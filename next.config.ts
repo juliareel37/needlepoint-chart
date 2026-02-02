@@ -1,5 +1,8 @@
-import type { NextConfig } from "next";
+// import type { NextConfig } from "next";
 
+const repo = "needlepoint-chart";
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
   images: { unoptimized: true },
@@ -9,4 +12,6 @@ const nextConfig = {
     NEXT_PUBLIC_BASE_PATH: "/needlepoint-chart",
   },
 };
-export default nextConfig;
+
+// export default nextConfig;
+module.exports = nextConfig;
