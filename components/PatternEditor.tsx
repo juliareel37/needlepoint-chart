@@ -3491,6 +3491,7 @@ export default function PatternEditor() {
                 setFilterRect(rect ? clampFilterRect(rect, gridW, gridH) : null)
               }
               onFilterSelectEnd={() => setFilterSelecting(false)}
+              isNarrow={isNarrow}
             />
           </div>
         </div>
@@ -3707,6 +3708,7 @@ function CanvasWithExportRef(props: any) {
     onClearFilterSelection,
     onFilterRectChange,
     onFilterSelectEnd,
+    isNarrow,
   } = props;
 
   // Render the interactive canvas
@@ -3736,9 +3738,10 @@ function CanvasWithExportRef(props: any) {
     const updateHeights = () => {
       const card = canvasCardRef.current;
       if (!card) return;
-      const rect = card.getBoundingClientRect();
       const bottomPadding = 16;
-      const maxHeight = Math.max(240, Math.floor(window.innerHeight - rect.top - bottomPadding));
+      const maxHeight = isNarrow
+        ? Math.max(240, Math.floor(window.innerHeight * 0.75))
+        : Math.max(240, Math.floor(window.innerHeight - card.getBoundingClientRect().top - bottomPadding));
       setCanvasCardMaxHeight(maxHeight);
       const zoomRowHeight = zoomRowRef.current?.getBoundingClientRect().height ?? 0;
       const padding = 12;
