@@ -7,10 +7,20 @@
 //   return `${BASE_PATH}${path}`;
 // }
 // src/lib/assetPath.ts
-const REPO = "needlepoint-chart";
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? `/${REPO}`;
+
+
+
+// const REPO = "needlepoint-chart";
+// const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? `/${REPO}`;
+
+// export function assetPath(p: string) {
+//   const path = p.startsWith("/") ? p : `/${p}`;
+//   return `${BASE.replace(/\/$/, "")}${path}`;
+// }
+
+
+// src/lib/assetPath.ts
 
 export function assetPath(p: string) {
-  const path = p.startsWith("/") ? p : `/${p}`;
-  return `${BASE.replace(/\/$/, "")}${path}`;
+  return p.startsWith("/") ? p : `/${p}`;
 }
