@@ -443,6 +443,7 @@ export default function PatternEditor() {
   const [traceLocked, setTraceLocked] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const traceUrlRef = useRef<string | null>(null);
+  const traceInputRef = useRef<HTMLInputElement | null>(null);
   const strokeActiveRef = useRef(false);
   const strokeDirtyRef = useRef(false);
   const strokeSnapshotRef = useRef<Snapshot | null>(null);
@@ -494,7 +495,6 @@ export default function PatternEditor() {
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
   const [lastEditCell, setLastEditCell] = useState<{ x: number; y: number } | null>(null);
-  const [jumpToLastEditTick, setJumpToLastEditTick] = useState(0);
 
   const [grid, setGrid] = useState<Uint16Array>(() => makeGrid(gridW, gridH, 0));
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
@@ -3103,7 +3103,9 @@ export default function PatternEditor() {
             </button>
             <div style={{ display: "grid", gap: 10, width: "100%", ...collapseStyle(traceOpen, 900) }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <label
+                  <button
+                    type="button"
+                    onClick={() => traceInputRef.current?.click()}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -3120,25 +3122,27 @@ export default function PatternEditor() {
                     }}
                   >
                     Choose file
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (traceUrlRef.current) {
-                          URL.revokeObjectURL(traceUrlRef.current);
-                        }
-                        const url = URL.createObjectURL(file);
-                        traceUrlRef.current = url;
-                        setTraceImageUrl(url);
-                        setTraceFileName(file.name);
-                        setTraceLocked(false);
-                        setTraceOpacity(0.5);
-                      }}
-                      style={{ display: "none" }}
-                    />
-                  </label>
+                  </button>
+                  <input
+                    ref={traceInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (!file) return;
+                      if (traceUrlRef.current) {
+                        URL.revokeObjectURL(traceUrlRef.current);
+                      }
+                      const url = URL.createObjectURL(file);
+                      traceUrlRef.current = url;
+                      setTraceImageUrl(url);
+                      setTraceFileName(file.name);
+                      setTraceLocked(false);
+                      setTraceOpacity(0.5);
+                      e.currentTarget.value = "";
+                    }}
+                    style={{ display: "none" }}
+                  />
                   <span style={{ fontSize: 12, opacity: 0.75 }}>
                     {traceFileName ?? "No file chosen"}
                   </span>
@@ -3468,11 +3472,6 @@ export default function PatternEditor() {
               canUndo={history.length > 0}
               canRedo={future.length > 0}
               lastEditCell={lastEditCell}
-              onJumpToLastEdit={() => {
-                if (!lastEditCell) return;
-                setJumpToLastEditTick((tick) => tick + 1);
-              }}
-              jumpToLastEditToken={jumpToLastEditTick}
               zoom={zoom}
               minZoom={minZoom}
               maxZoom={maxZoom}
@@ -3692,8 +3691,6 @@ function CanvasWithExportRef(props: any) {
     canUndo,
     canRedo,
     lastEditCell,
-    onJumpToLastEdit,
-    jumpToLastEditToken,
     zoom,
     minZoom,
     maxZoom,
@@ -3726,6 +3723,9 @@ function CanvasWithExportRef(props: any) {
   const [canvasCardMaxHeight, setCanvasCardMaxHeight] = useState<number | null>(null);
   const [canvasViewportHeight, setCanvasViewportHeight] = useState<number | null>(null);
   const [centerCanvasTick, setCenterCanvasTick] = useState(0);
+  const [focusCell, setFocusCell] = useState<{ x: number; y: number } | null>(null);
+  const [focusCellToken, setFocusCellToken] = useState(0);
+  const prevFilterSelectingRef = useRef(false);
 
   useEffect(() => {
     setZoomInput(String(zoomPercent));
@@ -3753,6 +3753,49 @@ function CanvasWithExportRef(props: any) {
 
   const effectiveContainerHeight =
     canvasViewportHeight !== null ? Math.min(containerHeight, canvasViewportHeight) : containerHeight;
+
+  const focusOnCell = (cell: { x: number; y: number }) => {
+    setFocusCell(cell);
+    setFocusCellToken((tick) => tick + 1);
+  };
+
+  useEffect(() => {
+    const wasSelecting = prevFilterSelectingRef.current;
+    prevFilterSelectingRef.current = filterSelecting;
+    if (!wasSelecting || filterSelecting) return;
+    if (!filterRect) return;
+    if (containerWidth <= 0 || effectiveContainerHeight <= 0) return;
+    const rectW = Math.max(1, filterRect.x1 - filterRect.x0 + 1);
+    const rectH = Math.max(1, filterRect.y1 - filterRect.y0 + 1);
+    const baseCellSize = cellSize / (zoom || 1);
+    if (!Number.isFinite(baseCellSize) || baseCellSize <= 0) return;
+    let paddedW = rectW;
+    let paddedH = rectH;
+    const paddingFactor = 1.08;
+    if (rectW > rectH) {
+      paddedW *= paddingFactor;
+    } else if (rectH > rectW) {
+      paddedH *= paddingFactor;
+    }
+    const targetCellSize = Math.min(containerWidth / paddedW, effectiveContainerHeight / paddedH);
+    if (!Number.isFinite(targetCellSize) || targetCellSize <= 0) return;
+    const nextZoom = Math.min(maxZoom, Math.max(minZoom, targetCellSize / baseCellSize));
+    onZoomChange(nextZoom);
+    focusOnCell({
+      x: Math.round((filterRect.x0 + filterRect.x1) / 2),
+      y: Math.round((filterRect.y0 + filterRect.y1) / 2),
+    });
+  }, [
+    filterRect,
+    filterSelecting,
+    containerWidth,
+    effectiveContainerHeight,
+    cellSize,
+    zoom,
+    minZoom,
+    maxZoom,
+    onZoomChange,
+  ]);
 
   function commitZoomInput(value: string) {
     if (value.trim() === "") {
@@ -4034,7 +4077,10 @@ function CanvasWithExportRef(props: any) {
           >
             <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
               <button
-                onClick={() => onJumpToLastEdit?.()}
+                onClick={() => {
+                  if (!lastEditCell) return;
+                  focusOnCell(lastEditCell);
+                }}
                 disabled={!lastEditCell}
                 aria-label="Jump to last edit"
                 data-tooltip="Jump to last edit"
@@ -4222,8 +4268,8 @@ function CanvasWithExportRef(props: any) {
           pinchEnabled={pinchEnabled}
           onZoomChange={onZoomChange}
           centerCanvasToken={centerCanvasTick}
-          focusCell={lastEditCell}
-          focusCellToken={jumpToLastEditToken}
+          focusCell={focusCell}
+          focusCellToken={focusCellToken}
           filterRect={filterRect}
           filterSelecting={filterSelecting}
           onFilterRectChange={onFilterRectChange}

@@ -119,6 +119,7 @@ export default function GridCanvas(props: Props) {
   const gridRef = useRef(grid);
   gridRef.current = grid;
   const traceSamplerRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPainting, setIsPainting] = useState(false);
   const [isLassoing, setIsLassoing] = useState(false);
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
@@ -132,6 +133,7 @@ export default function GridCanvas(props: Props) {
   const prevCellSizeRef = useRef(cellSize);
   const prevBaseOffsetRef = useRef({ x: 0, y: 0 });
   const prevPanRef = useRef({ x: 0, y: 0 });
+  const zoomAnchorRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!filterSelecting && filterPreviewRect) {
@@ -406,8 +408,9 @@ export default function GridCanvas(props: Props) {
     const prevCellSize = prevCellSizeRef.current;
     const prevBase = prevBaseOffsetRef.current;
     if (prevZoom !== zoom && Number.isFinite(prevCellSize) && prevCellSize > 0) {
-      const centerX = containerWidth / 2;
-      const centerY = containerHeight / 2;
+      const anchor = zoomAnchorRef.current;
+      const centerX = anchor ? anchor.x : containerWidth / 2;
+      const centerY = anchor ? anchor.y : containerHeight / 2;
       const prevPan = prevPanRef.current;
       const gridCenterX = (centerX - prevBase.x - prevPan.x) / prevCellSize;
       const gridCenterY = (centerY - prevBase.y - prevPan.y) / prevCellSize;
@@ -415,6 +418,9 @@ export default function GridCanvas(props: Props) {
         const nextPanX = centerX - baseOffsetX - gridCenterX * cellSize;
         const nextPanY = centerY - baseOffsetY - gridCenterY * cellSize;
         setPanOffset(clampPan(nextPanX, nextPanY));
+      }
+      if (anchor) {
+        zoomAnchorRef.current = null;
       }
     }
     prevZoomRef.current = zoom;
@@ -1245,8 +1251,29 @@ export default function GridCanvas(props: Props) {
   const effectivePanMode = panMode && !(traceAdjustMode && traceImage);
   const containerBg = darkCanvas ? "#000000" : threadView ? "#e6e6e6" : "#ffffff";
 
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = node.getBoundingClientRect();
+      const anchorX = e.clientX - rect.left;
+      const anchorY = e.clientY - rect.top;
+      const zoomFactor = Math.exp(-e.deltaY * 0.01);
+      const nextZoom = clampZoom(zoom * zoomFactor);
+      if (nextZoom === zoom) return;
+      zoomAnchorRef.current = { x: anchorX, y: anchorY };
+      onZoomChange(nextZoom);
+    };
+    node.addEventListener("wheel", handleWheel, { passive: false });
+    return () => node.removeEventListener("wheel", handleWheel);
+  }, [zoom, onZoomChange, minZoom, maxZoom]);
+
   return (
     <div
+      ref={containerRef}
       style={{
         position: "relative",
         display: "inline-flex",
@@ -1287,6 +1314,19 @@ export default function GridCanvas(props: Props) {
           if (pinchEnabled && e.pointerType === "touch") {
             e.preventDefault();
             (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+            updatePinchPointer(e.pointerId, e.clientX, e.clientY);
+            if (pinchPointersRef.current.size >= 2) {
+              pinchActiveRef.current = true;
+              if (isPainting) {
+                setIsPainting(false);
+                onStrokeEnd();
+              }
+              if (isPanningRef.current) {
+                isPanningRef.current = false;
+                panDragStartRef.current = null;
+              }
+              return;
+            }
           }
           if (filterSelecting) {
             e.preventDefault();
@@ -1331,7 +1371,6 @@ export default function GridCanvas(props: Props) {
             return;
           }
           if (pinchEnabled && e.pointerType === "touch") {
-            updatePinchPointer(e.pointerId, e.clientX, e.clientY);
             if (pinchPointersRef.current.size >= 2) {
               pinchActiveRef.current = true;
               if (isPainting) {
@@ -1395,6 +1434,8 @@ export default function GridCanvas(props: Props) {
         onPointerMove={(e) => {
           if (pinchEnabled && e.pointerType === "touch" && pinchPointersRef.current.size >= 2) {
             e.preventDefault();
+            updatePinchPointer(e.pointerId, e.clientX, e.clientY);
+            return;
           }
           if (filterSelecting) {
             if (filterDragStartRef.current) {
@@ -1519,10 +1560,6 @@ export default function GridCanvas(props: Props) {
           }
           if (isLassoing && tool === "lasso") {
             maybeAddLassoPoint(getCanvasPoint(e));
-            return;
-          }
-          if (pinchEnabled && e.pointerType === "touch" && pinchPointersRef.current.size >= 2) {
-            updatePinchPointer(e.pointerId, e.clientX, e.clientY);
             return;
           }
           if (pinchEnabled && pinchActiveRef.current) return;
