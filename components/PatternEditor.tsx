@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import GridCanvas from "./GridCanvas";
 import Palette from "./Palette";
 import ExportPdfButton from "./ExportPdfButton";
@@ -15,6 +16,14 @@ const EXPORT_CELL_SIZE = 24;
 
 type Point = { x: number; y: number };
 type FilterRect = { x0: number; y0: number; x1: number; y1: number };
+type DraftListItem = { id: string; title: string; createdAt: string; updatedAt: string };
+type DraftVersionItem = { id: string; createdAt: string };
+type VersionPreviewState = {
+  draftId: string;
+  versionId: string;
+  originalDraft: any;
+  versionCreatedAt?: string;
+};
 
 function clampFilterRect(rect: FilterRect, width: number, height: number): FilterRect {
   const x0 = Math.max(0, Math.min(width - 1, rect.x0));
@@ -393,9 +402,18 @@ export default function PatternEditor() {
   const [title, setTitle] = useState("Untitled Pattern");
   const [isNarrow, setIsNarrow] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const { isSignedIn } = useAuth();
+  const saveInFlightRef = useRef(false);
+  const autosaveInFlightRef = useRef(false);
+  const ignoreDirtyRef = useRef(false);
+  const hasMountedRef = useRef(false);
+  const isDirtyRef = useRef(false);
+  const editVersionRef = useRef(0);
+  const pendingRestoreHandledRef = useRef(false);
 
   const [gridW, setGridW] = useState(112);
   const [gridH, setGridH] = useState(140);
+  const [grid, setGrid] = useState<Uint16Array>(() => makeGrid(gridW, gridH, 0));
   type Snapshot = { gridW: number; gridH: number; grid: Uint16Array };
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [future, setFuture] = useState<Snapshot[]>([]);
@@ -415,6 +433,22 @@ export default function PatternEditor() {
   const [draftMeshCount, setDraftMeshCount] = useState(meshCount);
   const [draftWidthIn, setDraftWidthIn] = useState(widthIn);
   const [draftHeightIn, setDraftHeightIn] = useState(heightIn);
+  const [wipStatus, setWipStatus] = useState<{
+    message: string;
+    tone: "info" | "success" | "error";
+  } | null>(null);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [draftPickerOpen, setDraftPickerOpen] = useState(false);
+  const [draftPickerLoading, setDraftPickerLoading] = useState(false);
+  const [draftPickerItems, setDraftPickerItems] = useState<DraftListItem[]>([]);
+  const [draftPreviewUrls, setDraftPreviewUrls] = useState<Record<string, string | null>>({});
+  const draftPreviewLoadingRef = useRef(new Set<string>());
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  const [versionHistoryItems, setVersionHistoryItems] = useState<DraftVersionItem[]>([]);
+  const [versionPreview, setVersionPreview] = useState<VersionPreviewState | null>(null);
+  const [versionPreviewLoading, setVersionPreviewLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [threadView, setThreadView] = useState(false);
   const [darkCanvas, setDarkCanvas] = useState(false);
   const [showSymbols, setShowSymbols] = useState(false);
@@ -443,6 +477,8 @@ export default function PatternEditor() {
   const [traceLocked, setTraceLocked] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const traceUrlRef = useRef<string | null>(null);
+  const wipStatusTimeoutRef = useRef<number | null>(null);
+  const saveDraftRef = useRef<(opts?: { silent?: boolean }) => Promise<boolean>>(async () => false);
   const traceInputRef = useRef<HTMLInputElement | null>(null);
   const strokeActiveRef = useRef(false);
   const strokeDirtyRef = useRef(false);
@@ -459,6 +495,102 @@ export default function PatternEditor() {
     () => extractedPaletteIds.filter((id) => paletteById.has(id)),
     [extractedPaletteIds, paletteById]
   );
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    saveDraftRef.current = saveDraft;
+  });
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      pendingRestoreHandledRef.current = false;
+      return;
+    }
+    if (pendingRestoreHandledRef.current) return;
+    if (typeof window === "undefined") return;
+    const pendingRaw = window.sessionStorage.getItem("wippa:pendingDraft");
+    if (!pendingRaw) return;
+
+    let pendingDraft: any = null;
+    try {
+      pendingDraft = JSON.parse(pendingRaw);
+    } catch {
+      pendingDraft = null;
+    }
+
+    window.sessionStorage.removeItem("wippa:pendingDraft");
+    pendingRestoreHandledRef.current = true;
+
+    if (pendingDraft && !currentDraftId) {
+      applyDraft(pendingDraft);
+      window.setTimeout(() => {
+        void saveDraftRef.current({ silent: true });
+      }, 0);
+      return;
+    }
+
+    void saveDraftRef.current({ silent: true });
+  }, [isSignedIn, currentDraftId]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    if (versionPreview) return;
+    const interval = window.setInterval(() => {
+      if (!isDirtyRef.current) return;
+      if (autosaveInFlightRef.current) return;
+      autosaveInFlightRef.current = true;
+      void saveDraftRef.current({ silent: true }).finally(() => {
+        autosaveInFlightRef.current = false;
+      });
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [isSignedIn, versionPreview]);
+
+  function setWipMessage(message: string, tone: "info" | "success" | "error" = "info") {
+    if (wipStatusTimeoutRef.current) {
+      window.clearTimeout(wipStatusTimeoutRef.current);
+    }
+    setWipStatus({ message, tone });
+    wipStatusTimeoutRef.current = window.setTimeout(() => {
+      setWipStatus(null);
+      wipStatusTimeoutRef.current = null;
+    }, 3500);
+  }
+
+  function buildDraftSnapshot() {
+    return {
+      version: 1,
+      title,
+      gridW,
+      gridH,
+      grid: Array.from(grid),
+      gridMode,
+      meshCount,
+      widthIn,
+      heightIn,
+      trace: {
+        imageDataUrl: traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null,
+        opacity: traceOpacity,
+        scale: traceScale,
+        offsetX: traceOffsetX,
+        offsetY: traceOffsetY,
+        locked: traceLocked,
+      },
+    };
+  }
+
+  async function capturePendingDraft() {
+    if (typeof window === "undefined") return;
+    try {
+      const draft = buildDraftSnapshot();
+      window.sessionStorage.setItem("wippa:pendingDraft", JSON.stringify(draft));
+    } catch {
+      // Best-effort only; sign-in should still proceed.
+    }
+  }
 
   const [activeColorId, setActiveColorId] = useState<number>(DEFAULT_PALETTE[3].id);
   const [extractPaletteSize, setExtractPaletteSize] = useState(12);
@@ -496,7 +628,31 @@ export default function PatternEditor() {
   const [showGridlines, setShowGridlines] = useState(true);
   const [lastEditCell, setLastEditCell] = useState<{ x: number; y: number } | null>(null);
 
-  const [grid, setGrid] = useState<Uint16Array>(() => makeGrid(gridW, gridH, 0));
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (ignoreDirtyRef.current) return;
+    editVersionRef.current += 1;
+    setIsDirty(true);
+  }, [
+    title,
+    gridW,
+    gridH,
+    grid,
+    gridMode,
+    meshCount,
+    widthIn,
+    heightIn,
+    traceImageUrl,
+    traceOpacity,
+    traceScale,
+    traceOffsetX,
+    traceOffsetY,
+    traceLocked,
+  ]);
+
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
 
@@ -1994,19 +2150,25 @@ export default function PatternEditor() {
   }, [deleteMode, deleteSelectedIds, usedColorIds, paletteById, activeFilterRect, gridW]);
 
   async function buildTraceImageDataUrl() {
-    if (!traceImage) return null;
-    const canvas = document.createElement("canvas");
-    canvas.width = traceImage.width;
-    canvas.height = traceImage.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(traceImage, 0, 0);
-    return canvas.toDataURL("image/png");
+    if (!traceImage) {
+      return traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null;
+    }
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = traceImage.width;
+      canvas.height = traceImage.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(traceImage, 0, 0);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null;
+    }
   }
 
-  async function saveDraft() {
+  async function buildDraftPayload() {
     const traceImageDataUrl = await buildTraceImageDataUrl();
-    const draft = {
+    return {
       version: 1,
       title,
       gridW,
@@ -2016,13 +2178,6 @@ export default function PatternEditor() {
       meshCount,
       widthIn,
       heightIn,
-      brushSize,
-      activeColorId,
-      showGridlines,
-      threadView,
-      darkCanvas,
-      showSymbols,
-      zoom,
       trace: {
         imageDataUrl: traceImageDataUrl,
         opacity: traceOpacity,
@@ -2032,6 +2187,9 @@ export default function PatternEditor() {
         locked: traceLocked,
       },
     };
+  }
+
+  async function saveDraftToFile(draft: any) {
     const blob = new Blob([JSON.stringify(draft)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2043,70 +2201,410 @@ export default function PatternEditor() {
     URL.revokeObjectURL(url);
   }
 
+  async function saveDraft(options: { silent?: boolean } = {}): Promise<boolean> {
+    const silent = Boolean(options.silent);
+    if (saveInFlightRef.current) {
+      if (!silent) {
+        setWipMessage("Save already in progress.", "info");
+      }
+      return false;
+    }
+    saveInFlightRef.current = true;
+    const saveVersion = editVersionRef.current;
+    const draft = await buildDraftPayload();
+
+    if (!isSignedIn) {
+      if (!silent) {
+        setWipMessage("Sign in to save your work.", "info");
+      }
+      saveInFlightRef.current = false;
+      return false;
+    }
+
+    if (!silent) {
+      setWipMessage(currentDraftId ? "Saving changes..." : "Saving new WIP...", "info");
+    }
+    try {
+      const res = await fetch(currentDraftId ? `/api/wip/${currentDraftId}` : "/api/wip", {
+        method: currentDraftId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, draft }),
+      });
+      if (res.status === 401) {
+        if (!silent) {
+          setWipMessage("Please sign in to save your WIP.", "error");
+        }
+        return false;
+      }
+      if (res.status === 409) {
+        if (!silent) {
+          setWipMessage("A draft with this name already exists. Rename it before saving.", "error");
+        } else {
+          setWipMessage("Autosave needs a unique name. Rename this draft.", "error");
+        }
+        return false;
+      }
+      if (!res.ok) throw new Error("Save failed");
+      const data = (await res.json()) as { id?: string; title?: string };
+      if (!currentDraftId && data?.id) {
+        setCurrentDraftId(data.id);
+      }
+      let savedTitle = title;
+      if (data?.title && data.title !== title) {
+        savedTitle = data.title;
+        setTitle(data.title);
+      }
+      if (!silent) {
+        setWipMessage(currentDraftId ? "Saved changes." : `Saved as "${savedTitle}".`, "success");
+      }
+      if (editVersionRef.current === saveVersion) {
+        setIsDirty(false);
+      }
+      return true;
+    } catch {
+      setWipMessage("Could not save your WIP. Please try again.", "error");
+      return false;
+    } finally {
+      saveInFlightRef.current = false;
+    }
+  }
+
+  function applyDraft(parsed: any) {
+    if (!parsed || parsed.version !== 1) {
+      setWipMessage("That draft could not be loaded.", "error");
+      return;
+    }
+
+    ignoreDirtyRef.current = true;
+    setTitle(parsed.title || "Untitled Pattern");
+    setGridW(parsed.gridW);
+    setGridH(parsed.gridH);
+    const expectedSize = parsed.gridW * parsed.gridH;
+    const nextGrid =
+      Array.isArray(parsed.grid) && parsed.grid.length === expectedSize
+        ? new Uint16Array(parsed.grid)
+        : makeGrid(parsed.gridW, parsed.gridH);
+    setGrid(nextGrid);
+    setGridMode(parsed.gridMode || "stitches");
+    setMeshCount(parsed.meshCount || 10);
+    setWidthIn(parsed.widthIn || 11.2);
+    setHeightIn(parsed.heightIn || 14);
+    setDraftGridMode(parsed.gridMode || "stitches");
+    setDraftGridW(parsed.gridW);
+    setDraftGridH(parsed.gridH);
+    setDraftMeshCount(parsed.meshCount || 10);
+    setDraftWidthIn(parsed.widthIn || 11.2);
+    setDraftHeightIn(parsed.heightIn || 14);
+    setHistoryState([]);
+    setFutureState([]);
+    setRemapSourceId(null);
+    setRemapTargetId(null);
+    const trace = parsed.trace;
+    if (trace?.imageDataUrl) {
+      const img = new Image();
+      img.onload = () => {
+        setTraceImage(img);
+        setTraceImageUrl(trace.imageDataUrl);
+        setTraceFileName("Draft image");
+        setTraceOpacity(trace.opacity ?? 0.5);
+        setTraceScale(trace.scale ?? 1);
+        setTraceOffsetX(trace.offsetX ?? 0);
+        setTraceOffsetY(trace.offsetY ?? 0);
+        setTraceLocked(Boolean(trace.locked));
+        traceUrlRef.current = null;
+      };
+      img.src = trace.imageDataUrl;
+    } else {
+      setTraceImage(null);
+      setTraceImageUrl(null);
+      setTraceFileName(null);
+      setTraceOpacity(0);
+      setTraceScale(1);
+      setTraceOffsetX(0);
+      setTraceOffsetY(0);
+      setTraceLocked(false);
+      traceUrlRef.current = null;
+    }
+    window.setTimeout(() => {
+      ignoreDirtyRef.current = false;
+      editVersionRef.current = 0;
+      setIsDirty(false);
+    }, 0);
+  }
+
+  async function loadWipFromDb(id: string) {
+    setWipMessage("Loading from your account...", "info");
+    try {
+      const res = await fetch(`/api/wip/${id}`);
+      if (res.status === 401) {
+        setWipMessage("Please sign in to load your WIP.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Load failed");
+      const data = (await res.json()) as { draft?: any };
+      applyDraft(data.draft);
+      setCurrentDraftId(id);
+      setWipMessage("Loaded from your account.", "success");
+    } catch {
+      setWipMessage("Could not load your WIP. Please try again.", "error");
+    }
+  }
+
+  async function openDraftPicker() {
+    if (!isSignedIn) {
+      draftInputRef.current?.click();
+      return;
+    }
+    setDraftPickerLoading(true);
+    setDraftPickerOpen(true);
+    try {
+      const res = await fetch("/api/wip");
+      if (res.status === 401) {
+        setWipMessage("Please sign in to load your WIP.", "error");
+        setDraftPickerOpen(false);
+        return;
+      }
+      if (!res.ok) throw new Error("Load failed");
+      const data = (await res.json()) as { drafts?: DraftListItem[] };
+      const drafts = Array.isArray(data.drafts) ? data.drafts : [];
+      if (drafts.length === 0) {
+        setWipMessage("No saved WIP found yet.", "info");
+        setDraftPickerOpen(false);
+        return;
+      }
+      setDraftPickerItems(drafts);
+      for (const draft of drafts) {
+        if (draftPreviewUrls[draft.id] || draftPreviewLoadingRef.current.has(draft.id)) continue;
+        draftPreviewLoadingRef.current.add(draft.id);
+        void (async () => {
+          try {
+            const detail = await fetch(`/api/wip/${draft.id}`);
+            if (!detail.ok) return;
+            const payload = (await detail.json()) as { draft?: any };
+            const preview = buildPreviewDataUrl(payload.draft);
+            setDraftPreviewUrls((prev) => ({ ...prev, [draft.id]: preview }));
+          } finally {
+            draftPreviewLoadingRef.current.delete(draft.id);
+          }
+        })();
+      }
+    } catch {
+      setWipMessage("Could not load your WIP list. Please try again.", "error");
+      setDraftPickerOpen(false);
+    } finally {
+      setDraftPickerLoading(false);
+    }
+  }
+
+  async function selectDraft(id: string) {
+    setDraftPickerOpen(false);
+    await loadWipFromDb(id);
+  }
+
+  function requestDeleteDraft(id: string, title: string) {
+    confirmActionRef.current = () => {
+      void deleteDraft(id);
+    };
+    setConfirmDialog({
+      title: "Delete saved WIP?",
+      message: `Delete "${title}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+    });
+  }
+
+  async function deleteDraft(id: string) {
+    try {
+      const res = await fetch(`/api/wip/${id}`, { method: "DELETE" });
+      if (res.status === 401) {
+        setWipMessage("Please sign in to delete your WIP.", "error");
+        return;
+      }
+      if (res.status === 404) {
+        setWipMessage("That WIP no longer exists.", "info");
+        return;
+      }
+      if (!res.ok) throw new Error("Delete failed");
+      setDraftPickerItems((prev) => prev.filter((draft) => draft.id !== id));
+      setDraftPreviewUrls((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (currentDraftId === id) {
+        setCurrentDraftId(null);
+      }
+      setWipMessage("WIP deleted.", "success");
+    } catch {
+      setWipMessage("Could not delete this WIP. Please try again.", "error");
+    }
+  }
+
+  async function fetchDraftData(id: string) {
+    const res = await fetch(`/api/wip/${id}`);
+    if (res.status === 401) {
+      setWipMessage("Please sign in to view drafts.", "error");
+      return null;
+    }
+    if (!res.ok) return null;
+    const data = (await res.json()) as { draft?: any };
+    return data?.draft ?? null;
+  }
+
+  async function openVersionHistory() {
+    if (!isSignedIn) {
+      setWipMessage("Please sign in to view version history.", "info");
+      return;
+    }
+    if (!currentDraftId) {
+      setWipMessage("Load a WIP first to view its history.", "info");
+      return;
+    }
+    setVersionHistoryOpen(true);
+    setVersionHistoryLoading(true);
+    setVersionHistoryItems([]);
+    try {
+      const res = await fetch(`/api/wip/${currentDraftId}/versions`);
+      if (res.status === 401) {
+        setWipMessage("Please sign in to view versions.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Version load failed");
+      const data = (await res.json()) as { versions?: DraftVersionItem[] };
+      const versions = Array.isArray(data.versions) ? data.versions : [];
+      setVersionHistoryItems(versions);
+    } catch {
+      setWipMessage("Could not load versions.", "error");
+    } finally {
+      setVersionHistoryLoading(false);
+    }
+  }
+  async function viewVersion(draftId: string, versionId: string, versionCreatedAt?: string) {
+    if (versionPreviewLoading) return;
+    setVersionPreviewLoading(true);
+    try {
+      const originalDraft = await fetchDraftData(draftId);
+      if (!originalDraft) {
+        setWipMessage("Could not load the latest draft.", "error");
+        return;
+      }
+
+      const res = await fetch(`/api/wip/${draftId}/versions/${versionId}`);
+      if (res.status === 401) {
+        setWipMessage("Please sign in to view versions.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Version fetch failed");
+      const data = (await res.json()) as { draft?: any; createdAt?: string };
+      if (!data?.draft) {
+        setWipMessage("That version could not be loaded.", "error");
+        return;
+      }
+      applyDraft(data.draft);
+      setCurrentDraftId(draftId);
+      setVersionPreview({
+        draftId,
+        versionId,
+        originalDraft,
+        versionCreatedAt: versionCreatedAt ?? data.createdAt,
+      });
+      setVersionHistoryOpen(false);
+      setDraftPickerOpen(false);
+      setWipMessage("Viewing a past version. Restore or cancel when ready.", "info");
+    } catch {
+      setWipMessage("Could not load this version.", "error");
+    } finally {
+      setVersionPreviewLoading(false);
+    }
+  }
+
+  async function restoreVersion(draftId: string, versionId: string) {
+    try {
+      const res = await fetch(`/api/wip/${draftId}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      });
+      if (res.status === 401) {
+        setWipMessage("Please sign in to restore versions.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Restore failed");
+      const data = (await res.json()) as { draft?: any };
+      if (data?.draft) {
+        applyDraft(data.draft);
+        setCurrentDraftId(draftId);
+        const preview = buildPreviewDataUrl(data.draft);
+        setDraftPreviewUrls((prev) => ({ ...prev, [draftId]: preview }));
+      }
+      setDraftPickerOpen(false);
+      setVersionHistoryOpen(false);
+      setVersionPreview(null);
+      setWipMessage("Version restored.", "success");
+    } catch {
+      setWipMessage("Could not restore this version. Please try again.", "error");
+    }
+  }
+
+  function cancelVersionPreview() {
+    if (!versionPreview) return;
+    applyDraft(versionPreview.originalDraft);
+    setCurrentDraftId(versionPreview.draftId);
+    setVersionPreview(null);
+    setWipMessage("Back to the latest version.", "info");
+  }
+
+  async function loadWip() {
+    if (!isSignedIn) {
+      draftInputRef.current?.click();
+      return;
+    }
+    await openDraftPicker();
+  }
+
+  function buildBlankDraft() {
+    return {
+      version: 1,
+      title: "Untitled Pattern",
+      gridW,
+      gridH,
+      grid: Array.from(makeGrid(gridW, gridH, 0)),
+      gridMode,
+      meshCount,
+      widthIn,
+      heightIn,
+      trace: {
+        imageDataUrl: null,
+        opacity: 0,
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        locked: false,
+      },
+    };
+  }
+
+  async function startNewWip() {
+    if (!isSignedIn) {
+      setWipMessage("Sign in to save before starting a new WIP.", "info");
+      return;
+    }
+    const saved = await saveDraft();
+    if (!saved) return;
+    applyDraft(buildBlankDraft());
+    setCurrentDraftId(null);
+    setWipMessage("New WIP started.", "success");
+  }
+
   function loadDraftFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string);
-        if (!parsed || parsed.version !== 1) return;
-        setTitle(parsed.title || "Untitled Pattern");
-        setGridW(parsed.gridW);
-        setGridH(parsed.gridH);
-        const expectedSize = parsed.gridW * parsed.gridH;
-        const nextGrid =
-          Array.isArray(parsed.grid) && parsed.grid.length === expectedSize
-            ? new Uint16Array(parsed.grid)
-            : makeGrid(parsed.gridW, parsed.gridH);
-        setGrid(nextGrid);
-        setGridMode(parsed.gridMode || "stitches");
-        setMeshCount(parsed.meshCount || 10);
-        setWidthIn(parsed.widthIn || 11.2);
-        setHeightIn(parsed.heightIn || 14);
-        setDraftGridMode(parsed.gridMode || "stitches");
-        setDraftGridW(parsed.gridW);
-        setDraftGridH(parsed.gridH);
-        setDraftMeshCount(parsed.meshCount || 10);
-        setDraftWidthIn(parsed.widthIn || 11.2);
-        setDraftHeightIn(parsed.heightIn || 14);
-        setBrushSize(parsed.brushSize || 1);
-        setActiveColorId(parsed.activeColorId || DEFAULT_PALETTE[0].id);
-        setShowGridlines(Boolean(parsed.showGridlines));
-        setThreadView(Boolean(parsed.threadView));
-        // setDarkCanvas(Boolean(parsed.darkCanvas));
-        setShowSymbols(Boolean(parsed.showSymbols));
-        setZoom(clampZoom(parsed.zoom || 1));
-        setHistoryState([]);
-        setFutureState([]);
-        setRemapSourceId(null);
-        setRemapTargetId(null);
-        const trace = parsed.trace;
-        if (trace?.imageDataUrl) {
-          const img = new Image();
-          img.onload = () => {
-            setTraceImage(img);
-            setTraceImageUrl(trace.imageDataUrl);
-            setTraceFileName("Draft image");
-            setTraceOpacity(trace.opacity ?? 0.5);
-            setTraceScale(trace.scale ?? 1);
-            setTraceOffsetX(trace.offsetX ?? 0);
-            setTraceOffsetY(trace.offsetY ?? 0);
-            setTraceLocked(Boolean(trace.locked));
-            traceUrlRef.current = null;
-          };
-          img.src = trace.imageDataUrl;
-        } else {
-          setTraceImage(null);
-          setTraceImageUrl(null);
-          setTraceFileName(null);
-          setTraceOpacity(0);
-          setTraceScale(1);
-          setTraceOffsetX(0);
-          setTraceOffsetY(0);
-          setTraceLocked(false);
-          traceUrlRef.current = null;
-        }
+        applyDraft(parsed);
+        setCurrentDraftId(null);
+        setWipMessage("Loaded from file.", "success");
       } catch {
-        // ignore malformed drafts
+        setWipMessage("That draft could not be loaded.", "error");
       }
     };
     reader.readAsText(file);
@@ -2114,6 +2612,68 @@ export default function PatternEditor() {
 
   function sanitizeFilename(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  }
+
+  function formatDraftDate(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffMs = startOfToday.getTime() - startOfDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+    if (diffDays === 0) return `Today at ${time}`;
+    if (diffDays === 1) return `Yesterday at ${time}`;
+    if (diffDays === 2) return `2 days ago at ${time}`;
+    if (diffDays === 3) return `3 days ago at ${time}`;
+
+    const datePart = date.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+    return `${datePart} at ${time}`;
+  }
+
+  function hexToRgb(hex: string) {
+    const normalized = hex.replace("#", "").trim();
+    if (normalized.length !== 6) return null;
+    const r = Number.parseInt(normalized.slice(0, 2), 16);
+    const g = Number.parseInt(normalized.slice(2, 4), 16);
+    const b = Number.parseInt(normalized.slice(4, 6), 16);
+    if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+    return [r, g, b] as const;
+  }
+
+  function buildPreviewDataUrl(draft: any) {
+    if (!draft) return null;
+    const width = typeof draft.gridW === "number" && draft.gridW > 0 ? draft.gridW : 0;
+    const height = typeof draft.gridH === "number" && draft.gridH > 0 ? draft.gridH : 0;
+    const gridData = Array.isArray(draft.grid) ? draft.grid : null;
+    if (!width || !height || !gridData) return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const image = ctx.createImageData(width, height);
+    const data = image.data;
+
+    for (let i = 0; i < width * height; i++) {
+      const colorId = gridData[i];
+      if (!colorId) continue;
+      const color = paletteById.get(colorId);
+      if (!color) continue;
+      const rgb = hexToRgb(color.hex);
+      if (!rgb) continue;
+      const offset = i * 4;
+      data[offset] = rgb[0];
+      data[offset + 1] = rgb[1];
+      data[offset + 2] = rgb[2];
+      data[offset + 3] = 255;
+    }
+
+    ctx.putImageData(image, 0, 0);
+    return canvas.toDataURL("image/png");
   }
 
   function Toggle({
@@ -2846,23 +3406,45 @@ export default function PatternEditor() {
               }}
             />
             <div style={{ display: "grid", gap: 8, width: "100%" }}>
+              {!isSignedIn && (
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void capturePendingDraft();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "1px solid var(--panel-border)",
+                      background: "var(--card-bg)",
+                      color: "var(--foreground)",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      width: "100%",
+                    }}
+                  >
+                    Sign in to save
+                  </button>
+                </SignInButton>
+              )}
               <button
-                onClick={saveDraft}
+                onClick={startNewWip}
                 style={{
                   padding: "6px 10px",
                   borderRadius: 8,
-                  border: "none",
-                  background: "var(--muted-bg)",
+                  border: "1px solid var(--panel-border)",
+                  background: "var(--card-bg)",
                   color: "var(--foreground)",
                   cursor: "pointer",
                   fontSize: 14,
                   width: "100%",
                 }}
               >
-                Save WIP
+                New WIP
               </button>
               <button
-                onClick={() => draftInputRef.current?.click()}
+                onClick={loadWip}
                 style={{
                   padding: "6px 10px",
                   borderRadius: 8,
@@ -2876,6 +3458,21 @@ export default function PatternEditor() {
               >
                 Load WIP
               </button>
+              <button
+                onClick={openVersionHistory}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: "1px solid var(--panel-border)",
+                  background: "var(--card-bg)",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  width: "100%",
+                }}
+              >
+                Version History
+              </button>
               <input
                 ref={draftInputRef}
                 type="file"
@@ -2888,6 +3485,23 @@ export default function PatternEditor() {
                 }}
                 style={{ display: "none" }}
               />
+              {wipStatus && (
+                <div
+                  aria-live="polite"
+                  style={{
+                    fontSize: 12,
+                    color:
+                      wipStatus.tone === "error"
+                        ? "#b91c1c"
+                        : wipStatus.tone === "success"
+                        ? "var(--accent-strong)"
+                        : "var(--foreground)",
+                    opacity: 0.8,
+                  }}
+                >
+                  {wipStatus.message}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
               <ExportPdfButton
@@ -3561,6 +4175,327 @@ export default function PatternEditor() {
           </div>
         )}
       </div>
+      {draftPickerOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Load saved WIP"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.35)",
+            display: "block",
+            zIndex: 55,
+            padding: 16,
+          }}
+          onClick={() => setDraftPickerOpen(false)}
+        >
+          <div
+            style={{
+              background: "var(--card-bg)",
+              color: "var(--foreground)",
+              borderRadius: 14,
+              padding: 16,
+              width: "min(440px, 92vw)",
+              boxShadow: "0 16px 40px rgba(15, 23, 42, 0.2)",
+              display: "grid",
+              gap: 12,
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Load a saved WIP</div>
+            {draftPickerLoading ? (
+              <div style={{ fontSize: 12.5, opacity: 0.75 }}>Loading your drafts…</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8, maxHeight: "55vh", overflow: "auto" }}>
+                {draftPickerItems.map((draft) => (
+                  <div
+                    key={draft.id}
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => selectDraft(draft.id)}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          gap: 12,
+                          alignItems: "center",
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: "1px solid var(--panel-border)",
+                          background: "var(--muted-bg)",
+                          color: "var(--foreground)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: 10,
+                            border: "1px solid var(--panel-border)",
+                            background: "var(--card-bg)",
+                            display: "grid",
+                            placeItems: "center",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {draftPreviewUrls[draft.id] ? (
+                            <img
+                              src={draftPreviewUrls[draft.id] ?? ""}
+                              alt=""
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                imageRendering: "pixelated",
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: 10, opacity: 0.6 }}>Preview</span>
+                          )}
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <span style={{ fontWeight: 600 }}>{draft.title || "Untitled Pattern"}</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            Updated {formatDraftDate(draft.updatedAt)}
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${draft.title || "Untitled Pattern"}`}
+                        onClick={() => requestDeleteDraft(draft.id, draft.title || "Untitled Pattern")}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          border: "1px solid var(--panel-border)",
+                          background: "var(--card-bg)",
+                          color: "var(--foreground)",
+                          cursor: "pointer",
+                          display: "grid",
+                          placeItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          focusable="false"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M6 6l1 14h10l1-14" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setDraftPickerOpen(false)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--muted-bg)",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {versionHistoryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Version history"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.35)",
+            display: "block",
+            zIndex: 55,
+            padding: 16,
+          }}
+          onClick={() => setVersionHistoryOpen(false)}
+        >
+          <div
+            style={{
+              background: "var(--card-bg)",
+              color: "var(--foreground)",
+              borderRadius: 14,
+              padding: 16,
+              width: "min(420px, 92vw)",
+              boxShadow: "0 16px 40px rgba(15, 23, 42, 0.2)",
+              display: "grid",
+              gap: 12,
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Version History</div>
+            {versionHistoryLoading ? (
+              <div style={{ fontSize: 12.5, opacity: 0.75 }}>Loading versions…</div>
+            ) : versionHistoryItems.length ? (
+              <div style={{ display: "grid", gap: 8, maxHeight: "55vh", overflow: "auto" }}>
+                {versionHistoryItems.map((version) => (
+                  <div
+                    key={version.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid var(--panel-border)",
+                      background: "var(--card-bg)",
+                    }}
+                  >
+                    <span style={{ fontSize: 12, opacity: 0.75 }}>
+                      {formatDraftDate(version.createdAt)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        currentDraftId
+                          ? viewVersion(currentDraftId, version.id, version.createdAt)
+                          : null
+                      }
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 8,
+                        border: "1px solid var(--panel-border)",
+                        background: "var(--muted-bg)",
+                        color: "var(--foreground)",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      View version
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12.5, opacity: 0.75 }}>No versions yet.</div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setVersionHistoryOpen(false)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--muted-bg)",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {versionPreview && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 65,
+            background: "var(--card-bg)",
+            color: "var(--foreground)",
+            borderRadius: 14,
+            padding: "10px 14px",
+            boxShadow: "0 12px 32px rgba(15, 23, 42, 0.2)",
+            border: "1px solid var(--panel-border)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 12.5, opacity: 0.8 }}>
+            Viewing version from {formatDraftDate(versionPreview.versionCreatedAt ?? "")}
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => restoreVersion(versionPreview.draftId, versionPreview.versionId)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 10,
+                border: "1px solid var(--accent-strong)",
+                background: "var(--accent-wash)",
+                color: "var(--accent-strong)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              Restore
+            </button>
+            <button
+              type="button"
+              onClick={cancelVersionPreview}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 10,
+                border: "1px solid var(--panel-border)",
+                background: "var(--card-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {confirmDialog && (
         <div
           role="dialog"
@@ -3571,7 +4506,7 @@ export default function PatternEditor() {
             inset: 0,
             background: "rgba(15, 23, 42, 0.35)",
             display: "block",
-            zIndex: 50,
+            zIndex: 70,
             padding: 16,
           }}
           onClick={() => setConfirmDialog(null)}

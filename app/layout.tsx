@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
+import HeaderAuth from "../components/HeaderAuth";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -33,14 +35,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${uiSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div style={{ display: "grid", gap: 12, width: "100%", padding: "32px 24px 20px" }}>
-          {children}
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+          <div style={{ display: "grid", gap: 12, width: "100%", padding: "32px 24px 20px" }}>
+            <HeaderAuth />
+            {children}
+          </div>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
