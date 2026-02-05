@@ -1255,21 +1255,34 @@ export default function GridCanvas(props: Props) {
     const node = containerRef.current;
     if (!node) return;
     const handleWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const rect = node.getBoundingClientRect();
-      const anchorX = e.clientX - rect.left;
-      const anchorY = e.clientY - rect.top;
-      const zoomFactor = Math.exp(-e.deltaY * 0.01);
-      const nextZoom = clampZoom(zoom * zoomFactor);
-      if (nextZoom === zoom) return;
-      zoomAnchorRef.current = { x: anchorX, y: anchorY };
-      onZoomChange(nextZoom);
+      if (e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = node.getBoundingClientRect();
+        const anchorX = e.clientX - rect.left;
+        const anchorY = e.clientY - rect.top;
+        const zoomFactor = Math.exp(-e.deltaY * 0.01);
+        const nextZoom = clampZoom(zoom * zoomFactor);
+        if (nextZoom === zoom) return;
+        zoomAnchorRef.current = { x: anchorX, y: anchorY };
+        onZoomChange(nextZoom);
+        return;
+      }
+
+      // Trackpad two-finger drag (desktop): pan the canvas in any mode.
+      if (e.deltaMode === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dx = e.deltaX;
+        const dy = e.deltaY;
+        if (dx !== 0 || dy !== 0) {
+          setPanOffset((prev) => clampPan(prev.x - dx, prev.y - dy));
+        }
+      }
     };
     node.addEventListener("wheel", handleWheel, { passive: false });
     return () => node.removeEventListener("wheel", handleWheel);
-  }, [zoom, onZoomChange, minZoom, maxZoom]);
+  }, [zoom, onZoomChange, minZoom, maxZoom, containerWidth, containerHeight, canvasW, canvasH, cellSize]);
 
   return (
     <div

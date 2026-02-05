@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import GridCanvas from "./GridCanvas";
 import Palette from "./Palette";
 import ExportPdfButton from "./ExportPdfButton";
@@ -2328,73 +2328,79 @@ export default function PatternEditor() {
               onClick={toggleRemapMode}
               aria-pressed={remapMode}
               aria-label="Replace colors"
-              data-tooltip="Replace colors"
               data-active={remapMode ? "true" : undefined}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "6px 8px",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
               }}
             >
-              <img
-                src={assetPath("/swap.svg")}
-                alt=""
-                aria-hidden="true"
-                width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/swap.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Replace</span>
             </button>
             <button
               onClick={toggleMergeMode}
               aria-pressed={mergeMode}
               aria-label="Merge colors"
-              data-tooltip="Merge colors"
               data-active={mergeMode ? "true" : undefined}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "6px 8px",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
               }}
             >
-              <img
-                src={assetPath("/merge.svg")}
-                alt=""
-                aria-hidden="true"
-                width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/merge.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Merge</span>
             </button>
             <button
               onClick={toggleDeleteMode}
               aria-pressed={deleteMode}
               aria-label="Delete colors"
-              data-tooltip="Delete colors"
               data-active={deleteMode ? "true" : undefined}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "6px 8px",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
               }}
             >
-              <img
-                src={assetPath("/deselect.svg")}
-                alt=""
-                aria-hidden="true"
-                width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/deselect.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Delete</span>
             </button>
             <button
               onClick={() => {
@@ -2406,25 +2412,27 @@ export default function PatternEditor() {
               }}
               aria-pressed={filterMode}
               aria-label="Filter canvas"
-              data-tooltip="Filter canvas"
               data-active={filterMode ? "true" : undefined}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "6px 8px",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
               }}
             >
-              <img
-                src={assetPath("/crop_filter.svg")}
-                alt=""
-                aria-hidden="true"
-                width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/crop_filter.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Filter</span>
             </button>
             <div style={{ fontSize: 12, opacity: 0.7 }}>
               {remapMode
@@ -3720,8 +3728,14 @@ function CanvasWithExportRef(props: any) {
     zoom < 1 ? 0.1 : zoom < 2 ? 0.2 : zoom < 4 ? 0.35 : 0.5;
   const activeColor = paletteById.get(activeColorId);
   const hasFilterRect = Boolean(filterRect);
+  const canvasAreaRef = useRef<HTMLDivElement | null>(null);
+  const topToolbarRef = useRef<HTMLDivElement | null>(null);
   const canvasCardRef = useRef<HTMLDivElement | null>(null);
-  const zoomRowRef = useRef<HTMLDivElement | null>(null);
+  const bottomToolbarRef = useRef<HTMLDivElement | null>(null);
+  const brushButtonRef = useRef<HTMLButtonElement | null>(null);
+  const brushSubtoolbarRef = useRef<HTMLDivElement | null>(null);
+  const [brushSubtoolPosition, setBrushSubtoolPosition] = useState<{ left: number; top: number } | null>(null);
+  const [brushSubtoolsOpen, setBrushSubtoolsOpen] = useState(false);
   const [canvasCardMaxHeight, setCanvasCardMaxHeight] = useState<number | null>(null);
   const [canvasViewportHeight, setCanvasViewportHeight] = useState<number | null>(null);
   const [centerCanvasTick, setCenterCanvasTick] = useState(0);
@@ -3733,20 +3747,78 @@ function CanvasWithExportRef(props: any) {
     setZoomInput(String(zoomPercent));
   }, [zoomPercent]);
 
+  const brushFamily = ["paint", "eraser", "fill", "lasso"] as const;
+  const isBrushFamily = brushFamily.includes(tool);
+  const showBrushSubtools = brushSubtoolsOpen && isBrushFamily;
+  const brushSubtools = [
+    { id: "paint", label: "Brush", icon: "/brush.svg" },
+    { id: "eraser", label: "Eraser", icon: "/eraser.svg" },
+    { id: "fill", label: "Fill", icon: "/paint_bucket.svg" },
+    { id: "lasso", label: "Lasso", icon: "/lasso.svg" },
+  ] as const;
+
+  useEffect(() => {
+    if (!isBrushFamily && brushSubtoolsOpen) {
+      setBrushSubtoolsOpen(false);
+    }
+  }, [isBrushFamily, brushSubtoolsOpen]);
+
+  const updateBrushSubtoolPosition = () => {
+    const brushNode = brushButtonRef.current;
+    const toolbarNode = topToolbarRef.current;
+    const areaNode = canvasAreaRef.current;
+    if (!brushNode || !toolbarNode || !areaNode) return;
+    const subtoolbarWidth = brushSubtoolbarRef.current?.getBoundingClientRect().width ?? 180;
+    const brushRect = brushNode.getBoundingClientRect();
+    const toolbarRect = toolbarNode.getBoundingClientRect();
+    const areaRect = areaNode.getBoundingClientRect();
+    const brushCenter = brushRect.left + brushRect.width / 2;
+    const desiredLeft = brushCenter - areaRect.left - subtoolbarWidth / 2;
+    const minLeft = 8;
+    const maxLeft = Math.max(minLeft, areaRect.width - subtoolbarWidth - 8);
+    const left = Math.min(Math.max(desiredLeft, minLeft), maxLeft);
+    const desiredTop = toolbarRect.bottom - areaRect.top + 6;
+    const top = Math.max(2, desiredTop);
+    setBrushSubtoolPosition({ left: Math.round(left), top: Math.round(top) });
+  };
+
+  useLayoutEffect(() => {
+    if (!showBrushSubtools) {
+      setBrushSubtoolPosition(null);
+      return;
+    }
+    updateBrushSubtoolPosition();
+  }, [showBrushSubtools, containerWidth, containerHeight]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!showBrushSubtools) return;
+    const update = () => updateBrushSubtoolPosition();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [showBrushSubtools, containerWidth, containerHeight]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const updateHeights = () => {
       const card = canvasCardRef.current;
       if (!card) return;
       const bottomPadding = 16;
+      const bottomToolbarHeight = bottomToolbarRef.current?.getBoundingClientRect().height ?? 0;
+      const bottomToolbarGap = 10;
       const maxHeight = isNarrow
-        ? Math.max(240, Math.floor(window.innerHeight * 0.75))
-        : Math.max(240, Math.floor(window.innerHeight - card.getBoundingClientRect().top - bottomPadding));
+        ? Math.max(240, Math.floor(window.innerHeight * 0.75) - bottomToolbarHeight - bottomToolbarGap)
+        : Math.max(
+            240,
+            Math.floor(window.innerHeight - card.getBoundingClientRect().top - bottomPadding - bottomToolbarHeight - bottomToolbarGap)
+          );
       setCanvasCardMaxHeight(maxHeight);
-      const zoomRowHeight = zoomRowRef.current?.getBoundingClientRect().height ?? 0;
       const padding = 12;
-      const gap = 10;
-      const availableCanvasHeight = Math.max(120, maxHeight - zoomRowHeight - padding * 2 - gap);
+      const availableCanvasHeight = Math.max(120, maxHeight - padding * 2);
       setCanvasViewportHeight(availableCanvasHeight);
     };
     updateHeights();
@@ -3820,11 +3892,11 @@ function CanvasWithExportRef(props: any) {
   function fitToHeight() {
     if (!canvasCardRef.current) return;
     const rect = canvasCardRef.current.getBoundingClientRect();
-    const rowHeight = zoomRowRef.current?.getBoundingClientRect().height ?? 0;
+    const bottomToolbarHeight = bottomToolbarRef.current?.getBoundingClientRect().height ?? 0;
     const padding = 12;
     const gap = 10;
     const bottomPadding = 24;
-    const available = window.innerHeight - rect.top - bottomPadding - rowHeight - gap - padding * 2;
+    const available = window.innerHeight - rect.top - bottomPadding - bottomToolbarHeight - gap - padding * 2;
     if (!Number.isFinite(available) || available <= 0) return;
     const baseCellSize = cellSize / (zoom || 1);
     if (!Number.isFinite(baseCellSize) || baseCellSize <= 0) return;
@@ -3849,10 +3921,11 @@ function CanvasWithExportRef(props: any) {
   }, [onControlsHeightChange]);
 
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      <div ref={controlsRef} style={{ display: "grid", gap: 10 }}>
+    <div ref={canvasAreaRef} style={{ display: "grid", gap: 10, position: "relative" }}>
+      <div ref={controlsRef} style={{ display: "grid", gap: 10, position: "relative" }}>
         <div
           className="canvas-toolbar"
+          ref={topToolbarRef}
           style={{
             background: "var(--card-bg)",
             border: "none",
@@ -3870,141 +3943,185 @@ function CanvasWithExportRef(props: any) {
               onClick={onTogglePanMode}
               aria-pressed={panMode}
               aria-label="Pan"
-              data-tooltip="Pan"
               data-active={panMode ? "true" : undefined}
               style={{
-                padding: "6px 8px",
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
               }}
             >
-            <img
-              src={assetPath("/pan.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
-            </button>
-          {(["paint", "eraser", "fill", "eyedropper", "lasso"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => onToolChange(t)}
-              aria-label={
-                t === "paint"
-                  ? "Brush"
-                  : t === "eraser"
-                    ? "Eraser"
-                    : t === "fill"
-                      ? "Fill"
-                    : t === "eyedropper"
-                      ? "Eyedropper"
-                      : "Lasso"
-              }
-              data-tooltip={
-                t === "paint"
-                  ? "Brush"
-                  : t === "eraser"
-                    ? "Eraser"
-                    : t === "fill"
-                      ? "Fill"
-                      : t === "eyedropper"
-                        ? "Eyedropper"
-                        : "Lasso"
-              }
-              data-active={tool === t && !panMode ? "true" : undefined}
-              style={{
-                padding: "6px 8px",
-                borderRadius: 10,
-                  cursor: "pointer",
-                }}
-            >
+              <span className="toolbar-icon">
                 <img
-                  src={
-                    t === "paint"
-                      ? assetPath("/brush.svg")
-                      : t === "eraser"
-                        ? assetPath("/eraser.svg")
-                        : t === "fill"
-                          ? assetPath("/paint_bucket.svg")
-                        : t === "eyedropper"
-                          ? assetPath("/dropper.svg")
-                          : assetPath("/lasso.svg")
-                  }
+                  src={assetPath("/pan.svg")}
                   alt=""
                   aria-hidden="true"
                   width={18}
-                height={18}
-                style={{
-                  display: "block",
-                  filter: "var(--icon-on-bg-filter)",
-                }}
-              />
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Pan</span>
             </button>
-          ))}
+          {(["paint", "eyedropper"] as const).map((t) => {
+            const brushDisplayTool = isBrushFamily ? tool : "paint";
+            const brushIcon =
+              brushDisplayTool === "eraser"
+                ? "/eraser.svg"
+                : brushDisplayTool === "fill"
+                  ? "/paint_bucket.svg"
+                  : brushDisplayTool === "lasso"
+                    ? "/lasso.svg"
+                    : "/brush.svg";
+            const brushLabel =
+              brushDisplayTool === "eraser"
+                ? "Eraser"
+                : brushDisplayTool === "fill"
+                  ? "Fill"
+                  : brushDisplayTool === "lasso"
+                    ? "Lasso"
+                    : "Brush";
+
+            return (
+              <button
+                key={t}
+                ref={t === "paint" ? brushButtonRef : undefined}
+                onClick={() => {
+                  if (t === "paint") {
+                    setBrushSubtoolsOpen((open) => {
+                      const next = !open;
+                      if (next) {
+                        updateBrushSubtoolPosition();
+                      }
+                      return next;
+                    });
+                    onToolChange("paint");
+                  } else {
+                    if (brushSubtoolsOpen) {
+                      setBrushSubtoolsOpen(false);
+                    }
+                    onToolChange(t);
+                  }
+                }}
+                aria-label={t === "paint" ? brushLabel : "Eyedropper"}
+                data-active={
+                  t === "paint"
+                    ? brushSubtoolsOpen
+                      ? "true"
+                      : !panMode && tool === "paint"
+                        ? "true"
+                        : undefined
+                    : tool === t && !panMode
+                      ? "true"
+                      : undefined
+                }
+                style={{
+                  padding: 0,
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  display: "grid",
+                  justifyItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span className="toolbar-icon">
+                  <img
+                    src={t === "paint" ? assetPath(brushIcon) : assetPath("/dropper.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={18}
+                    height={18}
+                    style={{
+                      display: "block",
+                      filter: "var(--icon-on-bg-filter)",
+                    }}
+                  />
+                </span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                  {t === "paint" ? brushLabel : "Eyedropper"}
+                </span>
+              </button>
+            );
+          })}
             <span style={{ opacity: 0.45, margin: "0 6px" }}>|</span>
             <button
               onClick={onUndo}
               disabled={!canUndo}
               aria-label="Undo"
-              data-tooltip="Undo"
               style={{
-                padding: "6px 8px",
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
                 opacity: canUndo ? 1 : 0.5,
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
               }}
             >
-            <img
-              src={assetPath("/undo.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/undo.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Undo</span>
             </button>
             <button
               onClick={onRedo}
               disabled={!canRedo}
               aria-label="Redo"
-              data-tooltip="Redo"
               style={{
-                padding: "6px 8px",
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
                 opacity: canRedo ? 1 : 0.5,
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
               }}
             >
-            <img
-              src={assetPath("/redo.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/redo.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Redo</span>
             </button>
             <button
               onClick={onClear}
               aria-label="Clear"
-              data-tooltip="Clear"
               ref={clearButtonRef}
               style={{
-                padding: "6px 8px",
+                padding: 0,
                 borderRadius: 10,
                 cursor: "pointer",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
               }}
             >
-            <img
-              src={assetPath("/trash.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath("/trash.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Clear</span>
             </button>
           </div>
           <div style={{ flex: "1 1 auto" }} />
@@ -4040,6 +4157,57 @@ function CanvasWithExportRef(props: any) {
           </div>
         </div>
       </div>
+      {showBrushSubtools && (
+        <div
+          className="brush-subtoolbar"
+          ref={brushSubtoolbarRef}
+          style={{
+            position: "absolute",
+            left: brushSubtoolPosition?.left ?? 12,
+            top: brushSubtoolPosition?.top ?? 12,
+            visibility: brushSubtoolPosition ? "visible" : "hidden",
+            background: "var(--card-bg)",
+            border: "1px solid var(--panel-border)",
+            borderRadius: 10,
+            padding: "6px 8px",
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.2)",
+            zIndex: 6,
+          }}
+        >
+          {brushSubtools.map((subtool) => (
+            <button
+              key={subtool.id}
+              onClick={() => onToolChange(subtool.id)}
+              aria-label={subtool.label}
+              data-active={tool === subtool.id ? "true" : undefined}
+              style={{
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                padding: 0,
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "transparent",
+              }}
+            >
+              <span className="toolbar-icon">
+                <img
+                  src={assetPath(subtool.icon)}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>{subtool.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div
         ref={canvasCardRef}
@@ -4053,179 +4221,9 @@ function CanvasWithExportRef(props: any) {
           gap: 10,
           maxHeight: canvasCardMaxHeight ?? undefined,
           overflow: "visible",
+          position: "relative",
         }}
       >
-        <div
-          ref={zoomRowRef}
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}
-        >
-          <div style={{ display: "grid", justifyItems: "center", gap: 4 }}>
-            <span
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 8,
-                border: "1px solid rgba(0,0,0,0.2)",
-                background: activeColor?.hex ?? "transparent",
-                display: "inline-block",
-              }}
-            />
-            <span style={{ fontSize: 12, opacity: 0.7, fontWeight: 600 }}>
-              {activeColor?.code ? `#${activeColor.code}` : ""}
-            </span>
-          </div>
-          <div
-            className="zoom-row"
-            style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}
-          >
-            <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={() => {
-                  if (!lastEditCell) return;
-                  focusOnCell(lastEditCell);
-                }}
-                disabled={!lastEditCell}
-                aria-label="Jump to last edit"
-                data-tooltip="Jump to last edit"
-                title="Jump to last edit"
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "var(--muted-bg)",
-                  color: "var(--foreground)",
-                  cursor: lastEditCell ? "pointer" : "not-allowed",
-                  opacity: lastEditCell ? 1 : 0.5,
-                  fontSize: 12,
-                }}
-              >
-                <img
-                  src={assetPath("/jump_to_element.svg")}
-                  alt=""
-                  aria-hidden="true"
-                  width={16}
-                  height={16}
-                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                />
-              </button>
-              <button
-                onClick={() => {
-                  onZoomChange(1);
-                  setCenterCanvasTick((tick) => tick + 1);
-                }}
-                aria-label="Fit width"
-                data-tooltip="Fit width"
-                title="Fit width"
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "var(--muted-bg)",
-                  color: "var(--foreground)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                <img
-                  src={assetPath("/fit_width.svg")}
-                  alt=""
-                  aria-hidden="true"
-                  width={16}
-                  height={16}
-                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                />
-              </button>
-              <button
-                onClick={() => {
-                  fitToHeight();
-                }}
-                aria-label="Fit height"
-                data-tooltip="Fit height"
-                title="Fit height"
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "var(--muted-bg)",
-                  color: "var(--foreground)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                <img
-                  src={assetPath("/fit_height.svg")}
-                  alt=""
-                  aria-hidden="true"
-                  width={16}
-                  height={16}
-                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                />
-              </button>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={zoomInput}
-                onChange={(e) => {
-                  const next = e.target.value.replace(/[^\d]/g, "");
-                  setZoomInput(next);
-                }}
-                onBlur={(e) => commitZoomInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    commitZoomInput((e.target as HTMLInputElement).value);
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                style={{
-                  width: 60,
-                  height: 28,
-                  padding: "0 6px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 12,
-                  lineHeight: "26px",
-                }}
-              />
-              <span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
-            </div>
-            <div style={{ display: "flex", gap: 4, alignItems: "center", width: "100%" }}>
-              <button
-                onClick={() => onZoomChange(Math.max(minZoom, Number((zoom - zoomStep).toFixed(2))))}
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--foreground)",
-                  cursor: "pointer",
-                }}
-              >
-                -
-              </button>
-              <input
-                type="range"
-                min={Math.round(minZoom * 100)}
-                max={Math.round(maxZoom * 100)}
-                value={Math.round(zoom * 100)}
-                onChange={(e) => onZoomChange(parseInt(e.target.value, 10) / 100)}
-                style={{ flex: 1 }}
-              />
-              <button
-                onClick={() => onZoomChange(Math.min(maxZoom, Number((zoom + zoomStep).toFixed(2))))}
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--foreground)",
-                  cursor: "pointer",
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
         <GridCanvas
           width={width}
           height={height}
@@ -4278,6 +4276,189 @@ function CanvasWithExportRef(props: any) {
           onFilterRectChange={onFilterRectChange}
           onFilterSelectEnd={onFilterSelectEnd}
         />
+      </div>
+      <div
+        className="canvas-toolbar"
+        ref={bottomToolbarRef}
+        style={{
+          background: "var(--card-bg)",
+          border: "none",
+          borderRadius: 12,
+          padding: "var(--canvas-toolbar-padding, 12px)",
+          boxShadow: "none",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap",
+          minHeight: 40,
+        }}
+      >
+        <div style={{ display: "grid", justifyItems: "center", gap: 4 }}>
+          <span
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.2)",
+              background: activeColor?.hex ?? "transparent",
+              display: "inline-block",
+            }}
+          />
+          <span style={{ fontSize: 12, opacity: 0.7, fontWeight: 600 }}>
+            {activeColor?.code ? `#${activeColor.code}` : ""}
+          </span>
+        </div>
+        <div style={{ flex: "1 1 auto" }} />
+        <div className="zoom-row" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button
+              onClick={() => {
+                if (!lastEditCell) return;
+                focusOnCell(lastEditCell);
+              }}
+              disabled={!lastEditCell}
+              aria-label="Jump to last edit"
+              data-tooltip="Jump to last edit"
+              title="Jump to last edit"
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                cursor: lastEditCell ? "pointer" : "not-allowed",
+                opacity: lastEditCell ? 1 : 0.5,
+                fontSize: 12,
+              }}
+            >
+              <img
+                src={assetPath("/jump_to_element.svg")}
+                alt=""
+                aria-hidden="true"
+                width={16}
+                height={16}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </button>
+            <button
+              onClick={() => {
+                onZoomChange(1);
+                setCenterCanvasTick((tick) => tick + 1);
+              }}
+              aria-label="Fit width"
+              data-tooltip="Fit width"
+              title="Fit width"
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              <img
+                src={assetPath("/fit_width.svg")}
+                alt=""
+                aria-hidden="true"
+                width={16}
+                height={16}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </button>
+            <button
+              onClick={() => {
+                fitToHeight();
+              }}
+              aria-label="Fit height"
+              data-tooltip="Fit height"
+              title="Fit height"
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              <img
+                src={assetPath("/fit_height.svg")}
+                alt=""
+                aria-hidden="true"
+                width={16}
+                height={16}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center", minWidth: 180 }}>
+            <button
+              onClick={() => onZoomChange(Math.max(minZoom, Number((zoom - zoomStep).toFixed(2))))}
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: "var(--foreground)",
+                cursor: "pointer",
+              }}
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min={Math.round(minZoom * 100)}
+              max={Math.round(maxZoom * 100)}
+              value={Math.round(zoom * 100)}
+              onChange={(e) => onZoomChange(parseInt(e.target.value, 10) / 100)}
+              style={{ flex: 1 }}
+            />
+            <button
+              onClick={() => onZoomChange(Math.min(maxZoom, Number((zoom + zoomStep).toFixed(2))))}
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: "var(--foreground)",
+                cursor: "pointer",
+              }}
+            >
+              +
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={zoomInput}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^\d]/g, "");
+                setZoomInput(next);
+              }}
+              onBlur={(e) => commitZoomInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  commitZoomInput((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              style={{
+                width: 60,
+                height: 28,
+                padding: "0 6px",
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.2)",
+                fontSize: 12,
+                lineHeight: "26px",
+              }}
+            />
+            <span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
+          </div>
+        </div>
       </div>
 
       {/* Hidden high-res canvas for export */}

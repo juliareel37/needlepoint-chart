@@ -257,16 +257,28 @@ button:disabled {
 }
 .canvas-toolbar button,
 .used-colors-toolbar button,
+.brush-subtoolbar button,
 .zoom-row button {
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--foreground);
   box-shadow: none;
   outline: none;
   position: relative;
 }
+.canvas-toolbar button .toolbar-icon,
+.used-colors-toolbar button .toolbar-icon,
+.brush-subtoolbar button .toolbar-icon {
+  display: grid;
+  place-items: center;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+}
 .canvas-toolbar button[data-tooltip]::after,
 .used-colors-toolbar button[data-tooltip]::after,
+.brush-subtoolbar button[data-tooltip]::after,
 .zoom-row button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -291,30 +303,53 @@ button:disabled {
 .canvas-toolbar button[data-tooltip]:focus-visible::after,
 .used-colors-toolbar button[data-tooltip]:hover::after,
 .used-colors-toolbar button[data-tooltip]:focus-visible::after,
+.brush-subtoolbar button[data-tooltip]:hover::after,
+.brush-subtoolbar button[data-tooltip]:focus-visible::after,
 .zoom-row button[data-tooltip]:hover::after,
 .zoom-row button[data-tooltip]:focus-visible::after {
   opacity: 1;
   visibility: visible;
 }
 .canvas-toolbar button:hover:not(:disabled):not([data-active="true"]),
-.used-colors-toolbar button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--accent-wash);
-  border-color: var(--accent-soft);
+.used-colors-toolbar button:hover:not(:disabled):not([data-active="true"]),
+.brush-subtoolbar button:hover:not(:disabled):not([data-active="true"]) {
+  background: transparent;
+  border-color: transparent;
   filter: none;
 }
-.canvas-toolbar button[data-active="true"],
-.used-colors-toolbar button[data-active="true"] {
+.canvas-toolbar button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon,
+.used-colors-toolbar button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon,
+.brush-subtoolbar button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon {
   background: var(--accent-wash);
-  border-color: var(--accent-strong);
+  border-color: var(--accent-soft);
+}
+.canvas-toolbar button[data-active="true"],
+.used-colors-toolbar button[data-active="true"],
+.brush-subtoolbar button[data-active="true"] {
+  background: transparent;
+  border-color: transparent;
   color: var(--accent-strong);
   filter: none;
 }
-.canvas-toolbar button[data-active="true"]:hover:not(:disabled),
-.used-colors-toolbar button[data-active="true"]:hover:not(:disabled) {
+.canvas-toolbar button[data-active="true"] .toolbar-icon,
+.used-colors-toolbar button[data-active="true"] .toolbar-icon,
+.brush-subtoolbar button[data-active="true"] .toolbar-icon {
   background: var(--accent-wash);
+  border-color: var(--accent-strong);
+}
+.canvas-toolbar button[data-active="true"]:hover:not(:disabled),
+.used-colors-toolbar button[data-active="true"]:hover:not(:disabled),
+.brush-subtoolbar button[data-active="true"]:hover:not(:disabled) {
+  background: transparent;
 }
 .canvas-toolbar button:focus-visible,
-.used-colors-toolbar button:focus-visible {
+.used-colors-toolbar button:focus-visible,
+.brush-subtoolbar button:focus-visible {
+  outline: none;
+}
+.canvas-toolbar button:focus-visible .toolbar-icon,
+.used-colors-toolbar button:focus-visible .toolbar-icon,
+.brush-subtoolbar button:focus-visible .toolbar-icon {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
