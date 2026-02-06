@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import GridCanvas from "./GridCanvas";
 import Palette from "./Palette";
 import ExportPdfButton from "./ExportPdfButton";
@@ -3728,14 +3728,8 @@ function CanvasWithExportRef(props: any) {
     zoom < 1 ? 0.1 : zoom < 2 ? 0.2 : zoom < 4 ? 0.35 : 0.5;
   const activeColor = paletteById.get(activeColorId);
   const hasFilterRect = Boolean(filterRect);
-  const canvasAreaRef = useRef<HTMLDivElement | null>(null);
-  const topToolbarRef = useRef<HTMLDivElement | null>(null);
   const canvasCardRef = useRef<HTMLDivElement | null>(null);
   const bottomToolbarRef = useRef<HTMLDivElement | null>(null);
-  const brushButtonRef = useRef<HTMLButtonElement | null>(null);
-  const brushSubtoolbarRef = useRef<HTMLDivElement | null>(null);
-  const [brushSubtoolPosition, setBrushSubtoolPosition] = useState<{ left: number; top: number } | null>(null);
-  const [brushSubtoolsOpen, setBrushSubtoolsOpen] = useState(false);
   const [canvasCardMaxHeight, setCanvasCardMaxHeight] = useState<number | null>(null);
   const [canvasViewportHeight, setCanvasViewportHeight] = useState<number | null>(null);
   const [centerCanvasTick, setCenterCanvasTick] = useState(0);
@@ -3746,61 +3740,6 @@ function CanvasWithExportRef(props: any) {
   useEffect(() => {
     setZoomInput(String(zoomPercent));
   }, [zoomPercent]);
-
-  const brushFamily = ["paint", "eraser", "fill", "lasso"] as const;
-  const isBrushFamily = brushFamily.includes(tool);
-  const showBrushSubtools = brushSubtoolsOpen && isBrushFamily;
-  const brushSubtools = [
-    { id: "paint", label: "Brush", icon: "/brush.svg" },
-    { id: "eraser", label: "Eraser", icon: "/eraser.svg" },
-    { id: "fill", label: "Fill", icon: "/paint_bucket.svg" },
-    { id: "lasso", label: "Lasso", icon: "/lasso.svg" },
-  ] as const;
-
-  useEffect(() => {
-    if (!isBrushFamily && brushSubtoolsOpen) {
-      setBrushSubtoolsOpen(false);
-    }
-  }, [isBrushFamily, brushSubtoolsOpen]);
-
-  const updateBrushSubtoolPosition = () => {
-    const brushNode = brushButtonRef.current;
-    const toolbarNode = topToolbarRef.current;
-    const areaNode = canvasAreaRef.current;
-    if (!brushNode || !toolbarNode || !areaNode) return;
-    const subtoolbarWidth = brushSubtoolbarRef.current?.getBoundingClientRect().width ?? 180;
-    const brushRect = brushNode.getBoundingClientRect();
-    const toolbarRect = toolbarNode.getBoundingClientRect();
-    const areaRect = areaNode.getBoundingClientRect();
-    const brushCenter = brushRect.left + brushRect.width / 2;
-    const desiredLeft = brushCenter - areaRect.left - subtoolbarWidth / 2;
-    const minLeft = 8;
-    const maxLeft = Math.max(minLeft, areaRect.width - subtoolbarWidth - 8);
-    const left = Math.min(Math.max(desiredLeft, minLeft), maxLeft);
-    const desiredTop = toolbarRect.bottom - areaRect.top + 6;
-    const top = Math.max(2, desiredTop);
-    setBrushSubtoolPosition({ left: Math.round(left), top: Math.round(top) });
-  };
-
-  useLayoutEffect(() => {
-    if (!showBrushSubtools) {
-      setBrushSubtoolPosition(null);
-      return;
-    }
-    updateBrushSubtoolPosition();
-  }, [showBrushSubtools, containerWidth, containerHeight]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!showBrushSubtools) return;
-    const update = () => updateBrushSubtoolPosition();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [showBrushSubtools, containerWidth, containerHeight]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -3921,11 +3860,10 @@ function CanvasWithExportRef(props: any) {
   }, [onControlsHeightChange]);
 
   return (
-    <div ref={canvasAreaRef} style={{ display: "grid", gap: 10, position: "relative" }}>
-      <div ref={controlsRef} style={{ display: "grid", gap: 10, position: "relative" }}>
+    <div style={{ display: "grid", gap: 10 }}>
+      <div ref={controlsRef} style={{ display: "grid", gap: 10 }}>
         <div
           className="canvas-toolbar"
-          ref={topToolbarRef}
           style={{
             background: "var(--card-bg)",
             border: "none",
@@ -3965,86 +3903,67 @@ function CanvasWithExportRef(props: any) {
               </span>
               <span style={{ fontSize: 10, opacity: 0.7 }}>Pan</span>
             </button>
-          {(["paint", "eyedropper"] as const).map((t) => {
-            const brushDisplayTool = isBrushFamily ? tool : "paint";
-            const brushIcon =
-              brushDisplayTool === "eraser"
-                ? "/eraser.svg"
-                : brushDisplayTool === "fill"
-                  ? "/paint_bucket.svg"
-                  : brushDisplayTool === "lasso"
-                    ? "/lasso.svg"
-                    : "/brush.svg";
-            const brushLabel =
-              brushDisplayTool === "eraser"
-                ? "Eraser"
-                : brushDisplayTool === "fill"
-                  ? "Fill"
-                  : brushDisplayTool === "lasso"
-                    ? "Lasso"
-                    : "Brush";
-
-            return (
-              <button
-                key={t}
-                ref={t === "paint" ? brushButtonRef : undefined}
-                onClick={() => {
-                  if (t === "paint") {
-                    setBrushSubtoolsOpen((open) => {
-                      const next = !open;
-                      if (next) {
-                        updateBrushSubtoolPosition();
-                      }
-                      return next;
-                    });
-                    onToolChange("paint");
-                  } else {
-                    if (brushSubtoolsOpen) {
-                      setBrushSubtoolsOpen(false);
-                    }
-                    onToolChange(t);
+          {(["paint", "eraser", "fill", "eyedropper", "lasso"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => onToolChange(t)}
+              aria-label={
+                t === "paint"
+                  ? "Brush"
+                  : t === "eraser"
+                    ? "Eraser"
+                    : t === "fill"
+                      ? "Fill"
+                      : t === "eyedropper"
+                        ? "Eyedropper"
+                        : "Lasso"
+              }
+              data-active={tool === t && !panMode ? "true" : undefined}
+              style={{
+                padding: 0,
+                borderRadius: 10,
+                cursor: "pointer",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+              }}
+            >
+              <span className="toolbar-icon">
+                <img
+                  src={
+                    t === "paint"
+                      ? assetPath("/brush.svg")
+                      : t === "eraser"
+                        ? assetPath("/eraser.svg")
+                        : t === "fill"
+                          ? assetPath("/paint_bucket.svg")
+                          : t === "eyedropper"
+                            ? assetPath("/dropper.svg")
+                            : assetPath("/lasso.svg")
                   }
-                }}
-                aria-label={t === "paint" ? brushLabel : "Eyedropper"}
-                data-active={
-                  t === "paint"
-                    ? brushSubtoolsOpen
-                      ? "true"
-                      : !panMode && tool === "paint"
-                        ? "true"
-                        : undefined
-                    : tool === t && !panMode
-                      ? "true"
-                      : undefined
-                }
-                style={{
-                  padding: 0,
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  display: "grid",
-                  justifyItems: "center",
-                  gap: 4,
-                }}
-              >
-                <span className="toolbar-icon">
-                  <img
-                    src={t === "paint" ? assetPath(brushIcon) : assetPath("/dropper.svg")}
-                    alt=""
-                    aria-hidden="true"
-                    width={18}
-                    height={18}
-                    style={{
-                      display: "block",
-                      filter: "var(--icon-on-bg-filter)",
-                    }}
-                  />
-                </span>
-                <span style={{ fontSize: 10, opacity: 0.7 }}>
-                  {t === "paint" ? brushLabel : "Eyedropper"}
-                </span>
-              </button>
-            );
-          })}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{
+                    display: "block",
+                    filter: "var(--icon-on-bg-filter)",
+                  }}
+                />
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>
+                {t === "paint"
+                  ? "Brush"
+                  : t === "eraser"
+                    ? "Eraser"
+                    : t === "fill"
+                      ? "Fill"
+                      : t === "eyedropper"
+                        ? "Eyedropper"
+                        : "Lasso"}
+              </span>
+            </button>
+          ))}
             <span style={{ opacity: 0.45, margin: "0 6px" }}>|</span>
             <button
               onClick={onUndo}
@@ -4157,58 +4076,6 @@ function CanvasWithExportRef(props: any) {
           </div>
         </div>
       </div>
-      {showBrushSubtools && (
-        <div
-          className="brush-subtoolbar"
-          ref={brushSubtoolbarRef}
-          style={{
-            position: "absolute",
-            left: brushSubtoolPosition?.left ?? 12,
-            top: brushSubtoolPosition?.top ?? 12,
-            visibility: brushSubtoolPosition ? "visible" : "hidden",
-            background: "var(--card-bg)",
-            border: "1px solid var(--panel-border)",
-            borderRadius: 10,
-            padding: "6px 8px",
-            display: "flex",
-            gap: 6,
-            alignItems: "center",
-            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.2)",
-            zIndex: 6,
-          }}
-        >
-          {brushSubtools.map((subtool) => (
-            <button
-              key={subtool.id}
-              onClick={() => onToolChange(subtool.id)}
-              aria-label={subtool.label}
-              data-active={tool === subtool.id ? "true" : undefined}
-              style={{
-                display: "grid",
-                justifyItems: "center",
-                gap: 4,
-                padding: 0,
-                borderRadius: 8,
-                cursor: "pointer",
-                background: "transparent",
-              }}
-            >
-              <span className="toolbar-icon">
-                <img
-                  src={assetPath(subtool.icon)}
-                  alt=""
-                  aria-hidden="true"
-                  width={18}
-                  height={18}
-                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                />
-              </span>
-              <span style={{ fontSize: 10, opacity: 0.7 }}>{subtool.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div
         ref={canvasCardRef}
         style={{
