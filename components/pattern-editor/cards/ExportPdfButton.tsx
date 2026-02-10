@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import type { Color } from "../lib/grid";
-import { exportPatternPdf } from "../lib/pdf";
+import type { Color } from "../../../lib/grid";
+import { exportPatternPdf } from "../../../lib/pdf";
 
 type Props = {
   title: string;

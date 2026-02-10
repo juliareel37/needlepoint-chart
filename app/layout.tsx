@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
-import HeaderAuth from "../components/HeaderAuth";
+import HeaderAuth from "../components/auth/HeaderAuth";
 
 const uiSans = Manrope({
   variable: "--font-ui",

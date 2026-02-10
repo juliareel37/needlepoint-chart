@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { Color } from "../lib/grid";
+import type { Color } from "../../../lib/grid";
 
 type Props = {
   palette: Color[];
