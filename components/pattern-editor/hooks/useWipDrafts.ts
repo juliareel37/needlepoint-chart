@@ -77,6 +77,7 @@ type WipStatus = { message: string; tone: "info" | "success" | "error" } | null;
 
 type UseWipDraftsReturn = {
   wipStatus: WipStatus;
+  lastAutosaveAt: Date | null;
   currentDraftId: string | null;
   draftPickerOpen: boolean;
   draftPickerLoading: boolean;
@@ -152,6 +153,7 @@ export function useWipDrafts({
   setConfirmDialog,
 }: UseWipDraftsArgs): UseWipDraftsReturn {
   const [wipStatus, setWipStatus] = useState<WipStatus>(null);
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
   const [draftPickerLoading, setDraftPickerLoading] = useState(false);
@@ -246,6 +248,7 @@ export function useWipDrafts({
     const interval = window.setInterval(() => {
       if (!isDirtyRef.current) return;
       if (autosaveInFlightRef.current) return;
+      if (!hasPaintedCells()) return;
       autosaveInFlightRef.current = true;
       void saveDraftRef.current({ silent: true }).finally(() => {
         autosaveInFlightRef.current = false;
@@ -253,6 +256,41 @@ export function useWipDrafts({
     }, 10000);
     return () => window.clearInterval(interval);
   }, [isSignedIn, versionPreview]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    if (versionPreview) return;
+    const handleFinalSave = () => {
+      if (!currentDraftId) return;
+      if (!isDirtyRef.current) return;
+      if (!hasPaintedCells()) return;
+      try {
+        const draft = buildDraftSnapshot();
+        void fetch(`/api/wip/${currentDraftId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, draft }),
+          keepalive: true,
+        });
+      } catch {
+        // Best-effort only.
+      }
+    };
+
+    window.addEventListener("beforeunload", handleFinalSave);
+    window.addEventListener("pagehide", handleFinalSave);
+    return () => {
+      window.removeEventListener("beforeunload", handleFinalSave);
+      window.removeEventListener("pagehide", handleFinalSave);
+    };
+  }, [isSignedIn, versionPreview, currentDraftId, title]);
+
+  function hasPaintedCells() {
+    for (let i = 0; i < grid.length; i++) {
+      if (grid[i] !== 0) return true;
+    }
+    return false;
+  }
 
   function setWipMessage(message: string, tone: "info" | "success" | "error" = "info") {
     if (wipStatusTimeoutRef.current) {
@@ -339,6 +377,9 @@ export function useWipDrafts({
 
   async function saveDraft(options: { silent?: boolean } = {}): Promise<boolean> {
     const silent = Boolean(options.silent);
+    if (silent && !hasPaintedCells()) {
+      return false;
+    }
     if (saveInFlightRef.current) {
       if (!silent) {
         setWipMessage("Save already in progress.", "info");
@@ -395,6 +436,9 @@ export function useWipDrafts({
       }
       if (editVersionRef.current === saveVersion) {
         setIsDirty(false);
+      }
+      if (silent) {
+        setLastAutosaveAt(new Date());
       }
       return true;
     } catch {
@@ -801,6 +845,7 @@ export function useWipDrafts({
 
   return {
     wipStatus,
+    lastAutosaveAt,
     currentDraftId,
     draftPickerOpen,
     draftPickerLoading,

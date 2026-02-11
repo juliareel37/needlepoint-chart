@@ -312,6 +312,7 @@ export default function PatternEditor() {
 
   const {
     wipStatus,
+    lastAutosaveAt,
     currentDraftId,
     draftPickerOpen,
     draftPickerLoading,
@@ -624,7 +625,7 @@ export default function PatternEditor() {
             onOpenVersionHistory={openVersionHistory}
             draftInputRef={draftInputRef}
             onDraftFileSelected={loadDraftFile}
-            wipStatus={wipStatus}
+            lastAutosaveAt={lastAutosaveAt}
             exportCanvasRef={exportCanvasRef}
             usedColors={usedColors}
             grid={grid}
@@ -815,6 +816,7 @@ export default function PatternEditor() {
               threadView={threadView}
               onTogglePanMode={() => setPanMode((value) => !value)}
               traceImage={traceImage}
+              traceImageUrl={traceImageUrl}
               traceOpacity={traceOpacity}
               traceScale={traceScale}
               traceOffsetX={traceOffsetX}
@@ -858,6 +860,9 @@ export default function PatternEditor() {
               setShowGridlines={setShowGridlines}
               threadView={threadView}
               setThreadView={setThreadView}
+              traceImage={traceImage}
+              traceOpacity={traceOpacity}
+              setTraceOpacity={setTraceOpacity}
             />
           </div>
         </div>
@@ -895,6 +900,34 @@ export default function PatternEditor() {
           confirmActionRef.current?.();
         }}
       />
+      {wipStatus && (
+        <div
+          style={{
+            position: "fixed",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 80,
+            padding: "8px 14px",
+            borderRadius: 999,
+            background: "var(--card-bg)",
+            border: "1px solid rgba(15,23,42,0.12)",
+            boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
+            color:
+              wipStatus.tone === "error"
+                ? "#b91c1c"
+                : wipStatus.tone === "success"
+                  ? "var(--accent-strong)"
+                  : "var(--foreground)",
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          {wipStatus.message}
+        </div>
+      )}
     </div>
   );
 }

@@ -193,6 +193,17 @@ export function useGridRenderer({
       }
       ctx.restore();
     }
+    if (!showGridlines) {
+      ctx.save();
+      ctx.translate(drawTranslateX, drawTranslateY);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = darkCanvas ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 1;
+      const w = Math.max(0, canvasW - 1);
+      const h = Math.max(0, canvasH - 1);
+      ctx.strokeRect(0.5, 0.5, w, h);
+      ctx.restore();
+    }
 
     if (identifyColorId != null) {
       ctx.save();

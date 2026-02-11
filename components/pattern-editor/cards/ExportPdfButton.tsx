@@ -3,6 +3,7 @@
 import React from "react";
 import type { Color } from "../../../lib/grid";
 import { exportPatternPdf } from "../../../lib/pdf";
+import { assetPath } from "../../../lib/assetPath";
 
 type Props = {
   title: string;
@@ -42,8 +43,20 @@ export default function ExportPdfButton({
         color: "#ffffff",
         cursor: "pointer",
         width: "100%",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        justifyContent: "center",
       }}
     >
+      <img
+        src={assetPath("/download.svg")}
+        alt=""
+        aria-hidden="true"
+        width={16}
+        height={16}
+        style={{ display: "block", filter: "var(--icon-on-fg-filter)" }}
+      />
       Export PDF
     </button>
   );

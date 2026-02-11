@@ -43,6 +43,7 @@ export function CanvasWithExportRef(props: any) {
     threadView,
     onTogglePanMode,
     traceImage,
+    traceImageUrl,
     traceOpacity,
     traceScale,
     traceOffsetX,
@@ -77,6 +78,7 @@ export function CanvasWithExportRef(props: any) {
     isNarrow,
     setShowGridlines,
     setThreadView,
+    setTraceOpacity,
   } = props;
 
   const exportCellSize = EXPORT_CELL_SIZE;
@@ -95,6 +97,8 @@ export function CanvasWithExportRef(props: any) {
   const [uiReady, setUiReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toolbarHeight, setToolbarHeight] = useState(0);
+  const [imageOpacityOpen, setImageOpacityOpen] = useState(false);
+  const hasTraceImage = Boolean(traceImage || traceImageUrl);
 
   const effectiveContainerHeight = canvasViewportHeight ?? containerHeight;
   const baseCellSize = zoom ? cellSize / zoom : cellSize;
@@ -164,18 +168,20 @@ export function CanvasWithExportRef(props: any) {
     if (!hasFitInputs) return;
     if (hasInitializedZoomRef.current) return;
     hasInitializedZoomRef.current = true;
+    if (hasTraceImage) return;
     onZoomChange(baseFitZoom);
     setCenterCanvasTick((tick) => tick + 1);
-  }, [hasFitInputs, baseFitZoom, onZoomChange]);
+  }, [hasFitInputs, baseFitZoom, onZoomChange, hasTraceImage]);
 
   useEffect(() => {
     if (!hasFitInputs) return;
     if (fitPending) return;
     if (userZoomedRef.current) return;
+    if (hasTraceImage) return;
     if (Math.abs(zoom - baseFitZoom) < 0.002) return;
     onZoomChange(baseFitZoom);
     setCenterCanvasTick((tick) => tick + 1);
-  }, [hasFitInputs, fitPending, zoom, baseFitZoom, onZoomChange]);
+  }, [hasFitInputs, fitPending, zoom, baseFitZoom, onZoomChange, hasTraceImage]);
 
   useEffect(() => {
     if (!hasFitInputs || fitPending) {
@@ -750,6 +756,65 @@ export function CanvasWithExportRef(props: any) {
               <Toggle label="Thread view" checked={threadView} onChange={setThreadView} />
               <Toggle label="Color symbols" checked={showSymbols} onChange={setShowSymbols} />
             </div>
+          </div>
+        )}
+        {uiReady && traceImage && (
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              right: 12,
+              zIndex: 4,
+              background: "rgba(255,255,255,0.92)",
+              borderRadius: 12,
+              padding: "6px 8px",
+              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              backdropFilter: "blur(6px)",
+              display: "grid",
+              gap: 6,
+              minWidth: 160,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setImageOpacityOpen((open) => !open)}
+              aria-expanded={imageOpacityOpen}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--foreground)",
+              }}
+            >
+              <img
+                src={assetPath("/file.svg")}
+                alt=""
+                aria-hidden="true"
+                width={14}
+                height={14}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span style={{ flex: "1 1 auto", textAlign: "left" }}>Image Opacity</span>
+              <span aria-hidden="true" style={{ fontSize: 12, opacity: 0.7 }}>
+                {imageOpacityOpen ? "▾" : "▸"}
+              </span>
+            </button>
+            {imageOpacityOpen && (
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round((traceOpacity ?? 0) * 100)}
+                onChange={(e) => setTraceOpacity(parseInt(e.target.value, 10) / 100)}
+                style={{ width: "100%" }}
+              />
+            )}
           </div>
         )}
         <div style={{ opacity: uiReady ? 1 : 0, pointerEvents: uiReady ? "auto" : "none" }}>

@@ -1,14 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SignInButton } from "@clerk/nextjs";
 import ExportPdfButton from "./ExportPdfButton";
 import type { Color } from "../../../lib/grid";
-
-type WipStatus = {
-  message: string;
-  tone: "info" | "success" | "error";
-} | null;
+import { assetPath } from "../../../lib/assetPath";
 
 type UsedColorEntry = { color: Color; count: number };
 
@@ -28,7 +24,7 @@ type WipCardProps = {
   onOpenVersionHistory: () => void;
   draftInputRef: React.RefObject<HTMLInputElement | null>;
   onDraftFileSelected: (file: File) => void;
-  wipStatus: WipStatus;
+  lastAutosaveAt: Date | null;
   exportCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   usedColors: UsedColorEntry[];
   grid: Uint16Array;
@@ -55,7 +51,7 @@ export function WipCard({
   onOpenVersionHistory,
   draftInputRef,
   onDraftFileSelected,
-  wipStatus,
+  lastAutosaveAt,
   exportCanvasRef,
   usedColors,
   grid,
@@ -65,6 +61,20 @@ export function WipCard({
   gridH,
   exportCellSize,
 }: WipCardProps) {
+  const [autosaveMenuOpen, setAutosaveMenuOpen] = useState(false);
+  const autosaveMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!autosaveMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!autosaveMenuRef.current) return;
+      if (autosaveMenuRef.current.contains(event.target as Node)) return;
+      setAutosaveMenuOpen(false);
+    };
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, [autosaveMenuOpen]);
+
   return (
     <div
       className="app-card"
@@ -121,57 +131,78 @@ export function WipCard({
                   cursor: "pointer",
                   fontSize: 14,
                   width: "100%",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  justifyContent: "center",
                 }}
               >
+                <img
+                  src={assetPath("/save.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={16}
+                  height={16}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
                 Sign in to save
               </button>
             </SignInButton>
           )}
-          <button
-            onClick={onStartNewWip}
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--panel-border)",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 14,
-              width: "100%",
-            }}
-          >
-            New WIP
-          </button>
-          <button
-            onClick={onLoadWip}
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--muted-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 14,
-              width: "100%",
-            }}
-          >
-            Load WIP
-          </button>
-          <button
-            onClick={onOpenVersionHistory}
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--panel-border)",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 14,
-              width: "100%",
-            }}
-          >
-            Version History
-          </button>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={onStartNewWip}
+              style={{
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                display: "grid",
+                gap: 4,
+                justifyItems: "center",
+                minWidth: 80,
+                transition: "transform 120ms ease, box-shadow 120ms ease",
+              }}
+            >
+              <img
+                src={assetPath("/draft_add.svg")}
+                alt=""
+                aria-hidden="true"
+                width={20}
+                height={20}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span style={{ fontSize: 11, opacity: 0.75 }}>New WIP</span>
+            </button>
+            <button
+              onClick={onLoadWip}
+              style={{
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                display: "grid",
+                gap: 4,
+                justifyItems: "center",
+                minWidth: 80,
+                transition: "transform 120ms ease, box-shadow 120ms ease",
+              }}
+            >
+              <img
+                src={assetPath("/unarchive.svg")}
+                alt=""
+                aria-hidden="true"
+                width={20}
+                height={20}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span style={{ fontSize: 11, opacity: 0.75 }}>Load WIP</span>
+            </button>
+          </div>
           <input
             ref={draftInputRef}
             type="file"
@@ -184,21 +215,92 @@ export function WipCard({
             }}
             style={{ display: "none" }}
           />
-          {wipStatus && (
+          {isSignedIn && (
             <div
-              aria-live="polite"
               style={{
-                fontSize: 12,
-                color:
-                  wipStatus.tone === "error"
-                    ? "#b91c1c"
-                    : wipStatus.tone === "success"
-                      ? "var(--accent-strong)"
-                      : "var(--foreground)",
-                opacity: 0.8,
+                fontSize: 11,
+                opacity: 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                justifyContent: "center",
+                position: "relative",
               }}
             >
-              {wipStatus.message}
+              <img
+                src={assetPath("/cloud_done.svg")}
+                alt=""
+                aria-hidden="true"
+                width={14}
+                height={14}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span>
+                Autosaved{" "}
+                {lastAutosaveAt
+                  ? `at ${lastAutosaveAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                  : "enabled"}
+              </span>
+              <div ref={autosaveMenuRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  aria-label="Version history"
+                  onClick={() => setAutosaveMenuOpen((open) => !open)}
+                  className="autosave-ellipsis"
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    border: "1px solid rgba(15,23,42,0.12)",
+                    background: "rgba(15,23,42,0.04)",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    lineHeight: 1,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 28,
+                    minHeight: 20,
+                  }}
+                >
+                  ⋯
+                </button>
+                {autosaveMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      bottom: "100%",
+                      marginBottom: 6,
+                      background: "#ffffff",
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      borderRadius: 10,
+                      padding: 8,
+                      boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                      zIndex: 5,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutosaveMenuOpen(false);
+                        onOpenVersionHistory();
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(15,23,42,0.12)",
+                        background: "#ffffff",
+                        color: "var(--foreground)",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Version History
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

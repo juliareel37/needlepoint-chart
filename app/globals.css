@@ -342,6 +342,10 @@ button:disabled {
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--accent-soft);
 }
+.autosave-ellipsis:hover {
+  background: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
 .loading-spinner {
   width: 22px;
   height: 22px;
