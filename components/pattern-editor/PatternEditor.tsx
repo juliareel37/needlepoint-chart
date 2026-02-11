@@ -672,7 +672,6 @@ export default function PatternEditor() {
             traceImage={traceImage}
             traceLocked={traceLocked}
             onTraceFileSelected={handleTraceFileSelected}
-            onFitToGrid={fitTraceToGrid}
             onClearTrace={clearTraceImage}
             onSetTraceLockedState={setTraceLockedState}
           />
@@ -774,7 +773,7 @@ export default function PatternEditor() {
             style={{
               minWidth: 0,
               flex: "1 1 0",
-              paddingBottom: isNarrow ? 0 : undefined,
+              paddingBottom: isNarrow ? 12 : undefined,
             }}
           >
             <CanvasWithExportRef
@@ -814,14 +813,17 @@ export default function PatternEditor() {
               onFillCells={onFillCells}
               onFillGrid={onFillGrid}
               threadView={threadView}
-              onTogglePanMode={() => setPanMode((value) => !value)}
+              onTogglePanMode={() => setPanMode(true)}
               traceImage={traceImage}
               traceImageUrl={traceImageUrl}
               traceOpacity={traceOpacity}
               traceScale={traceScale}
               traceOffsetX={traceOffsetX}
               traceOffsetY={traceOffsetY}
-              traceAdjustMode={!traceLocked}
+              traceAdjustMode={traceImage ? !traceLocked : false}
+              traceLocked={traceLocked}
+              onToggleTraceLock={toggleTraceLock}
+              onFitToGrid={fitTraceToGrid}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
                 setTraceOffsetX(x);
                 setTraceOffsetY(y);

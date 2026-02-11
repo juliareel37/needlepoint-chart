@@ -14,11 +14,12 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
       style={{
         display: "grid",
         gap: 4,
-        justifyItems: "start",
+        width: "100%",
+        justifyItems: "end",
         cursor: "pointer",
       }}
     >
-      <span style={{ fontSize: 12, opacity: 0.8 }}>{label}</span>
+      <span style={{ fontSize: 12, opacity: 0.8, textAlign: "right", width: "100%" }}>{label}</span>
       <input
         type="checkbox"
         checked={checked}
@@ -31,8 +32,9 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
           width: 36,
           height: 20,
           borderRadius: 999,
-          border: "1px solid var(--foreground)",
-          background: checked ? "var(--foreground)" : "transparent",
+          border: "1px solid rgba(15, 23, 42, 0.2)",
+          background: checked ? "#e2e8f0" : "#f8fafc",
+          justifySelf: "end",
           position: "relative",
           transition: "background 150ms ease",
         }}
@@ -45,7 +47,8 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
             width: 14,
             height: 14,
             borderRadius: "50%",
-            background: checked ? "var(--background)" : "var(--foreground)",
+            background: "#ffffff",
+            boxShadow: "0 1px 2px rgba(15, 23, 42, 0.2)",
             transition: "left 150ms ease, background 150ms ease",
           }}
         />

@@ -49,6 +49,9 @@ export function CanvasWithExportRef(props: any) {
     traceOffsetX,
     traceOffsetY,
     traceAdjustMode,
+    traceLocked,
+    onToggleTraceLock,
+    onFitToGrid,
     onTraceScaleChange,
     onTraceOffsetChange,
     panMode,
@@ -98,6 +101,10 @@ export function CanvasWithExportRef(props: any) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toolbarHeight, setToolbarHeight] = useState(0);
   const [imageOpacityOpen, setImageOpacityOpen] = useState(false);
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+  const [zoomCollapsed, setZoomCollapsed] = useState(false);
+  const [expandedToolbarHeight, setExpandedToolbarHeight] = useState<number | null>(null);
+  const [expandedZoomHeight, setExpandedZoomHeight] = useState<number | null>(null);
   const hasTraceImage = Boolean(traceImage || traceImageUrl);
 
   const effectiveContainerHeight = canvasViewportHeight ?? containerHeight;
@@ -288,13 +295,34 @@ export function CanvasWithExportRef(props: any) {
       const height = Math.round(node.getBoundingClientRect().height);
       onControlsHeightChange(height);
       setToolbarHeight(height);
+      if (!toolbarCollapsed) {
+        setExpandedToolbarHeight(height);
+      }
     };
     notify();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => notify());
     observer.observe(node);
     return () => observer.disconnect();
-  }, [onControlsHeightChange]);
+  }, [onControlsHeightChange, toolbarCollapsed]);
+
+  const zoomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!zoomRef.current) return;
+    const node = zoomRef.current;
+    const notify = () => {
+      const height = Math.round(node.getBoundingClientRect().height);
+      if (!zoomCollapsed) {
+        setExpandedZoomHeight(height);
+      }
+    };
+    notify();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => notify());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [zoomCollapsed]);
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -304,7 +332,8 @@ export function CanvasWithExportRef(props: any) {
           background: "var(--card-bg)",
           border: "none",
           borderRadius: 12,
-          padding: "var(--canvas-card-padding, 12px)",
+          padding:
+            "var(--canvas-card-padding-y, var(--canvas-card-padding, 12px)) var(--canvas-card-padding-x, var(--canvas-card-padding, 12px))",
           boxShadow: "0 6px 16px rgba(15, 23, 42, 0.12)",
           display: "grid",
           gap: 10,
@@ -317,6 +346,8 @@ export function CanvasWithExportRef(props: any) {
         <div
           ref={controlsRef}
           className="canvas-toolbar"
+          data-collapsed={toolbarCollapsed ? "true" : undefined}
+          data-trace-adjust={traceAdjustMode ? "true" : undefined}
           style={{
             opacity: uiReady ? 1 : 0,
             pointerEvents: uiReady ? "auto" : "none",
@@ -324,7 +355,7 @@ export function CanvasWithExportRef(props: any) {
             top: 16,
             left: 12,
             zIndex: 4,
-            background: "rgba(255,255,255,0.92)",
+            background: "var(--canvas-toolbar-bg, rgba(255,255,255,0.92))",
             border: "none",
             borderRadius: 12,
             padding: "4px 8px",
@@ -332,17 +363,67 @@ export function CanvasWithExportRef(props: any) {
             backdropFilter: "blur(6px)",
             display: "flex",
             gap: 4,
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            maxWidth: "calc(100% - 180px)",
+            alignItems: "var(--canvas-toolbar-align, flex-start)",
+            flexWrap: "var(--canvas-toolbar-wrap, wrap)",
+            maxWidth: "var(--canvas-toolbar-max-width, calc(100% - 180px))",
+            minHeight: toolbarCollapsed ? expandedToolbarHeight ?? undefined : undefined,
+            transition: "background 160ms ease, box-shadow 160ms ease, padding 160ms ease, border-radius 160ms ease",
           }}
         >
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <button
+            onClick={() => setToolbarCollapsed((value) => !value)}
+            aria-pressed={toolbarCollapsed}
+            aria-label={toolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+            className="toolbar-button toolbar-toggle"
+            style={{
+              padding: 0,
+              width: "auto",
+              height: "auto",
+              borderRadius: 10,
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <span className="toolbar-icon" aria-hidden="true">
+              <span
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1,
+                  opacity: 0.7,
+                  display: "grid",
+                  placeItems: "center",
+                  width: 14,
+                  height: 14,
+                }}
+              >
+                {toolbarCollapsed ? "▾" : "▸"}
+              </span>
+            </span>
+          </button>
+          <div
+            className="canvas-toolbar-content"
+            style={{
+              display: "flex",
+              gap: 4,
+              flexWrap: "var(--canvas-toolbar-wrap, wrap)",
+              alignItems: "flex-start",
+              transformOrigin: "left center",
+              transform: toolbarCollapsed ? "scaleX(0)" : "scaleX(1)",
+              opacity: toolbarCollapsed ? 0 : 1,
+              maxWidth: toolbarCollapsed ? 0 : "100%",
+              maxHeight: toolbarCollapsed ? 0 : 999,
+              overflow: "hidden",
+              transition: "transform 160ms ease, opacity 160ms ease",
+              pointerEvents: toolbarCollapsed ? "none" : "auto",
+            }}
+          >
+            <div className="canvas-toolbar-scroll">
             <button
               onClick={onTogglePanMode}
               aria-pressed={panMode}
               aria-label="Pan"
-              data-active={panMode ? "true" : undefined}
+              data-active={panMode && !traceAdjustMode ? "true" : undefined}
               className="toolbar-button"
               style={{
                 padding: "2px 6px",
@@ -363,7 +444,7 @@ export function CanvasWithExportRef(props: any) {
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
               </span>
-              <span className="toolbar-label" style={{ fontSize: 9, opacity: 0.7 }}>
+              <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
                 Pan
               </span>
             </button>
@@ -382,7 +463,7 @@ export function CanvasWithExportRef(props: any) {
                       ? "Eyedropper"
                       : "Lasso"
                 }
-                data-active={tool === t && !panMode ? "true" : undefined}
+                data-active={tool === t && !panMode && !traceAdjustMode ? "true" : undefined}
                 className="toolbar-button"
                 style={{
                   padding: "2px 6px",
@@ -416,7 +497,7 @@ export function CanvasWithExportRef(props: any) {
                     }}
                   />
                 </span>
-                <span className="toolbar-label" style={{ fontSize: 9, opacity: 0.7 }}>
+                <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
                   {t === "paint"
                     ? "Brush"
                     : t === "eraser"
@@ -455,7 +536,7 @@ export function CanvasWithExportRef(props: any) {
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
               </span>
-              <span className="toolbar-label" style={{ fontSize: 9, opacity: 0.7 }}>
+              <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
                 Undo
               </span>
             </button>
@@ -484,7 +565,7 @@ export function CanvasWithExportRef(props: any) {
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
               </span>
-              <span className="toolbar-label" style={{ fontSize: 9, opacity: 0.7 }}>
+              <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
                 Redo
               </span>
             </button>
@@ -512,13 +593,38 @@ export function CanvasWithExportRef(props: any) {
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
               </span>
-              <span className="toolbar-label" style={{ fontSize: 9, opacity: 0.7 }}>
+              <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
                 Clear
               </span>
             </button>
+            </div>
           </div>
         </div>
-        {uiReady && (tool === "paint" || tool === "eraser") && (
+        {uiReady && traceImage && !traceLocked && (
+          <div
+            role="status"
+            style={{
+              position: "absolute",
+              top: -8,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "rgba(30, 41, 59, 0.88)",
+              color: "#f8fafc",
+              padding: "6px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+            }}
+          >
+            <span>Image is unlocked. Lock image when placement is complete.</span>
+          </div>
+        )}
+        {uiReady && !traceAdjustMode && !panMode && (tool === "paint" || tool === "eraser") && (
           <div
             className="canvas-toolbar-size"
             style={{
@@ -551,7 +657,7 @@ export function CanvasWithExportRef(props: any) {
           </div>
         )}
         <div
-          className="zoom-floating"
+          className="zoom-shell"
           style={{
             opacity: uiReady ? 1 : 0,
             pointerEvents: uiReady ? "auto" : "none",
@@ -560,16 +666,44 @@ export function CanvasWithExportRef(props: any) {
             bottom: 12,
             zIndex: 3,
             display: "flex",
-            alignItems: "center",
+            alignItems: "stretch",
             gap: 8,
-            padding: "6px 8px",
-            borderRadius: 12,
-            background: "rgba(255,255,255,0.92)",
-            backdropFilter: "blur(6px)",
-            boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
-            minWidth: 0,
           }}
         >
+          <div
+            className="zoom-floating"
+            ref={zoomRef}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: zoomCollapsed ? 0 : 8,
+              padding: zoomCollapsed ? "6px 4px" : "6px 8px",
+              borderRadius: 12,
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(6px)",
+              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              minWidth: 0,
+              minHeight: zoomCollapsed ? expandedZoomHeight ?? undefined : undefined,
+              transition:
+                "background 160ms ease, box-shadow 160ms ease, padding 160ms ease, border-radius 160ms ease",
+            }}
+          >
+          <div
+            className="zoom-toolbar-content"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transformOrigin: "right center",
+              transform: zoomCollapsed ? "scaleX(0)" : "scaleX(1)",
+              opacity: zoomCollapsed ? 0 : 1,
+              maxWidth: zoomCollapsed ? 0 : "100%",
+              maxHeight: zoomCollapsed ? 0 : 999,
+              overflow: "hidden",
+              transition: "transform 160ms ease, opacity 160ms ease",
+              pointerEvents: zoomCollapsed ? "none" : "auto",
+            }}
+          >
           <button
             onClick={() => {
               if (!lastEditCell) return;
@@ -593,8 +727,8 @@ export function CanvasWithExportRef(props: any) {
               src={assetPath("/jump_to_element.svg")}
               alt=""
               aria-hidden="true"
-              width={14}
-              height={14}
+              width={18}
+              height={18}
               style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
             />
           </button>
@@ -618,8 +752,8 @@ export function CanvasWithExportRef(props: any) {
               src={assetPath("/fit_width.svg")}
               alt=""
               aria-hidden="true"
-              width={14}
-              height={14}
+              width={18}
+              height={18}
               style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
             />
           </button>
@@ -694,45 +828,71 @@ export function CanvasWithExportRef(props: any) {
             />
             <span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
           </div>
+          </div>
           <button
-            onClick={() => setSettingsOpen((open) => !open)}
-            aria-pressed={settingsOpen}
-            aria-label="Canvas settings"
-            title="Canvas settings"
+            onClick={() => setZoomCollapsed((value) => !value)}
+            aria-pressed={zoomCollapsed}
+            aria-label={zoomCollapsed ? "Expand zoom toolbar" : "Collapse zoom toolbar"}
+            className="zoom-caret"
             style={{
               padding: "4px 6px",
               borderRadius: 8,
               border: "none",
-              background: settingsOpen ? "var(--accent-wash)" : "var(--muted-bg)",
-              color: settingsOpen ? "var(--accent-strong)" : "var(--foreground)",
+              background: "var(--muted-bg)",
+              color: "var(--foreground)",
               cursor: "pointer",
               fontSize: 12,
               fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
             }}
           >
-            <img
-              src={assetPath("/settings.svg")}
-              alt=""
-              aria-hidden="true"
-              width={16}
-              height={16}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
-            <span
-              aria-hidden="true"
+            {zoomCollapsed ? "▴" : "◂"}
+          </button>
+          </div>
+          <div className="settings-floating" style={{ display: "flex" }}>
+            <button
+              onClick={() => setSettingsOpen((open) => !open)}
+              aria-pressed={settingsOpen}
+              aria-label="Canvas settings"
+              title="Canvas settings"
+              className="zoom-settings-toggle"
               style={{
+                padding: "6px 10px",
+                borderRadius: 10,
+                border: "none",
+                background: settingsOpen ? "var(--accent-wash)" : "rgba(255,255,255,0.92)",
+                color: settingsOpen ? "var(--accent-strong)" : "var(--foreground)",
+                cursor: "pointer",
                 fontSize: 12,
-                lineHeight: 1,
-                color: "var(--foreground)",
-                opacity: 0.7,
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                backdropFilter: "blur(6px)",
+                boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                height: "100%",
               }}
             >
-              {settingsOpen ? "▴" : "▸"}
-            </span>
-          </button>
+              <span
+                aria-hidden="true"
+                style={{
+                  fontSize: 12,
+                  lineHeight: 1,
+                  color: "var(--foreground)",
+                  opacity: 0.7,
+                }}
+              >
+                {settingsOpen ? "▴" : "◂"}
+              </span>
+              <img
+                src={assetPath("/settings.svg")}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </button>
+          </div>
         </div>
         {uiReady && settingsOpen && (
           <div
@@ -748,7 +908,7 @@ export function CanvasWithExportRef(props: any) {
               backdropFilter: "blur(6px)",
               display: "grid",
               gap: 10,
-              minWidth: 120,
+              minWidth: 104,
             }}
           >
             <div style={{ display: "grid", gap: 8 }}>
@@ -760,18 +920,14 @@ export function CanvasWithExportRef(props: any) {
         )}
         {uiReady && traceImage && (
           <div
+            className="image-controls-panel"
             style={{
               position: "absolute",
               top: 16,
               right: 12,
               zIndex: 4,
-              background: "rgba(255,255,255,0.92)",
-              borderRadius: 12,
-              padding: "6px 8px",
-              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
-              backdropFilter: "blur(6px)",
               display: "grid",
-              gap: 6,
+              gap: 10,
               minWidth: 160,
             }}
           >
@@ -779,17 +935,21 @@ export function CanvasWithExportRef(props: any) {
               type="button"
               onClick={() => setImageOpacityOpen((open) => !open)}
               aria-expanded={imageOpacityOpen}
+              data-open={imageOpacityOpen ? "true" : undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
                 border: "none",
-                background: "transparent",
+                background: "rgba(255,255,255,0.92)",
                 cursor: "pointer",
-                padding: 0,
+                padding: "6px 8px",
+                borderRadius: 12,
                 fontSize: 12,
                 fontWeight: 600,
                 color: "var(--foreground)",
+                boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                backdropFilter: "blur(6px)",
               }}
             >
               <img
@@ -800,20 +960,143 @@ export function CanvasWithExportRef(props: any) {
                 height={14}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
-              <span style={{ flex: "1 1 auto", textAlign: "left" }}>Image Opacity</span>
-              <span aria-hidden="true" style={{ fontSize: 12, opacity: 0.7 }}>
+              <span style={{ flex: "1 1 auto", textAlign: "left" }}>Image controls</span>
+              <span className="image-controls-caret" aria-hidden="true" style={{ fontSize: 12, opacity: 0.7 }}>
                 {imageOpacityOpen ? "▾" : "▸"}
               </span>
             </button>
             {imageOpacityOpen && (
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round((traceOpacity ?? 0) * 100)}
-                onChange={(e) => setTraceOpacity(parseInt(e.target.value, 10) / 100)}
-                style={{ width: "100%" }}
-              />
+              <>
+                <div
+                  className="image-controls-body"
+                  style={{
+                    background: "rgba(255,255,255,0.92)",
+                    borderRadius: 12,
+                    padding: "8px 10px",
+                    boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 2 }}>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Opacity</div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round((traceOpacity ?? 0) * 100)}
+                      onChange={(e) => setTraceOpacity(parseInt(e.target.value, 10) / 100)}
+                      style={{ width: "140px" }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      alignItems: "stretch",
+                      marginTop: 6,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <button
+                    type="button"
+                    onClick={onToggleTraceLock}
+                    aria-label={traceLocked ? "Unlock image" : "Lock image"}
+                    className="image-controls-lock"
+                    style={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 2,
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      padding: 0,
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--foreground)",
+                      transition: "background 150ms ease, border-color 150ms ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 26,
+                        height: 26,
+                        borderRadius: 8,
+                        border: "1px solid rgba(15, 23, 42, 0.16)",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <img
+                        src={assetPath(traceLocked ? "/unlock.svg" : "/lock.svg")}
+                        alt=""
+                        aria-hidden="true"
+                        width={14}
+                        height={14}
+                        style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                      />
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 500 }}>
+                      {traceLocked ? "Unlock" : "Lock"}
+                    </span>
+                    </button>
+                    <button
+                    type="button"
+                    onClick={onFitToGrid}
+                    disabled={!traceImage || traceLocked}
+                    aria-label="Fit image to grid"
+                    className="image-controls-lock"
+                    style={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 2,
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      padding: 0,
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--foreground)",
+                      opacity: !traceImage || traceLocked ? 0.5 : 1,
+                      transition: "background 150ms ease, border-color 150ms ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 26,
+                        height: 26,
+                        borderRadius: 8,
+                        border: "1px solid rgba(15, 23, 42, 0.16)",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <img
+                        src={assetPath("/fit_width.svg")}
+                        alt=""
+                        aria-hidden="true"
+                        width={14}
+                        height={14}
+                        style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                      />
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 500 }}>Fit to grid</span>
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
