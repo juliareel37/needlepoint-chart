@@ -21,7 +21,6 @@ import { WipCard } from "./cards/WipCard";
 import { GridSizeCard } from "./cards/GridSizeCard";
 import { TraceImageCard } from "./cards/TraceImageCard";
 import { ImageToPatternCard } from "./cards/ImageToPatternCard";
-import { CanvasSettingsCard } from "./cards/CanvasSettingsCard";
 import { useCanvasEdits } from "./hooks/useCanvasEdits";
 import { useColorEdits } from "./hooks/useColorEdits";
 import { useHistoryStack } from "./hooks/useHistoryStack";
@@ -41,7 +40,7 @@ export default function PatternEditor() {
   const [grid, setGrid] = useState<Uint16Array>(() => makeGrid(gridW, gridH, 0));
   const { history, future, setHistoryState, setFutureState, pushHistory, pushFuture, popHistory, popFuture } =
     useHistoryStack();
-  const [tool, setTool] = useState<"paint" | "eraser" | "fill" | "eyedropper" | "lasso">("paint");
+  const [tool, setTool] = useState<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso">("none");
   const [brushSize, setBrushSize] = useState(1);
   const [gridMode, setGridMode] = useState<"stitches" | "inches">("stitches");
   const [meshCount, setMeshCount] = useState(10);
@@ -62,11 +61,11 @@ export default function PatternEditor() {
     confirmLabel?: string;
     position?: { top: number; left: number } | null;
   } | null>(null);
-  const [gridOpen, setGridOpen] = useState(true);
+  const [gridOpen, setGridOpen] = useState(false);
+  const [wipOpen, setWipOpen] = useState(true);
   const [traceOpen, setTraceOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(true);
-  const [canvasSettingsOpen, setCanvasSettingsOpen] = useState(true);
-  const [usedColorsOpen, setUsedColorsOpen] = useState(true);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [usedColorsOpen, setUsedColorsOpen] = useState(false);
   const [imageToPatternOpen, setImageToPatternOpen] = useState(false);
   const [traceImageUrl, setTraceImageUrl] = useState<string | null>(null);
   const [traceFileName, setTraceFileName] = useState<string | null>(null);
@@ -102,9 +101,13 @@ export default function PatternEditor() {
 
   const [zoom, setZoom] = useState(1);
   const [canvasControlsHeight, setCanvasControlsHeight] = useState(0);
-  const minZoom = 0.25;
+  const baseMinZoom = 0.25;
+  const [minZoomOverride, setMinZoomOverride] = useState<number | null>(null);
+  const minZoom = Math.max(0.05, Math.min(baseMinZoom, minZoomOverride ?? baseMinZoom));
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
+  const [fitAfterResize, setFitAfterResize] = useState<{ w: number; h: number } | null>(null);
+  const [fitToken, setFitToken] = useState(0);
 
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
@@ -172,7 +175,7 @@ export default function PatternEditor() {
     };
   }, []);
 
-  const sidebarWidth = 210;
+  const sidebarWidth = 240;
   const canvasCardPadding = 12;
   const canvasInnerWidth = Math.max(1, canvasAreaWidth - canvasCardPadding * 2);
 
@@ -470,6 +473,19 @@ export default function PatternEditor() {
     setDraftWidthIn(widthIn);
     setDraftHeightIn(heightIn);
   }, [gridMode, gridW, gridH, meshCount, widthIn, heightIn]);
+  useEffect(() => {
+    if (!fitAfterResize) return;
+    if (gridW !== fitAfterResize.w || gridH !== fitAfterResize.h) {
+      setFitToken((token) => token + 1);
+      setFitAfterResize(null);
+    }
+  }, [fitAfterResize, gridW, gridH]);
+  useEffect(() => {
+    if (!fitAfterResize) return;
+    if (confirmDialog === null && gridW === fitAfterResize.w && gridH === fitAfterResize.h) {
+      setFitAfterResize(null);
+    }
+  }, [confirmDialog, fitAfterResize, gridW, gridH]);
 
   function addColor(name: string, hex: string) {
     setPalette((prev) => {
@@ -543,7 +559,7 @@ export default function PatternEditor() {
     padding: 12,
     boxShadow: cardShadow,
   } as const;
-  const canvasSettingsMaxHeight = traceImage ? 1200 : 800;
+  const canvasSettingsOffset = 56;
 
   const collapseStyle = (open: boolean, maxHeight = 1200) =>
     ({
@@ -570,7 +586,7 @@ export default function PatternEditor() {
           alignItems: "start",
           width: "100%",
           minWidth: 0,
-          gridTemplateColumns: isNarrow ? "1fr" : `${sidebarWidth}px minmax(0, 1fr) ${sidebarWidth}px`,
+          gridTemplateColumns: isNarrow ? "1fr" : `${sidebarWidth}px minmax(0, 1fr)`,
         }}
       >
         <div
@@ -592,6 +608,11 @@ export default function PatternEditor() {
           </div>
           <WipCard
             cardStyle={cardStyle}
+            cardShadow={cardShadow}
+            cardShadowCollapsed={cardShadowCollapsed}
+            wipOpen={wipOpen}
+            setWipOpen={setWipOpen}
+            collapseStyle={collapseStyle}
             title={title}
             onTitleChange={(value) => setTitle(value)}
             isSignedIn={isSignedIn}
@@ -632,7 +653,10 @@ export default function PatternEditor() {
             setDraftHeightIn={setDraftHeightIn}
             draftMeshCount={draftMeshCount}
             setDraftMeshCount={setDraftMeshCount}
-            onApply={confirmAndApplyGrid}
+            onApply={() => {
+              setFitAfterResize({ w: gridW, h: gridH });
+              confirmAndApplyGrid();
+            }}
           />
 
           <TraceImageCard
@@ -666,6 +690,74 @@ export default function PatternEditor() {
             setConvertSmoothing={setConvertSmoothing}
             onConvert={convertImageToPattern}
           />
+          <PaletteSection
+            cardStyle={cardStyle}
+            cardShadow={cardShadow}
+            cardShadowCollapsed={cardShadowCollapsed}
+            paletteOpen={paletteOpen}
+            setPaletteOpen={setPaletteOpen}
+            collapseStyle={collapseStyle}
+            traceImage={traceImage}
+            extractPaletteOpen={extractPaletteOpen}
+            setExtractPaletteOpen={setExtractPaletteOpen}
+            extractPaletteSize={extractPaletteSize}
+            setExtractPaletteSize={setExtractPaletteSize}
+            extractPaletteFromTrace={extractPaletteFromTrace}
+            extractingPalette={extractingPalette}
+            palette={palette}
+            extractedIds={extractedIds}
+            usedColorIds={usedColorIds}
+            activeColorId={activeColorId}
+            remapTargetId={remapTargetId}
+            remapSourceId={remapSourceId}
+            onSelectActive={setActiveColorId}
+            onRemapSelect={previewRemap}
+            onAddColor={addColor}
+          />
+          <UsedColorsSection
+            cardStyle={cardStyle}
+            cardShadow={cardShadow}
+            cardShadowCollapsed={cardShadowCollapsed}
+            usedColorsOpen={usedColorsOpen}
+            setUsedColorsOpen={setUsedColorsOpen}
+            collapseStyle={collapseStyle}
+            usedColors={usedColors}
+            usedColorIds={usedColorIds}
+            remapMode={remapMode}
+            mergeMode={mergeMode}
+            deleteMode={deleteMode}
+            toggleRemapMode={toggleRemapMode}
+            toggleMergeMode={toggleMergeMode}
+            toggleDeleteMode={toggleDeleteMode}
+            filterMode={filterMode}
+            filterSelecting={filterSelecting}
+            startFilterSelection={startFilterSelection}
+            clearFilterSelection={clearFilterSelection}
+            deleteSelectedIds={deleteSelectedIds}
+            mergeSelectedIds={mergeSelectedIds}
+            mergeTargetId={mergeTargetId}
+            remapSourceId={remapSourceId}
+            remapTargetId={remapTargetId}
+            identifyColorId={identifyColorId}
+            showSymbols={showSymbols}
+            symbolMap={symbolMap}
+            setIdentifyColorId={setIdentifyColorId}
+            setActiveColorId={setActiveColorId}
+            setDeleteSelectedIds={setDeleteSelectedIds}
+            setMergeSelectedIds={setMergeSelectedIds}
+            setMergeTargetId={setMergeTargetId}
+            beginRemap={beginRemap}
+            previewRemap={previewRemap}
+            confirmRemap={confirmRemap}
+            confirmMerge={confirmMerge}
+            confirmDeleteColors={confirmDeleteColors}
+            cancelRemap={cancelRemap}
+            cancelMerge={cancelMerge}
+            cancelDelete={cancelDelete}
+            setRemapMode={setRemapMode}
+            setMergeMode={setMergeMode}
+            setDeleteMode={setDeleteMode}
+          />
 
         </div>
 
@@ -673,27 +765,7 @@ export default function PatternEditor() {
           className="pattern-canvas-shell"
           style={{ minWidth: 0, paddingInline: "var(--canvas-shell-padding, 12px)" }}
         >
-          {isNarrow && (
-            <CanvasSettingsCard
-              cardStyle={cardStyle}
-              cardShadow={cardShadow}
-              cardShadowCollapsed={cardShadowCollapsed}
-              canvasSettingsOpen={canvasSettingsOpen}
-              setCanvasSettingsOpen={setCanvasSettingsOpen}
-              collapseStyle={collapseStyle}
-              canvasSettingsMaxHeight={canvasSettingsMaxHeight}
-              showGridlines={showGridlines}
-              setShowGridlines={setShowGridlines}
-              threadView={threadView}
-              setThreadView={setThreadView}
-              showSymbols={showSymbols}
-              setShowSymbols={setShowSymbols}
-              traceImage={traceImage}
-              traceOpacity={traceOpacity}
-              setTraceOpacity={setTraceOpacity}
-              containerStyle={{ marginBottom: 16 }}
-            />
-          )}
+          {isNarrow && <div style={{ marginTop: canvasSettingsOffset, marginBottom: 16 }} />}
           {/* Canvas area */}
           <div
             ref={canvasAreaRef}
@@ -768,7 +840,10 @@ export default function PatternEditor() {
               onZoomChange={(next: number) => setZoom(clampZoom(next))}
               darkCanvas={darkCanvas}
               onControlsHeightChange={setCanvasControlsHeight}
+              onMinZoomChange={setMinZoomOverride}
+              fitToBoundsToken={fitToken}
               showSymbols={showSymbols}
+              setShowSymbols={setShowSymbols}
               identifyColorId={identifyColorId}
               symbolMap={symbolMap}
               filterMode={filterMode}
@@ -779,179 +854,13 @@ export default function PatternEditor() {
               onFilterRectChange={(rect: FilterRect | null) => setFilterRect(rect)}
               onFilterSelectEnd={endFilterSelection}
               isNarrow={isNarrow}
-            />
-          </div>
-        </div>
-        {isNarrow && (
-          <PaletteSection
-            cardStyle={cardStyle}
-            cardShadow={cardShadow}
-            cardShadowCollapsed={cardShadowCollapsed}
-            paletteOpen={paletteOpen}
-            setPaletteOpen={setPaletteOpen}
-            collapseStyle={collapseStyle}
-            traceImage={traceImage}
-            extractPaletteOpen={extractPaletteOpen}
-            setExtractPaletteOpen={setExtractPaletteOpen}
-            extractPaletteSize={extractPaletteSize}
-            setExtractPaletteSize={setExtractPaletteSize}
-            extractPaletteFromTrace={extractPaletteFromTrace}
-            extractingPalette={extractingPalette}
-            palette={palette}
-            extractedIds={extractedIds}
-            usedColorIds={usedColorIds}
-            activeColorId={activeColorId}
-            remapTargetId={remapTargetId}
-            remapSourceId={remapSourceId}
-            onSelectActive={setActiveColorId}
-            onRemapSelect={previewRemap}
-            onAddColor={addColor}
-          />
-        )}
-        {isNarrow && (
-          <UsedColorsSection
-            cardStyle={cardStyle}
-            cardShadow={cardShadow}
-            cardShadowCollapsed={cardShadowCollapsed}
-            usedColorsOpen={usedColorsOpen}
-            setUsedColorsOpen={setUsedColorsOpen}
-            collapseStyle={collapseStyle}
-            usedColors={usedColors}
-            usedColorIds={usedColorIds}
-            remapMode={remapMode}
-            mergeMode={mergeMode}
-            deleteMode={deleteMode}
-            toggleRemapMode={toggleRemapMode}
-            toggleMergeMode={toggleMergeMode}
-            toggleDeleteMode={toggleDeleteMode}
-            filterMode={filterMode}
-            filterSelecting={filterSelecting}
-            startFilterSelection={startFilterSelection}
-            clearFilterSelection={clearFilterSelection}
-            deleteSelectedIds={deleteSelectedIds}
-            mergeSelectedIds={mergeSelectedIds}
-            mergeTargetId={mergeTargetId}
-            remapSourceId={remapSourceId}
-            remapTargetId={remapTargetId}
-            identifyColorId={identifyColorId}
-            showSymbols={showSymbols}
-            symbolMap={symbolMap}
-            setIdentifyColorId={setIdentifyColorId}
-            setActiveColorId={setActiveColorId}
-            setDeleteSelectedIds={setDeleteSelectedIds}
-            setMergeSelectedIds={setMergeSelectedIds}
-            setMergeTargetId={setMergeTargetId}
-            beginRemap={beginRemap}
-            previewRemap={previewRemap}
-            confirmRemap={confirmRemap}
-            confirmMerge={confirmMerge}
-            confirmDeleteColors={confirmDeleteColors}
-            cancelRemap={cancelRemap}
-            cancelMerge={cancelMerge}
-            cancelDelete={cancelDelete}
-            setRemapMode={setRemapMode}
-            setMergeMode={setMergeMode}
-            setDeleteMode={setDeleteMode}
-          />
-        )}
-        {!isNarrow && (
-          <div
-            style={{
-              width: "100%",
-              minWidth: 0,
-              display: "grid",
-              gap: 16,
-            }}
-          >
-            <CanvasSettingsCard
-              cardStyle={cardStyle}
-              cardShadow={cardShadow}
-              cardShadowCollapsed={cardShadowCollapsed}
-              canvasSettingsOpen={canvasSettingsOpen}
-              setCanvasSettingsOpen={setCanvasSettingsOpen}
-              collapseStyle={collapseStyle}
-              canvasSettingsMaxHeight={canvasSettingsMaxHeight}
               showGridlines={showGridlines}
               setShowGridlines={setShowGridlines}
               threadView={threadView}
               setThreadView={setThreadView}
-              showSymbols={showSymbols}
-              setShowSymbols={setShowSymbols}
-              traceImage={traceImage}
-              traceOpacity={traceOpacity}
-              setTraceOpacity={setTraceOpacity}
-              containerStyle={{ width: "100%" }}
-            />
-            <PaletteSection
-              cardStyle={cardStyle}
-              cardShadow={cardShadow}
-              cardShadowCollapsed={cardShadowCollapsed}
-              paletteOpen={paletteOpen}
-              setPaletteOpen={setPaletteOpen}
-              collapseStyle={collapseStyle}
-              traceImage={traceImage}
-              extractPaletteOpen={extractPaletteOpen}
-              setExtractPaletteOpen={setExtractPaletteOpen}
-              extractPaletteSize={extractPaletteSize}
-              setExtractPaletteSize={setExtractPaletteSize}
-              extractPaletteFromTrace={extractPaletteFromTrace}
-              extractingPalette={extractingPalette}
-              palette={palette}
-              extractedIds={extractedIds}
-              usedColorIds={usedColorIds}
-              activeColorId={activeColorId}
-              remapTargetId={remapTargetId}
-              remapSourceId={remapSourceId}
-              onSelectActive={setActiveColorId}
-              onRemapSelect={previewRemap}
-              onAddColor={addColor}
-            />
-            <UsedColorsSection
-              cardStyle={cardStyle}
-              cardShadow={cardShadow}
-              cardShadowCollapsed={cardShadowCollapsed}
-              usedColorsOpen={usedColorsOpen}
-              setUsedColorsOpen={setUsedColorsOpen}
-              collapseStyle={collapseStyle}
-              usedColors={usedColors}
-              usedColorIds={usedColorIds}
-              remapMode={remapMode}
-              mergeMode={mergeMode}
-              deleteMode={deleteMode}
-              toggleRemapMode={toggleRemapMode}
-              toggleMergeMode={toggleMergeMode}
-              toggleDeleteMode={toggleDeleteMode}
-              filterMode={filterMode}
-              filterSelecting={filterSelecting}
-              startFilterSelection={startFilterSelection}
-              clearFilterSelection={clearFilterSelection}
-              deleteSelectedIds={deleteSelectedIds}
-              mergeSelectedIds={mergeSelectedIds}
-              mergeTargetId={mergeTargetId}
-              remapSourceId={remapSourceId}
-              remapTargetId={remapTargetId}
-              identifyColorId={identifyColorId}
-              showSymbols={showSymbols}
-              symbolMap={symbolMap}
-              setIdentifyColorId={setIdentifyColorId}
-              setActiveColorId={setActiveColorId}
-              setDeleteSelectedIds={setDeleteSelectedIds}
-              setMergeSelectedIds={setMergeSelectedIds}
-              setMergeTargetId={setMergeTargetId}
-              beginRemap={beginRemap}
-              previewRemap={previewRemap}
-              confirmRemap={confirmRemap}
-              confirmMerge={confirmMerge}
-              confirmDeleteColors={confirmDeleteColors}
-              cancelRemap={cancelRemap}
-              cancelMerge={cancelMerge}
-              cancelDelete={cancelDelete}
-              setRemapMode={setRemapMode}
-              setMergeMode={setMergeMode}
-              setDeleteMode={setDeleteMode}
             />
           </div>
-        )}
+        </div>
       </div>
       <DraftPickerDialog
         open={draftPickerOpen}

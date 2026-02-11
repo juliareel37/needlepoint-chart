@@ -40,7 +40,7 @@ type Props = {
   onTraceScaleChange: (scale: number) => void;
   panMode: boolean;
   showGridlines: boolean;
-  tool: "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+  tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
   brushSize: number;
   lassoPoints: { x: number; y: number }[];
   lassoClosed: boolean;
@@ -575,27 +575,36 @@ export default function GridCanvas(props: Props) {
   const alignX = "flex-start";
   const alignY = "flex-start";
   const effectivePanMode = panMode && !(traceAdjustMode && traceImage);
-  const containerBg = darkCanvas ? "#000000" : threadView ? "#e6e6e6" : "#ffffff";
+  const containerBg = darkCanvas ? "#000000" : "#ffffff";
 
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
     const handleWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return;
+      if (e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = node.getBoundingClientRect();
+        const anchorX = e.clientX - rect.left;
+        const anchorY = e.clientY - rect.top;
+        const zoomFactor = Math.exp(-e.deltaY * 0.01);
+        const nextZoom = clampZoom(zoom * zoomFactor);
+        if (nextZoom === zoom) return;
+        zoomAnchorRef.current = { x: anchorX, y: anchorY };
+        onZoomChange(nextZoom);
+        return;
+      }
+
+      // Two-finger scroll to pan even when not in pan mode.
       e.preventDefault();
       e.stopPropagation();
-      const rect = node.getBoundingClientRect();
-      const anchorX = e.clientX - rect.left;
-      const anchorY = e.clientY - rect.top;
-      const zoomFactor = Math.exp(-e.deltaY * 0.01);
-      const nextZoom = clampZoom(zoom * zoomFactor);
-      if (nextZoom === zoom) return;
-      zoomAnchorRef.current = { x: anchorX, y: anchorY };
-      onZoomChange(nextZoom);
+      const nextX = panOffset.x - e.deltaX;
+      const nextY = panOffset.y - e.deltaY;
+      setPanOffset(clampPan(nextX, nextY));
     };
     node.addEventListener("wheel", handleWheel, { passive: false });
     return () => node.removeEventListener("wheel", handleWheel);
-  }, [zoom, onZoomChange, minZoom, maxZoom]);
+  }, [zoom, onZoomChange, minZoom, maxZoom, panOffset]);
 
   return (
     <div
@@ -612,7 +621,7 @@ export default function GridCanvas(props: Props) {
         overflow: "hidden",
         borderRadius: 0,
         background: containerBg,
-        boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.15)",
+        boxShadow: "none",
         touchAction: "none",
       }}
     >

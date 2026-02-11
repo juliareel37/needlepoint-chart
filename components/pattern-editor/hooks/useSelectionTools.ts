@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { idx } from "../../../lib/grid";
 import { clampFilterRect, pointInPolygon, type FilterRect, type Point } from "../utils/geometry";
 
-type ToolName = "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
 
 type UseSelectionToolsArgs = {
   tool: ToolName;

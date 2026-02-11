@@ -38,8 +38,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
-          <div style={{ display: "grid", gap: 12, width: "100%", padding: "32px 24px 20px" }}>
-            <HeaderAuth />
+          <div style={{ position: "relative", width: "100%", padding: "20px 24px 0" }}>
+            <div style={{ position: "absolute", top: 12, right: 24, zIndex: 20 }}>
+              <HeaderAuth />
+            </div>
             {children}
           </div>
         </body>

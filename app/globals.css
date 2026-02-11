@@ -318,6 +318,43 @@ button:disabled {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
+.canvas-toolbar .toolbar-button {
+  background: transparent;
+  border-color: transparent;
+}
+.canvas-toolbar .toolbar-button:hover:not(:disabled),
+.canvas-toolbar .toolbar-button[data-active="true"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--foreground);
+}
+.canvas-toolbar .toolbar-button .toolbar-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 26px;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+.canvas-toolbar .toolbar-button:hover .toolbar-icon {
+  background: var(--accent-wash);
+}
+.canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
+  background: var(--accent-soft);
+}
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.18);
+  border-top-color: var(--accent-strong);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .pattern-canvas-shell {
   padding-inline: 12px;
 }

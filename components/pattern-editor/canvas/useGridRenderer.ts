@@ -8,7 +8,7 @@ import { contrastForHex, hexToRgb } from "../utils/colorUtils";
 import { getThreadRadii, getThreadStitchCanvas } from "./stitchUtils";
 
 type FilterRect = { x0: number; y0: number; x1: number; y1: number };
-type ToolName = "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
 type Point = { x: number; y: number };
 
 type UseGridRendererArgs = {
