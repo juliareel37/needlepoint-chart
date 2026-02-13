@@ -46,6 +46,7 @@ type UseGridRendererArgs = {
   filterSelecting: boolean;
   zoom: number;
   showGridlines: boolean;
+  gridBackground?: string;
 };
 
 export function useGridRenderer({
@@ -83,9 +84,11 @@ export function useGridRenderer({
   filterSelecting,
   zoom,
   showGridlines,
+  gridBackground,
 }: UseGridRendererArgs) {
   const stitchCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const stitchStyleVersion = 6;
+  const lastSurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -97,15 +100,43 @@ export function useGridRenderer({
     const dpr = window.devicePixelRatio || 1;
     const surfaceW = containerWidth || canvasW;
     const surfaceH = containerHeight || canvasH;
-    canvas.width = Math.floor(surfaceW * dpr);
-    canvas.height = Math.floor(surfaceH * dpr);
-    canvas.style.width = `${surfaceW}px`;
-    canvas.style.height = `${surfaceH}px`;
+    const nextW = Math.floor(surfaceW * dpr);
+    const nextH = Math.floor(surfaceH * dpr);
+    const last = lastSurfaceRef.current;
+    if (!last || last.w !== nextW || last.h !== nextH || last.dpr !== dpr) {
+      canvas.width = nextW;
+      canvas.height = nextH;
+      canvas.style.width = `${surfaceW}px`;
+      canvas.style.height = `${surfaceH}px`;
+      lastSurfaceRef.current = { w: nextW, h: nextH, dpr };
+    } else {
+      // Keep CSS size in sync even if the backing store is unchanged.
+      if (canvas.style.width !== `${surfaceW}px`) canvas.style.width = `${surfaceW}px`;
+      if (canvas.style.height !== `${surfaceH}px`) canvas.style.height = `${surfaceH}px`;
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Background
     ctx.clearRect(0, 0, surfaceW, surfaceH);
     // Keep canvas transparent so overscroll reveals the container background.
+
+    // Grid shadow (drawn within the canvas to avoid layout/compositing glitches).
+    ctx.save();
+    ctx.translate(drawTranslateX, drawTranslateY);
+    ctx.shadowColor = "rgba(15, 23, 42, 0.28)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "rgba(0,0,0,0.01)";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.restore();
+
+    // Grid background (only the grid area).
+    ctx.save();
+    ctx.translate(drawTranslateX, drawTranslateY);
+    ctx.fillStyle = darkCanvas ? "#000000" : gridBackground ?? "#ffffff";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.restore();
 
     // Trace image (below cells)
     if (traceImage && traceOpacity > 0) {

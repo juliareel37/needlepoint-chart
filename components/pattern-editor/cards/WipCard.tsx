@@ -304,19 +304,6 @@ export function WipCard({
             </div>
           )}
         </div>
-        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          <ExportPdfButton
-            title={title}
-            canvasRef={exportCanvasRef}
-            usedColors={usedColors}
-            grid={grid}
-            paletteById={paletteById}
-            symbolMap={symbolMap}
-            width={gridW}
-            height={gridH}
-            cellSize={exportCellSize}
-          />
-        </div>
       </div>
     </div>
   );

@@ -235,6 +235,8 @@ body {
   font-family: var(--font-ui), ui-sans-serif, system-ui;
   min-height: 100%;
   margin: 0;
+  height: 100%;
+  overflow: hidden;
 }
 button {
   font-weight: 600;
@@ -243,6 +245,9 @@ button {
 button:hover:not(:disabled) {
   filter: brightness(0.94);
   transform: none;
+}
+.canvas-toolbar .toolbar-button.toolbar-toggle:hover:not(:disabled) {
+  filter: none !important;
 }
 .image-controls-lock:hover:not(:disabled) {
   background: transparent !important;
@@ -255,6 +260,8 @@ button:hover:not(:disabled) {
 }
 .zoom-floating .zoom-caret:hover:not(:disabled) {
   filter: none;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 .zoom-floating .zoom-caret {
   background: transparent !important;
@@ -269,6 +276,17 @@ button:disabled {
 }
 .app-card:hover {
   z-index: 2;
+}
+.pattern-sidebar {
+  background: var(--card-bg);
+  border-radius: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  transition: width 200ms ease;
+  will-change: width;
 }
 .canvas-toolbar button,
 .used-colors-toolbar button,
@@ -351,16 +369,26 @@ button:disabled {
   border-radius: 8px;
   transition: background 150ms ease;
 }
-.canvas-toolbar .toolbar-button.toolbar-toggle .toolbar-icon {
+.canvas-toolbar .toolbar-button.toolbar-toggle .toolbar-toggle-icon {
+  display: grid;
+  place-items: center;
   width: 14px;
   height: 14px;
   border-radius: 5px;
+  background: transparent !important;
+}
+.canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-toggle-icon,
+.canvas-toolbar .toolbar-button.toolbar-toggle[data-active="true"] .toolbar-toggle-icon {
+  background: transparent !important;
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle {
   align-self: center;
 }
 .canvas-toolbar[data-collapsed="true"]:hover {
   --canvas-toolbar-bg: #eef2f5;
+}
+.canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
+  --canvas-toolbar-bg: rgba(255, 255, 255, 0.92);
 }
 .canvas-toolbar .canvas-toolbar-scroll {
   display: flex;
@@ -370,7 +398,9 @@ button:disabled {
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle:hover,
 .canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-icon {
-  background: transparent;
+  background: transparent !important;
+  border-color: transparent !important;
+  filter: none !important;
 }
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--accent-soft);
@@ -393,7 +423,7 @@ button:disabled {
   }
 }
 .pattern-canvas-shell {
-  padding-inline: 12px;
+  padding-inline: 0;
 }
 input[type="range"] {
   -webkit-appearance: none;
@@ -448,6 +478,25 @@ input[type="range"]::-moz-range-thumb {
   .pattern-canvas-shell {
     --canvas-shell-padding: 0;
     padding-inline: 0;
+  }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .canvas-toolbar {
+    --canvas-toolbar-max-width: 100%;
+  }
+}
+@media (min-width: 641px) {
+  .canvas-toolbar {
+    --canvas-toolbar-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .canvas-toolbar .canvas-toolbar-content {
+    flex-wrap: nowrap;
+  }
+  .canvas-toolbar .canvas-toolbar-scroll {
+    flex-wrap: nowrap;
+    width: max-content;
   }
 }
 @media (max-width: 640px) {
@@ -578,15 +627,15 @@ input[type="range"]::-moz-range-thumb {
     max-width: none;
   }
   .pattern-canvas-area {
-    padding-bottom: 12px;
+    padding-bottom: 0;
   }
   .pattern-canvas-shell {
     --canvas-shell-padding: 0;
   }
   .pattern-canvas-area {
     --canvas-card-padding: 8px;
-    --canvas-card-padding-y: 8px;
-    --canvas-card-padding-x: 8px;
+    --canvas-card-padding-y: 0px;
+    --canvas-card-padding-x: 0px;
   }
   .image-controls-panel {
     top: auto !important;
@@ -605,10 +654,10 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 .pattern-canvas-area {
-  --canvas-card-padding-y: 20px;
-  --canvas-card-padding-x: 12px;
-  padding-top: clamp(0px, 2.5vh, 24px);
-  padding-bottom: clamp(0px, 2vh, 20px);
+  --canvas-card-padding-y: 0px;
+  --canvas-card-padding-x: 0px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 @property --tw-rotate-x {
   syntax: "*";

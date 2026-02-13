@@ -59,6 +59,7 @@ type Props = {
   filterSelecting?: boolean;
   onFilterRectChange?: (rect: { x0: number; y0: number; x1: number; y1: number } | null) => void;
   onFilterSelectEnd?: () => void;
+  gridBackground?: string;
 };
 
 export default function GridCanvas(props: Props) {
@@ -113,6 +114,7 @@ export default function GridCanvas(props: Props) {
     filterSelecting = false,
     onFilterRectChange,
     onFilterSelectEnd,
+    gridBackground,
   } = props;
 
   const canvasW = width * cellSize;
@@ -236,7 +238,11 @@ export default function GridCanvas(props: Props) {
       if (Number.isFinite(gridCenterX) && Number.isFinite(gridCenterY)) {
         const nextPanX = centerX - baseOffsetX - gridCenterX * cellSize;
         const nextPanY = centerY - baseOffsetY - gridCenterY * cellSize;
-        setPanOffset(clampPan(nextPanX, nextPanY));
+        setPanOffset((prev) => {
+          const next = clampPan(nextPanX, nextPanY);
+          if (next.x === prev.x && next.y === prev.y) return prev;
+          return next;
+        });
       }
       if (anchor) {
         zoomAnchorRef.current = null;
@@ -248,7 +254,11 @@ export default function GridCanvas(props: Props) {
   }, [zoom, cellSize, containerWidth, containerHeight, baseOffsetX, baseOffsetY]);
 
   useLayoutEffect(() => {
-    setPanOffset((prev) => clampPan(prev.x, prev.y));
+    setPanOffset((prev) => {
+      const next = clampPan(prev.x, prev.y);
+      if (next.x === prev.x && next.y === prev.y) return prev;
+      return next;
+    });
   }, [canvasW, canvasH, containerWidth, containerHeight]);
 
   const lastCenterTokenRef = useRef<number | undefined>(undefined);
@@ -335,6 +345,7 @@ export default function GridCanvas(props: Props) {
     filterSelecting,
     zoom,
     showGridlines,
+    gridBackground,
   });
 
   function getCellFromEvent(e: React.PointerEvent<HTMLCanvasElement>, ignoreFilter = false) {
@@ -575,7 +586,7 @@ export default function GridCanvas(props: Props) {
   const alignX = "flex-start";
   const alignY = "flex-start";
   const effectivePanMode = panMode && !(traceAdjustMode && traceImage);
-  const containerBg = darkCanvas ? "#000000" : "#ffffff";
+  const containerBg = "#e6e6e6";
 
   useEffect(() => {
     const node = containerRef.current;
@@ -618,17 +629,34 @@ export default function GridCanvas(props: Props) {
         alignSelf: "start",
         width: containerWidth || canvasW,
         height: containerHeight || canvasH,
-        overflow: "hidden",
+        overflow: "visible",
         borderRadius: 0,
         background: containerBg,
         boxShadow: "none",
         touchAction: "none",
       }}
     >
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: canvasW,
+          height: canvasH,
+          transform: `translate3d(${drawTranslateX}px, ${drawTranslateY}px, 0)`,
+          boxShadow: "0 10px 24px rgba(15, 23, 42, 0.18)",
+          pointerEvents: "none",
+          zIndex: 0,
+          willChange: "transform",
+        }}
+      />
       <canvas
         ref={canvasRef}
         style={{
           touchAction: "none",
+          position: "relative",
+          zIndex: 1,
           cursor:
             filterSelecting
               ? "crosshair"

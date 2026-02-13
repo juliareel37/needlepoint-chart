@@ -36,13 +36,13 @@ export default function ExportPdfButton({
         exportPatternPdf({ title, canvas, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
-        padding: "10px 12px",
+        padding: "8px 12px",
         borderRadius: 10,
         border: "none",
         background: "var(--accent)",
         color: "#ffffff",
         cursor: "pointer",
-        width: "100%",
+        fontSize: 14,
         display: "inline-flex",
         alignItems: "center",
         gap: 8,

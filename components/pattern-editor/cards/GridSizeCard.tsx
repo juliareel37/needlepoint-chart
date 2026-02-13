@@ -52,7 +52,6 @@ export function GridSizeCard({
         ...cardStyle,
         boxShadow: gridOpen ? cardShadow : cardShadowCollapsed,
         width: "100%",
-        minHeight: gridOpen ? 240 : 0,
         boxSizing: "border-box",
       }}
     >
@@ -76,7 +75,7 @@ export function GridSizeCard({
         <span style={{ opacity: 0.7 }}>{gridOpen ? "▾" : "▸"}</span>
       </button>
 
-      <div style={{ display: "grid", gap: 8, width: "100%", ...collapseStyle(gridOpen, 900) }}>
+      <div style={{ display: "grid", gap: 8, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "nowrap" }}>
           <button
             type="button"

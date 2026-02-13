@@ -82,6 +82,7 @@ export function CanvasWithExportRef(props: any) {
     setShowGridlines,
     setThreadView,
     setTraceOpacity,
+    gridBackground,
   } = props;
 
   const exportCellSize = EXPORT_CELL_SIZE;
@@ -134,14 +135,12 @@ export function CanvasWithExportRef(props: any) {
     const updateHeights = () => {
       const card = canvasCardRef.current;
       if (!card) return;
-      const bottomPadding = 16;
-      const maxHeight = isNarrow
-        ? Math.max(240, Math.floor(window.innerHeight * 0.75))
-        : Math.max(240, Math.floor(window.innerHeight - card.getBoundingClientRect().top - bottomPadding));
+      const parentHeight = card.parentElement?.getBoundingClientRect().height ?? window.innerHeight;
+      const maxHeight = Math.max(240, Math.floor(parentHeight));
       setCanvasCardMaxHeight(maxHeight);
       const zoomRowHeight = 0;
-      const padding = 12;
-      const gap = 10;
+      const padding = 0;
+      const gap = 0;
       const availableCanvasHeight = Math.max(120, maxHeight - zoomRowHeight - padding * 2 - gap);
       setCanvasViewportHeight(availableCanvasHeight);
     };
@@ -325,20 +324,22 @@ export function CanvasWithExportRef(props: any) {
   }, [zoomCollapsed]);
 
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div style={{ display: "grid", gap: 0, height: "100%", minHeight: 0, width: "100%" }}>
       <div
         ref={canvasCardRef}
         style={{
-          background: "var(--card-bg)",
+          background: "var(--canvas-card-bg, var(--card-bg))",
           border: "none",
-          borderRadius: 12,
+          borderRadius: "var(--canvas-card-radius, 12px)",
           padding:
             "var(--canvas-card-padding-y, var(--canvas-card-padding, 12px)) var(--canvas-card-padding-x, var(--canvas-card-padding, 12px))",
-          boxShadow: "0 6px 16px rgba(15, 23, 42, 0.12)",
+          boxShadow: "var(--canvas-card-shadow, 0 6px 16px rgba(15, 23, 42, 0.12))",
           display: "grid",
           gap: 10,
-          maxHeight: canvasCardMaxHeight ?? undefined,
-          minHeight: uiReady ? canvasCardMaxHeight ?? "70vh" : "calc(100vh - 140px)",
+          height: "100%",
+          maxHeight: "100%",
+          minHeight: "100%",
+          flex: "1 1 auto",
           overflow: "visible",
           position: "relative",
         }}
@@ -385,7 +386,7 @@ export function CanvasWithExportRef(props: any) {
               placeItems: "center",
             }}
           >
-            <span className="toolbar-icon" aria-hidden="true">
+            <span className="toolbar-toggle-icon" aria-hidden="true">
               <span
                 style={{
                   fontSize: 14,
@@ -661,10 +662,10 @@ export function CanvasWithExportRef(props: any) {
           style={{
             opacity: uiReady ? 1 : 0,
             pointerEvents: uiReady ? "auto" : "none",
-            position: "absolute",
-            right: 12,
-            bottom: 12,
-            zIndex: 3,
+            position: "fixed",
+            right: 16,
+            bottom: 16,
+            zIndex: 60,
             display: "flex",
             alignItems: "stretch",
             gap: 8,
@@ -897,10 +898,10 @@ export function CanvasWithExportRef(props: any) {
         {uiReady && settingsOpen && (
           <div
             style={{
-              position: "absolute",
-              right: 12,
-              bottom: 56,
-              zIndex: 4,
+              position: "fixed",
+              right: 16,
+              bottom: 72,
+              zIndex: 60,
               background: "rgba(255,255,255,0.96)",
               borderRadius: 12,
               padding: "10px 12px",
@@ -1140,6 +1141,7 @@ export function CanvasWithExportRef(props: any) {
             traceAdjustMode={traceAdjustMode}
             onTraceOffsetChange={onTraceOffsetChange}
             onTraceScaleChange={onTraceScaleChange}
+            gridBackground={gridBackground}
             zoom={zoom}
             minZoom={minZoom}
             maxZoom={maxZoom}
