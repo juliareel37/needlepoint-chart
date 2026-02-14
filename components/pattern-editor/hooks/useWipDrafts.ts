@@ -53,11 +53,10 @@ type UseWipDraftsArgs = {
   setTraceOffsetY: (value: number) => void;
   traceLocked: boolean;
   setTraceLocked: (value: boolean) => void;
-  traceImage: HTMLImageElement | null;
   setTraceImage: (value: HTMLImageElement | null) => void;
-  traceFileName: string | null;
   setTraceFileName: (value: string | null) => void;
-  traceUrlRef: MutableRefObject<string | null>;
+  traceUploadState: "idle" | "uploading" | "error";
+  setTraceUploadState: (value: "idle" | "uploading" | "error") => void;
   setDraftGridMode: (value: "stitches" | "inches") => void;
   setDraftGridW: (value: number) => void;
   setDraftGridH: (value: number) => void;
@@ -74,6 +73,13 @@ type UseWipDraftsArgs = {
 };
 
 type WipStatus = { message: string; tone: "info" | "success" | "error" } | null;
+
+class TraceSaveBlockedError extends Error {
+  constructor(public code: "UPLOAD_PENDING" | "UPLOAD_FAILED" | "MIGRATION_FAILED") {
+    super(code);
+    this.name = "TraceSaveBlockedError";
+  }
+}
 
 type UseWipDraftsReturn = {
   wipStatus: WipStatus;
@@ -133,11 +139,10 @@ export function useWipDrafts({
   setTraceOffsetY,
   traceLocked,
   setTraceLocked,
-  traceImage,
   setTraceImage,
-  traceFileName,
   setTraceFileName,
-  traceUrlRef,
+  traceUploadState,
+  setTraceUploadState,
   setDraftGridMode,
   setDraftGridW,
   setDraftGridH,
@@ -315,7 +320,10 @@ export function useWipDrafts({
       widthIn,
       heightIn,
       trace: {
-        imageDataUrl: traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null,
+        imageDataUrl:
+          traceImageUrl && (traceImageUrl.startsWith("data:") || traceImageUrl.startsWith("https://"))
+            ? traceImageUrl
+            : null,
         opacity: traceOpacity,
         scale: traceScale,
         offsetX: traceOffsetX,
@@ -335,25 +343,34 @@ export function useWipDrafts({
     }
   }
 
-  async function buildTraceImageDataUrl() {
-    if (!traceImage) {
-      return traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null;
-    }
-    try {
-      const canvas = document.createElement("canvas");
-      canvas.width = traceImage.width;
-      canvas.height = traceImage.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
-      ctx.drawImage(traceImage, 0, 0);
-      return canvas.toDataURL("image/png");
-    } catch {
-      return traceImageUrl && traceImageUrl.startsWith("data:") ? traceImageUrl : null;
-    }
-  }
-
   async function buildDraftPayload() {
-    const traceImageDataUrl = await buildTraceImageDataUrl();
+    let imageUrl = traceImageUrl;
+
+    if (imageUrl && imageUrl.startsWith("blob:")) {
+      if (traceUploadState === "uploading") {
+        throw new TraceSaveBlockedError("UPLOAD_PENDING");
+      }
+      throw new TraceSaveBlockedError("UPLOAD_FAILED");
+    }
+
+    if (imageUrl && imageUrl.startsWith("data:")) {
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const { upload } = await import("@vercel/blob/client");
+        const uploadName = `migrated-trace-${Date.now()}-${crypto.randomUUID()}.png`;
+        const uploaded = await upload(uploadName, blob, {
+          access: "public",
+          handleUploadUrl: "/api/upload-trace",
+        });
+        imageUrl = uploaded.url;
+        setTraceImageUrl(imageUrl);
+        setTraceUploadState("idle");
+      } catch {
+        throw new TraceSaveBlockedError("MIGRATION_FAILED");
+      }
+    }
+
     return {
       version: 1,
       title,
@@ -365,7 +382,7 @@ export function useWipDrafts({
       widthIn,
       heightIn,
       trace: {
-        imageDataUrl: traceImageDataUrl,
+        imageDataUrl: imageUrl ?? null,
         opacity: traceOpacity,
         scale: traceScale,
         offsetX: traceOffsetX,
@@ -388,20 +405,35 @@ export function useWipDrafts({
     }
     saveInFlightRef.current = true;
     const saveVersion = editVersionRef.current;
-    const draft = await buildDraftPayload();
-
-    if (!isSignedIn) {
-      if (!silent) {
-        setWipMessage("Sign in to save your work.", "info");
-      }
-      saveInFlightRef.current = false;
-      return false;
-    }
-
-    if (!silent) {
-      setWipMessage(currentDraftId ? "Saving changes..." : "Saving new WIP...", "info");
-    }
     try {
+      if (!isSignedIn) {
+        if (!silent) {
+          setWipMessage("Sign in to save your work.", "info");
+        }
+        return false;
+      }
+
+      let draft: Awaited<ReturnType<typeof buildDraftPayload>>;
+      try {
+        draft = await buildDraftPayload();
+      } catch (err) {
+        if (err instanceof TraceSaveBlockedError) {
+          if (err.code === "UPLOAD_PENDING") {
+            setWipMessage("Trace image is still uploading. Please wait and save again.", "info");
+          } else if (err.code === "UPLOAD_FAILED") {
+            setWipMessage("Trace upload failed. Re-select the image and try saving again.", "error");
+          } else {
+            setWipMessage("Could not migrate this trace image yet. Please retry save.", "error");
+          }
+          return false;
+        }
+        throw err;
+      }
+
+      if (!silent) {
+        setWipMessage(currentDraftId ? "Saving changes..." : "Saving new WIP...", "info");
+      }
+
       const res = await fetch(currentDraftId ? `/api/wip/${currentDraftId}` : "/api/wip", {
         method: currentDraftId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -479,9 +511,13 @@ export function useWipDrafts({
     setFutureState([]);
     setRemapSourceId(null);
     setRemapTargetId(null);
+    setTraceUploadState("idle");
     const trace = parsed.trace;
     if (trace?.imageDataUrl) {
       const img = new Image();
+      if (trace.imageDataUrl.startsWith("https://")) {
+        img.crossOrigin = "anonymous";
+      }
       img.onload = () => {
         setTraceImage(img);
         setTraceImageUrl(trace.imageDataUrl);
@@ -491,7 +527,6 @@ export function useWipDrafts({
         setTraceOffsetX(trace.offsetX ?? 0);
         setTraceOffsetY(trace.offsetY ?? 0);
         setTraceLocked(Boolean(trace.locked));
-        traceUrlRef.current = null;
       };
       img.src = trace.imageDataUrl;
     } else {
@@ -503,7 +538,6 @@ export function useWipDrafts({
       setTraceOffsetX(0);
       setTraceOffsetY(0);
       setTraceLocked(false);
-      traceUrlRef.current = null;
     }
     window.setTimeout(() => {
       ignoreDirtyRef.current = false;

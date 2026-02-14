@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { deleteBlobIfExists, extractBlobUrl } from "@/lib/blob";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ type DraftPayload = {
   widthIn: number;
   heightIn: number;
   trace: {
-    imageDataUrl: string | null;
+    imageDataUrl: string | null; // Vercel Blob URL (https://...) or legacy data: URL
     opacity: number;
     scale: number;
     offsetX: number;
@@ -77,6 +78,7 @@ export async function PUT(req: Request, context: RouteContext) {
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
+  const draft = body.draft;
 
   const existing = await prisma.patternDraft.findFirst({
     where: { id, userId },
@@ -88,7 +90,7 @@ export async function PUT(req: Request, context: RouteContext) {
 
   const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
 
-  const dataHash = hashDraft(body.draft);
+  const dataHash = hashDraft(draft);
   const now = new Date();
   const lastVersionAt = existing.lastVersionAt ? new Date(existing.lastVersionAt) : null;
   const VERSION_INTERVAL_MS = 3 * 60 * 1000;
@@ -102,7 +104,7 @@ export async function PUT(req: Request, context: RouteContext) {
       where: { id },
       data: {
         title,
-        data: body.draft,
+        data: draft,
         ...(shouldVersion
           ? {
               lastVersionAt: now,
@@ -116,7 +118,7 @@ export async function PUT(req: Request, context: RouteContext) {
       await tx.patternVersion.create({
         data: {
           draftId: id,
-          data: body.draft,
+          data: draft,
           dataHash,
         },
       });
@@ -144,12 +146,32 @@ export async function DELETE(_req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
+  const existing = await prisma.patternDraft.findFirst({
+    where: { id, userId },
+    include: { versions: { select: { data: true } } },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const result = await prisma.patternDraft.deleteMany({
     where: { id, userId },
   });
 
   if (result.count === 0) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const blobUrls = new Set<string>();
+  const draftBlob = extractBlobUrl(existing.data);
+  if (draftBlob) blobUrls.add(draftBlob);
+  for (const version of existing.versions) {
+    const versionBlob = extractBlobUrl(version.data);
+    if (versionBlob) blobUrls.add(versionBlob);
+  }
+  for (const url of blobUrls) {
+    void deleteBlobIfExists(url);
   }
 
   return NextResponse.json({ ok: true });

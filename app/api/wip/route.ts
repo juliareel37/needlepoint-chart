@@ -16,7 +16,7 @@ type DraftPayload = {
   widthIn: number;
   heightIn: number;
   trace: {
-    imageDataUrl: string | null;
+    imageDataUrl: string | null; // Vercel Blob URL (https://...) or legacy data: URL
     opacity: number;
     scale: number;
     offsetX: number;
@@ -62,19 +62,20 @@ export async function POST(req: Request) {
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
+  const draft = body.draft;
 
   const title =
     typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled Pattern";
 
   const now = new Date();
-  const dataHash = hashDraft(body.draft);
+  const dataHash = hashDraft(draft);
 
   const saved = await prisma.$transaction(async (tx) => {
     const created = await tx.patternDraft.create({
       data: {
         userId,
         title,
-        data: body.draft,
+        data: draft,
         lastVersionAt: now,
         lastVersionHash: dataHash,
       },
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     await tx.patternVersion.create({
       data: {
         draftId: created.id,
-        data: body.draft,
+        data: draft,
         dataHash,
       },
     });

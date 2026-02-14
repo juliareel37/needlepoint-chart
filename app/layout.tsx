@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
@@ -29,26 +30,26 @@ export const metadata: Metadata = {
   },
 };
 
+const appShellStyle: CSSProperties & Record<"--app-header-height", string> = {
+  position: "relative",
+  width: "100%",
+  padding: 0,
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  "--app-header-height": "52px",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <ClerkProvider>
       <html lang="en">
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              padding: 0,
-              minHeight: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              "--app-header-height": "52px",
-            }}
-          >
+          <div style={appShellStyle}>
             <div
               style={{
                 height: 52,
