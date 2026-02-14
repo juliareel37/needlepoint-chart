@@ -64,12 +64,12 @@ export default function PatternEditor() {
     confirmLabel?: string;
     position?: { top: number; left: number } | null;
   } | null>(null);
-  const [gridOpen, setGridOpen] = useState(false);
+  const [gridOpen, setGridOpen] = useState(true);
   const [wipOpen, setWipOpen] = useState(true);
-  const [traceOpen, setTraceOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [usedColorsOpen, setUsedColorsOpen] = useState(false);
-  const [imageToPatternOpen, setImageToPatternOpen] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(true);
+  const [paletteOpen, setPaletteOpen] = useState(true);
+  const [usedColorsOpen, setUsedColorsOpen] = useState(true);
+  const [imageToPatternOpen, setImageToPatternOpen] = useState(true);
   const [traceImageUrl, setTraceImageUrl] = useState<string | null>(null);
   const [traceFileName, setTraceFileName] = useState<string | null>(null);
   const [traceImage, setTraceImage] = useState<HTMLImageElement | null>(null);
@@ -78,7 +78,13 @@ export default function PatternEditor() {
   const [traceOffsetX, setTraceOffsetX] = useState(0);
   const [traceOffsetY, setTraceOffsetY] = useState(0);
   const [traceLocked, setTraceLocked] = useState(false);
+  const [tracePostUpload, setTracePostUpload] = useState(false);
+  const [traceEditMode, setTraceEditMode] = useState(false);
+  const [pendingTraceUnlock, setPendingTraceUnlock] = useState(false);
+  const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number } | null>(null);
   const [panMode, setPanMode] = useState(false);
+  const prevToolRef = useRef<typeof tool>(tool);
+  const prevPanModeRef = useRef<boolean>(panMode);
   const traceUrlRef = useRef<string | null>(null);
   const traceInputRef = useRef<HTMLInputElement | null>(null);
   const traceSampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -115,6 +121,14 @@ export default function PatternEditor() {
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
   const [headerActionsNode, setHeaderActionsNode] = useState<HTMLElement | null>(null);
+  const [headerTitleNode, setHeaderTitleNode] = useState<HTMLElement | null>(null);
+  const [headerFileNode, setHeaderFileNode] = useState<HTMLElement | null>(null);
+  const [headerAutosaveNode, setHeaderAutosaveNode] = useState<HTMLElement | null>(null);
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const fileMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(title);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isNarrow) {
@@ -131,19 +145,47 @@ export default function PatternEditor() {
   }, []);
 
   useEffect(() => {
-    if (!traceImageUrl) {
-      setTraceImage(null);
-      setTraceFileName(null);
-      setTraceOpacity(0);
-      return;
-    }
-    const img = new Image();
-    img.onload = () => setTraceImage(img);
-    img.src = traceImageUrl;
-    return () => {
-      setTraceImage(null);
+    if (typeof document === "undefined") return;
+    const node = document.getElementById("app-header-title");
+    setHeaderTitleNode(node);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const node = document.getElementById("app-header-file");
+    setHeaderFileNode(node);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const node = document.getElementById("app-header-autosave");
+    setHeaderAutosaveNode(node);
+  }, []);
+
+  useEffect(() => {
+    if (!fileMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!fileMenuRef.current || !target) return;
+      if (fileMenuRef.current.contains(target)) return;
+      setFileMenuOpen(false);
     };
-  }, [traceImageUrl]);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [fileMenuOpen]);
+
+  useEffect(() => {
+    if (!isRenaming) return;
+    setDraftTitle(title);
+    renameInputRef.current?.focus();
+    renameInputRef.current?.select();
+  }, [isRenaming]);
+
+  function commitRename() {
+    setTitle(draftTitle.trim() || "Untitled Pattern");
+    setIsRenaming(false);
+  }
+
 
 
 
@@ -206,6 +248,31 @@ export default function PatternEditor() {
   const displayCellSize = useMemo(() => {
     return Math.max(1, Number((fitCellSize * zoom).toFixed(2)));
   }, [fitCellSize, zoom]);
+
+  useEffect(() => {
+    if (!traceImageUrl) {
+      setTraceImage(null);
+      setTraceFileName(null);
+      setTraceOpacity(0);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      setTraceImage(img);
+      fitTraceImageToGrid(img);
+    };
+    img.src = traceImageUrl;
+    return () => {
+      setTraceImage(null);
+    };
+  }, [traceImageUrl, fitCellSize]);
+
+  useEffect(() => {
+    if (pendingTraceUnlock && !traceLocked) {
+      setTraceEditMode(true);
+      setPendingTraceUnlock(false);
+    }
+  }, [pendingTraceUnlock, traceLocked]);
 
   const containerWidth = Math.max(1, canvasInnerWidth);
   const containerHeight = Math.max(1, Math.round((containerWidth * gridH) / gridW));
@@ -432,35 +499,70 @@ export default function PatternEditor() {
     setTraceOffsetY((baseCanvasH - traceImage.height * scale) / 2);
   }
 
+  function fitTraceImageToGrid(image: HTMLImageElement) {
+    const baseCanvasW = gridW * fitCellSize;
+    const baseCanvasH = gridH * fitCellSize;
+    const scale = Math.min(baseCanvasW / image.width, baseCanvasH / image.height);
+    setTraceScale(scale);
+    setTraceOffsetX((baseCanvasW - image.width * scale) / 2);
+    setTraceOffsetY((baseCanvasH - image.height * scale) / 2);
+  }
+
   function convertImageToPattern() {
     if (!traceImage) return;
-    const result = buildImageToPattern({
-      traceImage,
-      fitCellSize,
-      traceScale,
-      traceOffsetX,
-      traceOffsetY,
-      palette,
-      maxColors: convertMaxColors,
-      smoothing: convertSmoothing,
-      gridW,
-      gridH,
-      sampleCanvas: traceSampleCanvasRef.current,
-    });
-    if (!result) return;
-    traceSampleCanvasRef.current = result.sampleCanvas;
-    updateGrid(() => result.grid);
+
+    const hasPaintedCells = (() => {
+      for (let i = 0; i < grid.length; i += 1) {
+        if (grid[i] !== 0) return true;
+      }
+      return false;
+    })();
+
+    const runConvert = () => {
+      const result = buildImageToPattern({
+        traceImage,
+        fitCellSize,
+        traceScale,
+        traceOffsetX,
+        traceOffsetY,
+        palette,
+        maxColors: convertMaxColors,
+        smoothing: convertSmoothing,
+        gridW,
+        gridH,
+        sampleCanvas: traceSampleCanvasRef.current,
+      });
+      if (!result) return;
+      traceSampleCanvasRef.current = result.sampleCanvas;
+      updateGrid(() => result.grid);
+    };
+
+    if (hasPaintedCells) {
+      confirmActionRef.current = runConvert;
+      setConfirmDialog({
+        title: "Overwrite current pattern?",
+        message: "Converting this image will replace your current stitches. Do you want to continue?",
+        confirmLabel: "Convert",
+      });
+      return;
+    }
+
+    runConvert();
   }
 
   function handleTraceFileSelected(file: File) {
     if (traceUrlRef.current) {
       URL.revokeObjectURL(traceUrlRef.current);
     }
+    prevToolRef.current = tool;
+    prevPanModeRef.current = panMode;
     const url = URL.createObjectURL(file);
     traceUrlRef.current = url;
     setTraceImageUrl(url);
     setTraceFileName(file.name);
     setTraceLocked(false);
+    setTracePostUpload(true);
+    setTraceEditMode(false);
     setTraceOpacity(0.5);
   }
 
@@ -470,10 +572,67 @@ export default function PatternEditor() {
     setTraceImage(null);
     setTraceOpacity(0);
     setTraceLocked(false);
+    setTracePostUpload(false);
+    setTraceEditMode(false);
     if (traceUrlRef.current) {
       URL.revokeObjectURL(traceUrlRef.current);
       traceUrlRef.current = null;
     }
+  }
+
+  function handleToggleTraceLock() {
+    if (traceLocked) {
+      prevTraceTransformRef.current = {
+        scale: traceScale,
+        x: traceOffsetX,
+        y: traceOffsetY,
+      };
+      setPendingTraceUnlock(true);
+      setTracePostUpload(false);
+    } else {
+      setTraceEditMode(false);
+      setTracePostUpload(false);
+    }
+    toggleTraceLock();
+  }
+
+  function handleSetTraceLockedState(nextLocked: boolean) {
+    if (!nextLocked) {
+      prevTraceTransformRef.current = {
+        scale: traceScale,
+        x: traceOffsetX,
+        y: traceOffsetY,
+      };
+      setPendingTraceUnlock(true);
+      setTracePostUpload(false);
+    } else {
+      setTraceEditMode(false);
+      setTracePostUpload(false);
+    }
+    setTraceLockedState(nextLocked);
+  }
+
+  function handleTraceCancel() {
+    if (traceEditMode) {
+      const prevTransform = prevTraceTransformRef.current;
+      if (prevTransform) {
+        setTraceScale(prevTransform.scale);
+        setTraceOffsetX(prevTransform.x);
+        setTraceOffsetY(prevTransform.y);
+      }
+      setTraceEditMode(false);
+      setTraceLockedState(true);
+      return;
+    }
+    setTool(prevToolRef.current);
+    setPanMode(prevPanModeRef.current);
+    clearTraceImage();
+  }
+
+  function handleTraceSetImage() {
+    setTracePostUpload(false);
+    setTraceEditMode(false);
+    setTraceLockedState(true);
   }
 
   useEffect(() => {
@@ -591,9 +750,9 @@ export default function PatternEditor() {
     }) as const;
 
   const menuPages = [
-    { id: "main", label: "Main", icon: "▦" },
-    { id: "colors", label: "Colors", icon: "🎨" },
-    { id: "background", label: "Background", icon: "🖼" },
+    { id: "main", label: "Main", icon: assetPath("/grid.svg") },
+    { id: "colors", label: "Colors", icon: assetPath("/palette.svg") },
+    { id: "background", label: "Background", icon: assetPath("/photo.svg") },
   ];
   const [activeMenuId, setActiveMenuId] = useState(menuPages[0].id);
 
@@ -647,6 +806,217 @@ export default function PatternEditor() {
             />,
             headerActionsNode
           )}
+        {headerFileNode &&
+          createPortal(
+            <div ref={fileMenuRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setFileMenuOpen((open) => !open)}
+                aria-expanded={fileMenuOpen}
+                aria-haspopup="menu"
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--card-bg)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                File
+              </button>
+              {fileMenuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    left: 0,
+                    minWidth: 160,
+                    background: "var(--card-bg)",
+                    border: "1px solid rgba(15, 23, 42, 0.12)",
+                    borderRadius: 10,
+                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
+                    padding: 6,
+                    display: "grid",
+                    gap: 4,
+                    zIndex: 50,
+                  }}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.open(window.location.href, "_blank", "noopener,noreferrer");
+                      } else {
+                        startNewWip();
+                      }
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    New WIP
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      loadWip();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Load WIP
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      openVersionHistory();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Version History
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      setIsRenaming(true);
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Rename
+                  </button>
+                </div>
+              )}
+            </div>,
+            headerFileNode
+          )}
+        {headerAutosaveNode &&
+          createPortal(
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <img
+                src={assetPath("/cloud_done.svg")}
+                alt=""
+                aria-hidden="true"
+                width={16}
+                height={16}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span style={{ fontSize: 12, opacity: 0.8 }}>
+                Autosaved{" "}
+                {lastAutosaveAt
+                  ? `at ${lastAutosaveAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                  : ""}
+              </span>
+            </div>,
+            headerAutosaveNode
+          )}
+        {headerTitleNode &&
+          createPortal(
+            isRenaming ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input
+                  ref={renameInputRef}
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      commitRename();
+                    }
+                    if (e.key === "Escape") {
+                      setIsRenaming(false);
+                      setDraftTitle(title);
+                    }
+                  }}
+                  aria-label="Pattern name"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    textAlign: "center",
+                    border: "1px solid var(--panel-border)",
+                    borderRadius: 8,
+                    background: "transparent",
+                    color: "var(--foreground)",
+                    outline: "none",
+                    padding: "4px 8px",
+                    minWidth: 120,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={commitRename}
+                  aria-label="Confirm rename"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: "1px solid var(--panel-border)",
+                    background: "var(--card-bg)",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                    fontWeight: 700,
+                  }}
+                >
+                  ✓
+                </button>
+              </div>
+            ) : (
+              <span
+                onDoubleClick={() => setIsRenaming(true)}
+                style={{ fontWeight: 700, fontSize: 14, color: "var(--foreground)", cursor: "text" }}
+              >
+                {title}
+              </span>
+            ),
+            headerTitleNode
+          )}
         {!isNarrow && !sidebarCollapsed && (
           <button
             type="button"
@@ -670,7 +1040,7 @@ export default function PatternEditor() {
             }}
           >
             <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.7 }}>
-              {sidebarCollapsed ? "◂" : "▸"}
+              {sidebarCollapsed ? "▸" : "◂"}
             </span>
           </button>
         )}
@@ -697,7 +1067,7 @@ export default function PatternEditor() {
             }}
           >
             <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.7 }}>
-              {sidebarCollapsed ? "◂" : "▸"}
+              {sidebarCollapsed ? "▸" : "◂"}
             </span>
           </button>
         )}
@@ -732,7 +1102,7 @@ export default function PatternEditor() {
                   width: 40,
                   height: 40,
                   borderRadius: 12,
-                  border: "1px solid rgba(15,23,42,0.12)",
+                  border: "none",
                   background: activeMenuId === page.id ? "var(--accent-wash)" : "var(--card-bg)",
                   color: activeMenuId === page.id ? "var(--accent-strong)" : "var(--foreground)",
                   fontSize: 16,
@@ -741,7 +1111,14 @@ export default function PatternEditor() {
                   cursor: "pointer",
                 }}
               >
-                <span aria-hidden="true">{page.icon}</span>
+                <img
+                  src={page.icon}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
               </button>
             ))}
           </div>
@@ -801,34 +1178,6 @@ export default function PatternEditor() {
                     style={{ height: 92, width: "auto", display: "block" }}
                   />
                 </div>
-                <WipCard
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  wipOpen={wipOpen}
-                  setWipOpen={setWipOpen}
-                  collapseStyle={collapseStyle}
-                  title={title}
-                  onTitleChange={(value) => setTitle(value)}
-                  isSignedIn={isSignedIn}
-                  onCapturePendingDraft={() => {
-                    void capturePendingDraft();
-                  }}
-                  onStartNewWip={startNewWip}
-                  onLoadWip={loadWip}
-                  onOpenVersionHistory={openVersionHistory}
-                  draftInputRef={draftInputRef}
-                  onDraftFileSelected={loadDraftFile}
-                  lastAutosaveAt={lastAutosaveAt}
-                  exportCanvasRef={exportCanvasRef}
-                  usedColors={usedColors}
-                  grid={grid}
-                  paletteById={paletteById}
-                  symbolMap={symbolMap}
-                  gridW={gridW}
-                  gridH={gridH}
-                  exportCellSize={EXPORT_CELL_SIZE}
-                />
                 <GridSizeCard
                   cardStyle={cardStyle}
                   cardShadow={cardShadow}
@@ -854,20 +1203,6 @@ export default function PatternEditor() {
                   }}
                 />
 
-                <ImageToPatternCard
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  imageToPatternOpen={imageToPatternOpen}
-                  setImageToPatternOpen={setImageToPatternOpen}
-                  collapseStyle={collapseStyle}
-                  traceImage={traceImage}
-                  convertMaxColors={convertMaxColors}
-                  setConvertMaxColors={setConvertMaxColors}
-                  convertSmoothing={convertSmoothing}
-                  setConvertSmoothing={setConvertSmoothing}
-                  onConvert={convertImageToPattern}
-                />
               </>
             ) : activeMenuId === "colors" ? (
               <>
@@ -955,7 +1290,7 @@ export default function PatternEditor() {
                   traceLocked={traceLocked}
                   onTraceFileSelected={handleTraceFileSelected}
                   onClearTrace={clearTraceImage}
-                  onSetTraceLockedState={setTraceLockedState}
+                  onSetTraceLockedState={handleSetTraceLockedState}
                 />
                 <ImageToPatternCard
                   cardStyle={cardStyle}
@@ -1062,10 +1397,9 @@ export default function PatternEditor() {
               traceScale={traceScale}
               traceOffsetX={traceOffsetX}
               traceOffsetY={traceOffsetY}
-              traceAdjustMode={traceImage ? !traceLocked : false}
+              traceAdjustMode={traceImage ? traceEditMode || tracePostUpload : false}
               traceLocked={traceLocked}
-              onToggleTraceLock={toggleTraceLock}
-              onFitToGrid={fitTraceToGrid}
+              onToggleTraceLock={handleToggleTraceLock}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
                 setTraceOffsetX(x);
                 setTraceOffsetY(y);
@@ -1107,6 +1441,10 @@ export default function PatternEditor() {
               traceImage={traceImage}
               traceOpacity={traceOpacity}
               setTraceOpacity={setTraceOpacity}
+              tracePostUpload={tracePostUpload}
+              traceEditMode={traceEditMode}
+              onTraceCancel={handleTraceCancel}
+              onTraceSetImage={handleTraceSetImage}
             />
           </div>
         </div>
@@ -1138,7 +1476,14 @@ export default function PatternEditor() {
       />
       <ConfirmDialog
         dialog={confirmDialog}
-        onClose={() => setConfirmDialog(null)}
+        onClose={() => {
+          setConfirmDialog(null);
+          if (pendingTraceUnlock) {
+            setPendingTraceUnlock(false);
+            setTraceEditMode(false);
+            setTracePostUpload(false);
+          }
+        }}
         onConfirm={() => {
           setConfirmDialog(null);
           confirmActionRef.current?.();

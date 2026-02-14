@@ -51,7 +51,6 @@ export function CanvasWithExportRef(props: any) {
     traceAdjustMode,
     traceLocked,
     onToggleTraceLock,
-    onFitToGrid,
     onTraceScaleChange,
     onTraceOffsetChange,
     panMode,
@@ -82,6 +81,10 @@ export function CanvasWithExportRef(props: any) {
     setShowGridlines,
     setThreadView,
     setTraceOpacity,
+    tracePostUpload,
+    traceEditMode,
+    onTraceCancel,
+    onTraceSetImage,
     gridBackground,
   } = props;
 
@@ -355,6 +358,7 @@ export function CanvasWithExportRef(props: any) {
             position: "absolute",
             top: 16,
             left: 12,
+            transform: "none",
             zIndex: 4,
             background: "var(--canvas-toolbar-bg, rgba(255,255,255,0.92))",
             border: "none",
@@ -601,28 +605,56 @@ export function CanvasWithExportRef(props: any) {
             </div>
           </div>
         </div>
-        {uiReady && traceImage && !traceLocked && (
+        {uiReady && traceImage && !traceLocked && (tracePostUpload || traceEditMode) && (
           <div
-            role="status"
             style={{
               position: "absolute",
-              top: -8,
+              top: "85%",
               left: "50%",
-              transform: "translateX(-50%)",
+              transform: "translate(-50%, -50%)",
               zIndex: 5,
               display: "flex",
-              alignItems: "center",
               gap: 8,
+              alignItems: "center",
               background: "rgba(30, 41, 59, 0.88)",
-              color: "#f8fafc",
-              padding: "6px 10px",
-              borderRadius: 999,
-              fontSize: 12,
-              fontWeight: 600,
+              borderRadius: 12,
+              padding: "8px 10px",
               boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              backdropFilter: "blur(6px)",
             }}
           >
-            <span>Image is unlocked. Lock image when placement is complete.</span>
+            <button
+              type="button"
+              onClick={onTraceCancel}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,0.35)",
+                background: "transparent",
+                color: "#ffffff",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {traceEditMode ? "Cancel Edit" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={onTraceSetImage}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#ffffff",
+                color: "#0f172a",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Set Image
+            </button>
           </div>
         )}
         {uiReady && !traceAdjustMode && !panMode && (tool === "paint" || tool === "eraser") && (
@@ -1046,54 +1078,6 @@ export function CanvasWithExportRef(props: any) {
                     <span style={{ fontSize: 10, fontWeight: 500 }}>
                       {traceLocked ? "Unlock" : "Lock"}
                     </span>
-                    </button>
-                    <button
-                    type="button"
-                    onClick={onFitToGrid}
-                    disabled={!traceImage || traceLocked}
-                    aria-label="Fit image to grid"
-                    className="image-controls-lock"
-                    style={{
-                      flex: "1 1 0",
-                      minWidth: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 2,
-                      border: "none",
-                      background: "transparent",
-                      cursor: "pointer",
-                      padding: 0,
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "var(--foreground)",
-                      opacity: !traceImage || traceLocked ? 0.5 : 1,
-                      transition: "background 150ms ease, border-color 150ms ease",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: 26,
-                        height: 26,
-                        borderRadius: 8,
-                        border: "1px solid rgba(15, 23, 42, 0.16)",
-                        background: "#f8fafc",
-                      }}
-                    >
-                      <img
-                        src={assetPath("/fit_width.svg")}
-                        alt=""
-                        aria-hidden="true"
-                        width={14}
-                        height={14}
-                        style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                      />
-                    </span>
-                    <span style={{ fontSize: 10, fontWeight: 500 }}>Fit to grid</span>
                     </button>
                   </div>
                 </div>

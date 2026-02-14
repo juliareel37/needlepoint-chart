@@ -106,16 +106,6 @@ export function WipCard({
         <span style={{ opacity: 0.7 }}>{wipOpen ? "▾" : "▸"}</span>
       </button>
       <div style={{ display: "grid", gap: 8, width: "100%", ...collapseStyle(wipOpen, 900) }}>
-        <input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          style={{
-            padding: "8px 10px",
-            borderRadius: 8,
-            border: "1px solid var(--panel-border)",
-            width: "100%",
-          }}
-        />
         <div style={{ display: "grid", gap: 8, width: "100%" }}>
           {!isSignedIn && (
             <SignInButton mode="modal">

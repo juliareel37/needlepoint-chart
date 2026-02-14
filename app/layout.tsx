@@ -62,12 +62,25 @@ export default function RootLayout({
                 zIndex: 200,
               }}
             >
-              <img
-                src={assetPath("/wippa_logo.png")}
-                alt="Wippa"
-                style={{ height: 24, width: "auto", display: "block" }}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+                <img
+                  src={assetPath("/wippa_logo.png")}
+                  alt="Wippa"
+                  style={{ height: 24, width: "auto", display: "block" }}
+                />
+                <div id="app-header-file" />
+                <div id="app-header-autosave" />
+              </div>
+              <div
+                id="app-header-title"
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 0,
+                }}
               />
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                 <div id="app-header-actions" />
                 <HeaderAuth />
               </div>

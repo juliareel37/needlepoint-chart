@@ -66,7 +66,6 @@ export function ImageToPatternCard({
           ...collapseStyle(imageToPatternOpen, 500),
         }}
       >
-        <div style={{ fontSize: 12, opacity: 0.7 }}>Running this will overwrite the current pattern.</div>
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 12, opacity: 0.7 }}>Max colors</span>
