@@ -85,7 +85,9 @@ export default function PatternEditor() {
   const [panMode, setPanMode] = useState(false);
   const prevToolRef = useRef<typeof tool>(tool);
   const prevPanModeRef = useRef<boolean>(panMode);
-  const traceUrlRef = useRef<string | null>(null);
+  const [traceUploadState, setTraceUploadState] = useState<"idle" | "uploading" | "error">("idle");
+  const tracePreviewObjectUrlRef = useRef<string | null>(null);
+  const traceUploadSeqRef = useRef(0);
   const traceInputRef = useRef<HTMLInputElement | null>(null);
   const traceSampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -186,13 +188,28 @@ export default function PatternEditor() {
     setIsRenaming(false);
   }
 
-
-
-
+  useEffect(() => {
+    if (!traceImageUrl) {
+      setTraceImage(null);
+      setTraceFileName(null);
+      setTraceOpacity(0);
+      return;
+    }
+    const img = new Image();
+    if (traceImageUrl.startsWith("https://")) {
+      img.crossOrigin = "anonymous";
+    }
+    img.onload = () => setTraceImage(img);
+    img.src = traceImageUrl;
+    return () => {
+      setTraceImage(null);
+    };
+  }, [traceImageUrl]);
   useEffect(() => {
     return () => {
-      if (traceUrlRef.current) {
-        URL.revokeObjectURL(traceUrlRef.current);
+      if (tracePreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(tracePreviewObjectUrlRef.current);
+        tracePreviewObjectUrlRef.current = null;
       }
     };
   }, []);
@@ -450,11 +467,10 @@ export default function PatternEditor() {
     setTraceOffsetY,
     traceLocked,
     setTraceLocked,
-    traceImage,
     setTraceImage,
-    traceFileName,
     setTraceFileName,
-    traceUrlRef,
+    traceUploadState,
+    setTraceUploadState,
     setDraftGridMode,
     setDraftGridW,
     setDraftGridH,
@@ -550,23 +566,50 @@ export default function PatternEditor() {
     runConvert();
   }
 
-  function handleTraceFileSelected(file: File) {
-    if (traceUrlRef.current) {
-      URL.revokeObjectURL(traceUrlRef.current);
+  async function handleTraceFileSelected(file: File) {
+    const seq = ++traceUploadSeqRef.current;
+    setTraceUploadState("uploading");
+
+    if (tracePreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(tracePreviewObjectUrlRef.current);
+      tracePreviewObjectUrlRef.current = null;
     }
     prevToolRef.current = tool;
     prevPanModeRef.current = panMode;
-    const url = URL.createObjectURL(file);
-    traceUrlRef.current = url;
-    setTraceImageUrl(url);
+
+    const localPreview = URL.createObjectURL(file);
+    tracePreviewObjectUrlRef.current = localPreview;
+    setTraceImageUrl(localPreview);
     setTraceFileName(file.name);
     setTraceLocked(false);
     setTracePostUpload(true);
     setTraceEditMode(false);
     setTraceOpacity(0.5);
+
+    try {
+      const { upload } = await import("@vercel/blob/client");
+      const uploadName = `trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`;
+      const uploaded = await upload(uploadName, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload-trace",
+      });
+
+      if (seq !== traceUploadSeqRef.current) return;
+      if (tracePreviewObjectUrlRef.current === localPreview) {
+        URL.revokeObjectURL(localPreview);
+        tracePreviewObjectUrlRef.current = null;
+      }
+      setTraceImageUrl(uploaded.url);
+      setTraceUploadState("idle");
+    } catch {
+      if (seq !== traceUploadSeqRef.current) return;
+      setTraceUploadState("error");
+    }
   }
 
   function clearTraceImage() {
+    traceUploadSeqRef.current += 1;
+    setTraceUploadState("idle");
     setTraceImageUrl(null);
     setTraceFileName(null);
     setTraceImage(null);
@@ -574,9 +617,9 @@ export default function PatternEditor() {
     setTraceLocked(false);
     setTracePostUpload(false);
     setTraceEditMode(false);
-    if (traceUrlRef.current) {
-      URL.revokeObjectURL(traceUrlRef.current);
-      traceUrlRef.current = null;
+    if (tracePreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(tracePreviewObjectUrlRef.current);
+      tracePreviewObjectUrlRef.current = null;
     }
   }
 
