@@ -4,7 +4,6 @@ const repo = "needlepoint-chart";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
   images: { unoptimized: true },
   // basePath: "/needlepoint-chart",
   // assetPrefix: "/needlepoint-chart/",

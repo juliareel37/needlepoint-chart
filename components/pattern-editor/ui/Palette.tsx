@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { Color } from "../lib/grid";
+import type { Color } from "../../../lib/grid";
 
 type Props = {
   palette: Color[];
@@ -214,8 +214,8 @@ export default function Palette({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(36px, 1fr))",
-            gap: 6,
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 4,
             maxHeight: 240,
             overflowY: "auto",
             paddingRight: 4,
@@ -238,10 +238,10 @@ export default function Palette({
               }}
               style={{
                 display: "grid",
-                gap: 3,
+                gap: 2,
                 justifyItems: "center",
-                padding: 3,
-                borderRadius: 8,
+                padding: 2,
+                borderRadius: 6,
                 border:
                   isRemapTarget || showRemapSource
                     ? "2px solid var(--foreground)"
@@ -256,15 +256,15 @@ export default function Palette({
             >
               <span
                 style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 5,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
                   background: c.hex,
                   display: "inline-block",
                   boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
                 }}
               />
-              <span style={{ fontSize: 9, opacity: 0.75, lineHeight: 1 }}>{c.code ?? ""}</span>
+              <span style={{ fontSize: 8, opacity: 0.75, lineHeight: 1 }}>{c.code ?? ""}</span>
             </button>
           )})}
         </div>

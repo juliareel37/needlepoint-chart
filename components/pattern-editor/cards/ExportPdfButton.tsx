@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import type { Color } from "../lib/grid";
-import { exportPatternPdf } from "../lib/pdf";
+import type { Color } from "../../../lib/grid";
+import { exportPatternPdf } from "../../../lib/pdf";
+import { assetPath } from "../../../lib/assetPath";
 
 type Props = {
   title: string;
@@ -35,15 +36,27 @@ export default function ExportPdfButton({
         exportPatternPdf({ title, canvas, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
-        padding: "10px 12px",
+        padding: "8px 12px",
         borderRadius: 10,
         border: "none",
         background: "var(--accent)",
         color: "#ffffff",
         cursor: "pointer",
-        width: "100%",
+        fontSize: 14,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        justifyContent: "center",
       }}
     >
+      <img
+        src={assetPath("/download.svg")}
+        alt=""
+        aria-hidden="true"
+        width={16}
+        height={16}
+        style={{ display: "block", filter: "var(--icon-on-fg-filter)" }}
+      />
       Export PDF
     </button>
   );
