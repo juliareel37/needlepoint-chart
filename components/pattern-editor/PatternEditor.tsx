@@ -1172,7 +1172,6 @@ export default function PatternEditor() {
             display: sidebarCollapsed ? "none" : "grid",
             gap: 16,
             alignContent: "start",
-            width: "100%",
             minWidth: 0,
             minHeight: 0,
             height: "100%",
@@ -1368,21 +1367,23 @@ export default function PatternEditor() {
 
         <div
           className="pattern-canvas-shell"
-          style={{
-            minWidth: 0,
-            paddingInline: 0,
-            marginLeft: isNarrow && sidebarCollapsed ? 0 : 0,
-            transition: "margin-left 220ms ease",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            "--canvas-card-radius": "0px",
-            "--canvas-card-shadow": "none",
-            background: "var(--muted-bg)",
-            overflow: "visible",
-            position: "relative",
-            zIndex: 1,
-          }}
+          style={
+            {
+              minWidth: 0,
+              paddingInline: 0,
+              marginLeft: isNarrow && sidebarCollapsed ? 0 : 0,
+              transition: "margin-left 220ms ease",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              "--canvas-card-radius": "0px",
+              "--canvas-card-shadow": "none",
+              background: "var(--muted-bg)",
+              overflow: "visible",
+              position: "relative",
+              zIndex: 1,
+            } as React.CSSProperties & Record<"--canvas-card-radius" | "--canvas-card-shadow", string>
+          }
         >
           {/* Canvas area */}
           <div
@@ -1477,12 +1478,8 @@ export default function PatternEditor() {
               onFilterRectChange={(rect: FilterRect | null) => setFilterRect(rect)}
               onFilterSelectEnd={endFilterSelection}
               isNarrow={isNarrow}
-              showGridlines={showGridlines}
               setShowGridlines={setShowGridlines}
-              threadView={threadView}
               setThreadView={setThreadView}
-              traceImage={traceImage}
-              traceOpacity={traceOpacity}
               setTraceOpacity={setTraceOpacity}
               tracePostUpload={tracePostUpload}
               traceEditMode={traceEditMode}

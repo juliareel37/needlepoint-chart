@@ -1,7 +1,7 @@
 import { del } from "@vercel/blob";
 
 /** Returns true if the URL is a Vercel Blob URL managed by this app. */
-export function isBlobUrl(url: string | null | undefined): boolean {
+export function isBlobUrl(url: string | null | undefined): url is string {
   return typeof url === "string" && url.startsWith("https://") && url.includes(".blob.vercel-storage.com/");
 }
 

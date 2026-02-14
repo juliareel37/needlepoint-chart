@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -75,7 +76,7 @@ export async function POST(req: Request, context: RouteContext) {
   const updated = await prisma.patternDraft.update({
     where: { id },
     data: {
-      data: version.data,
+      data: version.data === null ? Prisma.JsonNull : (version.data as Prisma.InputJsonValue),
       lastVersionAt: now,
       lastVersionHash: version.dataHash,
     },
