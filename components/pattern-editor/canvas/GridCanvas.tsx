@@ -138,6 +138,8 @@ export default function GridCanvas(props: Props) {
   const prevBaseOffsetRef = useRef({ x: 0, y: 0 });
   const prevPanRef = useRef({ x: 0, y: 0 });
   const zoomAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const lastClampSignatureRef = useRef<string | null>(null);
+  const clampDebugRef = useRef<{ count: number; last?: string }>({ count: 0 });
   useEffect(() => {
     if (!filterSelecting && filterPreviewRect) {
       setFilterPreviewRect(null);
@@ -225,6 +227,8 @@ export default function GridCanvas(props: Props) {
   }, [panOffset]);
 
   useLayoutEffect(() => {
+    if (!Number.isFinite(containerWidth) || !Number.isFinite(containerHeight)) return;
+    if (containerWidth <= 0 || containerHeight <= 0) return;
     const prevZoom = prevZoomRef.current;
     const prevCellSize = prevCellSizeRef.current;
     const prevBase = prevBaseOffsetRef.current;
@@ -254,6 +258,24 @@ export default function GridCanvas(props: Props) {
   }, [zoom, cellSize, containerWidth, containerHeight, baseOffsetX, baseOffsetY]);
 
   useLayoutEffect(() => {
+    if (!Number.isFinite(containerWidth) || !Number.isFinite(containerHeight)) return;
+    if (containerWidth <= 0 || containerHeight <= 0) return;
+    if (!Number.isFinite(canvasW) || !Number.isFinite(canvasH)) return;
+    if (canvasW <= 0 || canvasH <= 0) return;
+    const signature = `${canvasW}:${canvasH}:${containerWidth}:${containerHeight}`;
+    if (lastClampSignatureRef.current === signature) return;
+    lastClampSignatureRef.current = signature;
+    if (clampDebugRef.current.count < 1) {
+      clampDebugRef.current.count += 1;
+      clampDebugRef.current.last = signature;
+      console.warn("GridCanvas clampPan triggered", {
+        canvasW,
+        canvasH,
+        containerWidth,
+        containerHeight,
+        signature,
+      });
+    }
     setPanOffset((prev) => {
       const next = clampPan(prev.x, prev.y);
       if (next.x === prev.x && next.y === prev.y) return prev;
