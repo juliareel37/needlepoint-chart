@@ -65,14 +65,15 @@ export function GridSizeCard({
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: gridOpen ? 12 : 0,
+          marginBottom: gridOpen ? 10 : 0,
           cursor: "pointer",
           fontWeight: 600,
+          fontSize: 14,
         }}
         type="button"
       >
         <span>Canvas Size</span>
-        <span style={{ opacity: 0.7 }}>{gridOpen ? "▾" : "▸"}</span>
+        <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{gridOpen ? "▾" : "▸"}</span>
       </button>
 
       <div style={{ display: "grid", gap: 8, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
@@ -88,7 +89,7 @@ export function GridSizeCard({
               background: draftGridMode === "stitches" ? "var(--accent-wash)" : "var(--muted-bg)",
               color: draftGridMode === "stitches" ? "var(--accent-strong)" : "var(--foreground)",
               cursor: "pointer",
-              fontSize: 13.5,
+              fontSize: 12,
               flex: "1 1 0",
             }}
           >
@@ -105,7 +106,7 @@ export function GridSizeCard({
               background: draftGridMode === "inches" ? "var(--accent-wash)" : "var(--muted-bg)",
               color: draftGridMode === "inches" ? "var(--accent-strong)" : "var(--foreground)",
               cursor: "pointer",
-              fontSize: 13.5,
+              fontSize: 12,
               flex: "1 1 0",
             }}
           >

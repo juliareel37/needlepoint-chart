@@ -41,27 +41,26 @@ export function ImageToPatternCard({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "flex-start",
+          justifyContent: "space-between",
           width: "100%",
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: imageToPatternOpen ? 8 : 0,
+          marginBottom: imageToPatternOpen ? 12 : 0,
           cursor: "pointer",
           fontWeight: 600,
+          fontSize: 14,
           textAlign: "left",
         }}
         type="button"
       >
         <span>Convert Image to Pattern</span>
-        <span style={{ opacity: 0.7, width: 14, textAlign: "center", marginLeft: "auto" }}>
-          {imageToPatternOpen ? "▾" : "▸"}
-        </span>
+        <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{imageToPatternOpen ? "▾" : "▸"}</span>
       </button>
       <div
         style={{
           display: "grid",
-          gap: 10,
+          gap: 12,
           width: "100%",
           ...collapseStyle(imageToPatternOpen, 500),
         }}
@@ -99,6 +98,7 @@ export function ImageToPatternCard({
           disabled={!traceImage}
           style={{
             padding: "8px 12px",
+            marginTop: 6,
             borderRadius: 10,
             border: "none",
             background: "var(--muted-bg)",

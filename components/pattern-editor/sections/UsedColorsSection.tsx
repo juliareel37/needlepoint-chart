@@ -109,9 +109,10 @@ export function UsedColorsSection({
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: usedColorsOpen ? 8 : 0,
+          marginBottom: usedColorsOpen ? 10 : 0,
           cursor: "pointer",
           fontWeight: 600,
+          fontSize: 14,
         }}
         type="button"
       >

@@ -46,14 +46,15 @@ export function TraceImageCard({
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: traceOpen ? 12 : 0,
+          marginBottom: traceOpen ? 10 : 0,
           cursor: "pointer",
           fontWeight: 600,
+          fontSize: 14,
         }}
         type="button"
       >
         <span>Background Image</span>
-        <span style={{ opacity: 0.7 }}>{traceOpen ? "▾" : "▸"}</span>
+        <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{traceOpen ? "▾" : "▸"}</span>
       </button>
       <div style={{ display: "grid", gap: 10, width: "100%", ...collapseStyle(traceOpen, 900) }}>
         <div style={{ display: "grid", gap: 6 }}>

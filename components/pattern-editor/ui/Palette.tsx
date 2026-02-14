@@ -182,7 +182,7 @@ export default function Palette({
                   alignItems: "center",
                   justifyContent: "center",
                   textAlign: "center",
-                  fontSize: 11,
+                  fontSize: 10,
                 }}
               >
                 Used Colors
@@ -203,7 +203,7 @@ export default function Palette({
                   alignItems: "center",
                   justifyContent: "center",
                   textAlign: "center",
-                  fontSize: 11,
+                  fontSize: 10,
                 }}
               >
                 Image Colors
@@ -264,7 +264,7 @@ export default function Palette({
                   boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
                 }}
               />
-              <span style={{ fontSize: 8, opacity: 0.75, lineHeight: 1 }}>{c.code ?? ""}</span>
+              <span style={{ fontSize: 10, opacity: 0.75, lineHeight: 1 }}>{c.code ?? ""}</span>
             </button>
           )})}
         </div>

@@ -736,6 +736,17 @@ export default function PatternEditor() {
     padding: 12,
     boxShadow: cardShadow,
   } as const;
+  const sidebarCardStyle = {
+    ...cardStyle,
+    background: "transparent",
+    boxShadow: "none",
+    border: "none",
+    borderRadius: 0,
+    padding: 0,
+    fontSize: 12,
+  } as const;
+  const sidebarCardShadow = "none";
+  const sidebarCardShadowCollapsed = "none";
   const canvasSettingsOffset = 56;
 
   const collapseStyle = (open: boolean, maxHeight = 1200) =>
@@ -1156,9 +1167,9 @@ export default function PatternEditor() {
             className="pattern-sidebar-inner"
             style={{
               display: "grid",
-              gap: 16,
+              gap: 0,
               alignContent: "start",
-              padding: "24px 18px",
+              padding: "12px 18px",
               height: "auto",
               minHeight: 0,
               overflowY: "visible",
@@ -1170,18 +1181,11 @@ export default function PatternEditor() {
             }}
           >
             {activeMenuId === "main" ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "center" }}>
-                  <img
-                    src={assetPath("/wippa_logo.png")}
-                    alt="Wippa"
-                    style={{ height: 92, width: "auto", display: "block" }}
-                  />
-                </div>
+              <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
                 <GridSizeCard
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
+                  cardStyle={sidebarCardStyle}
+                  cardShadow={sidebarCardShadow}
+                  cardShadowCollapsed={sidebarCardShadowCollapsed}
                   gridOpen={gridOpen}
                   setGridOpen={setGridOpen}
                   collapseStyle={collapseStyle}
@@ -1202,111 +1206,118 @@ export default function PatternEditor() {
                     confirmAndApplyGrid();
                   }}
                 />
-
-              </>
+              </div>
             ) : activeMenuId === "colors" ? (
-              <>
-                <PaletteSection
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  paletteOpen={paletteOpen}
-                  setPaletteOpen={setPaletteOpen}
-                  collapseStyle={collapseStyle}
-                  traceImage={traceImage}
-                  extractPaletteOpen={extractPaletteOpen}
-                  setExtractPaletteOpen={setExtractPaletteOpen}
-                  extractPaletteSize={extractPaletteSize}
-                  setExtractPaletteSize={setExtractPaletteSize}
-                  extractPaletteFromTrace={extractPaletteFromTrace}
-                  extractingPalette={extractingPalette}
-                  palette={palette}
-                  extractedIds={extractedIds}
-                  usedColorIds={usedColorIds}
-                  activeColorId={activeColorId}
-                  remapTargetId={remapTargetId}
-                  remapSourceId={remapSourceId}
-                  onSelectActive={setActiveColorId}
-                  onRemapSelect={previewRemap}
-                  onAddColor={addColor}
-                />
-                <UsedColorsSection
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  usedColorsOpen={usedColorsOpen}
-                  setUsedColorsOpen={setUsedColorsOpen}
-                  collapseStyle={collapseStyle}
-                  usedColors={usedColors}
-                  usedColorIds={usedColorIds}
-                  remapMode={remapMode}
-                  mergeMode={mergeMode}
-                  deleteMode={deleteMode}
-                  toggleRemapMode={toggleRemapMode}
-                  toggleMergeMode={toggleMergeMode}
-                  toggleDeleteMode={toggleDeleteMode}
-                  filterMode={filterMode}
-                  filterSelecting={filterSelecting}
-                  startFilterSelection={startFilterSelection}
-                  clearFilterSelection={clearFilterSelection}
-                  deleteSelectedIds={deleteSelectedIds}
-                  mergeSelectedIds={mergeSelectedIds}
-                  mergeTargetId={mergeTargetId}
-                  remapSourceId={remapSourceId}
-                  remapTargetId={remapTargetId}
-                  identifyColorId={identifyColorId}
-                  showSymbols={showSymbols}
-                  symbolMap={symbolMap}
-                  setIdentifyColorId={setIdentifyColorId}
-                  setActiveColorId={setActiveColorId}
-                  setDeleteSelectedIds={setDeleteSelectedIds}
-                  setMergeSelectedIds={setMergeSelectedIds}
-                  setMergeTargetId={setMergeTargetId}
-                  beginRemap={beginRemap}
-                  previewRemap={previewRemap}
-                  confirmRemap={confirmRemap}
-                  confirmMerge={confirmMerge}
-                  confirmDeleteColors={confirmDeleteColors}
-                  cancelRemap={cancelRemap}
-                  cancelMerge={cancelMerge}
-                  cancelDelete={cancelDelete}
-                  setRemapMode={setRemapMode}
-                  setMergeMode={setMergeMode}
-                  setDeleteMode={setDeleteMode}
-                />
-              </>
+              <div style={{ display: "grid", gap: 0 }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
+                  <PaletteSection
+                    cardStyle={sidebarCardStyle}
+                    cardShadow={sidebarCardShadow}
+                    cardShadowCollapsed={sidebarCardShadowCollapsed}
+                    paletteOpen={paletteOpen}
+                    setPaletteOpen={setPaletteOpen}
+                    collapseStyle={collapseStyle}
+                    traceImage={traceImage}
+                    extractPaletteOpen={extractPaletteOpen}
+                    setExtractPaletteOpen={setExtractPaletteOpen}
+                    extractPaletteSize={extractPaletteSize}
+                    setExtractPaletteSize={setExtractPaletteSize}
+                    extractPaletteFromTrace={extractPaletteFromTrace}
+                    extractingPalette={extractingPalette}
+                    palette={palette}
+                    extractedIds={extractedIds}
+                    usedColorIds={usedColorIds}
+                    activeColorId={activeColorId}
+                    remapTargetId={remapTargetId}
+                    remapSourceId={remapSourceId}
+                    onSelectActive={setActiveColorId}
+                    onRemapSelect={previewRemap}
+                    onAddColor={addColor}
+                  />
+                </div>
+                <div style={{ padding: "12px 0" }}>
+                  <UsedColorsSection
+                    cardStyle={sidebarCardStyle}
+                    cardShadow={sidebarCardShadow}
+                    cardShadowCollapsed={sidebarCardShadowCollapsed}
+                    usedColorsOpen={usedColorsOpen}
+                    setUsedColorsOpen={setUsedColorsOpen}
+                    collapseStyle={collapseStyle}
+                    usedColors={usedColors}
+                    usedColorIds={usedColorIds}
+                    remapMode={remapMode}
+                    mergeMode={mergeMode}
+                    deleteMode={deleteMode}
+                    toggleRemapMode={toggleRemapMode}
+                    toggleMergeMode={toggleMergeMode}
+                    toggleDeleteMode={toggleDeleteMode}
+                    filterMode={filterMode}
+                    filterSelecting={filterSelecting}
+                    startFilterSelection={startFilterSelection}
+                    clearFilterSelection={clearFilterSelection}
+                    deleteSelectedIds={deleteSelectedIds}
+                    mergeSelectedIds={mergeSelectedIds}
+                    mergeTargetId={mergeTargetId}
+                    remapSourceId={remapSourceId}
+                    remapTargetId={remapTargetId}
+                    identifyColorId={identifyColorId}
+                    showSymbols={showSymbols}
+                    symbolMap={symbolMap}
+                    setIdentifyColorId={setIdentifyColorId}
+                    setActiveColorId={setActiveColorId}
+                    setDeleteSelectedIds={setDeleteSelectedIds}
+                    setMergeSelectedIds={setMergeSelectedIds}
+                    setMergeTargetId={setMergeTargetId}
+                    beginRemap={beginRemap}
+                    previewRemap={previewRemap}
+                    confirmRemap={confirmRemap}
+                    confirmMerge={confirmMerge}
+                    confirmDeleteColors={confirmDeleteColors}
+                    cancelRemap={cancelRemap}
+                    cancelMerge={cancelMerge}
+                    cancelDelete={cancelDelete}
+                    setRemapMode={setRemapMode}
+                    setMergeMode={setMergeMode}
+                    setDeleteMode={setDeleteMode}
+                  />
+                </div>
+              </div>
             ) : activeMenuId === "background" ? (
-              <>
-                <TraceImageCard
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  traceOpen={traceOpen}
-                  setTraceOpen={setTraceOpen}
-                  collapseStyle={collapseStyle}
-                  traceInputRef={traceInputRef}
-                  traceFileName={traceFileName}
-                  traceImage={traceImage}
-                  traceLocked={traceLocked}
-                  onTraceFileSelected={handleTraceFileSelected}
-                  onClearTrace={clearTraceImage}
-                  onSetTraceLockedState={handleSetTraceLockedState}
-                />
-                <ImageToPatternCard
-                  cardStyle={cardStyle}
-                  cardShadow={cardShadow}
-                  cardShadowCollapsed={cardShadowCollapsed}
-                  imageToPatternOpen={imageToPatternOpen}
-                  setImageToPatternOpen={setImageToPatternOpen}
-                  collapseStyle={collapseStyle}
-                  traceImage={traceImage}
-                  convertMaxColors={convertMaxColors}
-                  setConvertMaxColors={setConvertMaxColors}
-                  convertSmoothing={convertSmoothing}
-                  setConvertSmoothing={setConvertSmoothing}
-                  onConvert={convertImageToPattern}
-                />
-              </>
+              <div style={{ display: "grid", gap: 0 }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
+                  <TraceImageCard
+                    cardStyle={sidebarCardStyle}
+                    cardShadow={sidebarCardShadow}
+                    cardShadowCollapsed={sidebarCardShadowCollapsed}
+                    traceOpen={traceOpen}
+                    setTraceOpen={setTraceOpen}
+                    collapseStyle={collapseStyle}
+                    traceInputRef={traceInputRef}
+                    traceFileName={traceFileName}
+                    traceImage={traceImage}
+                    traceLocked={traceLocked}
+                    onTraceFileSelected={handleTraceFileSelected}
+                    onClearTrace={clearTraceImage}
+                    onSetTraceLockedState={handleSetTraceLockedState}
+                  />
+                </div>
+                <div style={{ padding: "12px 0" }}>
+                  <ImageToPatternCard
+                    cardStyle={sidebarCardStyle}
+                    cardShadow={sidebarCardShadow}
+                    cardShadowCollapsed={sidebarCardShadowCollapsed}
+                    imageToPatternOpen={imageToPatternOpen}
+                    setImageToPatternOpen={setImageToPatternOpen}
+                    collapseStyle={collapseStyle}
+                    traceImage={traceImage}
+                    convertMaxColors={convertMaxColors}
+                    setConvertMaxColors={setConvertMaxColors}
+                    convertSmoothing={convertSmoothing}
+                    setConvertSmoothing={setConvertSmoothing}
+                    onConvert={convertImageToPattern}
+                  />
+                </div>
+              </div>
             ) : (
               <div
                 style={{

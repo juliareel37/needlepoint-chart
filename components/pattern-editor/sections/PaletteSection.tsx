@@ -65,14 +65,15 @@ export function PaletteSection({
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: paletteOpen ? 12 : 0,
+          marginBottom: paletteOpen ? 10 : 0,
           cursor: "pointer",
           fontWeight: 600,
+          fontSize: 14,
         }}
         type="button"
       >
         <span>Palette</span>
-        <span style={{ opacity: 0.7 }}>{paletteOpen ? "▾" : "▸"}</span>
+        <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{paletteOpen ? "▾" : "▸"}</span>
       </button>
       <div style={{ display: "grid", gap: 10, ...collapseStyle(paletteOpen, 1600) }}>
         {traceImage && (
