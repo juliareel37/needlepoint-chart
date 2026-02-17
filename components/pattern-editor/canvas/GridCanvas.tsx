@@ -36,6 +36,8 @@ type Props = {
   traceOffsetX: number;
   traceOffsetY: number;
   traceAdjustMode: boolean;
+  onTraceTransformStart?: () => void;
+  onTraceTransformEnd?: () => void;
   onTraceOffsetChange: (x: number, y: number) => void;
   onTraceScaleChange: (scale: number) => void;
   filterEditMode?: boolean;
@@ -92,6 +94,8 @@ export default function GridCanvas(props: Props) {
     traceOffsetX,
     traceOffsetY,
     traceAdjustMode,
+    onTraceTransformStart,
+    onTraceTransformEnd,
     onTraceOffsetChange,
     onTraceScaleChange,
     filterEditMode = false,
@@ -727,7 +731,9 @@ export default function GridCanvas(props: Props) {
           position: "relative",
           zIndex: 1,
           cursor:
-            filterSelecting
+            filterEditMode
+              ? "default"
+              : filterSelecting
               ? "crosshair"
               : effectivePanMode
                 ? "grab"
@@ -801,6 +807,7 @@ export default function GridCanvas(props: Props) {
             const point = getCanvasPoint(e);
             const handle = getTraceHandle(point);
             (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+            onTraceTransformStart?.();
             if (handle) {
               traceResizeRef.current = {
                 handle,
@@ -922,7 +929,8 @@ export default function GridCanvas(props: Props) {
               isLassoing ||
               (pinchEnabled && pinchActiveRef.current) ||
               panMode ||
-              traceAdjustMode
+              traceAdjustMode ||
+              filterEditMode
             ) {
               updateHoverCell(null);
             } else {
@@ -1066,11 +1074,13 @@ export default function GridCanvas(props: Props) {
           }
           if (traceResizeRef.current) {
             traceResizeRef.current = null;
+            onTraceTransformEnd?.();
             return;
           }
           if (isTracingDragRef.current) {
             isTracingDragRef.current = false;
             traceDragStartRef.current = null;
+            onTraceTransformEnd?.();
             return;
           }
           if (isLassoing) {
@@ -1104,11 +1114,13 @@ export default function GridCanvas(props: Props) {
           }
           if (traceResizeRef.current) {
             traceResizeRef.current = null;
+            onTraceTransformEnd?.();
             return;
           }
           if (isTracingDragRef.current) {
             isTracingDragRef.current = false;
             traceDragStartRef.current = null;
+            onTraceTransformEnd?.();
             return;
           }
           if (isLassoing) {

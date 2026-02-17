@@ -21,6 +21,7 @@ type PaletteSectionProps = {
   palette: Color[];
   extractedIds: number[];
   usedColorIds: number[];
+  usedColorCounts: Record<number, number>;
   activeColorId: number;
   remapTargetId: number | null;
   remapSourceId: number | null;
@@ -46,6 +47,7 @@ export function PaletteSection({
   palette,
   extractedIds,
   usedColorIds,
+  usedColorCounts,
   activeColorId,
   remapTargetId,
   remapSourceId,
@@ -160,6 +162,7 @@ export function PaletteSection({
           showExtractedFilter={Boolean(traceImage) && extractedIds.length > 0}
           usedIds={usedColorIds}
           showUsedFilter={usedColorIds.length > 0}
+          usedCounts={usedColorCounts}
           activeColorId={remapTargetId ?? activeColorId}
           onSelect={onSelectActive}
           remapSourceId={remapSourceId}

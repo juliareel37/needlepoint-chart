@@ -364,8 +364,8 @@ button:disabled {
 }
 .used-colors-toolbar .toolbar-button:hover:not(:disabled),
 .used-colors-toolbar .toolbar-button[data-active="true"] {
-  background: transparent !important;
-  border-color: transparent !important;
+  background: var(--accent-wash) !important;
+  border-color: var(--accent-soft) !important;
   color: var(--foreground);
 }
 .canvas-toolbar .toolbar-button .toolbar-icon {
@@ -379,9 +379,9 @@ button:disabled {
 .used-colors-toolbar .toolbar-button .toolbar-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 26px;
-  border-radius: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
   transition: background 150ms ease;
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle .toolbar-toggle-icon {
@@ -420,18 +420,25 @@ button:disabled {
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--accent-soft);
 }
-.used-colors-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
-  background: var(--accent-soft);
+.used-colors-toolbar .toolbar-button .toolbar-icon {
+  background: transparent;
 }
 .used-colors-filter-button:hover:not(:disabled) {
-  background: var(--accent-wash);
-  border-color: var(--accent-soft);
-  color: var(--accent-strong);
+  background: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.2);
+  color: var(--foreground);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.06);
 }
 .used-colors-filter-button[data-active="true"] {
-  background: var(--accent-wash);
-  border-color: var(--accent-strong);
+  background: rgba(191, 100, 217, 0.12);
+  border-color: rgba(191, 100, 217, 0.45);
   color: var(--accent-strong);
+  box-shadow: 0 0 0 2px rgba(191, 100, 217, 0.2);
+}
+.used-colors-filter-button {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 .autosave-ellipsis:hover {
   background: rgba(15, 23, 42, 0.08) !important;
@@ -692,6 +699,12 @@ input[type="range"]::-moz-range-thumb {
     display: inline-block;
   }
 }
+.canvas-toolbar:not([data-collapsed="true"]) {
+  overflow-y: visible !important;
+}
+.canvas-toolbar:not([data-collapsed="true"]) .canvas-toolbar-content {
+  overflow-y: visible !important;
+}
 .pattern-canvas-area {
   --canvas-card-padding-y: 0px;
   --canvas-card-padding-x: 0px;
@@ -884,7 +897,7 @@ input[type="range"]::-moz-range-thumb {
   background: var(--accent-wash) !important;
 }
 .used-colors-toolbar .toolbar-button:hover .toolbar-icon {
-  background: var(--accent-wash) !important;
+  background: transparent !important;
 }
 .canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]),
 .canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon,
@@ -892,4 +905,8 @@ input[type="range"]::-moz-range-thumb {
   background: transparent !important;
   border-color: transparent !important;
   filter: none !important;
+}
+.canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon,
+.canvas-toolbar .toolbar-button[data-active="true"]:hover .toolbar-icon {
+  background: var(--accent-soft) !important;
 }

@@ -356,7 +356,7 @@ export function useGridRenderer({
       ctx.restore();
     }
 
-    if (hoverCell && (tool === "paint" || tool === "eraser") && !panMode && !traceAdjustMode) {
+    if (hoverCell && (tool === "paint" || tool === "eraser") && !panMode && !traceAdjustMode && !filterEditMode) {
       const size = Math.max(1, Math.floor(brushSize));
       const radius = Math.floor(size / 2);
       const startX = hoverCell.x - radius;

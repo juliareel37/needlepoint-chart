@@ -6,8 +6,7 @@ import { idx } from "../../../lib/grid";
 import { SYMBOLS } from "../../../lib/symbols";
 import { rgbToOklab } from "../utils/colorUtils";
 import type { FilterRect } from "../utils/geometry";
-
-type Snapshot = { gridW: number; gridH: number; grid: Uint16Array };
+import type { Snapshot, TraceSnapshot } from "../utils/historyTypes";
 
 type SetState<T> = (value: T | ((prev: T) => T)) => void;
 
@@ -25,6 +24,7 @@ type UseColorEditsArgs = {
   pushHistory: (entry: Snapshot) => void;
   setFutureState: (next: Snapshot[]) => void;
   setLastEditCell: SetState<{ x: number; y: number } | null>;
+  getTraceSnapshot: () => TraceSnapshot;
 };
 
 export function useColorEdits({
@@ -41,6 +41,7 @@ export function useColorEdits({
   pushHistory,
   setFutureState,
   setLastEditCell,
+  getTraceSnapshot,
 }: UseColorEditsArgs) {
   const [remapMode, setRemapMode] = useState(false);
   const [remapSourceId, setRemapSourceId] = useState<number | null>(null);
@@ -165,7 +166,7 @@ export function useColorEdits({
     }
     const original = remapOriginalRef.current ?? new Uint16Array(grid);
     bumpStrokeVersion();
-    pushHistory({ gridW, gridH, grid: original });
+    pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
     let focusCell: { x: number; y: number } | null = null;
     setGrid(() => {
@@ -202,7 +203,7 @@ export function useColorEdits({
     const original = mergeOriginalRef.current ?? new Uint16Array(grid);
     mergeOriginalRef.current = original;
     bumpStrokeVersion();
-    pushHistory({ gridW, gridH, grid: original });
+    pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
     let focusCell: { x: number; y: number } | null = null;
     setGrid((prev) => {
@@ -283,7 +284,7 @@ export function useColorEdits({
     const original = deleteOriginalRef.current ?? new Uint16Array(grid);
     deleteOriginalRef.current = original;
     bumpStrokeVersion();
-    pushHistory({ gridW, gridH, grid: original });
+    pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
     let focusCell: { x: number; y: number } | null = null;
     setGrid((prev) => {
@@ -321,6 +322,18 @@ export function useColorEdits({
         : deleteMode && deleteOriginalRef.current
           ? deleteOriginalRef.current
           : grid;
+  const usedColorsAll = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (let i = 0; i < usedColorsGrid.length; i++) {
+      const id = usedColorsGrid[i];
+      if (id === 0) continue;
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([id, count]) => ({ color: paletteById.get(id)!, count }))
+      .filter((x) => Boolean(x.color))
+      .sort((a, b) => b.count - a.count);
+  }, [usedColorsGrid, paletteById]);
   const usedColors = useMemo(() => {
     const counts = new Map<number, number>();
     if (activeFilterRect) {
@@ -344,6 +357,7 @@ export function useColorEdits({
       .sort((a, b) => b.count - a.count);
     return arr;
   }, [usedColorsGrid, paletteById, activeFilterRect, gridW]);
+  const hasAnyPaintedCells = usedColorsAll.length > 0;
   const usedColorIds = useMemo(() => usedColors.map((entry) => entry.color.id), [usedColors]);
   const [symbolMap, setSymbolMap] = useState<Map<number, string>>(() => new Map());
   useEffect(() => {
@@ -485,6 +499,7 @@ export function useColorEdits({
     deleteSelectedIds,
     symbolMap,
     usedColors,
+    hasAnyPaintedCells,
     usedColorIds,
     setRemapMode,
     setRemapSourceId,

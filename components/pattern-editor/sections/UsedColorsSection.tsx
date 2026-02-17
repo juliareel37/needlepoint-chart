@@ -17,6 +17,7 @@ type UsedColorsSectionProps = {
   collapseStyle: (open: boolean, maxHeight?: number) => React.CSSProperties;
   usedColors: UsedColorEntry[];
   usedColorIds: number[];
+  hasAnyPaintedCells: boolean;
   remapMode: boolean;
   mergeMode: boolean;
   deleteMode: boolean;
@@ -62,6 +63,7 @@ export function UsedColorsSection({
   collapseStyle,
   usedColors,
   usedColorIds,
+  hasAnyPaintedCells,
   remapMode,
   mergeMode,
   deleteMode,
@@ -97,7 +99,7 @@ export function UsedColorsSection({
   setMergeMode,
   setDeleteMode,
 }: UsedColorsSectionProps) {
-  const hasPaintedCells = usedColors.length > 0;
+  const hasPaintedCells = hasAnyPaintedCells;
   return (
     <div className="app-card" style={{ ...cardStyle, boxShadow: usedColorsOpen ? cardShadow : cardShadowCollapsed }}>
       <button
@@ -123,9 +125,75 @@ export function UsedColorsSection({
         </span>
       </button>
       <div style={{ ...collapseStyle(usedColorsOpen, 800) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <button
+            onClick={() => {
+              if (!hasPaintedCells) return;
+              if (filterMode) {
+                clearFilterSelection();
+              } else {
+                startFilterSelection();
+              }
+            }}
+            aria-pressed={filterMode}
+            aria-disabled={!hasPaintedCells}
+            aria-label="Filter canvas"
+            data-active={filterMode ? "true" : undefined}
+            className="toolbar-button used-colors-filter-button"
+            disabled={!hasPaintedCells}
+            style={{
+              flex: 1,
+              padding: "4px 8px",
+              borderRadius: 6,
+              cursor: hasPaintedCells ? "pointer" : "not-allowed",
+              opacity: hasPaintedCells ? 1 : 0.5,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
+              <img
+                src={assetPath("/pic_in_pic.svg")}
+                alt=""
+                aria-hidden="true"
+                width={16}
+                height={16}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </span>
+            Filter canvas area
+          </button>
+          {filterMode && (
+            <button
+              type="button"
+              onClick={clearFilterSelection}
+              aria-label="Clear filter"
+              className="toolbar-button"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                border: "1px solid rgba(15,23,42,0.12)",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
         <div
           className="used-colors-toolbar"
-          style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}
+          style={{ display: "flex", 
+            // gap: 4, 
+            alignItems: "center", flexWrap: "nowrap", marginBottom: 6 }}
         >
           <button
             onClick={toggleRemapMode}
@@ -135,13 +203,14 @@ export function UsedColorsSection({
             className="toolbar-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "2px 6px",
-              borderRadius: 10,
+              padding: "0 6px",
+              borderRadius: 8,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
-              display: "grid",
-              gap: 1,
-              justifyItems: "center",
+              display: "flex",
+              gap: 3,
+              alignItems: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
+              whiteSpace: "nowrap",
             }}
           >
             <span className="toolbar-icon" aria-hidden="true">
@@ -149,12 +218,12 @@ export function UsedColorsSection({
                 src={assetPath("/swap.svg")}
                 alt=""
                 aria-hidden="true"
-                width={18}
-                height={18}
+                width={10}
+                height={10}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
               Replace
             </span>
           </button>
@@ -166,13 +235,14 @@ export function UsedColorsSection({
             className="toolbar-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "2px 6px",
-              borderRadius: 10,
+              padding: "0 6px",
+              borderRadius: 8,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
-              display: "grid",
-              gap: 1,
-              justifyItems: "center",
+              display: "flex",
+              gap: 3,
+              alignItems: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
+              whiteSpace: "nowrap",
             }}
           >
             <span className="toolbar-icon" aria-hidden="true">
@@ -180,12 +250,12 @@ export function UsedColorsSection({
                 src={assetPath("/merge.svg")}
                 alt=""
                 aria-hidden="true"
-                width={18}
-                height={18}
+                width={10}
+                height={10}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
               Merge
             </span>
           </button>
@@ -197,13 +267,14 @@ export function UsedColorsSection({
             className="toolbar-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "2px 6px",
-              borderRadius: 10,
+              padding: "0 6px",
+              borderRadius: 8,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
-              display: "grid",
-              gap: 1,
-              justifyItems: "center",
+              display: "flex",
+              gap: 3,
+              alignItems: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
+              whiteSpace: "nowrap",
             }}
           >
             <span className="toolbar-icon" aria-hidden="true">
@@ -211,78 +282,35 @@ export function UsedColorsSection({
                 src={assetPath("/deselect.svg")}
                 alt=""
                 aria-hidden="true"
-                width={18}
-                height={18}
+                width={10}
+                height={10}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
               Delete
             </span>
           </button>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            {remapMode
-              ? remapSourceId !== null
-                ? "Pick replacement color."
-                : "Select a used color to replace."
-              : mergeMode
-                ? mergeSelectedIds.length < 2
-                  ? "Select at least 2 colors."
-                  : mergeTargetId
-                    ? "Ready to merge."
-                    : "Pick a target color."
-                  : deleteMode
-                    ? deleteSelectedIds.length === 0
-                      ? "Select colors to delete."
-                      : usedColors.length - deleteSelectedIds.length < 1
-                        ? "Keep at least one color."
-                      : "Ready to delete."
-                  : ""}
-          </div>
         </div>
-        <button
-          onClick={() => {
-            if (filterMode) {
-              clearFilterSelection();
-            } else {
-              startFilterSelection();
-            }
-          }}
-          aria-pressed={filterMode}
-          aria-label="Filter canvas"
-          data-active={filterMode ? "true" : undefined}
-          className="toolbar-button used-colors-filter-button"
-          style={{
-            width: "100%",
-            marginBottom: 8,
-            padding: "6px 10px",
-            borderRadius: 10,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
-            <img
-              src={assetPath("/pic_in_pic.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
-          </span>
-          Filter canvas area
-        </button>
-        {filterSelecting && (
-          <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>
-            Drag on canvas to set your filter area. Color changes will only apply within selection.
-          </div>
-        )}
+        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
+          {remapMode
+            ? remapSourceId !== null
+              ? "Pick replacement color."
+              : "Select a used color to replace."
+            : mergeMode
+              ? mergeSelectedIds.length < 2
+                ? "Select at least 2 colors."
+                : mergeTargetId
+                  ? "Ready to merge."
+                  : "Pick a target color."
+            : deleteMode
+              ? deleteSelectedIds.length === 0
+                ? "Select colors to delete."
+                : usedColors.length - deleteSelectedIds.length < 1
+                  ? "Keep at least one color."
+                  : "Ready to delete."
+            : ""}
+        </div>
         {deleteMode && (
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <button
@@ -291,7 +319,7 @@ export function UsedColorsSection({
                 setDeleteMode(false);
               }}
               style={{
-                padding: "2px 8px",
+                padding: "2px 6px",
                 borderRadius: 999,
                 border: "none",
                 background: "var(--muted-bg)",
@@ -405,10 +433,7 @@ export function UsedColorsSection({
           </div>
         )}
         <div style={{ display: "grid", gap: 6, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
-          {usedColors.length === 0 ? (
-            <div style={{ opacity: 0.7 }}>None yet.</div>
-          ) : (
-            usedColors.map(({ color, count }) => {
+          {usedColors.map(({ color, count }) => {
               const isIdentifyActive = identifyColorId === color.id;
               const isMergeSelected = mergeSelectedIds.includes(color.id);
               const isMergeTarget = mergeTargetId === color.id;
@@ -556,6 +581,28 @@ export function UsedColorsSection({
                     aria-label={mergeMode ? `Set ${color.name} as merge target` : undefined}
                     title={mergeMode ? "Set as merge target" : undefined}
                   >
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: -4,
+                        left: -4,
+                        minWidth: 14,
+                        height: 14,
+                        padding: "0 3px",
+                        borderRadius: 999,
+                        background: "rgba(15,23,42,0.85)",
+                        color: "#ffffff",
+                        fontSize: 8,
+                        fontWeight: 700,
+                        display: "grid",
+                        placeItems: "center",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                        pointerEvents: "none",
+                      }}
+                      aria-hidden="true"
+                    >
+                      {count}
+                    </span>
                     {showSymbols && symbolForColorId(color.id, symbolMap) && (
                       <span
                         style={{
@@ -585,7 +632,7 @@ export function UsedColorsSection({
                     }}
                   >
                     {color.code ? `#${color.code} ` : ""}
-                    {color.name} ({count})
+                    {color.name}
                   </span>
                   <button
                     type="button"
@@ -618,8 +665,7 @@ export function UsedColorsSection({
                   </button>
                 </div>
               );
-            })
-          )}
+            })}
         </div>
       </div>
     </div>

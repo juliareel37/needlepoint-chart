@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@clerk/nextjs";
 import type { Color } from "../../lib/grid";
@@ -27,6 +27,7 @@ import { useCanvasEdits } from "./hooks/useCanvasEdits";
 import { useColorEdits } from "./hooks/useColorEdits";
 import { useHistoryStack } from "./hooks/useHistoryStack";
 import { useWipDrafts } from "./hooks/useWipDrafts";
+import type { TraceSnapshot } from "./utils/historyTypes";
 
 const DEFAULT_PALETTE: Color[] = DMC_COLORS;
 
@@ -84,6 +85,8 @@ export default function PatternEditor() {
   const [tracePostUpload, setTracePostUpload] = useState(false);
   const [traceEditMode, setTraceEditMode] = useState(false);
   const [pendingTraceUnlock, setPendingTraceUnlock] = useState(false);
+  const pendingTraceRestoreRef = useRef<TraceSnapshot | null>(null);
+  const traceTransformActiveRef = useRef(false);
   const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number } | null>(null);
   const [panMode, setPanMode] = useState(false);
   const prevToolRef = useRef<typeof tool>(tool);
@@ -112,6 +115,68 @@ export default function PatternEditor() {
   const [lastEditCell, setLastEditCell] = useState<{ x: number; y: number } | null>(null);
   const clearButtonRef = useRef<HTMLButtonElement | null>(null);
   const confirmActionRef = useRef<(() => void) | null>(null);
+
+  const buildTraceSnapshot = useCallback(
+    (): TraceSnapshot => ({
+      imageUrl: traceImageUrl,
+      image: traceImage,
+      opacity: traceOpacity,
+      scale: traceScale,
+      offsetX: traceOffsetX,
+      offsetY: traceOffsetY,
+      locked: traceLocked,
+      editMode: traceEditMode,
+      postUpload: tracePostUpload,
+      fileName: traceFileName,
+      fileSize: traceFileSize,
+    }),
+    [
+      traceEditMode,
+      traceFileName,
+      traceFileSize,
+      traceImage,
+      traceImageUrl,
+      traceLocked,
+      traceOffsetX,
+      traceOffsetY,
+      traceOpacity,
+      tracePostUpload,
+      traceScale,
+    ]
+  );
+
+  const applyTraceSnapshot = useCallback(
+    (snapshot: TraceSnapshot | null | undefined) => {
+      if (!snapshot) return;
+      const shouldDefer = Boolean(snapshot.imageUrl && snapshot.imageUrl !== traceImageUrl);
+      pendingTraceRestoreRef.current = shouldDefer ? snapshot : null;
+      setTraceImage(snapshot.image ?? null);
+      setTraceImageUrl(snapshot.imageUrl);
+      setTraceFileName(snapshot.fileName ?? null);
+      setTraceFileSize(snapshot.fileSize ?? null);
+      setTraceOpacity(snapshot.opacity);
+      setTraceScale(snapshot.scale);
+      setTraceOffsetX(snapshot.offsetX);
+      setTraceOffsetY(snapshot.offsetY);
+      setTraceLocked(snapshot.locked);
+      setTracePostUpload(snapshot.postUpload);
+      setTraceEditMode(snapshot.editMode);
+    },
+    [
+      traceImageUrl,
+      setTraceEditMode,
+      setTraceFileName,
+      setTraceFileSize,
+      setTraceImage,
+      setTraceImageUrl,
+      setTraceLocked,
+      setTraceOffsetX,
+      setTraceOffsetY,
+      setTraceOpacity,
+      setTracePostUpload,
+      setTraceScale,
+    ]
+  );
 
   const [zoom, setZoom] = useState(1);
   const [canvasControlsHeight, setCanvasControlsHeight] = useState(0);
@@ -281,6 +346,14 @@ export default function PatternEditor() {
     }
     img.onload = () => {
       setTraceImage(img);
+      const pending = pendingTraceRestoreRef.current;
+      if (pending && pending.imageUrl === traceImageUrl) {
+        setTraceScale(pending.scale);
+        setTraceOffsetX(pending.offsetX);
+        setTraceOffsetY(pending.offsetY);
+        pendingTraceRestoreRef.current = null;
+        return;
+      }
       fitTraceImageToGrid(img);
     };
     img.src = getSafeTraceImageUrl(traceImageUrl);
@@ -362,6 +435,8 @@ export default function PatternEditor() {
     traceImage,
     traceLocked,
     setTraceLocked,
+    getTraceSnapshot: buildTraceSnapshot,
+    applyTraceSnapshot,
   });
 
   const {
@@ -376,6 +451,7 @@ export default function PatternEditor() {
     deleteSelectedIds,
     symbolMap,
     usedColors,
+    hasAnyPaintedCells,
     usedColorIds,
     setRemapMode,
     setRemapSourceId,
@@ -411,7 +487,17 @@ export default function PatternEditor() {
     pushHistory,
     setFutureState,
     setLastEditCell,
+    getTraceSnapshot: buildTraceSnapshot,
   });
+
+  const usedColorCounts = useMemo(
+    () =>
+      usedColors.reduce<Record<number, number>>((acc, entry) => {
+        acc[entry.color.id] = entry.count;
+        return acc;
+      }, {}),
+    [usedColors],
+  );
 
   const {
     wipStatus,
@@ -611,6 +697,10 @@ export default function PatternEditor() {
   }
 
   function clearTraceImage() {
+    if (traceImage || traceImageUrl) {
+      pushHistory({ gridW, gridH, grid, trace: buildTraceSnapshot() });
+      setFutureState([]);
+    }
     traceUploadSeqRef.current += 1;
     setTraceUploadState("idle");
     setTraceImageUrl(null);
@@ -626,6 +716,17 @@ export default function PatternEditor() {
       tracePreviewObjectUrlRef.current = null;
     }
   }
+
+  const beginTraceTransform = useCallback(() => {
+    if (traceTransformActiveRef.current) return;
+    pushHistory({ gridW, gridH, grid, trace: buildTraceSnapshot() });
+    setFutureState([]);
+    traceTransformActiveRef.current = true;
+  }, [buildTraceSnapshot, grid, gridH, gridW, pushHistory, setFutureState]);
+
+  const endTraceTransform = useCallback(() => {
+    traceTransformActiveRef.current = false;
+  }, []);
 
   function confirmClearTraceImage() {
     confirmActionRef.current = () => {
@@ -725,7 +826,7 @@ export default function PatternEditor() {
   function addColor(name: string, hex: string) {
     setPalette((prev) => {
       const nextId = prev.reduce((m, c) => Math.max(m, c.id), 0) + 1;
-      return [...prev, { id: nextId, name, hex, family: "Custom" }];
+      return [...prev, { id: nextId, name, hex, family: "neutrals" }];
     });
   }
 
@@ -1398,10 +1499,15 @@ export default function PatternEditor() {
                     palette={palette}
                     extractedIds={extractedIds}
                     usedColorIds={usedColorIds}
+                    usedColorCounts={usedColorCounts}
                     activeColorId={activeColorId}
                     remapTargetId={remapTargetId}
                     remapSourceId={remapSourceId}
-                    onSelectActive={setActiveColorId}
+                    onSelectActive={(id) => {
+                      setActiveColorId(id);
+                      setTool("paint");
+                      setPanMode(false);
+                    }}
                     onRemapSelect={previewRemap}
                     onAddColor={addColor}
                   />
@@ -1416,6 +1522,7 @@ export default function PatternEditor() {
                     collapseStyle={collapseStyle}
                     usedColors={usedColors}
                     usedColorIds={usedColorIds}
+                    hasAnyPaintedCells={hasAnyPaintedCells}
                     remapMode={remapMode}
                     mergeMode={mergeMode}
                     deleteMode={deleteMode}
@@ -1586,6 +1693,8 @@ export default function PatternEditor() {
               traceAdjustMode={traceImage ? traceEditMode || tracePostUpload : false}
               traceLocked={traceLocked}
               onToggleTraceLock={handleToggleTraceLock}
+              onTraceTransformStart={beginTraceTransform}
+              onTraceTransformEnd={endTraceTransform}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
                 setTraceOffsetX(x);
                 setTraceOffsetY(y);

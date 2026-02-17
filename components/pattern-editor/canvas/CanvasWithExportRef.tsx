@@ -10,6 +10,7 @@ import { assetPath } from "../../../lib/assetPath";
 import { EXPORT_CELL_SIZE } from "../utils/constants";
 import { contrastForHex, hexToRgb } from "../utils/colorUtils";
 import { Toggle } from "../ui/Toggle";
+import { sortPaletteByHsv } from "../utils/paletteSort";
 
 export function CanvasWithExportRef(props: any) {
   const {
@@ -17,6 +18,7 @@ export function CanvasWithExportRef(props: any) {
     width,
     height,
     grid,
+    usedColors,
     paletteById,
     symbolMap,
     activeColorId,
@@ -52,6 +54,8 @@ export function CanvasWithExportRef(props: any) {
     traceAdjustMode,
     traceLocked,
     onToggleTraceLock,
+    onTraceTransformStart,
+    onTraceTransformEnd,
     onTraceScaleChange,
     onTraceOffsetChange,
     panMode,
@@ -79,6 +83,7 @@ export function CanvasWithExportRef(props: any) {
     filterSelecting,
     onFilterRectChange,
     onFilterSelectEnd,
+    onClearFilterSelection,
     isNarrow,
     setShowGridlines,
     setThreadView,
@@ -117,8 +122,10 @@ export function CanvasWithExportRef(props: any) {
   const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used">("all");
   const [filterEditMode, setFilterEditMode] = useState(false);
   const [filterEditRect, setFilterEditRect] = useState(filterRect ?? null);
+  const filterEditRectRef = useRef<typeof filterRect | null>(filterRect ?? null);
   const prevFilterRectRef = useRef<typeof filterRect | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const toolbarContentRef = useRef<HTMLDivElement | null>(null);
@@ -130,6 +137,11 @@ export function CanvasWithExportRef(props: any) {
   const sizePopoverRafRef = useRef<number | null>(null);
   const opacityPopoverRafRef = useRef<number | null>(null);
   const hasTraceImage = Boolean(traceImage || traceImageUrl);
+  const usedColorSet = useMemo(
+    () => new Set((usedColors ?? []).map((entry: { color: Color }) => entry.color.id)),
+    [usedColors],
+  );
+  const hasUsedColors = usedColorSet.size > 0;
 
   const effectiveContainerHeight = canvasViewportHeight ?? containerHeight;
   const baseCellSize = zoom ? cellSize / zoom : cellSize;
@@ -148,40 +160,14 @@ export function CanvasWithExportRef(props: any) {
   const [zoomInput, setZoomInput] = useState(String(zoomPercent));
   const zoomStepPercent = zoomDisplay < 1 ? 10 : zoomDisplay < 2 ? 20 : zoomDisplay < 4 ? 35 : 50;
   const paletteEntries = useMemo(() => {
-    const toHsl = (hex: string) => {
-      const rgb = hexToRgb(hex);
-      if (!rgb) return { h: 0, s: 0, l: 0 };
-      const r = rgb.r / 255;
-      const g = rgb.g / 255;
-      const b = rgb.b / 255;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      const delta = max - min;
-      let h = 0;
-      if (delta > 0) {
-        if (max === r) h = ((g - b) / delta) % 6;
-        else if (max === g) h = (b - r) / delta + 2;
-        else h = (r - g) / delta + 4;
-        h *= 60;
-        if (h < 0) h += 360;
-      }
-      const l = (max + min) / 2;
-      const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
-      return { h, s, l };
-    };
-
-    return Array.from(paletteById.values())
-      .map((color) => ({ color, hsl: toHsl(color.hex) }))
-      .sort((a, b) => {
-        const aNeutral = a.hsl.s < 0.08;
-        const bNeutral = b.hsl.s < 0.08;
-        if (aNeutral !== bNeutral) return aNeutral ? 1 : -1;
-        if (a.hsl.h !== b.hsl.h) return a.hsl.h - b.hsl.h;
-        if (a.hsl.s !== b.hsl.s) return b.hsl.s - a.hsl.s;
-        return a.hsl.l - b.hsl.l;
-      })
-      .map((entry) => entry.color);
+    return sortPaletteByHsv(Array.from(paletteById.values()));
   }, [paletteById]);
+  const filteredPaletteEntries = useMemo(() => {
+    if (activePalettePanel === "used" && hasUsedColors) {
+      return paletteEntries.filter((color) => usedColorSet.has(color.id));
+    }
+    return paletteEntries;
+  }, [activePalettePanel, hasUsedColors, paletteEntries, usedColorSet]);
 
   useEffect(() => {
     if (fitPending) return;
@@ -310,12 +296,14 @@ export function CanvasWithExportRef(props: any) {
   useEffect(() => {
     if (!filterEditMode) {
       setFilterEditRect(filterRect ?? null);
+      filterEditRectRef.current = filterRect ?? null;
     }
   }, [filterRect, filterEditMode]);
 
   const handleFilterRectChange = (rect: typeof filterRect | null) => {
     if (filterSelecting || filterEditMode) {
       setFilterEditRect(rect);
+      filterEditRectRef.current = rect;
       return;
     }
     onFilterRectChange(rect);
@@ -323,8 +311,13 @@ export function CanvasWithExportRef(props: any) {
 
   const handleFilterSelectEnd = () => {
     if (filterSelecting) {
-      prevFilterRectRef.current = filterRect ?? null;
-      setFilterEditMode(true);
+      const nextRect = filterEditRectRef.current ?? filterRect ?? null;
+      if (nextRect) {
+        onFilterRectChange(nextRect);
+        setFilterEditRect(nextRect);
+        filterEditRectRef.current = nextRect;
+      }
+      setFilterEditMode(false);
     }
     onFilterSelectEnd();
   };
@@ -642,15 +635,17 @@ export function CanvasWithExportRef(props: any) {
             background: "var(--canvas-toolbar-bg, rgba(255,255,255,0.92))",
             border: "none",
             borderRadius: 12,
-            padding: "4px 8px",
+            padding: "6px 10px",
             boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
             backdropFilter: "blur(6px)",
+            overflowY: "visible",
             display: "flex",
-            gap: 4,
+            gap: 1,
             alignItems: "var(--canvas-toolbar-align, flex-start)" as React.CSSProperties["alignItems"],
             flexWrap: "var(--canvas-toolbar-wrap, wrap)" as React.CSSProperties["flexWrap"],
             maxWidth: "var(--canvas-toolbar-max-width, calc(100% - 180px))",
             minHeight: toolbarCollapsed ? expandedToolbarHeight ?? undefined : undefined,
+            cursor: filterEditMode ? "default" : "auto",
             transition: "background 160ms ease, box-shadow 160ms ease, padding 160ms ease, border-radius 160ms ease",
           }}
         >
@@ -690,20 +685,20 @@ export function CanvasWithExportRef(props: any) {
             ref={toolbarContentRef}
             style={{
               display: "flex",
-              gap: 4,
+              gap: 1,
               flexWrap: "var(--canvas-toolbar-wrap, wrap)" as React.CSSProperties["flexWrap"],
               alignItems: "center",
               transformOrigin: "left center",
               transform: toolbarCollapsed ? "scaleX(0)" : "scaleX(1)",
-              opacity: toolbarCollapsed ? 0 : 1,
+              opacity: toolbarCollapsed ? 0 : filterEditMode ? 0.5 : 1,
               maxWidth: toolbarCollapsed ? 0 : "100%",
               maxHeight: toolbarCollapsed ? 0 : 999,
-              overflow: "hidden",
+              overflow: toolbarCollapsed ? "hidden" : "visible",
               transition: "transform 160ms ease, opacity 160ms ease",
-              pointerEvents: toolbarCollapsed ? "none" : "auto",
+              pointerEvents: toolbarCollapsed || filterEditMode ? "none" : "auto",
             }}
           >
-            <div className="canvas-toolbar-scroll" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div className="canvas-toolbar-scroll" style={{ display: "flex", alignItems: "center", gap: 1 }}>
             <div style={{ position: "relative" }}>
               <button
                 ref={colorButtonRef}
@@ -747,38 +742,180 @@ export function CanvasWithExportRef(props: any) {
                         padding: 8,
                         boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
                         border: "1px solid rgba(15,23,42,0.12)",
-                        maxHeight: 180,
-                        overflowY: "auto",
+                        maxHeight: 220,
+                        overflow: "hidden",
                         display: "grid",
-                        gridTemplateColumns: "repeat(6, 1fr)",
                         gap: 6,
-                        minWidth: 180,
+                        minWidth: 200,
                       }}
                     >
-                      {paletteEntries.map((color) => (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-end",
+                          gap: 6,
+                          borderBottom: "1px solid rgba(15,23,42,0.12)",
+                          paddingBottom: 4,
+                        }}
+                      >
                         <button
-                          key={color.id}
                           type="button"
-                          onClick={() => {
-                            onPickColor(color.id);
-                            onPickColorComplete();
-                            setColorMenuOpen(false);
-                          }}
-                          aria-label={color.name}
-                          title={color.name}
+                          onClick={() => setActivePalettePanel("all")}
+                          aria-pressed={activePalettePanel === "all"}
                           style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 6,
+                            padding: "4px 8px",
+                            borderRadius: "8px 8px 0 0",
                             border:
-                              color.id === activeColorId
-                                ? "2px solid var(--accent-strong)"
-                                : "1px solid rgba(0,0,0,0.18)",
-                            background: color.hex,
+                              activePalettePanel === "all"
+                                ? "1px solid rgba(15,23,42,0.18)"
+                                : "1px solid transparent",
+                            borderBottom:
+                              activePalettePanel === "all" ? "1px solid var(--card-bg)" : "1px solid transparent",
+                            background: activePalettePanel === "all" ? "var(--card-bg)" : "transparent",
+                            color: "var(--foreground)",
                             cursor: "pointer",
+                            fontSize: 10,
+                            fontWeight: 600,
                           }}
-                        />
-                      ))}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActivePalettePanel("used")}
+                          aria-pressed={activePalettePanel === "used"}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "8px 8px 0 0",
+                            border:
+                              activePalettePanel === "used"
+                                ? "1px solid rgba(15,23,42,0.18)"
+                                : "1px solid transparent",
+                            borderBottom:
+                              activePalettePanel === "used" ? "1px solid var(--card-bg)" : "1px solid transparent",
+                            background: activePalettePanel === "used" ? "var(--card-bg)" : "transparent",
+                            color: "var(--foreground)",
+                            cursor: "pointer",
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Used
+                        </button>
+                      </div>
+                      {activePalettePanel === "used" && !hasUsedColors ? (
+                        <div
+                          style={{
+                            padding: "10px 8px",
+                            borderRadius: 10,
+                            border: "1px dashed rgba(15,23,42,0.2)",
+                            background: "rgba(15,23,42,0.03)",
+                            textAlign: "center",
+                            fontSize: 11,
+                            color: "var(--foreground)",
+                            opacity: 0.75,
+                          }}
+                        >
+                          No colors used. Let's start painting!
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(6, 1fr)",
+                            gap: 6,
+                            maxHeight: 170,
+                            overflowY: "auto",
+                            paddingRight: 4,
+                          }}
+                        >
+                          {filteredPaletteEntries.map((color) => {
+                            const usedCount = (usedColors ?? []).find(
+                              (entry: { color: Color }) => entry.color.id === color.id,
+                            )?.count;
+                            const handlePick = () => {
+                              onPickColor(color.id);
+                              onPickColorComplete();
+                              setColorMenuOpen(false);
+                            };
+                            return (
+                              <div
+                                key={color.id}
+                                style={{
+                                  display: "grid",
+                                  gap: 2,
+                                  justifyItems: "center",
+                                  padding: 2,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={handlePick}
+                                  aria-label={color.name}
+                                  title={color.name}
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: 6,
+                                    border:
+                                      color.id === activeColorId
+                                        ? "2px solid var(--accent-strong)"
+                                        : "1px solid rgba(0,0,0,0.18)",
+                                    background: color.hex,
+                                    cursor: "pointer",
+                                    display: "grid",
+                                    placeItems: "center",
+                                    padding: 0,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: 5,
+                                      background: color.hex,
+                                      position: "relative",
+                                      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                                      display: "block",
+                                    }}
+                                  >
+                                    {usedCount != null && usedCount > 0 && (
+                                      <span
+                                        style={{
+                                          position: "absolute",
+                                          top: -4,
+                                          left: -4,
+                                          minWidth: 14,
+                                          height: 14,
+                                          padding: "0 3px",
+                                          borderRadius: 999,
+                                          background: "rgba(15,23,42,0.85)",
+                                          color: "#ffffff",
+                                          fontSize: 8,
+                                          fontWeight: 700,
+                                          display: "grid",
+                                          placeItems: "center",
+                                          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                                          pointerEvents: "none",
+                                        }}
+                                        aria-hidden="true"
+                                      >
+                                        {usedCount}
+                                      </span>
+                                    )}
+                                  </span>
+                                </button>
+                                <span
+                                  onClick={handlePick}
+                                  style={{ fontSize: 9, opacity: 0.75, lineHeight: 1, cursor: "pointer" }}
+                                >
+                                  {color.code ?? ""}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>,
                     document.body
                   )
@@ -808,9 +945,6 @@ export function CanvasWithExportRef(props: any) {
                   height={18}
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
-              </span>
-              <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
-                Pan
               </span>
             </button>
             {(["paint", "eraser", "fill", "lasso", "eyedropper"] as const).map((t) => (
@@ -875,37 +1009,55 @@ export function CanvasWithExportRef(props: any) {
                     }}
                   />
                 </span>
-                <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
-                  {t === "paint"
-                    ? "Brush"
-                    : t === "eraser"
-                      ? "Eraser"
-                      : t === "fill"
-                        ? "Fill"
-                        : t === "eyedropper"
-                          ? "Eyedropper"
-                          : "Lasso"}
-                </span>
               </button>
             ))}
             {traceImage && (
               <>
-                <button
-                  ref={opacityButtonRef}
-                  onClick={() => setImageOpacityOpen((open) => !open)}
-                  aria-pressed={imageOpacityOpen}
-                  aria-label="Image opacity"
-                  data-active={imageOpacityOpen ? "true" : undefined}
-                  className="toolbar-button"
+                <span
+                  aria-hidden="true"
                   style={{
-                    padding: "2px 6px",
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    display: "grid",
-                    gap: 1,
-                    justifyItems: "center",
+                    width: 1,
+                    height: 22,
+                    background: "rgba(15,23,42,0.18)",
+                    alignSelf: "center",
+                    margin: "0 4px",
                   }}
-                >
+                />
+                <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4, paddingTop: 6 }}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      fontSize: 9,
+                      fontWeight: 600,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "rgba(100,116,139,0.9)",
+                      padding: "2px 6px",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    Image
+                  </span>
+                  <button
+                    ref={opacityButtonRef}
+                    onClick={() => setImageOpacityOpen((open) => !open)}
+                    aria-pressed={imageOpacityOpen}
+                    aria-label="Image opacity"
+                    data-active={imageOpacityOpen ? "true" : undefined}
+                    className="toolbar-button"
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      display: "grid",
+                      gap: 1,
+                      justifyItems: "center",
+                    }}
+                  >
                   <span className="toolbar-icon" aria-hidden="true">
                     <img
                       src={assetPath("/gradient.svg")}
@@ -916,24 +1068,21 @@ export function CanvasWithExportRef(props: any) {
                       style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                     />
                   </span>
-                  <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
-                    Opacity
-                  </span>
                 </button>
                 <button
                   onClick={onToggleTraceLock}
                   aria-label="Reposition"
-                  data-active={traceAdjustMode ? "true" : undefined}
-                  className="toolbar-button"
-                  style={{
-                    padding: "2px 6px",
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    display: "grid",
-                    gap: 1,
-                    justifyItems: "center",
-                  }}
-                >
+                    data-active={traceAdjustMode ? "true" : undefined}
+                    className="toolbar-button"
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      display: "grid",
+                      gap: 1,
+                      justifyItems: "center",
+                    }}
+                  >
                   <span className="toolbar-icon" aria-hidden="true">
                     <img
                       src={assetPath("/transform.svg")}
@@ -944,12 +1093,10 @@ export function CanvasWithExportRef(props: any) {
                       style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                     />
                   </span>
-                  <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
-                    Reposition
-                  </span>
                 </button>
-              </>
-            )}
+              </div>
+            </>
+          )}
             </div>
           </div>
         </div>
@@ -957,7 +1104,7 @@ export function CanvasWithExportRef(props: any) {
           <div
             style={{
               position: "absolute",
-              top: "85%",
+              top: "78%",
               left: "50%",
               transform: "translate(-50%, -50%)",
               zIndex: 5,
@@ -1006,13 +1153,14 @@ export function CanvasWithExportRef(props: any) {
             </button>
           </div>
         )}
+        {/*
         {uiReady && filterEditMode && filterEditRect && (
           <div
             style={{
               position: "absolute",
-              top: "85%",
+              bottom: 160,
               left: "50%",
-              transform: "translate(-50%, -50%)",
+              transform: "translateX(-50%)",
               zIndex: 5,
               display: "flex",
               gap: 8,
@@ -1033,18 +1181,22 @@ export function CanvasWithExportRef(props: any) {
                 setFilterEditRect(prev);
                 onFilterRectChange(prev);
               }}
+              aria-label="Cancel"
               style={{
-                padding: "6px 10px",
-                borderRadius: 8,
+                width: 30,
+                height: 30,
+                borderRadius: 999,
                 border: "1px solid rgba(15,23,42,0.12)",
                 background: "var(--muted-bg)",
                 color: "var(--foreground)",
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: 18,
+                fontWeight: 700,
+                display: "grid",
+                placeItems: "center",
                 cursor: "pointer",
               }}
             >
-              Cancel
+              ×
             </button>
             <button
               type="button"
@@ -1052,19 +1204,190 @@ export function CanvasWithExportRef(props: any) {
                 onFilterRectChange(filterEditRect);
                 setFilterEditMode(false);
               }}
+              aria-label="Confirm"
               style={{
-                padding: "6px 12px",
-                borderRadius: 8,
+                width: 30,
+                height: 30,
+                borderRadius: 999,
                 border: "none",
                 background: "var(--accent-strong)",
                 color: "#ffffff",
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 700,
+                display: "grid",
+                placeItems: "center",
                 cursor: "pointer",
               }}
             >
-              OK
+              ✓
             </button>
+          </div>
+        )}
+        */}
+        {uiReady && filterSelecting && !filterEditMode && (
+          <div
+            style={{
+              position: "absolute",
+              top: "85%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 5,
+              display: "grid",
+              gap: 6,
+              justifyItems: "center",
+              background: "var(--card-bg)",
+              borderRadius: 12,
+              padding: "8px 12px",
+              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
+              border: "1px solid rgba(15,23,42,0.12)",
+              backdropFilter: "blur(8px)",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--foreground)",
+            }}
+          >
+            <span>Drag on canvas to set your filter area.</span>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterEditMode(false);
+                setFilterEditRect(null);
+                onClearFilterSelection?.();
+              }}
+              aria-label="Cancel filter selection"
+              style={{
+                border: "1px solid rgba(15,23,42,0.12)",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                width: 60,
+                height: 22,
+                borderRadius: 999,
+                fontSize: 12,
+                lineHeight: 1,
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {uiReady && filterMode && filterRect && !filterSelecting && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 70,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 5,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--card-bg)",
+              borderRadius: 12,
+              padding: "8px 12px",
+              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
+              border: "1px solid rgba(15,23,42,0.12)",
+              backdropFilter: "blur(8px)",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--foreground)",
+              
+            }}
+          >
+            <div style={{ textAlign: "center" }}>Color adjustments will only apply within selected region.</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => onClearFilterSelection?.()}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(15,23,42,0.12)",
+                  background: "var(--muted-bg)",
+                  color: "var(--foreground)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  prevFilterRectRef.current = filterRect ?? null;
+                  setFilterEditMode(true);
+                  setFilterEditRect(filterRect);
+                }}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(191,100,217,0.35)",
+                  background: "rgba(191,100,217,0.12)",
+                  color: "var(--foreground)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Edit selection
+              </button>
+              {filterEditMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prev = prevFilterRectRef.current ?? null;
+                      setFilterEditMode(false);
+                      setFilterEditRect(prev);
+                      onFilterRectChange(prev);
+                    }}
+                    aria-label="Cancel"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      background: "var(--muted-bg)",
+                      color: "var(--foreground)",
+                      fontSize: 18,
+                      fontWeight: 700,
+                      display: "grid",
+                      placeItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onFilterRectChange(filterEditRect);
+                      setFilterEditMode(false);
+                    }}
+                    aria-label="Confirm"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      border: "none",
+                      background: "var(--accent-strong)",
+                      color: "#ffffff",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      display: "grid",
+                      placeItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✓
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
         {uiReady &&
@@ -1126,7 +1449,8 @@ export function CanvasWithExportRef(props: any) {
               backdropFilter: "blur(6px)",
             }}
           >
-            <div style={{ display: "grid", gap: 2 }}>
+            <div style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>Opacity</span>
               <input
                 type="range"
                 min={0}
@@ -1438,6 +1762,8 @@ export function CanvasWithExportRef(props: any) {
             traceOffsetX={traceOffsetX}
             traceOffsetY={traceOffsetY}
             traceAdjustMode={traceAdjustMode}
+            onTraceTransformStart={onTraceTransformStart}
+            onTraceTransformEnd={onTraceTransformEnd}
             onTraceOffsetChange={onTraceOffsetChange}
             onTraceScaleChange={onTraceScaleChange}
             gridBackground={gridBackground}

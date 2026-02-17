@@ -4,8 +4,8 @@ import type { MutableRefObject, RefObject } from "react";
 import { useEffect, useRef } from "react";
 import { idx, makeGrid } from "../../../lib/grid";
 import { useSelectionTools } from "./useSelectionTools";
+import type { Snapshot, TraceSnapshot } from "../utils/historyTypes";
 
-type Snapshot = { gridW: number; gridH: number; grid: Uint16Array };
 type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
 
 type ConfirmDialogState = {
@@ -51,6 +51,8 @@ type UseCanvasEditsArgs = {
   traceImage: HTMLImageElement | null;
   traceLocked: boolean;
   setTraceLocked: (value: boolean) => void;
+  getTraceSnapshot: () => TraceSnapshot;
+  applyTraceSnapshot: (snapshot: TraceSnapshot | null | undefined) => void;
 };
 
 export function useCanvasEdits({
@@ -89,6 +91,8 @@ export function useCanvasEdits({
   traceImage,
   traceLocked,
   setTraceLocked,
+  getTraceSnapshot,
+  applyTraceSnapshot,
 }: UseCanvasEditsArgs) {
   const gridRef = useRef<Uint16Array | null>(null);
   const strokeActiveRef = useRef(false);
@@ -122,7 +126,7 @@ export function useCanvasEdits({
       const next = updater(prev);
       if (next === prev) return prev;
       if (!strokeActiveRef.current) {
-        pushHistory({ gridW, gridH, grid: prev });
+        pushHistory({ gridW, gridH, grid: prev, trace: getTraceSnapshot() });
         setFutureState([]);
       }
       return next;
@@ -203,7 +207,7 @@ export function useCanvasEdits({
 
   function resetGrid(newW: number, newH: number) {
     bumpStrokeVersion();
-    pushHistory({ gridW, gridH, grid });
+    pushHistory({ gridW, gridH, grid, trace: getTraceSnapshot() });
     setFutureState([]);
     setGridW(newW);
     setGridH(newH);
@@ -291,6 +295,7 @@ export function useCanvasEdits({
   function toggleTraceLock() {
     if (!traceImage) return;
     if (traceLocked) {
+      /*
       if (hasPaintedCells()) {
         openConfirmDialog({
           title: "Unlock trace image?",
@@ -301,6 +306,7 @@ export function useCanvasEdits({
         });
         return;
       }
+      */
       setTraceLocked(false);
       return;
     }
@@ -310,6 +316,7 @@ export function useCanvasEdits({
   function setTraceLockedState(nextLocked: boolean) {
     if (!traceImage) return;
     if (!nextLocked && traceLocked) {
+      /*
       if (hasPaintedCells()) {
         openConfirmDialog({
           title: "Unlock background image?",
@@ -320,6 +327,7 @@ export function useCanvasEdits({
         });
         return;
       }
+      */
     }
     setTraceLocked(nextLocked);
   }
@@ -348,10 +356,11 @@ export function useCanvasEdits({
     const last = popHistory();
     if (!last) return;
     bumpStrokeVersion();
-    pushFuture({ gridW, gridH, grid });
+    pushFuture({ gridW, gridH, grid, trace: getTraceSnapshot() });
     setGridW(last.gridW);
     setGridH(last.gridH);
     setGrid(last.grid);
+    applyTraceSnapshot(last.trace);
   }
 
   function redo() {
@@ -359,16 +368,17 @@ export function useCanvasEdits({
     const next = popFuture();
     if (!next) return;
     bumpStrokeVersion();
-    pushHistory({ gridW, gridH, grid });
+    pushHistory({ gridW, gridH, grid, trace: getTraceSnapshot() });
     setGridW(next.gridW);
     setGridH(next.gridH);
     setGrid(next.grid);
+    applyTraceSnapshot(next.trace);
   }
 
   function beginStroke() {
     strokeActiveRef.current = true;
     strokeDirtyRef.current = false;
-    strokeSnapshotRef.current = { gridW, gridH, grid };
+    strokeSnapshotRef.current = { gridW, gridH, grid, trace: getTraceSnapshot() };
     bumpStrokeVersion();
   }
 

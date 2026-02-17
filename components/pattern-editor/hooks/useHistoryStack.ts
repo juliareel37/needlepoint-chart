@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-
-type Snapshot = { gridW: number; gridH: number; grid: Uint16Array };
+import type { Snapshot } from "../utils/historyTypes";
 
 export function useHistoryStack() {
   const [history, setHistory] = useState<Snapshot[]>([]);
