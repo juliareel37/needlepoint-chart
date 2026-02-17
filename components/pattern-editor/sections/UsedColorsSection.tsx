@@ -97,6 +97,7 @@ export function UsedColorsSection({
   setMergeMode,
   setDeleteMode,
 }: UsedColorsSectionProps) {
+  const hasPaintedCells = usedColors.length > 0;
   return (
     <div className="app-card" style={{ ...cardStyle, boxShadow: usedColorsOpen ? cardShadow : cardShadowCollapsed }}>
       <button
@@ -116,7 +117,7 @@ export function UsedColorsSection({
         }}
         type="button"
       >
-        <span>Used colors ({usedColors.length})</span>
+        <span>Manage colors ({usedColors.length})</span>
         <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>
           {usedColorsOpen ? "▾" : "▸"}
         </span>
@@ -130,103 +131,94 @@ export function UsedColorsSection({
             onClick={toggleRemapMode}
             aria-pressed={remapMode}
             aria-label="Replace colors"
-            data-tooltip="Replace colors"
             data-active={remapMode ? "true" : undefined}
+            className="toolbar-button"
+            disabled={!hasPaintedCells}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 8px",
+              padding: "2px 6px",
               borderRadius: 10,
-              cursor: "pointer",
+              cursor: hasPaintedCells ? "pointer" : "not-allowed",
+              display: "grid",
+              gap: 1,
+              justifyItems: "center",
+              opacity: hasPaintedCells ? 1 : 0.5,
             }}
           >
-            <img
-              src={assetPath("/swap.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
+            <span className="toolbar-icon" aria-hidden="true">
+              <img
+                src={assetPath("/swap.svg")}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </span>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+              Replace
+            </span>
           </button>
           <button
             onClick={toggleMergeMode}
             aria-pressed={mergeMode}
             aria-label="Merge colors"
-            data-tooltip="Merge colors"
             data-active={mergeMode ? "true" : undefined}
+            className="toolbar-button"
+            disabled={!hasPaintedCells}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 8px",
+              padding: "2px 6px",
               borderRadius: 10,
-              cursor: "pointer",
+              cursor: hasPaintedCells ? "pointer" : "not-allowed",
+              display: "grid",
+              gap: 1,
+              justifyItems: "center",
+              opacity: hasPaintedCells ? 1 : 0.5,
             }}
           >
-            <img
-              src={assetPath("/merge.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
+            <span className="toolbar-icon" aria-hidden="true">
+              <img
+                src={assetPath("/merge.svg")}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </span>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+              Merge
+            </span>
           </button>
           <button
             onClick={toggleDeleteMode}
             aria-pressed={deleteMode}
             aria-label="Delete colors"
-            data-tooltip="Delete colors"
             data-active={deleteMode ? "true" : undefined}
+            className="toolbar-button"
+            disabled={!hasPaintedCells}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 8px",
+              padding: "2px 6px",
               borderRadius: 10,
-              cursor: "pointer",
+              cursor: hasPaintedCells ? "pointer" : "not-allowed",
+              display: "grid",
+              gap: 1,
+              justifyItems: "center",
+              opacity: hasPaintedCells ? 1 : 0.5,
             }}
           >
-            <img
-              src={assetPath("/deselect.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
-          </button>
-          <button
-            onClick={() => {
-              if (filterMode) {
-                clearFilterSelection();
-              } else {
-                startFilterSelection();
-              }
-            }}
-            aria-pressed={filterMode}
-            aria-label="Filter canvas"
-            data-tooltip="Filter canvas"
-            data-active={filterMode ? "true" : undefined}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 8px",
-              borderRadius: 10,
-              cursor: "pointer",
-            }}
-          >
-            <img
-              src={assetPath("/crop_filter.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
+            <span className="toolbar-icon" aria-hidden="true">
+              <img
+                src={assetPath("/deselect.svg")}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+            </span>
+            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7 }}>
+              Delete
+            </span>
           </button>
           <div style={{ fontSize: 12, opacity: 0.7 }}>
             {remapMode
@@ -239,15 +231,53 @@ export function UsedColorsSection({
                   : mergeTargetId
                     ? "Ready to merge."
                     : "Pick a target color."
-                : deleteMode
-                  ? deleteSelectedIds.length === 0
-                    ? "Select colors to delete."
-                    : usedColors.length - deleteSelectedIds.length < 1
-                      ? "Keep at least one color."
+                  : deleteMode
+                    ? deleteSelectedIds.length === 0
+                      ? "Select colors to delete."
+                      : usedColors.length - deleteSelectedIds.length < 1
+                        ? "Keep at least one color."
                       : "Ready to delete."
                   : ""}
           </div>
         </div>
+        <button
+          onClick={() => {
+            if (filterMode) {
+              clearFilterSelection();
+            } else {
+              startFilterSelection();
+            }
+          }}
+          aria-pressed={filterMode}
+          aria-label="Filter canvas"
+          data-active={filterMode ? "true" : undefined}
+          className="toolbar-button used-colors-filter-button"
+          style={{
+            width: "100%",
+            marginBottom: 8,
+            padding: "6px 10px",
+            borderRadius: 10,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
+            <img
+              src={assetPath("/pic_in_pic.svg")}
+              alt=""
+              aria-hidden="true"
+              width={18}
+              height={18}
+              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+            />
+          </span>
+          Filter canvas area
+        </button>
         {filterSelecting && (
           <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>
             Drag on canvas to set your filter area. Color changes will only apply within selection.

@@ -43,6 +43,8 @@ export default function PatternEditor() {
   const [grid, setGrid] = useState<Uint16Array>(() => makeGrid(gridW, gridH, 0));
   const { history, future, setHistoryState, setFutureState, pushHistory, pushFuture, popHistory, popFuture } =
     useHistoryStack();
+  const canUndo = history.length > 0;
+  const canRedo = future.length > 0;
   const [tool, setTool] = useState<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso">("none");
   const [brushSize, setBrushSize] = useState(1);
   const [gridMode, setGridMode] = useState<"stitches" | "inches">("stitches");
@@ -72,6 +74,7 @@ export default function PatternEditor() {
   const [imageToPatternOpen, setImageToPatternOpen] = useState(true);
   const [traceImageUrl, setTraceImageUrl] = useState<string | null>(null);
   const [traceFileName, setTraceFileName] = useState<string | null>(null);
+  const [traceFileSize, setTraceFileSize] = useState<number | null>(null);
   const [traceImage, setTraceImage] = useState<HTMLImageElement | null>(null);
   const [traceOpacity, setTraceOpacity] = useState(0.6);
   const [traceScale, setTraceScale] = useState(1);
@@ -188,23 +191,21 @@ export default function PatternEditor() {
     setIsRenaming(false);
   }
 
-  useEffect(() => {
-    if (!traceImageUrl) {
-      setTraceImage(null);
-      setTraceFileName(null);
-      setTraceOpacity(0);
-      return;
+  function getSafeTraceImageUrl(inputUrl: string) {
+    if (inputUrl.startsWith("data:") || inputUrl.startsWith("blob:")) {
+      return inputUrl;
     }
-    const img = new Image();
-    if (traceImageUrl.startsWith("https://")) {
-      img.crossOrigin = "anonymous";
+    if (typeof window === "undefined") return inputUrl;
+    try {
+      const parsed = new URL(inputUrl);
+      if (parsed.origin === window.location.origin) {
+        return inputUrl;
+      }
+      return `/api/image-proxy?url=${encodeURIComponent(inputUrl)}`;
+    } catch {
+      return inputUrl;
     }
-    img.onload = () => setTraceImage(img);
-    img.src = traceImageUrl;
-    return () => {
-      setTraceImage(null);
-    };
-  }, [traceImageUrl]);
+  }
   useEffect(() => {
     return () => {
       if (tracePreviewObjectUrlRef.current) {
@@ -270,18 +271,19 @@ export default function PatternEditor() {
     if (!traceImageUrl) {
       setTraceImage(null);
       setTraceFileName(null);
+      setTraceFileSize(null);
       setTraceOpacity(0);
       return;
     }
     const img = new Image();
+    if (traceImageUrl.startsWith("http://") || traceImageUrl.startsWith("https://")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       setTraceImage(img);
       fitTraceImageToGrid(img);
     };
-    img.src = traceImageUrl;
-    return () => {
-      setTraceImage(null);
-    };
+    img.src = getSafeTraceImageUrl(traceImageUrl);
   }, [traceImageUrl, fitCellSize]);
 
   useEffect(() => {
@@ -581,6 +583,7 @@ export default function PatternEditor() {
     tracePreviewObjectUrlRef.current = localPreview;
     setTraceImageUrl(localPreview);
     setTraceFileName(file.name);
+    setTraceFileSize(file.size);
     setTraceLocked(false);
     setTracePostUpload(true);
     setTraceEditMode(false);
@@ -612,6 +615,7 @@ export default function PatternEditor() {
     setTraceUploadState("idle");
     setTraceImageUrl(null);
     setTraceFileName(null);
+    setTraceFileSize(null);
     setTraceImage(null);
     setTraceOpacity(0);
     setTraceLocked(false);
@@ -621,6 +625,17 @@ export default function PatternEditor() {
       URL.revokeObjectURL(tracePreviewObjectUrlRef.current);
       tracePreviewObjectUrlRef.current = null;
     }
+  }
+
+  function confirmClearTraceImage() {
+    confirmActionRef.current = () => {
+      clearTraceImage();
+    };
+    setConfirmDialog({
+      title: "Remove background image?",
+      message: "This will remove the current background image from the canvas.",
+      confirmLabel: "Remove",
+    });
   }
 
   function handleToggleTraceLock() {
@@ -809,6 +824,42 @@ export default function PatternEditor() {
     { id: "background", label: "Background", icon: assetPath("/photo.svg") },
   ];
   const [activeMenuId, setActiveMenuId] = useState(menuPages[0].id);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const sidebarInnerRef = useRef<HTMLDivElement | null>(null);
+  const sidebarContentRef = useRef<HTMLDivElement | null>(null);
+  const [sidebarScrollable, setSidebarScrollable] = useState(false);
+
+  useEffect(() => {
+    const container = sidebarInnerRef.current;
+    const content = sidebarContentRef.current;
+    if (!container || !content) return;
+
+    let raf = 0;
+    const update = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const scrollable = container.scrollHeight - container.clientHeight > 1;
+        setSidebarScrollable(scrollable);
+      });
+    };
+
+    update();
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(update);
+      observer.observe(container);
+      observer.observe(content);
+      return () => {
+        if (raf) cancelAnimationFrame(raf);
+        observer.disconnect();
+      };
+    }
+
+    window.addEventListener("resize", update);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   return (
     <div
@@ -1013,62 +1064,136 @@ export default function PatternEditor() {
           )}
         {headerTitleNode &&
           createPortal(
-            isRenaming ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <input
-                  ref={renameInputRef}
-                  value={draftTitle}
-                  onChange={(e) => setDraftTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      commitRename();
-                    }
-                    if (e.key === "Escape") {
-                      setIsRenaming(false);
-                      setDraftTitle(title);
-                    }
-                  }}
-                  aria-label="Pattern name"
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 14,
-                    textAlign: "center",
-                    border: "1px solid var(--panel-border)",
-                    borderRadius: 8,
-                    background: "transparent",
-                    color: "var(--foreground)",
-                    outline: "none",
-                    padding: "4px 8px",
-                    minWidth: 120,
-                  }}
-                />
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, zIndex: 2 }}>
+              {isRenaming ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    ref={renameInputRef}
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        commitRename();
+                      }
+                      if (e.key === "Escape") {
+                        setIsRenaming(false);
+                        setDraftTitle(title);
+                      }
+                    }}
+                    aria-label="Pattern name"
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      textAlign: "center",
+                      border: "1px solid var(--panel-border)",
+                      borderRadius: 8,
+                      background: "transparent",
+                      color: "var(--foreground)",
+                      outline: "none",
+                      padding: "4px 8px",
+                      minWidth: 120,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={commitRename}
+                    aria-label="Confirm rename"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      border: "1px solid var(--panel-border)",
+                      background: "var(--card-bg)",
+                      cursor: "pointer",
+                      display: "grid",
+                      placeItems: "center",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              ) : (
+                <span
+                  onDoubleClick={() => setIsRenaming(true)}
+                  style={{ fontWeight: 700, fontSize: 14, color: "var(--foreground)", cursor: "text" }}
+                >
+                  {title}
+                </span>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 24 }}>
                 <button
                   type="button"
-                  onClick={commitRename}
-                  aria-label="Confirm rename"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  aria-label="Undo"
+                  title="Undo"
                   style={{
-                    width: 28,
-                    height: 28,
+                    padding: "4px 6px",
                     borderRadius: 8,
-                    border: "1px solid var(--panel-border)",
+                    border: "none",
                     background: "var(--card-bg)",
-                    cursor: "pointer",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 700,
+                    cursor: canUndo ? "pointer" : "not-allowed",
+                    opacity: canUndo ? 1 : 0.5,
                   }}
                 >
-                  ✓
+                  <img
+                    src={assetPath("/undo.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={18}
+                    height={18}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  aria-label="Redo"
+                  title="Redo"
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "var(--card-bg)",
+                    cursor: canRedo ? "pointer" : "not-allowed",
+                    opacity: canRedo ? 1 : 0.5,
+                  }}
+                >
+                  <img
+                    src={assetPath("/redo.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={18}
+                    height={18}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={clearGrid}
+                  aria-label="Clear"
+                  title="Clear"
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "var(--card-bg)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <img
+                    src={assetPath("/trash.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={18}
+                    height={18}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
                 </button>
               </div>
-            ) : (
-              <span
-                onDoubleClick={() => setIsRenaming(true)}
-                style={{ fontWeight: 700, fontSize: 14, color: "var(--foreground)", cursor: "text" }}
-              >
-                {title}
-              </span>
-            ),
+            </div>,
             headerTitleNode
           )}
         {!isNarrow && !sidebarCollapsed && (
@@ -1179,6 +1304,7 @@ export default function PatternEditor() {
         )}
         <div
           className="pattern-sidebar"
+          ref={sidebarRef}
           style={{
             display: sidebarCollapsed ? "none" : "grid",
             gap: 16,
@@ -1187,7 +1313,7 @@ export default function PatternEditor() {
             minHeight: 0,
             height: "100%",
             maxHeight: "100%",
-            overflowY: sidebarCollapsed ? "hidden" : "auto",
+            overflowY: "hidden",
             overflowX: "visible",
             alignSelf: "stretch",
             position: isNarrow ? "fixed" : "relative",
@@ -1207,14 +1333,16 @@ export default function PatternEditor() {
         >
           <div
             className="pattern-sidebar-inner"
+            ref={sidebarInnerRef}
             style={{
               display: "grid",
               gap: 0,
               alignContent: "start",
               padding: "12px 18px",
-              height: "auto",
+              height: "100%",
               minHeight: 0,
-              overflowY: "visible",
+              maxHeight: "100%",
+              overflowY: sidebarScrollable ? "auto" : "hidden",
               overflowX: "hidden",
               opacity: sidebarCollapsed ? 0 : 1,
               transform: sidebarCollapsed ? "translateX(-6px)" : "translateX(0)",
@@ -1222,6 +1350,7 @@ export default function PatternEditor() {
               pointerEvents: sidebarCollapsed ? "none" : "auto",
             }}
           >
+            <div ref={sidebarContentRef} style={{ display: "grid", gap: 0, alignContent: "start" }}>
             {activeMenuId === "main" ? (
               <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
                 <GridSizeCard
@@ -1327,21 +1456,22 @@ export default function PatternEditor() {
             ) : activeMenuId === "background" ? (
               <div style={{ display: "grid", gap: 0 }}>
                 <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
-                  <TraceImageCard
-                    cardStyle={sidebarCardStyle}
-                    cardShadow={sidebarCardShadow}
-                    cardShadowCollapsed={sidebarCardShadowCollapsed}
-                    traceOpen={traceOpen}
-                    setTraceOpen={setTraceOpen}
-                    collapseStyle={collapseStyle}
-                    traceInputRef={traceInputRef}
-                    traceFileName={traceFileName}
-                    traceImage={traceImage}
-                    traceLocked={traceLocked}
-                    onTraceFileSelected={handleTraceFileSelected}
-                    onClearTrace={clearTraceImage}
-                    onSetTraceLockedState={handleSetTraceLockedState}
-                  />
+                <TraceImageCard
+                  cardStyle={sidebarCardStyle}
+                  cardShadow={sidebarCardShadow}
+                  cardShadowCollapsed={sidebarCardShadowCollapsed}
+                  traceOpen={traceOpen}
+                  setTraceOpen={setTraceOpen}
+                  collapseStyle={collapseStyle}
+                  traceInputRef={traceInputRef}
+                  traceFileName={traceFileName}
+                  traceFileSize={traceFileSize}
+                  traceImage={traceImage}
+                  traceLocked={traceLocked}
+                  onTraceFileSelected={handleTraceFileSelected}
+                  onClearTrace={confirmClearTraceImage}
+                  onSetTraceLockedState={handleSetTraceLockedState}
+                />
                 </div>
                 <div style={{ padding: "12px 0" }}>
                   <ImageToPatternCard
@@ -1373,6 +1503,7 @@ export default function PatternEditor() {
                 {menuPages.find((page) => page.id === activeMenuId)?.label} page (placeholder)
               </div>
             )}
+            </div>
           </div>
         </div>
 

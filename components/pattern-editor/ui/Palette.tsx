@@ -185,7 +185,7 @@ export default function Palette({
                   fontSize: 10,
                 }}
               >
-                Used Colors
+                Used
               </button>
             )}
             {showExtractedFilter && hasExtracted && (

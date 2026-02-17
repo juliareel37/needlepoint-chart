@@ -38,6 +38,7 @@ type Props = {
   traceAdjustMode: boolean;
   onTraceOffsetChange: (x: number, y: number) => void;
   onTraceScaleChange: (scale: number) => void;
+  filterEditMode?: boolean;
   panMode: boolean;
   showGridlines: boolean;
   tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
@@ -93,6 +94,7 @@ export default function GridCanvas(props: Props) {
     traceAdjustMode,
     onTraceOffsetChange,
     onTraceScaleChange,
+    filterEditMode = false,
     panMode,
     showGridlines,
     tool,
@@ -131,6 +133,11 @@ export default function GridCanvas(props: Props) {
     null
   );
   const filterDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const filterResizeRef = useRef<{
+    handle: "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se" | "move";
+    startRect: { x0: number; y0: number; x1: number; y1: number };
+    startCell: { x: number; y: number };
+  } | null>(null);
   const focusCellRef = useRef<{ x: number; y: number } | null>(null);
   const lastFocusTokenRef = useRef<number | undefined>(undefined);
   const prevZoomRef = useRef(zoom);
@@ -178,6 +185,45 @@ export default function GridCanvas(props: Props) {
     x1: Math.max(start.x, end.x),
     y1: Math.max(start.y, end.y),
   });
+
+  const clampRectToBounds = (rect: { x0: number; y0: number; x1: number; y1: number }) => {
+    const x0 = Math.max(0, Math.min(width - 1, rect.x0));
+    const y0 = Math.max(0, Math.min(height - 1, rect.y0));
+    const x1 = Math.max(0, Math.min(width - 1, rect.x1));
+    const y1 = Math.max(0, Math.min(height - 1, rect.y1));
+    return normalizeRect({ x: x0, y: y0 }, { x: x1, y: y1 });
+  };
+
+  const getFilterHandle = (point: { x: number; y: number }) => {
+    if (!activeFilterRect) return null;
+    const x0 = activeFilterRect.x0 * cellSize;
+    const y0 = activeFilterRect.y0 * cellSize;
+    const x1 = (activeFilterRect.x1 + 1) * cellSize;
+    const y1 = (activeFilterRect.y1 + 1) * cellSize;
+    const handleSize = 8;
+    const within = (px: number, py: number) =>
+      point.x >= px - handleSize && point.x <= px + handleSize && point.y >= py - handleSize && point.y <= py + handleSize;
+    const corners: Array<[number, number, "nw" | "ne" | "sw" | "se"]> = [
+      [x0, y0, "nw"],
+      [x1, y0, "ne"],
+      [x0, y1, "sw"],
+      [x1, y1, "se"],
+    ];
+    for (const [cx, cy, handle] of corners) {
+      if (within(cx, cy)) return handle;
+    }
+    const edges: Array<[number, number, "n" | "s" | "w" | "e"]> = [
+      [(x0 + x1) / 2, y0, "n"],
+      [(x0 + x1) / 2, y1, "s"],
+      [x0, (y0 + y1) / 2, "w"],
+      [x1, (y0 + y1) / 2, "e"],
+    ];
+    for (const [cx, cy, handle] of edges) {
+      if (within(cx, cy)) return handle;
+    }
+    if (point.x >= x0 && point.x <= x1 && point.y >= y0 && point.y <= y1) return "move";
+    return null;
+  };
 
   const isCellInFilter = (x: number, y: number) =>
     !activeFilterRect ||
@@ -365,6 +411,7 @@ export default function GridCanvas(props: Props) {
     panMode,
     activeFilterRect,
     filterSelecting,
+    filterEditMode,
     zoom,
     showGridlines,
     gridBackground,
@@ -713,6 +760,20 @@ export default function GridCanvas(props: Props) {
               return;
             }
           }
+          if (filterEditMode && activeFilterRect) {
+            const point = getCanvasPoint(e);
+            const handle = getFilterHandle(point);
+            if (handle) {
+              e.preventDefault();
+              (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+              filterResizeRef.current = {
+                handle,
+                startRect: activeFilterRect,
+                startCell: getClampedCellFromEvent(e),
+              };
+              return;
+            }
+          }
           if (filterSelecting) {
             e.preventDefault();
             const cell = getClampedCellFromEvent(e);
@@ -820,6 +881,30 @@ export default function GridCanvas(props: Props) {
           if (pinchEnabled && e.pointerType === "touch" && pinchPointersRef.current.size >= 2) {
             e.preventDefault();
             updatePinchPointer(e.pointerId, e.clientX, e.clientY);
+            return;
+          }
+          if (filterResizeRef.current) {
+            const { handle, startRect, startCell } = filterResizeRef.current;
+            const cell = getClampedCellFromEvent(e);
+            const dx = cell.x - startCell.x;
+            const dy = cell.y - startCell.y;
+            let next = { ...startRect };
+            if (handle === "move") {
+              const w = startRect.x1 - startRect.x0;
+              const h = startRect.y1 - startRect.y0;
+              let x0 = startRect.x0 + dx;
+              let y0 = startRect.y0 + dy;
+              x0 = Math.max(0, Math.min(width - 1 - w, x0));
+              y0 = Math.max(0, Math.min(height - 1 - h, y0));
+              next = { x0, y0, x1: x0 + w, y1: y0 + h };
+            } else {
+              if (handle.includes("w")) next.x0 = startRect.x0 + dx;
+              if (handle.includes("e")) next.x1 = startRect.x1 + dx;
+              if (handle.includes("n")) next.y0 = startRect.y0 + dy;
+              if (handle.includes("s")) next.y1 = startRect.y1 + dy;
+              next = clampRectToBounds(next);
+            }
+            onFilterRectChange?.(next);
             return;
           }
           if (filterSelecting) {
@@ -961,6 +1046,10 @@ export default function GridCanvas(props: Props) {
           lastPaintCellRef.current = cell;
         }}
         onPointerUp={(e) => {
+          if (filterResizeRef.current) {
+            filterResizeRef.current = null;
+            return;
+          }
           if (filterSelecting && filterDragStartRef.current) {
             const endPoint = getClampedCellFromEvent(e);
             const rect = normalizeRect(filterDragStartRef.current, endPoint);
@@ -995,6 +1084,10 @@ export default function GridCanvas(props: Props) {
           onStrokeEnd();
         }}
         onPointerCancel={(e) => {
+          if (filterResizeRef.current) {
+            filterResizeRef.current = null;
+            return;
+          }
           if (filterSelecting && filterDragStartRef.current) {
             const endPoint = getClampedCellFromEvent(e);
             const rect = normalizeRect(filterDragStartRef.current, endPoint);

@@ -299,7 +299,6 @@ button:disabled {
   position: relative;
 }
 .canvas-toolbar button[data-tooltip]::after,
-.used-colors-toolbar button[data-tooltip]::after,
 .zoom-row button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -322,8 +321,6 @@ button:disabled {
 }
 .canvas-toolbar button[data-tooltip]:hover::after,
 .canvas-toolbar button[data-tooltip]:focus-visible::after,
-.used-colors-toolbar button[data-tooltip]:hover::after,
-.used-colors-toolbar button[data-tooltip]:focus-visible::after,
 .zoom-row button[data-tooltip]:hover::after,
 .zoom-row button[data-tooltip]:focus-visible::after {
   opacity: 1;
@@ -361,7 +358,25 @@ button:disabled {
   border-color: transparent !important;
   color: var(--foreground);
 }
+.used-colors-toolbar .toolbar-button {
+  background: transparent;
+  border-color: transparent;
+}
+.used-colors-toolbar .toolbar-button:hover:not(:disabled),
+.used-colors-toolbar .toolbar-button[data-active="true"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--foreground);
+}
 .canvas-toolbar .toolbar-button .toolbar-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 26px;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+.used-colors-toolbar .toolbar-button .toolbar-icon {
   display: grid;
   place-items: center;
   width: 30px;
@@ -404,6 +419,19 @@ button:disabled {
 }
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--accent-soft);
+}
+.used-colors-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
+  background: var(--accent-soft);
+}
+.used-colors-filter-button:hover:not(:disabled) {
+  background: var(--accent-wash);
+  border-color: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.used-colors-filter-button[data-active="true"] {
+  background: var(--accent-wash);
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
 }
 .autosave-ellipsis:hover {
   background: rgba(15, 23, 42, 0.08) !important;
@@ -853,6 +881,9 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 .canvas-toolbar:not([data-trace-adjust="true"]) .toolbar-button:hover .toolbar-icon {
+  background: var(--accent-wash) !important;
+}
+.used-colors-toolbar .toolbar-button:hover .toolbar-icon {
   background: var(--accent-wash) !important;
 }
 .canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]),

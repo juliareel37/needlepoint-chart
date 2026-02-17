@@ -44,6 +44,7 @@ type UseGridRendererArgs = {
   panMode: boolean;
   activeFilterRect: FilterRect | null;
   filterSelecting: boolean;
+  filterEditMode?: boolean;
   zoom: number;
   showGridlines: boolean;
   gridBackground?: string;
@@ -82,6 +83,7 @@ export function useGridRenderer({
   panMode,
   activeFilterRect,
   filterSelecting,
+  filterEditMode = false,
   zoom,
   showGridlines,
   gridBackground,
@@ -151,6 +153,13 @@ export function useGridRenderer({
       const drawW = traceImage.width * traceScale * zoom;
       const drawH = traceImage.height * traceScale * zoom;
       ctx.drawImage(traceImage, traceOffsetX * zoom, traceOffsetY * zoom, drawW, drawH);
+      if (traceAdjustMode) {
+        const accent = getComputedStyle(canvas).getPropertyValue("--accent-strong").trim() || "#7c3aed";
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(traceOffsetX * zoom + 1, traceOffsetY * zoom + 1, Math.max(0, drawW - 2), Math.max(0, drawH - 2));
+      }
       ctx.restore();
     }
 
@@ -305,11 +314,10 @@ export function useGridRenderer({
       const w = traceImage.width * traceScale * zoom;
       const h = traceImage.height * traceScale * zoom;
       const handleSize = 8;
-      ctx.strokeStyle = "rgba(0,0,0,0.6)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 3]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.setLineDash([]);
+      const accent = getComputedStyle(canvas).getPropertyValue("--accent-strong").trim() || "#7c3aed";
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1, y + 1, Math.max(0, w - 2), Math.max(0, h - 2));
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.strokeStyle = "rgba(0,0,0,0.7)";
       const half = handleSize / 2;
@@ -424,6 +432,26 @@ export function useGridRenderer({
           ctx.setLineDash([]);
         }
         ctx.strokeRect(x0 + 1, y0 + 1, Math.max(0, w - 2), Math.max(0, h - 2));
+        if (filterEditMode) {
+          const handleSize = 8;
+          const half = handleSize / 2;
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          ctx.strokeStyle = "rgba(0,0,0,0.65)";
+          const handles = [
+            [x0, y0],
+            [x1, y0],
+            [x0, y1],
+            [x1, y1],
+            [x0 + w / 2, y0],
+            [x0 + w / 2, y1],
+            [x0, y0 + h / 2],
+            [x1, y0 + h / 2],
+          ];
+          handles.forEach(([cx, cy]) => {
+            ctx.fillRect(cx - half, cy - half, handleSize, handleSize);
+            ctx.strokeRect(cx - half, cy - half, handleSize, handleSize);
+          });
+        }
         ctx.restore();
       }
     }
@@ -460,6 +488,7 @@ export function useGridRenderer({
     panMode,
     activeFilterRect,
     filterSelecting,
+    filterEditMode,
     zoom,
   ]);
 }

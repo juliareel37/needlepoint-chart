@@ -12,6 +12,7 @@ type TraceImageCardProps = {
   collapseStyle: (open: boolean, maxHeight?: number) => React.CSSProperties;
   traceInputRef: React.RefObject<HTMLInputElement | null>;
   traceFileName: string | null;
+  traceFileSize: number | null;
   traceImage: HTMLImageElement | null;
   traceLocked: boolean;
   onTraceFileSelected: (file: File) => void;
@@ -28,12 +29,20 @@ export function TraceImageCard({
   collapseStyle,
   traceInputRef,
   traceFileName,
+  traceFileSize,
   traceImage,
   traceLocked,
   onTraceFileSelected,
   onClearTrace,
   onSetTraceLockedState,
 }: TraceImageCardProps) {
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    return `${(kb / 1024).toFixed(1)} MB`;
+  };
+
   return (
     <div className="app-card" style={{ ...cardStyle, boxShadow: traceOpen ? cardShadow : cardShadowCollapsed }}>
       <button
@@ -58,57 +67,154 @@ export function TraceImageCard({
       </button>
       <div style={{ display: "grid", gap: 10, width: "100%", ...collapseStyle(traceOpen, 900) }}>
         <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => traceInputRef.current?.click()}
+          <input
+            ref={traceInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              if (!file) return;
+              onTraceFileSelected(file);
+              e.currentTarget.value = "";
+            }}
+            style={{ display: "none" }}
+          />
+          {traceImage && traceFileName ? (
+            <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                justifyContent: "space-between",
                 gap: 8,
-                padding: "6px 8px",
+                padding: "8px 8px",
                 borderRadius: 10,
-                border: "none",
-                background: "var(--muted-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontSize: 12,
-                width: "fit-content",
+                border: "1px solid rgba(15,23,42,0.12)",
+                background: "rgba(15,23,42,0.04)",
               }}
             >
-              Choose file
-            </button>
-            <button
-              onClick={onClearTrace}
-              disabled={!traceImage}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "var(--muted-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                opacity: traceImage ? 1 : 0.5,
-                fontSize: 12,
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "var(--card-bg)",
+                    border: "1px solid rgba(15,23,42,0.12)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={assetPath("/file.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={14}
+                    height={14}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
+                </span>
+                <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "var(--foreground)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={traceFileName}
+                  >
+                    {traceFileName}
+                  </span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>
+                    {traceFileSize != null ? formatBytes(traceFileSize) : "Size unavailable"}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={onClearTrace}
+                style={{
+                  padding: "6px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
+                }}
+                aria-label="Remove image"
+              >
+                <img
+                  src={assetPath("/trash.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={16}
+                  height={16}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </button>
+            </div>
+          ) : (
+            <div
+              onDragOver={(event) => {
+                event.preventDefault();
               }}
-            >
-              Remove
-            </button>
-            <input
-              ref={traceInputRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.currentTarget.files?.[0];
+              onDrop={(event) => {
+                event.preventDefault();
+                const file = event.dataTransfer.files?.[0];
                 if (!file) return;
                 onTraceFileSelected(file);
-                e.currentTarget.value = "";
               }}
-              style={{ display: "none" }}
-            />
-          </div>
-          <span style={{ fontSize: 12, opacity: 0.75 }}>{traceFileName ?? "No file chosen"}</span>
+              style={{
+                display: "grid",
+                placeItems: "center",
+                gap: 6,
+                padding: "14px 12px",
+                borderRadius: 12,
+                border: "1px dashed rgba(15,23,42,0.3)",
+                background: "rgba(15,23,42,0.03)",
+                textAlign: "center",
+              }}
+            >
+              <img
+                src={assetPath("/upload.svg")}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Choose a file or drag &amp; drop.</span>
+              <span style={{ fontSize: 11, opacity: 0.7 }}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
+              <button
+                type="button"
+                onClick={() => traceInputRef.current?.click()}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--muted-bg)",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Browse file
+              </button>
+            </div>
+          )}
         </div>
         <div />
       </div>

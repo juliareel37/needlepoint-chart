@@ -76,7 +76,7 @@ export function GridSizeCard({
         <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{gridOpen ? "▾" : "▸"}</span>
       </button>
 
-      <div style={{ display: "grid", gap: 8, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
+      <div style={{ display: "grid", gap: 12, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "nowrap" }}>
           <button
             type="button"
@@ -93,7 +93,7 @@ export function GridSizeCard({
               flex: "1 1 0",
             }}
           >
-            Stitch Count
+            Stitch count
           </button>
           <button
             type="button"
@@ -203,7 +203,7 @@ export function GridSizeCard({
             </label>
           </>
         )}
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: 4 }}>
           <button
             onClick={onApply}
             style={{
@@ -215,7 +215,7 @@ export function GridSizeCard({
               cursor: "pointer",
             }}
           >
-            Apply Size
+            Apply
           </button>
         </div>
       </div>
