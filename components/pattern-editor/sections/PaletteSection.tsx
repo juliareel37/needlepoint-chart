@@ -22,6 +22,8 @@ type PaletteSectionProps = {
   extractedIds: number[];
   usedColorIds: number[];
   usedColorCounts: Record<number, number>;
+  favoriteIds: number[];
+  setFavoriteIds: React.Dispatch<React.SetStateAction<number[]>>;
   activeColorId: number;
   remapTargetId: number | null;
   remapSourceId: number | null;
@@ -48,6 +50,8 @@ export function PaletteSection({
   extractedIds,
   usedColorIds,
   usedColorCounts,
+  favoriteIds,
+  setFavoriteIds,
   activeColorId,
   remapTargetId,
   remapSourceId,
@@ -78,6 +82,7 @@ export function PaletteSection({
         <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{paletteOpen ? "▾" : "▸"}</span>
       </button>
       <div style={{ display: "grid", gap: 10, ...collapseStyle(paletteOpen, 1600) }}>
+        {/*
         {traceImage && (
           <div
             style={{
@@ -156,6 +161,7 @@ export function PaletteSection({
             </div>
           </div>
         )}
+        */}
         <Palette
           palette={palette}
           extractedIds={extractedIds}
@@ -163,6 +169,8 @@ export function PaletteSection({
           usedIds={usedColorIds}
           showUsedFilter={usedColorIds.length > 0}
           usedCounts={usedColorCounts}
+          favoriteIds={favoriteIds}
+          setFavoriteIds={setFavoriteIds}
           activeColorId={remapTargetId ?? activeColorId}
           onSelect={onSelectActive}
           remapSourceId={remapSourceId}

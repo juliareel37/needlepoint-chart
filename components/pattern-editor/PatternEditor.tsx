@@ -107,6 +107,7 @@ export default function PatternEditor() {
   );
 
   const [activeColorId, setActiveColorId] = useState<number>(DEFAULT_PALETTE[3].id);
+  const [favoriteColorIds, setFavoriteColorIds] = useState<number[]>([]);
   const [extractPaletteSize, setExtractPaletteSize] = useState(12);
   const [extractingPalette, setExtractingPalette] = useState(false);
   const [extractPaletteOpen, setExtractPaletteOpen] = useState(false);
@@ -159,12 +160,9 @@ export default function PatternEditor() {
       setTraceOffsetX(snapshot.offsetX);
       setTraceOffsetY(snapshot.offsetY);
       setTraceLocked(snapshot.locked);
-      setTracePostUpload(snapshot.postUpload);
-      setTraceEditMode(snapshot.editMode);
     },
     [
       traceImageUrl,
-      setTraceEditMode,
       setTraceFileName,
       setTraceFileSize,
       setTraceImage,
@@ -173,7 +171,6 @@ export default function PatternEditor() {
       setTraceOffsetX,
       setTraceOffsetY,
       setTraceOpacity,
-      setTracePostUpload,
       setTraceScale,
     ]
   );
@@ -311,7 +308,7 @@ export default function PatternEditor() {
     };
   }, []);
 
-  const sidebarWidth = 240;
+  const sidebarWidth = 260;
   const sidebarCollapsedWidth = 40;
   const sidebarCollapsedWidthMobile = 0;
   const menuWidth = 56;
@@ -1496,13 +1493,15 @@ export default function PatternEditor() {
                     setExtractPaletteSize={setExtractPaletteSize}
                     extractPaletteFromTrace={extractPaletteFromTrace}
                     extractingPalette={extractingPalette}
-                    palette={palette}
-                    extractedIds={extractedIds}
-                    usedColorIds={usedColorIds}
-                    usedColorCounts={usedColorCounts}
-                    activeColorId={activeColorId}
-                    remapTargetId={remapTargetId}
-                    remapSourceId={remapSourceId}
+                  palette={palette}
+                  extractedIds={extractedIds}
+                  usedColorIds={usedColorIds}
+                  usedColorCounts={usedColorCounts}
+                  favoriteIds={favoriteColorIds}
+                  setFavoriteIds={setFavoriteColorIds}
+                  activeColorId={activeColorId}
+                  remapTargetId={remapTargetId}
+                  remapSourceId={remapSourceId}
                     onSelectActive={(id) => {
                       setActiveColorId(id);
                       setTool("paint");
@@ -1721,6 +1720,7 @@ export default function PatternEditor() {
               setShowSymbols={setShowSymbols}
               identifyColorId={identifyColorId}
               symbolMap={symbolMap}
+              favoriteColorIds={favoriteColorIds}
               filterMode={filterMode}
               filterRect={activeFilterRect}
               filterSelecting={filterSelecting}

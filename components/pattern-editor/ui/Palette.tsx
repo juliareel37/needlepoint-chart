@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import type { Color } from "../../../lib/grid";
 import { sortPaletteByHsv } from "../utils/paletteSort";
+import { assetPath } from "../../../lib/assetPath";
 
 type Props = {
   palette: Color[];
@@ -11,6 +12,8 @@ type Props = {
   usedIds?: number[];
   showUsedFilter?: boolean;
   usedCounts?: Record<number, number>;
+  favoriteIds: number[];
+  setFavoriteIds: React.Dispatch<React.SetStateAction<number[]>>;
   activeColorId: number;
   onSelect: (id: number) => void;
   remapSourceId?: number | null;
@@ -26,6 +29,8 @@ export default function Palette({
   usedIds,
   showUsedFilter = true,
   usedCounts,
+  favoriteIds,
+  setFavoriteIds,
   activeColorId,
   onSelect,
   remapSourceId,
@@ -61,8 +66,9 @@ export default function Palette({
   const [newHex, setNewHex] = useState("#c9b08b");
   const [newName, setNewName] = useState("Custom");
   const [activeFamily, setActiveFamily] = useState("All");
-  const [activePanel, setActivePanel] = useState<"All" | "Used">("All");
+  const [activePanel, setActivePanel] = useState<"All" | "Used" | "Favorites">("All");
   const [query, setQuery] = useState("");
+  const [hoveredSwatchId, setHoveredSwatchId] = useState<number | null>(null);
   const familySwatches: Record<string, string> = {
     red: "#d62b5b",
     orange: "#f27842",
@@ -97,10 +103,19 @@ export default function Palette({
   }, [palette]);
   const extractedSet = useMemo(() => new Set(extractedIds ?? []), [extractedIds]);
   const usedSet = useMemo(() => new Set(usedIds ?? []), [usedIds]);
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const hasExtracted = extractedSet.size > 0;
   const hasUsed = usedSet.size > 0;
   const filteredPalette = useMemo(() => {
-    const panelFiltered = activePanel === "Used" ? sortedPalette.filter((c) => usedSet.has(c.id)) : sortedPalette;
+    const panelFiltered =
+      activePanel === "Favorites"
+        ? sortedPalette.filter((c) => favoriteSet.has(c.id))
+        : activePanel === "Used"
+          ? sortedPalette.filter((c) => usedSet.has(c.id))
+          : sortedPalette;
+    if (activePanel !== "All") {
+      return panelFiltered;
+    }
     const familyFiltered =
       activeFamily === "Extracted"
         ? panelFiltered.filter((c) => extractedSet.has(c.id))
@@ -114,65 +129,12 @@ export default function Palette({
       const code = (c.code ?? "").toLowerCase();
       return name.includes(q) || code.includes(q) || `#${code}`.includes(q);
     });
-  }, [sortedPalette, activeFamily, activePanel, query, extractedSet, usedSet]);
+  }, [sortedPalette, activeFamily, activePanel, query, extractedSet, usedSet, favoriteSet]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div>
         <div style={{ display: "grid", gap: 8, marginBottom: 8 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: 6,
-              flexWrap: "wrap",
-              borderBottom: "1px solid rgba(15,23,42,0.12)",
-              paddingBottom: 4,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setActivePanel("All")}
-              aria-pressed={activePanel === "All"}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px 8px 0 0",
-                border:
-                  activePanel === "All"
-                    ? "1px solid rgba(15,23,42,0.18)"
-                    : "1px solid transparent",
-                borderBottom: activePanel === "All" ? "1px solid var(--card-bg)" : "1px solid transparent",
-                background: activePanel === "All" ? "var(--card-bg)" : "transparent",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-              }}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivePanel("Used")}
-              aria-pressed={activePanel === "Used"}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px 8px 0 0",
-                border:
-                  activePanel === "Used"
-                    ? "1px solid rgba(15,23,42,0.18)"
-                    : "1px solid transparent",
-                borderBottom: activePanel === "Used" ? "1px solid var(--card-bg)" : "1px solid transparent",
-                background: activePanel === "Used" ? "var(--card-bg)" : "transparent",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-              }}
-            >
-              Used
-            </button>
-          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             {activePanel === "All" && showExtractedFilter && hasExtracted && (
               <button
@@ -196,59 +158,107 @@ export default function Palette({
               </button>
             )}
           </div>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or #DMC"
+          <div
+            role="tablist"
+            aria-label="Palette tabs"
             style={{
-              padding: "6px 8px",
-              borderRadius: 8,
-              border: "1px solid var(--panel-border)",
-              background: "transparent",
-              color: "var(--foreground)",
-              fontSize: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              padding: 4,
+              borderRadius: 10,
+              border: "1px solid rgba(15,23,42,0.12)",
+              background: "rgba(15,23,42,0.04)",
             }}
-          />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, opacity: 0.7 }}>Family</span>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              {families
-                .filter((family) => family !== "All")
-                .map((family) => {
-                  const swatch = familySwatches[family] ?? "#9ca3af";
-                  const isActive = activeFamily === family;
-                  return (
-                    <button
-                      key={family}
-                      type="button"
-                      onClick={() => setActiveFamily(isActive ? "All" : family)}
-                      aria-pressed={isActive}
-                      aria-label={`Filter ${family}`}
-                      title={family}
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 6,
-                        background: swatch,
-                        border: isActive ? "2px solid var(--accent-strong)" : "1px solid rgba(15,23,42,0.2)",
-                        boxShadow: isActive ? "0 0 0 2px var(--accent-soft)" : "none",
-                        cursor: "pointer",
-                      }}
-                    />
-                  );
-                })}
-            </div>
+          >
+            {(["All", "Used", "Favorites"] as const).map((tab) => {
+              const isActive = activePanel === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  onClick={() => setActivePanel(tab)}
+                  aria-pressed={isActive}
+                  aria-selected={isActive}
+                  data-active={isActive ? "true" : undefined}
+                  className="menu-tab-button"
+                  style={{
+                    padding: "6px 10px",
+                    flex: "1 1 0",
+                    borderRadius: 8,
+                    border: "none",
+                    color: "var(--foreground)",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
           </div>
+          {activePanel === "All" && (
+            <>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name or #DMC"
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                  border: "1px solid var(--panel-border)",
+                  background: "transparent",
+                  color: "var(--foreground)",
+                  fontSize: 12,
+                }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Family</span>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  {families
+                    .filter((family) => family !== "All")
+                    .map((family) => {
+                      const swatch = familySwatches[family] ?? "#9ca3af";
+                      const isActive = activeFamily === family;
+                      return (
+                        <button
+                          key={family}
+                          type="button"
+                          onClick={() => setActiveFamily(isActive ? "All" : family)}
+                          aria-pressed={isActive}
+                          aria-label={`Filter ${family}`}
+                          title={family}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 6,
+                            background: swatch,
+                            border: isActive ? "2px solid var(--accent-strong)" : "1px solid rgba(15,23,42,0.2)",
+                            boxShadow: isActive ? "0 0 0 2px var(--accent-soft)" : "none",
+                            cursor: "pointer",
+                          }}
+                        />
+                      );
+                    })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        <div style={{ height: 1, background: "rgba(15,23,42,0.12)", margin: "6px 0 8px" }} />
+        {activePanel === "All" && (
+          <div style={{ height: 1, background: "rgba(15,23,42,0.12)", margin: "6px 0 8px" }} />
+        )}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: 4,
+            columnGap: 4,
+            rowGap: 6,
             maxHeight: 240,
             overflowY: "auto",
-            paddingRight: 4,
+            padding: "6px 4px 4px 6px",
             overscrollBehavior: "contain",
           }}
         >
@@ -273,6 +283,8 @@ export default function Palette({
               const isRemapTarget = remapTargetId != null && c.id === remapTargetId;
               const isRemapSource = remapSourceId != null && c.id === remapSourceId;
               const showRemapSource = isRemapSource && (remapTargetId == null || remapTargetId === remapSourceId);
+              const isFavorite = favoriteIds.includes(c.id);
+              const showHeart = hoveredSwatchId === c.id || isFavorite;
               const usedCount = usedCounts?.[c.id];
               const handleSelect = () => {
                 if (remapSourceId != null && onRemapSelect) {
@@ -290,6 +302,8 @@ export default function Palette({
                     justifyItems: "center",
                     padding: 2,
                   }}
+                  onMouseEnter={() => setHoveredSwatchId(c.id)}
+                  onMouseLeave={() => setHoveredSwatchId((prev) => (prev === c.id ? null : prev))}
                 >
                   <button
                     type="button"
@@ -297,8 +311,8 @@ export default function Palette({
                     aria-label={`Select ${c.name}`}
                     title={`${c.name} (${c.code ?? c.hex})`}
                     style={{
-                      width: 26,
-                      height: 26,
+                      width: 38,
+                      height: 38,
                       borderRadius: 6,
                       border:
                         isRemapTarget || showRemapSource
@@ -315,33 +329,92 @@ export default function Palette({
                   >
                     <span
                       style={{
-                        width: 22,
-                        height: 22,
+                        width: 34,
+                        height: 34,
                         borderRadius: 4,
                         background: c.hex,
                         display: "inline-block",
                         boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
                         position: "relative",
+                        overflow: "visible",
                       }}
                     >
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setFavoriteIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(c.id)) {
+                              next.delete(c.id);
+                            } else {
+                              next.add(c.id);
+                            }
+                            return Array.from(next);
+                          });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setFavoriteIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(c.id)) {
+                                next.delete(c.id);
+                              } else {
+                                next.add(c.id);
+                              }
+                              return Array.from(next);
+                            });
+                          }
+                        }}
+                        aria-label={isFavorite ? `Unfavorite ${c.name}` : `Favorite ${c.name}`}
+                        title={isFavorite ? "Unfavorite" : "Favorite"}
+                        style={{
+                          position: "absolute",
+                          top: -5,
+                          right: -5,
+                          width: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: "rgba(255,255,255,0.75)",
+                          boxShadow: "0 1px 3px rgba(15,23,42,0.18)",
+                          display: showHeart ? "grid" : "none",
+                          placeItems: "center",
+                          padding: 0,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <img
+                          src={assetPath(isFavorite ? "/heart_fill.svg" : "/heart_empty.svg")}
+                          alt=""
+                          aria-hidden="true"
+                          width={14}
+                          height={14}
+                          style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                        />
+                      </span>
                       {usedCount != null && usedCount > 0 && (
                         <span
                           style={{
                             position: "absolute",
-                            top: -4,
-                            left: -4,
+                            top: 0,
+                            left: 0,
                             minWidth: 14,
                             height: 14,
                             padding: "0 3px",
                             borderRadius: 999,
-                            background: "rgba(15,23,42,0.85)",
-                            color: "#ffffff",
+                            background: "#ffffff",
+                            color: "rgba(15,23,42,0.9)",
                             fontSize: 8,
                             fontWeight: 700,
                             display: "grid",
                             placeItems: "center",
                             boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                             pointerEvents: "none",
+                            transform: "translate(-50%, -50%)",
+                            zIndex: 2,
                           }}
                           aria-hidden="true"
                         >

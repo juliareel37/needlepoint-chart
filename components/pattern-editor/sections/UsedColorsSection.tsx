@@ -125,105 +125,137 @@ export function UsedColorsSection({
         </span>
       </button>
       <div style={{ ...collapseStyle(usedColorsOpen, 800) }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <button
-            onClick={() => {
-              if (!hasPaintedCells) return;
-              if (filterMode) {
-                clearFilterSelection();
-              } else {
-                startFilterSelection();
-              }
-            }}
-            aria-pressed={filterMode}
-            aria-disabled={!hasPaintedCells}
-            aria-label="Filter canvas"
-            data-active={filterMode ? "true" : undefined}
-            className="toolbar-button used-colors-filter-button"
-            disabled={!hasPaintedCells}
-            style={{
-              flex: 1,
-              padding: "4px 8px",
-              borderRadius: 6,
-              cursor: hasPaintedCells ? "pointer" : "not-allowed",
-              opacity: hasPaintedCells ? 1 : 0.5,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
-              <img
-                src={assetPath("/pic_in_pic.svg")}
-                alt=""
-                aria-hidden="true"
-                width={16}
-                height={16}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
-            </span>
-            Filter canvas area
-          </button>
-          {filterMode && (
-            <button
-              type="button"
-              onClick={clearFilterSelection}
-              aria-label="Clear filter"
-              className="toolbar-button"
+        <div
+          style={{
+            display: "grid",
+            gap: 6,
+            marginBottom: 10,
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid rgba(15,23,42,0.12)",
+            background: "rgba(15,23,42,0.04)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ display: "grid", gap: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>Apply to Area</div>
+              <div style={{ fontSize: 11, opacity: 0.7 }}>Limit color changes to a selected region</div>
+            </div>
+            <span
               style={{
-                width: 24,
-                height: 24,
+                padding: "2px 8px",
                 borderRadius: 999,
-                border: "1px solid rgba(15,23,42,0.12)",
-                background: "var(--muted-bg)",
-                color: "var(--foreground)",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
+                border: filterMode ? "1px solid rgba(15,23,42,0.18)" : "1px solid rgba(15,23,42,0.12)",
+                background: filterMode ? "rgba(15,23,42,0.08)" : "var(--card-bg)",
+                fontSize: 10,
+                fontWeight: 600,
+                color: filterMode ? "var(--accent-strong)" : "var(--foreground)",
+                whiteSpace: "nowrap",
               }}
             >
-              ×
+              {filterMode ? "Selected area" : "Entire canvas"}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={() => {
+                if (!hasPaintedCells) return;
+                if (filterMode) {
+                  clearFilterSelection();
+                } else {
+                  startFilterSelection();
+                }
+              }}
+              aria-pressed={filterMode}
+              aria-disabled={!hasPaintedCells}
+              aria-label="Filter canvas"
+              data-active={filterMode ? "true" : undefined}
+              className="toolbar-button used-colors-filter-button"
+              disabled={!hasPaintedCells}
+              style={{
+                flex: "1 1 auto",
+                width: "100%",
+                padding: "6px 10px",
+                borderRadius: 8,
+                cursor: hasPaintedCells ? "pointer" : "not-allowed",
+                opacity: hasPaintedCells ? 1 : 0.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                background: filterMode ? "var(--card-bg)" : "#ffffff",
+                border: "1px solid rgba(15,23,42,0.12)",
+                boxShadow: filterMode ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
+              }}
+            >
+              <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
+                <img
+                  src={assetPath("/pic_in_pic.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={16}
+                  height={16}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </span>
+              {filterMode ? "Clear selection" : "Select area"}
             </button>
-          )}
+          </div>
         </div>
         <div
           className="used-colors-toolbar"
-          style={{ display: "flex", 
-            // gap: 4, 
-            alignItems: "center", flexWrap: "nowrap", marginBottom: 6 }}
+          role="tablist"
+          aria-label="Manage colors tools"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: 4,
+            borderRadius: 10,
+            border: "1px solid rgba(15,23,42,0.12)",
+            background: "rgba(15,23,42,0.04)",
+            marginBottom: 6,
+          }}
         >
           <button
             onClick={toggleRemapMode}
             aria-pressed={remapMode}
             aria-label="Replace colors"
             data-active={remapMode ? "true" : undefined}
-            className="toolbar-button"
+            className="toolbar-button menu-tab-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "0 6px",
+              padding: "6px 8px",
               borderRadius: 8,
+              flex: "1 1 0",
+              width: 0,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
               display: "flex",
-              gap: 3,
+              gap: 4,
               alignItems: "center",
+              justifyContent: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
               whiteSpace: "nowrap",
+              border: "none",
             }}
           >
-            <span className="toolbar-icon" aria-hidden="true">
+            <span
+              className="toolbar-icon"
+              aria-hidden="true"
+              style={{ width: 16, height: 16, display: "grid", placeItems: "center", flexShrink: 0 }}
+            >
               <img
                 src={assetPath("/swap.svg")}
                 alt=""
                 aria-hidden="true"
-                width={10}
-                height={10}
+                width={12}
+                height={12}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, lineHeight: 1.1 }}>
               Replace
             </span>
           </button>
@@ -232,17 +264,21 @@ export function UsedColorsSection({
             aria-pressed={mergeMode}
             aria-label="Merge colors"
             data-active={mergeMode ? "true" : undefined}
-            className="toolbar-button"
+            className="toolbar-button menu-tab-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "0 6px",
+              padding: "6px 8px",
               borderRadius: 8,
+              flex: "1 1 0",
+              width: 0,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
               display: "flex",
-              gap: 3,
+              gap: 4,
               alignItems: "center",
+              justifyContent: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
               whiteSpace: "nowrap",
+              border: "none",
             }}
           >
             <span className="toolbar-icon" aria-hidden="true">
@@ -250,12 +286,12 @@ export function UsedColorsSection({
                 src={assetPath("/merge.svg")}
                 alt=""
                 aria-hidden="true"
-                width={10}
-                height={10}
+                width={12}
+                height={12}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, lineHeight: 1.1 }}>
               Merge
             </span>
           </button>
@@ -264,17 +300,21 @@ export function UsedColorsSection({
             aria-pressed={deleteMode}
             aria-label="Delete colors"
             data-active={deleteMode ? "true" : undefined}
-            className="toolbar-button"
+            className="toolbar-button menu-tab-button"
             disabled={!hasPaintedCells}
             style={{
-              padding: "0 6px",
+              padding: "6px 8px",
               borderRadius: 8,
+              flex: "1 1 0",
+              width: 0,
               cursor: hasPaintedCells ? "pointer" : "not-allowed",
               display: "flex",
-              gap: 3,
+              gap: 4,
               alignItems: "center",
+              justifyContent: "center",
               opacity: hasPaintedCells ? 1 : 0.5,
               whiteSpace: "nowrap",
+              border: "none",
             }}
           >
             <span className="toolbar-icon" aria-hidden="true">
@@ -282,12 +322,12 @@ export function UsedColorsSection({
                 src={assetPath("/deselect.svg")}
                 alt=""
                 aria-hidden="true"
-                width={10}
-                height={10}
+                width={12}
+                height={12}
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
             </span>
-            <span className="toolbar-label" style={{ fontSize: 11, opacity: 0.7, lineHeight: 1 }}>
+            <span className="toolbar-label" style={{ fontSize: 11, lineHeight: 1.1 }}>
               Delete
             </span>
           </button>
@@ -432,7 +472,15 @@ export function UsedColorsSection({
             </button>
           </div>
         )}
-        <div style={{ display: "grid", gap: 6, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
+        <div
+          style={{
+            display: "grid",
+            gap: 8,
+            maxHeight: 240,
+            overflowY: "auto",
+            padding: "8px 6px 6px 6px",
+          }}
+        >
           {usedColors.map(({ color, count }) => {
               const isIdentifyActive = identifyColorId === color.id;
               const isMergeSelected = mergeSelectedIds.includes(color.id);
@@ -518,7 +566,7 @@ export function UsedColorsSection({
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "4px 6px",
+                    padding: "6px 8px",
                     position: "relative",
                     borderRadius: 8,
                     border: borderStyle,
@@ -564,6 +612,7 @@ export function UsedColorsSection({
                         ? "0 0 0 3px var(--accent-strong), 0 0 0 6px rgba(191,100,217,0.25), inset 0 0 0 1px rgba(0,0,0,0.2)"
                         : "inset 0 0 0 1px rgba(0,0,0,0.15)",
                       position: "relative",
+                      overflow: "visible",
                     }}
                     onClick={(event) => {
                       if (!mergeMode) return;
@@ -584,20 +633,22 @@ export function UsedColorsSection({
                     <span
                       style={{
                         position: "absolute",
-                        top: -4,
-                        left: -4,
+                        top: 0,
+                        left: 0,
                         minWidth: 14,
                         height: 14,
                         padding: "0 3px",
                         borderRadius: 999,
-                        background: "rgba(15,23,42,0.85)",
-                        color: "#ffffff",
+                        background: "#ffffff",
+                        color: "rgba(15,23,42,0.9)",
                         fontSize: 8,
                         fontWeight: 700,
                         display: "grid",
                         placeItems: "center",
                         boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                         pointerEvents: "none",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 2,
                       }}
                       aria-hidden="true"
                     >

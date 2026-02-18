@@ -425,20 +425,45 @@ button:disabled {
 }
 .used-colors-filter-button:hover:not(:disabled) {
   background: rgba(15, 23, 42, 0.08);
-  border-color: rgba(15, 23, 42, 0.2);
+  border-color: rgba(15, 23, 42, 0.18);
   color: var(--foreground);
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
 }
 .used-colors-filter-button[data-active="true"] {
-  background: rgba(191, 100, 217, 0.12);
-  border-color: rgba(191, 100, 217, 0.45);
-  color: var(--accent-strong);
-  box-shadow: 0 0 0 2px rgba(191, 100, 217, 0.2);
+  background: var(--card-bg);
+  border-color: rgba(15, 23, 42, 0.18);
+  color: var(--foreground);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
 }
 .used-colors-filter-button {
   background: rgba(15, 23, 42, 0.04);
   border: 1px solid rgba(15, 23, 42, 0.12);
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.menu-tab-button {
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+.menu-tab-button:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.menu-tab-button[data-active="true"] {
+  background: var(--card-bg);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+.used-colors-toolbar .menu-tab-button {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+.used-colors-toolbar .menu-tab-button:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.08) !important;
+  border-color: transparent !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
+}
+.used-colors-toolbar .menu-tab-button[data-active="true"] {
+  background: var(--card-bg) !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12) !important;
 }
 .autosave-ellipsis:hover {
   background: rgba(15, 23, 42, 0.08) !important;

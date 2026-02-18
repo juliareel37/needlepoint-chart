@@ -78,6 +78,7 @@ export function CanvasWithExportRef(props: any) {
     showSymbols,
     setShowSymbols,
     identifyColorId,
+    favoriteColorIds,
     filterMode,
     filterRect,
     filterSelecting,
@@ -122,7 +123,7 @@ export function CanvasWithExportRef(props: any) {
   const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used">("all");
+  const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used" | "favorites">("all");
   const [filterEditMode, setFilterEditMode] = useState(false);
   const [filterEditRect, setFilterEditRect] = useState(filterRect ?? null);
   const filterEditRectRef = useRef<typeof filterRect | null>(filterRect ?? null);
@@ -162,12 +163,16 @@ export function CanvasWithExportRef(props: any) {
   const paletteEntries = useMemo(() => {
     return sortPaletteByHsv(Array.from(paletteById.values()));
   }, [paletteById]);
+  const favoriteColorSet = useMemo(() => new Set(favoriteColorIds ?? []), [favoriteColorIds]);
   const filteredPaletteEntries = useMemo(() => {
     if (activePalettePanel === "used" && hasUsedColors) {
       return paletteEntries.filter((color) => usedColorSet.has(color.id));
     }
+    if (activePalettePanel === "favorites") {
+      return paletteEntries.filter((color) => favoriteColorSet.has(color.id));
+    }
     return paletteEntries;
-  }, [activePalettePanel, hasUsedColors, paletteEntries, usedColorSet]);
+  }, [activePalettePanel, hasUsedColors, paletteEntries, usedColorSet, favoriteColorSet]);
 
   useEffect(() => {
     if (fitPending) return;
@@ -752,26 +757,26 @@ export function CanvasWithExportRef(props: any) {
                       <div
                         style={{
                           display: "flex",
-                          alignItems: "flex-end",
-                          gap: 6,
-                          borderBottom: "1px solid rgba(15,23,42,0.12)",
-                          paddingBottom: 4,
+                          alignItems: "center",
+                          gap: 4,
+                          padding: 4,
+                          borderRadius: 10,
+                          border: "1px solid rgba(15,23,42,0.12)",
+                          background: "rgba(15,23,42,0.04)",
                         }}
                       >
                         <button
                           type="button"
                           onClick={() => setActivePalettePanel("all")}
                           aria-pressed={activePalettePanel === "all"}
+                          data-active={activePalettePanel === "all" ? "true" : undefined}
+                          className="menu-tab-button"
                           style={{
-                            padding: "4px 8px",
-                            borderRadius: "8px 8px 0 0",
-                            border:
-                              activePalettePanel === "all"
-                                ? "1px solid rgba(15,23,42,0.18)"
-                                : "1px solid transparent",
-                            borderBottom:
-                              activePalettePanel === "all" ? "1px solid var(--card-bg)" : "1px solid transparent",
-                            background: activePalettePanel === "all" ? "var(--card-bg)" : "transparent",
+                            padding: "6px 10px",
+                            flex: "1 1 0",
+                            borderRadius: 8,
+                            border: "none",
+                            background: "transparent",
                             color: "var(--foreground)",
                             cursor: "pointer",
                             fontSize: 10,
@@ -784,16 +789,14 @@ export function CanvasWithExportRef(props: any) {
                           type="button"
                           onClick={() => setActivePalettePanel("used")}
                           aria-pressed={activePalettePanel === "used"}
+                          data-active={activePalettePanel === "used" ? "true" : undefined}
+                          className="menu-tab-button"
                           style={{
-                            padding: "4px 8px",
-                            borderRadius: "8px 8px 0 0",
-                            border:
-                              activePalettePanel === "used"
-                                ? "1px solid rgba(15,23,42,0.18)"
-                                : "1px solid transparent",
-                            borderBottom:
-                              activePalettePanel === "used" ? "1px solid var(--card-bg)" : "1px solid transparent",
-                            background: activePalettePanel === "used" ? "var(--card-bg)" : "transparent",
+                            padding: "6px 10px",
+                            flex: "1 1 0",
+                            borderRadius: 8,
+                            border: "none",
+                            background: "transparent",
                             color: "var(--foreground)",
                             cursor: "pointer",
                             fontSize: 10,
@@ -801,6 +804,26 @@ export function CanvasWithExportRef(props: any) {
                           }}
                         >
                           Used
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActivePalettePanel("favorites")}
+                          aria-pressed={activePalettePanel === "favorites"}
+                          data-active={activePalettePanel === "favorites" ? "true" : undefined}
+                          className="menu-tab-button"
+                          style={{
+                            padding: "6px 10px",
+                            flex: "1 1 0",
+                            borderRadius: 8,
+                            border: "none",
+                            background: "transparent",
+                            color: "var(--foreground)",
+                            cursor: "pointer",
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Favorites
                         </button>
                       </div>
                       {activePalettePanel === "used" && !hasUsedColors ? (
@@ -822,11 +845,11 @@ export function CanvasWithExportRef(props: any) {
                         <div
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(6, 1fr)",
-                            gap: 6,
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: 10,
                             maxHeight: 170,
                             overflowY: "auto",
-                            paddingRight: 4,
+                            padding: "10px 8px 8px 8px",
                           }}
                         >
                           {filteredPaletteEntries.map((color) => {
@@ -854,8 +877,8 @@ export function CanvasWithExportRef(props: any) {
                                   aria-label={color.name}
                                   title={color.name}
                                   style={{
-                                    width: 24,
-                                    height: 24,
+                                    width: 26,
+                                    height: 26,
                                     borderRadius: 6,
                                     border:
                                       color.id === activeColorId
@@ -866,12 +889,13 @@ export function CanvasWithExportRef(props: any) {
                                     display: "grid",
                                     placeItems: "center",
                                     padding: 0,
+                                    overflow: "visible",
                                   }}
                                 >
                                   <span
                                     style={{
-                                      width: 20,
-                                      height: 20,
+                                      width: 22,
+                                      height: 22,
                                       borderRadius: 5,
                                       background: color.hex,
                                       position: "relative",
@@ -881,25 +905,27 @@ export function CanvasWithExportRef(props: any) {
                                   >
                                     {usedCount != null && usedCount > 0 && (
                                       <span
-                                        style={{
-                                          position: "absolute",
-                                          top: -4,
-                                          left: -4,
-                                          minWidth: 14,
-                                          height: 14,
-                                          padding: "0 3px",
-                                          borderRadius: 999,
-                                          background: "rgba(15,23,42,0.85)",
-                                          color: "#ffffff",
-                                          fontSize: 8,
-                                          fontWeight: 700,
-                                          display: "grid",
-                                          placeItems: "center",
-                                          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                                          pointerEvents: "none",
-                                        }}
-                                        aria-hidden="true"
-                                      >
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      left: 0,
+                                      minWidth: 14,
+                                      height: 14,
+                                      padding: "0 3px",
+                                      borderRadius: 999,
+                                      background: "#ffffff",
+                                      color: "rgba(15,23,42,0.9)",
+                                      fontSize: 8,
+                                      fontWeight: 700,
+                                      display: "grid",
+                                      placeItems: "center",
+                                      boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                                      pointerEvents: "none",
+                                      transform: "translate(-50%, -50%)",
+                                      zIndex: 2,
+                                    }}
+                                    aria-hidden="true"
+                                  >
                                         {usedCount}
                                       </span>
                                     )}
@@ -1072,7 +1098,7 @@ export function CanvasWithExportRef(props: any) {
                 <button
                   onClick={onToggleTraceLock}
                   aria-label="Reposition"
-                    data-active={traceAdjustMode ? "true" : undefined}
+                    data-active={traceEditMode ? "true" : undefined}
                     className="toolbar-button"
                     style={{
                       padding: "2px 6px",
@@ -1297,7 +1323,6 @@ export function CanvasWithExportRef(props: any) {
               
             }}
           >
-            <div style={{ textAlign: "center" }}>Color adjustments will only apply within selected region.</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button
                 type="button"
