@@ -185,7 +185,7 @@ export function UsedColorsSection({
                 gap: 8,
                 fontSize: 12,
                 fontWeight: 600,
-                background: filterMode ? "var(--card-bg)" : "#ffffff",
+                background: filterMode ? "var(--card-bg)" : "var(--muted-bg)",
                 border: "1px solid var(--ui-border-subtle)",
                 boxShadow: filterMode ? "0 2px 6px var(--ui-border-subtle)" : "none",
               }}

@@ -365,8 +365,13 @@ export default function GridCanvas(props: Props) {
   const pinchStartZoomRef = useRef<number | null>(null);
   const pinchLastCenterRef = useRef<{ x: number; y: number } | null>(null);
 
-  const drawTranslateX = baseOffsetX + panOffset.x;
-  const drawTranslateY = baseOffsetY + panOffset.y;
+  const rawDrawTranslateX = baseOffsetX + panOffset.x;
+  const rawDrawTranslateY = baseOffsetY + panOffset.y;
+  const shouldSnapDrawTranslate = !threadView && !showGridlines;
+  const devicePixelRatio = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  const snapToDevicePixel = (value: number) => Math.round(value * devicePixelRatio) / devicePixelRatio;
+  const drawTranslateX = shouldSnapDrawTranslate ? snapToDevicePixel(rawDrawTranslateX) : rawDrawTranslateX;
+  const drawTranslateY = shouldSnapDrawTranslate ? snapToDevicePixel(rawDrawTranslateY) : rawDrawTranslateY;
 
   const paletteRgb = useMemo(() => {
     const arr: Array<{ id: number; r: number; g: number; b: number }> = [];

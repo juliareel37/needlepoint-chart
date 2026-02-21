@@ -227,6 +227,8 @@
   --surface-floating: rgba(255, 255, 255, 0.92);
   --surface-elevated: rgba(255, 255, 255, 0.96);
   --canvas-surround-bg: #e2e2e2;
+  --sidebar-bg: var(--card-bg);
+  --canvas-toolbar-bg: var(--surface-floating);
   --icon-on-bg-filter: invert(0);
   --icon-on-fg-filter: invert(1);
   --panel-border: #d08de3;
@@ -245,6 +247,9 @@
   --toggle-track-off: #f8fafc;
   --toggle-track-on: #e2e8f0;
   --toggle-knob: #ffffff;
+  --slider-track-bg: #d6dee8;
+  --slider-thumb-bg: var(--card-bg);
+  --slider-thumb-border: var(--accent);
 }
 :root[data-theme="dark"] {
   --background: #0b0d10;
@@ -258,6 +263,8 @@
   --surface-floating: rgba(23, 27, 33, 0.92);
   --surface-elevated: rgba(23, 27, 33, 0.96);
   --canvas-surround-bg: #181818;
+  --sidebar-bg: #252b34;
+  --canvas-toolbar-bg: #252b34;
   --icon-on-bg-filter: invert(1);
   --icon-on-fg-filter: invert(0);
   --panel-border: #414a58;
@@ -276,6 +283,9 @@
   --toggle-track-off: #1f252d;
   --toggle-track-on: #394251;
   --toggle-knob: #f5f7fb;
+  --slider-track-bg: #4b5565;
+  --slider-thumb-bg: #d4dbe5;
+  --slider-thumb-border: #9aa7bb;
 }
 :root[data-theme="dark"] * {
   box-shadow: none !important;
@@ -334,7 +344,7 @@ button:disabled {
   z-index: 2;
 }
 .pattern-sidebar {
-  background: var(--card-bg);
+  background: var(--sidebar-bg);
   border-radius: 0;
   padding: 0;
   box-sizing: border-box;
@@ -566,7 +576,7 @@ input[type="range"]:focus {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
-  background: var(--muted-bg);
+  background: var(--slider-track-bg);
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -574,22 +584,22 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--card-bg);
-  border: 1px solid var(--accent);
+  background: var(--slider-thumb-bg);
+  border: 1px solid var(--slider-thumb-border);
   margin-top: -4px;
   box-shadow: none;
 }
 input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: var(--muted-bg);
+  background: var(--slider-track-bg);
 }
 input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--card-bg);
-  border: 1px solid var(--accent);
+  background: var(--slider-thumb-bg);
+  border: 1px solid var(--slider-thumb-border);
   box-shadow: none;
 }
 @media (max-width: 900px) {

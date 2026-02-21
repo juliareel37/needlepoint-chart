@@ -378,7 +378,8 @@ export default function Palette({
                           width: 18,
                           height: 18,
                           borderRadius: 999,
-                          background: "rgba(255,255,255,0.75)",
+                          background: "#ffffff",
+                          border: "1px solid transparent",
                           boxShadow: "0 1px 3px var(--ui-border)",
                           display: showHeart ? "grid" : "none",
                           placeItems: "center",
@@ -392,7 +393,7 @@ export default function Palette({
                           aria-hidden="true"
                           width={14}
                           height={14}
-                          style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                          style={{ display: "block", filter: "none" }}
                         />
                       </span>
                       {usedCount != null && usedCount > 0 && (
