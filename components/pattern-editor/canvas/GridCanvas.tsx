@@ -659,7 +659,7 @@ export default function GridCanvas(props: Props) {
   const alignX = "flex-start";
   const alignY = "flex-start";
   const effectivePanMode = panMode && !(traceAdjustMode && traceImage);
-  const containerBg = "#e6e6e6";
+  const containerBg = "var(--canvas-surround-bg)";
 
   useEffect(() => {
     const node = containerRef.current;
@@ -718,7 +718,7 @@ export default function GridCanvas(props: Props) {
           width: canvasW,
           height: canvasH,
           transform: `translate3d(${drawTranslateX}px, ${drawTranslateY}px, 0)`,
-          boxShadow: "0 10px 24px rgba(15, 23, 42, 0.18)",
+          boxShadow: "0 10px 24px var(--ui-border)",
           pointerEvents: "none",
           zIndex: 0,
           willChange: "transform",

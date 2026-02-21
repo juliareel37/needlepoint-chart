@@ -88,8 +88,8 @@ export function TraceImageCard({
                 gap: 8,
                 padding: "8px 8px",
                 borderRadius: 10,
-                border: "1px solid rgba(15,23,42,0.12)",
-                background: "rgba(15,23,42,0.04)",
+                border: "1px solid var(--ui-border-subtle)",
+                background: "var(--ui-surface-soft)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -103,7 +103,7 @@ export function TraceImageCard({
                     alignItems: "center",
                     justifyContent: "center",
                     background: "var(--card-bg)",
-                    border: "1px solid rgba(15,23,42,0.12)",
+                    border: "1px solid var(--ui-border-subtle)",
                     flexShrink: 0,
                   }}
                 >
@@ -179,7 +179,7 @@ export function TraceImageCard({
                 padding: "14px 12px",
                 borderRadius: 12,
                 border: "1px dashed rgba(15,23,42,0.3)",
-                background: "rgba(15,23,42,0.03)",
+                background: "var(--ui-surface-faint)",
                 textAlign: "center",
               }}
             >

@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { deleteBlobIfExists, extractBlobUrl } from "@/lib/blob";
+import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
 
@@ -92,12 +93,14 @@ export async function PUT(req: Request, context: RouteContext) {
 
   const dataHash = hashDraft(draft);
   const now = new Date();
+  const versioningEnabled = isWipVersioningEnabled();
   const lastVersionAt = existing.lastVersionAt ? new Date(existing.lastVersionAt) : null;
   const VERSION_INTERVAL_MS = 3 * 60 * 1000;
   const shouldVersion =
-    !lastVersionAt ||
-    (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
-      dataHash !== existing.lastVersionHash);
+    versioningEnabled &&
+    (!lastVersionAt ||
+      (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
+        dataHash !== existing.lastVersionHash));
 
   const saved = await prisma.$transaction(async (tx) => {
     const updated = await tx.patternDraft.update({

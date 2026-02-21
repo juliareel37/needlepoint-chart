@@ -136,7 +136,7 @@ export function useGridRenderer({
     // Grid background (only the grid area).
     ctx.save();
     ctx.translate(drawTranslateX, drawTranslateY);
-    ctx.fillStyle = darkCanvas ? "#000000" : gridBackground ?? "#ffffff";
+    ctx.fillStyle = gridBackground ?? (darkCanvas ? "#000000" : "#ffffff");
     ctx.fillRect(0, 0, canvasW, canvasH);
     ctx.restore();
 
@@ -206,11 +206,15 @@ export function useGridRenderer({
     ctx.restore();
 
     // Gridlines
+    const darkGridSurface =
+      darkCanvas || (typeof gridBackground === "string" && gridBackground.toLowerCase() !== "#ffffff");
+    const gridlineStroke = darkGridSurface ? "rgba(130,142,160,0.62)" : "rgba(0,0,0,0.18)";
+
     if (showGridlines) {
       ctx.save();
       ctx.translate(drawTranslateX, drawTranslateY);
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = darkCanvas ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.18)";
+      ctx.strokeStyle = gridlineStroke;
       ctx.lineWidth = 1;
       const maxX = Math.max(0, canvasW - 0.5);
       const maxY = Math.max(0, canvasH - 0.5);
@@ -237,7 +241,7 @@ export function useGridRenderer({
       ctx.save();
       ctx.translate(drawTranslateX, drawTranslateY);
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = darkCanvas ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.18)";
+      ctx.strokeStyle = gridlineStroke;
       ctx.lineWidth = 1;
       const w = Math.max(0, canvasW - 1);
       const h = Math.max(0, canvasH - 1);

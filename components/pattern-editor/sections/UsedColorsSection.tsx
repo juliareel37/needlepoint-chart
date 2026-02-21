@@ -132,8 +132,8 @@ export function UsedColorsSection({
             marginBottom: 10,
             padding: "8px 10px",
             borderRadius: 10,
-            border: "1px solid rgba(15,23,42,0.12)",
-            background: "rgba(15,23,42,0.04)",
+            border: "1px solid var(--ui-border-subtle)",
+            background: "var(--ui-surface-soft)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -145,8 +145,8 @@ export function UsedColorsSection({
               style={{
                 padding: "2px 8px",
                 borderRadius: 999,
-                border: filterMode ? "1px solid rgba(15,23,42,0.18)" : "1px solid rgba(15,23,42,0.12)",
-                background: filterMode ? "rgba(15,23,42,0.08)" : "var(--card-bg)",
+                border: filterMode ? "1px solid var(--ui-border)" : "1px solid var(--ui-border-subtle)",
+                background: filterMode ? "var(--ui-hover-soft)" : "var(--card-bg)",
                 fontSize: 10,
                 fontWeight: 600,
                 color: filterMode ? "var(--accent-strong)" : "var(--foreground)",
@@ -186,8 +186,8 @@ export function UsedColorsSection({
                 fontSize: 12,
                 fontWeight: 600,
                 background: filterMode ? "var(--card-bg)" : "#ffffff",
-                border: "1px solid rgba(15,23,42,0.12)",
-                boxShadow: filterMode ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
+                border: "1px solid var(--ui-border-subtle)",
+                boxShadow: filterMode ? "0 2px 6px var(--ui-border-subtle)" : "none",
               }}
             >
               <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
@@ -214,8 +214,8 @@ export function UsedColorsSection({
             gap: 4,
             padding: 4,
             borderRadius: 10,
-            border: "1px solid rgba(15,23,42,0.12)",
-            background: "rgba(15,23,42,0.04)",
+            border: "1px solid var(--ui-border-subtle)",
+            background: "var(--ui-surface-soft)",
             marginBottom: 6,
           }}
         >

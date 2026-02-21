@@ -36,7 +36,7 @@ export function VersionPreviewToast({
         color: "var(--foreground)",
         borderRadius: 14,
         padding: "10px 14px",
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.2)",
+        boxShadow: "0 12px 32px var(--ui-border-strong)",
         border: "1px solid var(--panel-border)",
         display: "flex",
         alignItems: "center",

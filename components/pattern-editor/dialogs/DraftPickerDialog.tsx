@@ -34,7 +34,7 @@ export function DraftPickerDialog({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15, 23, 42, 0.35)",
+        background: "rgba(0, 0, 0, 0.45)",
         display: "block",
         zIndex: 55,
         padding: 16,
@@ -48,7 +48,7 @@ export function DraftPickerDialog({
           borderRadius: 14,
           padding: 16,
           width: "min(440px, 92vw)",
-          boxShadow: "0 16px 40px rgba(15, 23, 42, 0.2)",
+          boxShadow: "0 16px 40px var(--ui-border-strong)",
           display: "grid",
           gap: 12,
           position: "absolute",

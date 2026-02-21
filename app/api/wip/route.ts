@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
 
   const now = new Date();
   const dataHash = hashDraft(draft);
+  const versioningEnabled = isWipVersioningEnabled();
 
   const saved = await prisma.$transaction(async (tx) => {
     const created = await tx.patternDraft.create({
@@ -76,17 +78,23 @@ export async function POST(req: Request) {
         userId,
         title,
         data: draft,
-        lastVersionAt: now,
-        lastVersionHash: dataHash,
+        ...(versioningEnabled
+          ? {
+              lastVersionAt: now,
+              lastVersionHash: dataHash,
+            }
+          : {}),
       },
     });
-    await tx.patternVersion.create({
-      data: {
-        draftId: created.id,
-        data: draft,
-        dataHash,
-      },
-    });
+    if (versioningEnabled) {
+      await tx.patternVersion.create({
+        data: {
+          draftId: created.id,
+          data: draft,
+          dataHash,
+        },
+      });
+    }
     return created;
   });
 

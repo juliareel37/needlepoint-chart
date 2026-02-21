@@ -74,6 +74,17 @@ type UseWipDraftsArgs = {
 
 type WipStatus = { message: string; tone: "info" | "success" | "error" } | null;
 
+const AUTOSAVE_DEBUG_KEY = "wippa:debugAutosave";
+
+function debugAutosave(event: string, details?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  if (window.localStorage.getItem(AUTOSAVE_DEBUG_KEY) !== "1") return;
+  console.info("[wippa autosave]", event, {
+    ...details,
+    at: new Date().toISOString(),
+  });
+}
+
 class TraceSaveBlockedError extends Error {
   constructor(public code: "UPLOAD_PENDING" | "UPLOAD_FAILED" | "MIGRATION_FAILED") {
     super(code);
@@ -182,6 +193,9 @@ export function useWipDrafts({
   const wipStatusTimeoutRef = useRef<number | null>(null);
   const saveDraftRef = useRef<(opts?: { silent?: boolean }) => Promise<boolean>>(async () => false);
   const draftInputRef = useRef<HTMLInputElement | null>(null);
+  const gridRef = useRef(grid);
+  const debugTitleRef = useRef(title);
+  const debugDraftIdRef = useRef(currentDraftId);
 
   useEffect(() => {
     if (!hasMountedRef.current) {
@@ -211,6 +225,18 @@ export function useWipDrafts({
   useEffect(() => {
     isDirtyRef.current = isDirty;
   }, [isDirty]);
+
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+
+  useEffect(() => {
+    debugTitleRef.current = title;
+  }, [title]);
+
+  useEffect(() => {
+    debugDraftIdRef.current = currentDraftId;
+  }, [currentDraftId]);
 
   useEffect(() => {
     saveDraftRef.current = saveDraft;
@@ -248,16 +274,43 @@ export function useWipDrafts({
   }, [isSignedIn, currentDraftId]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
-    if (versionPreview) return;
+    if (!isSignedIn) {
+      debugAutosave("interval-disabled", { reason: "signed-out" });
+      return;
+    }
+    if (versionPreview) {
+      debugAutosave("interval-disabled", { reason: "preview-open" });
+      return;
+    }
     const interval = window.setInterval(() => {
-      if (!isDirtyRef.current) return;
-      if (autosaveInFlightRef.current) return;
-      if (!hasPaintedCells()) return;
+      if (!isDirtyRef.current) {
+        debugAutosave("tick-skip", { reason: "not-dirty" });
+        return;
+      }
+      if (autosaveInFlightRef.current) {
+        debugAutosave("tick-skip", { reason: "autosave-in-flight" });
+        return;
+      }
+      if (!hasPaintedCells()) {
+        debugAutosave("tick-skip", { reason: "no-painted-cells" });
+        return;
+      }
       autosaveInFlightRef.current = true;
-      void saveDraftRef.current({ silent: true }).finally(() => {
-        autosaveInFlightRef.current = false;
+      debugAutosave("tick-save-start", {
+        draftId: debugDraftIdRef.current ?? null,
+        title: debugTitleRef.current,
       });
+      void saveDraftRef.current({ silent: true })
+        .then((saved) => {
+          debugAutosave(saved ? "tick-save-success" : "tick-save-noop", {
+            draftId: debugDraftIdRef.current ?? null,
+            title: debugTitleRef.current,
+          });
+        })
+        .finally(() => {
+          autosaveInFlightRef.current = false;
+          debugAutosave("tick-complete");
+        });
     }, 10000);
     return () => window.clearInterval(interval);
   }, [isSignedIn, versionPreview]);
@@ -291,8 +344,9 @@ export function useWipDrafts({
   }, [isSignedIn, versionPreview, currentDraftId, title]);
 
   function hasPaintedCells() {
-    for (let i = 0; i < grid.length; i++) {
-      if (grid[i] !== 0) return true;
+    const currentGrid = gridRef.current;
+    for (let i = 0; i < currentGrid.length; i++) {
+      if (currentGrid[i] !== 0) return true;
     }
     return false;
   }
@@ -395,9 +449,11 @@ export function useWipDrafts({
   async function saveDraft(options: { silent?: boolean } = {}): Promise<boolean> {
     const silent = Boolean(options.silent);
     if (silent && !hasPaintedCells()) {
+      debugAutosave("save-skip", { reason: "no-painted-cells", silent });
       return false;
     }
     if (saveInFlightRef.current) {
+      debugAutosave("save-skip", { reason: "save-in-flight", silent });
       if (!silent) {
         setWipMessage("Save already in progress.", "info");
       }
@@ -407,6 +463,7 @@ export function useWipDrafts({
     const saveVersion = editVersionRef.current;
     try {
       if (!isSignedIn) {
+        debugAutosave("save-skip", { reason: "signed-out", silent });
         if (!silent) {
           setWipMessage("Sign in to save your work.", "info");
         }
@@ -418,6 +475,7 @@ export function useWipDrafts({
         draft = await buildDraftPayload();
       } catch (err) {
         if (err instanceof TraceSaveBlockedError) {
+          debugAutosave("save-blocked", { reason: err.code, silent });
           if (err.code === "UPLOAD_PENDING") {
             setWipMessage("Trace image is still uploading. Please wait and save again.", "info");
           } else if (err.code === "UPLOAD_FAILED") {
@@ -434,18 +492,26 @@ export function useWipDrafts({
         setWipMessage(currentDraftId ? "Saving changes..." : "Saving new WIP...", "info");
       }
 
+      debugAutosave("save-request", {
+        silent,
+        method: currentDraftId ? "PUT" : "POST",
+        draftId: currentDraftId ?? null,
+        title,
+      });
       const res = await fetch(currentDraftId ? `/api/wip/${currentDraftId}` : "/api/wip", {
         method: currentDraftId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, draft }),
       });
       if (res.status === 401) {
+        debugAutosave("save-fail", { reason: "unauthorized", silent });
         if (!silent) {
           setWipMessage("Please sign in to save your WIP.", "error");
         }
         return false;
       }
       if (res.status === 409) {
+        debugAutosave("save-fail", { reason: "title-conflict", silent, title });
         if (!silent) {
           setWipMessage("A draft with this name already exists. Rename it before saving.", "error");
         } else {
@@ -453,7 +519,10 @@ export function useWipDrafts({
         }
         return false;
       }
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        debugAutosave("save-fail", { reason: "http-error", status: res.status, silent });
+        throw new Error("Save failed");
+      }
       const data = (await res.json()) as { id?: string; title?: string };
       if (!currentDraftId && data?.id) {
         setCurrentDraftId(data.id);
@@ -470,10 +539,21 @@ export function useWipDrafts({
         setIsDirty(false);
       }
       if (silent) {
-        setLastAutosaveAt(new Date());
+        const now = new Date();
+        setLastAutosaveAt(now);
+        debugAutosave("autosave-timestamp-updated", {
+          draftId: data?.id ?? currentDraftId ?? null,
+          title: savedTitle,
+          at: now.toISOString(),
+        });
       }
+      debugAutosave("save-success", { silent, draftId: data?.id ?? currentDraftId ?? null, title: savedTitle });
       return true;
-    } catch {
+    } catch (err) {
+      debugAutosave("save-exception", {
+        silent,
+        message: err instanceof Error ? err.message : String(err),
+      });
       setWipMessage("Could not save your WIP. Please try again.", "error");
       return false;
     } finally {

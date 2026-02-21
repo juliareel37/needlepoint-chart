@@ -224,9 +224,61 @@
   --accent-soft: #e1b6ed;
   --accent-strong: #bf64d9;
   --accent-wash: #f2dff7;
+  --surface-floating: rgba(255, 255, 255, 0.92);
+  --surface-elevated: rgba(255, 255, 255, 0.96);
+  --canvas-surround-bg: #e2e2e2;
   --icon-on-bg-filter: invert(0);
   --icon-on-fg-filter: invert(1);
   --panel-border: #d08de3;
+  --ui-border-subtle: rgba(15, 23, 42, 0.12);
+  --ui-border: rgba(15, 23, 42, 0.18);
+  --ui-border-strong: rgba(15, 23, 42, 0.2);
+  --ui-divider: rgba(15, 23, 42, 0.08);
+  --ui-surface-faint: rgba(15, 23, 42, 0.03);
+  --ui-surface-soft: rgba(15, 23, 42, 0.04);
+  --ui-hover-soft: rgba(15, 23, 42, 0.08);
+  --ui-tooltip-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+  --ui-shadow-sm: 0 1px 4px rgba(15, 23, 42, 0.12);
+  --ui-shadow-md: 0 2px 6px rgba(15, 23, 42, 0.12);
+  --ui-shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12);
+  --toggle-track-border: rgba(15, 23, 42, 0.2);
+  --toggle-track-off: #f8fafc;
+  --toggle-track-on: #e2e8f0;
+  --toggle-knob: #ffffff;
+}
+:root[data-theme="dark"] {
+  --background: #0b0d10;
+  --foreground: rgba(255, 255, 255, 0.86);
+  --card-bg: #171b21;
+  --muted-bg: #252b34;
+  --accent: #a77bd8;
+  --accent-soft: #3f3354;
+  --accent-strong: #d2a7ff;
+  --accent-wash: #31263f;
+  --surface-floating: rgba(23, 27, 33, 0.92);
+  --surface-elevated: rgba(23, 27, 33, 0.96);
+  --canvas-surround-bg: #181818;
+  --icon-on-bg-filter: invert(1);
+  --icon-on-fg-filter: invert(0);
+  --panel-border: #414a58;
+  --ui-border-subtle: rgba(245, 247, 251, 0.16);
+  --ui-border: rgba(245, 247, 251, 0.24);
+  --ui-border-strong: rgba(245, 247, 251, 0.32);
+  --ui-divider: rgba(245, 247, 251, 0.14);
+  --ui-surface-faint: rgba(245, 247, 251, 0.04);
+  --ui-surface-soft: rgba(245, 247, 251, 0.08);
+  --ui-hover-soft: rgba(245, 247, 251, 0.12);
+  --ui-tooltip-shadow: none;
+  --ui-shadow-sm: none;
+  --ui-shadow-md: none;
+  --ui-shadow-lg: none;
+  --toggle-track-border: rgba(245, 247, 251, 0.3);
+  --toggle-track-off: #1f252d;
+  --toggle-track-on: #394251;
+  --toggle-knob: #f5f7fb;
+}
+:root[data-theme="dark"] * {
+  box-shadow: none !important;
 }
 html,
 body {
@@ -237,6 +289,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 button {
   font-weight: 600;
@@ -245,6 +298,9 @@ button {
 button:hover:not(:disabled) {
   filter: brightness(0.94);
   transform: none;
+}
+:root[data-theme="dark"] button:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle:hover:not(:disabled) {
   filter: none !important;
@@ -255,8 +311,8 @@ button:hover:not(:disabled) {
   filter: none;
 }
 .image-controls-lock:hover:not(:disabled) span:first-child {
-  background: #e2e8f0 !important;
-  border-color: rgba(15, 23, 42, 0.28) !important;
+  background: var(--toggle-track-on) !important;
+  border-color: var(--ui-border-strong) !important;
 }
 .zoom-floating .zoom-caret:hover:not(:disabled) {
   filter: none;
@@ -284,7 +340,7 @@ button:disabled {
   box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  box-shadow: var(--ui-shadow-lg);
   transition: width 200ms ease;
   will-change: width;
 }
@@ -315,7 +371,7 @@ button:disabled {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+  box-shadow: var(--ui-tooltip-shadow);
   transition: opacity 140ms ease;
   z-index: 10;
 }
@@ -424,56 +480,56 @@ button:disabled {
   background: transparent;
 }
 .used-colors-filter-button:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.08);
-  border-color: rgba(15, 23, 42, 0.18);
+  background: var(--ui-hover-soft);
+  border-color: var(--ui-border);
   color: var(--foreground);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 1px 4px var(--ui-border-subtle);
 }
 .used-colors-filter-button[data-active="true"] {
   background: var(--card-bg);
-  border-color: rgba(15, 23, 42, 0.18);
+  border-color: var(--ui-border);
   color: var(--foreground);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 2px 6px var(--ui-border-subtle);
 }
 .used-colors-filter-button {
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: var(--ui-surface-soft);
+  border: 1px solid var(--ui-border-subtle);
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 .menu-tab-button {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
 .menu-tab-button:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.08);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  background: var(--ui-hover-soft);
+  box-shadow: 0 1px 3px var(--ui-border-subtle);
 }
 .menu-tab-button[data-active="true"] {
   background: var(--card-bg);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 2px 6px var(--ui-border-subtle);
 }
 .used-colors-toolbar .menu-tab-button {
   background: transparent !important;
   border-color: transparent !important;
 }
 .used-colors-toolbar .menu-tab-button:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.08) !important;
+  background: var(--ui-hover-soft) !important;
   border-color: transparent !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 1px 3px var(--ui-border-subtle) !important;
 }
 .used-colors-toolbar .menu-tab-button[data-active="true"] {
   background: var(--card-bg) !important;
   border-color: transparent !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 2px 6px var(--ui-border-subtle) !important;
 }
 .autosave-ellipsis:hover {
-  background: rgba(15, 23, 42, 0.08) !important;
-  border-color: rgba(15, 23, 42, 0.2) !important;
+  background: var(--ui-hover-soft) !important;
+  border-color: var(--ui-border-strong) !important;
 }
 .loading-spinner {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid rgba(15, 23, 42, 0.18);
+  border: 2px solid var(--ui-border);
   border-top-color: var(--accent-strong);
   animation: spin 0.9s linear infinite;
 }

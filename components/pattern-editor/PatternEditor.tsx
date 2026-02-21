@@ -883,8 +883,8 @@ export default function PatternEditor() {
     setActiveColorId(picked[0]);
   }
 
-  const cardShadow = "0 6px 16px rgba(15, 23, 42, 0.12)";
-  const cardShadowCollapsed = "0 3px 10px rgba(15, 23, 42, 0.08)";
+  const cardShadow = "var(--ui-shadow-md)";
+  const cardShadowCollapsed = "var(--ui-shadow-sm)";
   const cardStyle = {
     background: "var(--card-bg)",
     border: "none",
@@ -1038,9 +1038,9 @@ export default function PatternEditor() {
                     left: 0,
                     minWidth: 160,
                     background: "var(--card-bg)",
-                    border: "1px solid rgba(15, 23, 42, 0.12)",
+                    border: "1px solid var(--ui-border-subtle)",
                     borderRadius: 10,
-                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
+                    boxShadow: "var(--ui-shadow-lg)",
                     padding: 6,
                     display: "grid",
                     gap: 4,
@@ -1307,9 +1307,9 @@ export default function PatternEditor() {
               width: 22,
               height: 40,
               borderRadius: 999,
-              border: "1px solid rgba(15,23,42,0.18)",
+              border: "1px solid var(--ui-border)",
               background: "var(--card-bg)",
-              boxShadow: "0 6px 14px rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-md)",
               display: "grid",
               placeItems: "center",
               cursor: "pointer",
@@ -1334,9 +1334,9 @@ export default function PatternEditor() {
               width: 22,
               height: 40,
               borderRadius: 999,
-              border: "1px solid rgba(15,23,42,0.18)",
+              border: "1px solid var(--ui-border)",
               background: "var(--card-bg)",
-              boxShadow: "0 6px 14px rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-md)",
               display: "grid",
               placeItems: "center",
               cursor: "pointer",
@@ -1358,7 +1358,7 @@ export default function PatternEditor() {
               padding: "16px 8px",
               height: "100%",
               background: "var(--card-bg)",
-              borderRight: "1px solid rgba(15,23,42,0.08)",
+              borderRight: "1px solid var(--ui-divider)",
             }}
           >
             {menuPages.map((page) => (
@@ -1450,7 +1450,7 @@ export default function PatternEditor() {
           >
             <div ref={sidebarContentRef} style={{ display: "grid", gap: 0, alignContent: "start" }}>
             {activeMenuId === "main" ? (
-              <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
+              <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
                 <GridSizeCard
                   cardStyle={sidebarCardStyle}
                   cardShadow={sidebarCardShadow}
@@ -1478,7 +1478,7 @@ export default function PatternEditor() {
               </div>
             ) : activeMenuId === "colors" ? (
               <div style={{ display: "grid", gap: 0 }}>
-                <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
                   <PaletteSection
                     cardStyle={sidebarCardStyle}
                     cardShadow={sidebarCardShadow}
@@ -1561,7 +1561,7 @@ export default function PatternEditor() {
               </div>
             ) : activeMenuId === "background" ? (
               <div style={{ display: "grid", gap: 0 }}>
-                <div style={{ padding: "12px 0", borderBottom: "1px solid rgba(15,23,42,0.08)" }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
                 <TraceImageCard
                   cardStyle={sidebarCardStyle}
                   cardShadow={sidebarCardShadow}
@@ -1599,7 +1599,7 @@ export default function PatternEditor() {
             ) : (
               <div
                 style={{
-                  border: "1px dashed rgba(15,23,42,0.2)",
+                  border: "1px dashed var(--ui-border-strong)",
                   borderRadius: 12,
                   padding: 16,
                   fontSize: 13,
@@ -1791,8 +1791,8 @@ export default function PatternEditor() {
             padding: "8px 14px",
             borderRadius: 999,
             background: "var(--card-bg)",
-            border: "1px solid rgba(15,23,42,0.12)",
-            boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
+            border: "1px solid var(--ui-border-subtle)",
+            boxShadow: "var(--ui-shadow-lg)",
             color:
               wipStatus.tone === "error"
                 ? "#b91c1c"

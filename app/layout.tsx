@@ -40,6 +40,19 @@ const appShellStyle: CSSProperties & Record<"--app-header-height", string> = {
   "--app-header-height": "52px",
 };
 
+const themeBootstrapScript = `
+(() => {
+  try {
+    const saved = window.localStorage.getItem("wippa:theme");
+    if (saved === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  } catch {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,7 +60,10 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+        </head>
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
           <div style={appShellStyle}>
             <div
@@ -58,7 +74,7 @@ export default function RootLayout({
                 justifyContent: "space-between",
                 padding: "0 28px 0 16px",
                 background: "var(--card-bg)",
-                borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
+                borderBottom: "1px solid var(--ui-divider)",
                 position: "relative",
                 zIndex: 200,
               }}

@@ -112,6 +112,10 @@ export function CanvasWithExportRef(props: any) {
   const prevPanModeRef = useRef(panMode);
   const [uiReady, setUiReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("wippa:theme") === "dark";
+  });
   const [toolbarHeight, setToolbarHeight] = useState(0);
   const [imageOpacityOpen, setImageOpacityOpen] = useState(false);
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -173,11 +177,23 @@ export function CanvasWithExportRef(props: any) {
     }
     return paletteEntries;
   }, [activePalettePanel, hasUsedColors, paletteEntries, usedColorSet, favoriteColorSet]);
+  const effectiveGridBackground = darkMode ? "#1f252d" : gridBackground ?? "#ffffff";
 
   useEffect(() => {
     if (fitPending) return;
     setZoomInput(String(zoomPercent));
   }, [zoomPercent, fitPending]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.setAttribute("data-theme", "dark");
+      window.localStorage.setItem("wippa:theme", "dark");
+      return;
+    }
+    root.removeAttribute("data-theme");
+    window.localStorage.setItem("wippa:theme", "light");
+  }, [darkMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -613,7 +629,7 @@ export function CanvasWithExportRef(props: any) {
           borderRadius: "var(--canvas-card-radius, 12px)",
           padding:
             "var(--canvas-card-padding-y, var(--canvas-card-padding, 12px)) var(--canvas-card-padding-x, var(--canvas-card-padding, 12px))",
-          boxShadow: "var(--canvas-card-shadow, 0 6px 16px rgba(15, 23, 42, 0.12))",
+          boxShadow: "var(--canvas-card-shadow, 0 6px 16px var(--ui-border-subtle))",
           display: "grid",
           gap: 10,
           height: "100%",
@@ -637,11 +653,11 @@ export function CanvasWithExportRef(props: any) {
             left: 12,
             transform: "none",
             zIndex: 4,
-            background: "var(--canvas-toolbar-bg, rgba(255,255,255,0.92))",
+            background: "var(--canvas-toolbar-bg, var(--surface-floating))",
             border: "none",
             borderRadius: 12,
             padding: "6px 10px",
-            boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+            boxShadow: "0 8px 18px var(--ui-border)",
             backdropFilter: "blur(6px)",
             overflowY: "visible",
             display: "flex",
@@ -742,11 +758,11 @@ export function CanvasWithExportRef(props: any) {
                         top: colorMenuPos.top,
                         left: colorMenuPos.left,
                         zIndex: 999,
-                        background: "rgba(255,255,255,0.98)",
+                        background: "var(--surface-elevated)",
                         borderRadius: 12,
                         padding: 8,
-                        boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
-                        border: "1px solid rgba(15,23,42,0.12)",
+                        boxShadow: "0 8px 18px var(--ui-border)",
+                        border: "1px solid var(--ui-border-subtle)",
                         maxHeight: 220,
                         overflow: "hidden",
                         display: "grid",
@@ -761,8 +777,8 @@ export function CanvasWithExportRef(props: any) {
                           gap: 4,
                           padding: 4,
                           borderRadius: 10,
-                          border: "1px solid rgba(15,23,42,0.12)",
-                          background: "rgba(15,23,42,0.04)",
+                          border: "1px solid var(--ui-border-subtle)",
+                          background: "var(--ui-surface-soft)",
                         }}
                       >
                         <button
@@ -831,8 +847,8 @@ export function CanvasWithExportRef(props: any) {
                           style={{
                             padding: "10px 8px",
                             borderRadius: 10,
-                            border: "1px dashed rgba(15,23,42,0.2)",
-                            background: "rgba(15,23,42,0.03)",
+                            border: "1px dashed var(--ui-border-strong)",
+                            background: "var(--ui-surface-faint)",
                             textAlign: "center",
                             fontSize: 11,
                             color: "var(--foreground)",
@@ -1044,7 +1060,7 @@ export function CanvasWithExportRef(props: any) {
                   style={{
                     width: 1,
                     height: 22,
-                    background: "rgba(15,23,42,0.18)",
+                    background: "var(--ui-border)",
                     alignSelf: "center",
                     margin: "0 4px",
                   }}
@@ -1140,8 +1156,8 @@ export function CanvasWithExportRef(props: any) {
               background: "var(--card-bg)",
               borderRadius: 12,
               padding: "8px 10px",
-              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
-              border: "1px solid rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-lg)",
+              border: "1px solid var(--ui-border-subtle)",
               backdropFilter: "blur(8px)",
             }}
           >
@@ -1151,7 +1167,7 @@ export function CanvasWithExportRef(props: any) {
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
-                border: "1px solid rgba(15,23,42,0.12)",
+                border: "1px solid var(--ui-border-subtle)",
                 background: "var(--muted-bg)",
                 color: "var(--foreground)",
                 fontSize: 12,
@@ -1194,8 +1210,8 @@ export function CanvasWithExportRef(props: any) {
               background: "var(--card-bg)",
               borderRadius: 12,
               padding: "8px 10px",
-              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
-              border: "1px solid rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-lg)",
+              border: "1px solid var(--ui-border-subtle)",
               backdropFilter: "blur(8px)",
             }}
           >
@@ -1212,7 +1228,7 @@ export function CanvasWithExportRef(props: any) {
                 width: 30,
                 height: 30,
                 borderRadius: 999,
-                border: "1px solid rgba(15,23,42,0.12)",
+                border: "1px solid var(--ui-border-subtle)",
                 background: "var(--muted-bg)",
                 color: "var(--foreground)",
                 fontSize: 18,
@@ -1264,8 +1280,8 @@ export function CanvasWithExportRef(props: any) {
               background: "var(--card-bg)",
               borderRadius: 12,
               padding: "8px 12px",
-              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
-              border: "1px solid rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-lg)",
+              border: "1px solid var(--ui-border-subtle)",
               backdropFilter: "blur(8px)",
               fontSize: 12,
               fontWeight: 600,
@@ -1282,7 +1298,7 @@ export function CanvasWithExportRef(props: any) {
               }}
               aria-label="Cancel filter selection"
               style={{
-                border: "1px solid rgba(15,23,42,0.12)",
+                border: "1px solid var(--ui-border-subtle)",
                 background: "var(--muted-bg)",
                 color: "var(--foreground)",
                 width: 60,
@@ -1314,8 +1330,8 @@ export function CanvasWithExportRef(props: any) {
               background: "var(--card-bg)",
               borderRadius: 12,
               padding: "8px 12px",
-              boxShadow: "0 10px 22px rgba(15,23,42,0.14)",
-              border: "1px solid rgba(15,23,42,0.12)",
+              boxShadow: "var(--ui-shadow-lg)",
+              border: "1px solid var(--ui-border-subtle)",
               backdropFilter: "blur(8px)",
               fontSize: 12,
               fontWeight: 600,
@@ -1330,7 +1346,7 @@ export function CanvasWithExportRef(props: any) {
                 style={{
                   padding: "4px 10px",
                   borderRadius: 8,
-                  border: "1px solid rgba(15,23,42,0.12)",
+                  border: "1px solid var(--ui-border-subtle)",
                   background: "var(--muted-bg)",
                   color: "var(--foreground)",
                   fontSize: 12,
@@ -1375,7 +1391,7 @@ export function CanvasWithExportRef(props: any) {
                       width: 30,
                       height: 30,
                       borderRadius: 999,
-                      border: "1px solid rgba(15,23,42,0.12)",
+                      border: "1px solid var(--ui-border-subtle)",
                       background: "var(--muted-bg)",
                       color: "var(--foreground)",
                       fontSize: 18,
@@ -1430,11 +1446,11 @@ export function CanvasWithExportRef(props: any) {
               left: sizePopoverLeft,
               transform: "translateX(-50%)",
               zIndex: 4,
-              background: "rgba(255,255,255,0.92)",
+              background: "var(--surface-floating)",
               border: "none",
               borderRadius: 12,
               padding: "4px 8px",
-              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              boxShadow: "0 8px 18px var(--ui-border)",
               backdropFilter: "blur(6px)",
               display: "flex",
               gap: 4,
@@ -1467,10 +1483,10 @@ export function CanvasWithExportRef(props: any) {
               left: opacityPopoverLeft,
               transform: "translateX(-50%)",
               zIndex: 6,
-              background: "rgba(255,255,255,0.96)",
+              background: "var(--surface-elevated)",
               borderRadius: 12,
               padding: "8px 10px",
-              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              boxShadow: "0 8px 18px var(--ui-border)",
               backdropFilter: "blur(6px)",
             }}
           >
@@ -1510,9 +1526,9 @@ export function CanvasWithExportRef(props: any) {
               gap: zoomCollapsed ? 0 : 8,
               padding: zoomCollapsed ? "6px 4px" : "6px 8px",
               borderRadius: 12,
-              background: "rgba(255,255,255,0.92)",
+              background: "var(--surface-floating)",
               backdropFilter: "blur(6px)",
-              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              boxShadow: "0 8px 18px var(--ui-border)",
               minWidth: 0,
               minHeight: zoomCollapsed ? expandedZoomHeight ?? undefined : undefined,
               transition:
@@ -1651,10 +1667,11 @@ export function CanvasWithExportRef(props: any) {
                 height: 22,
                 padding: "0 6px",
                 borderRadius: 8,
-                border: "1px solid rgba(0,0,0,0.2)",
+                border: "1px solid var(--panel-border)",
                 fontSize: 12,
                 lineHeight: "20px",
-                background: "white",
+                background: "var(--card-bg)",
+                color: "var(--foreground)",
               }}
             />
             <span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
@@ -1690,7 +1707,7 @@ export function CanvasWithExportRef(props: any) {
                 padding: "6px 10px",
                 borderRadius: 10,
                 border: "none",
-                background: settingsOpen ? "var(--accent-wash)" : "rgba(255,255,255,0.92)",
+                background: settingsOpen ? "var(--accent-wash)" : "var(--surface-floating)",
                 color: settingsOpen ? "var(--accent-strong)" : "var(--foreground)",
                 cursor: "pointer",
                 fontSize: 12,
@@ -1699,7 +1716,7 @@ export function CanvasWithExportRef(props: any) {
                 alignItems: "center",
                 gap: 6,
                 backdropFilter: "blur(6px)",
-                boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                boxShadow: "0 8px 18px var(--ui-border)",
                 height: "100%",
               }}
             >
@@ -1732,10 +1749,10 @@ export function CanvasWithExportRef(props: any) {
               right: 16,
               bottom: 72,
               zIndex: 60,
-              background: "rgba(255,255,255,0.96)",
+              background: "var(--surface-elevated)",
               borderRadius: 12,
               padding: "10px 12px",
-              boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+              boxShadow: "0 8px 18px var(--ui-border)",
               backdropFilter: "blur(6px)",
               display: "grid",
               gap: 10,
@@ -1746,6 +1763,7 @@ export function CanvasWithExportRef(props: any) {
               <Toggle label="Gridlines" checked={showGridlines} onChange={setShowGridlines} />
               <Toggle label="Thread view" checked={threadView} onChange={setThreadView} />
               <Toggle label="Color symbols" checked={showSymbols} onChange={setShowSymbols} />
+              <Toggle label="Dark mode" checked={darkMode} onChange={setDarkMode} />
             </div>
           </div>
         )}
@@ -1791,7 +1809,7 @@ export function CanvasWithExportRef(props: any) {
             onTraceTransformEnd={onTraceTransformEnd}
             onTraceOffsetChange={onTraceOffsetChange}
             onTraceScaleChange={onTraceScaleChange}
-            gridBackground={gridBackground}
+            gridBackground={effectiveGridBackground}
             zoom={zoom}
             minZoom={minZoom}
             maxZoom={maxZoom}
@@ -1814,7 +1832,7 @@ export function CanvasWithExportRef(props: any) {
               position: "absolute",
               inset: 12,
               borderRadius: 10,
-              background: "rgba(255,255,255,0.8)",
+              background: "var(--canvas-surround-bg)",
               display: "grid",
               placeItems: "center",
               color: "var(--foreground)",

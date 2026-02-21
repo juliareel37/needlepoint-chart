@@ -167,8 +167,8 @@ export default function Palette({
               gap: 4,
               padding: 4,
               borderRadius: 10,
-              border: "1px solid rgba(15,23,42,0.12)",
-              background: "rgba(15,23,42,0.04)",
+              border: "1px solid var(--ui-border-subtle)",
+              background: "var(--ui-surface-soft)",
             }}
           >
             {(["All", "Used", "Favorites"] as const).map((tab) => {
@@ -235,7 +235,7 @@ export default function Palette({
                             height: 18,
                             borderRadius: 6,
                             background: swatch,
-                            border: isActive ? "2px solid var(--accent-strong)" : "1px solid rgba(15,23,42,0.2)",
+                            border: isActive ? "2px solid var(--accent-strong)" : "1px solid var(--ui-border-strong)",
                             boxShadow: isActive ? "0 0 0 2px var(--accent-soft)" : "none",
                             cursor: "pointer",
                           }}
@@ -248,7 +248,7 @@ export default function Palette({
           )}
         </div>
         {activePanel === "All" && (
-          <div style={{ height: 1, background: "rgba(15,23,42,0.12)", margin: "6px 0 8px" }} />
+          <div style={{ height: 1, background: "var(--ui-border-subtle)", margin: "6px 0 8px" }} />
         )}
         <div
           style={{
@@ -268,8 +268,8 @@ export default function Palette({
                 gridColumn: "1 / -1",
                 padding: "12px 8px",
                 borderRadius: 10,
-                border: "1px dashed rgba(15,23,42,0.2)",
-                background: "rgba(15,23,42,0.03)",
+                border: "1px dashed var(--ui-border-strong)",
+                background: "var(--ui-surface-faint)",
                 textAlign: "center",
                 fontSize: 12,
                 color: "var(--foreground)",
@@ -379,7 +379,7 @@ export default function Palette({
                           height: 18,
                           borderRadius: 999,
                           background: "rgba(255,255,255,0.75)",
-                          boxShadow: "0 1px 3px rgba(15,23,42,0.18)",
+                          boxShadow: "0 1px 3px var(--ui-border)",
                           display: showHeart ? "grid" : "none",
                           placeItems: "center",
                           padding: 0,

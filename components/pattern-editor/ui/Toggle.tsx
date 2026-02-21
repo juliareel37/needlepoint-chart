@@ -32,8 +32,8 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
           width: 36,
           height: 20,
           borderRadius: 999,
-          border: "1px solid rgba(15, 23, 42, 0.2)",
-          background: checked ? "#e2e8f0" : "#f8fafc",
+          border: "1px solid var(--toggle-track-border)",
+          background: checked ? "var(--toggle-track-on)" : "var(--toggle-track-off)",
           justifySelf: "end",
           position: "relative",
           transition: "background 150ms ease",
@@ -47,8 +47,8 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
             width: 14,
             height: 14,
             borderRadius: "50%",
-            background: "#ffffff",
-            boxShadow: "0 1px 2px rgba(15, 23, 42, 0.2)",
+            background: "var(--toggle-knob)",
+            boxShadow: "0 1px 2px var(--ui-border-strong)",
             transition: "left 150ms ease, background 150ms ease",
           }}
         />

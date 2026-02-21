@@ -240,8 +240,8 @@ export function WipCard({
                   style={{
                     padding: "2px 8px",
                     borderRadius: 999,
-                    border: "1px solid rgba(15,23,42,0.12)",
-                    background: "rgba(15,23,42,0.04)",
+                    border: "1px solid var(--ui-border-subtle)",
+                    background: "var(--ui-surface-soft)",
                     cursor: "pointer",
                     fontSize: 11,
                     lineHeight: 1,
@@ -262,10 +262,10 @@ export function WipCard({
                       bottom: "100%",
                       marginBottom: 6,
                       background: "#ffffff",
-                      border: "1px solid rgba(15,23,42,0.12)",
+                      border: "1px solid var(--ui-border-subtle)",
                       borderRadius: 10,
                       padding: 8,
-                      boxShadow: "0 8px 18px rgba(15,23,42,0.18)",
+                      boxShadow: "0 8px 18px var(--ui-border)",
                       zIndex: 5,
                     }}
                   >
@@ -278,7 +278,7 @@ export function WipCard({
                       style={{
                         padding: "6px 10px",
                         borderRadius: 8,
-                        border: "1px solid rgba(15,23,42,0.12)",
+                        border: "1px solid var(--ui-border-subtle)",
                         background: "#ffffff",
                         color: "var(--foreground)",
                         cursor: "pointer",
