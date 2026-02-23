@@ -178,7 +178,7 @@ export function TraceImageCard({
                 gap: 6,
                 padding: "14px 12px",
                 borderRadius: 12,
-                border: "1px dashed rgba(15,23,42,0.3)",
+                border: "none",
                 background: "var(--ui-surface-faint)",
                 textAlign: "center",
               }}

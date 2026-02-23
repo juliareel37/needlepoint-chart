@@ -79,6 +79,7 @@ export async function POST(req: Request, context: RouteContext) {
     where: { id },
     data: {
       data: version.data === null ? Prisma.JsonNull : (version.data as Prisma.InputJsonValue),
+      lastSaveSource: "RESTORE",
       ...(versioningEnabled
         ? {
             lastVersionAt: now,

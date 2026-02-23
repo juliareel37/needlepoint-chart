@@ -24,6 +24,7 @@ type ConfirmDialogState = {
 } | null;
 
 type UseWipDraftsArgs = {
+  authLoaded: boolean;
   isSignedIn: boolean;
   title: string;
   setTitle: (value: string) => void;
@@ -75,6 +76,10 @@ type UseWipDraftsArgs = {
 type WipStatus = { message: string; tone: "info" | "success" | "error" } | null;
 
 const AUTOSAVE_DEBUG_KEY = "wippa:debugAutosave";
+const LOCAL_DRAFT_BACKUP_KEY_PREFIX = "wippa:localDraftBackup";
+const LOCAL_DRAFT_BACKUP_LAST_KEY = "wippa:localDraftBackup:lastKey";
+const LAST_ACTIVE_DRAFT_ID_KEY = "wippa:lastActiveDraftId";
+const SESSION_REFRESH_RESUME_KEY = "wippa:refreshResumeDraft";
 
 function debugAutosave(event: string, details?: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -83,6 +88,37 @@ function debugAutosave(event: string, details?: Record<string, unknown>) {
     ...details,
     at: new Date().toISOString(),
   });
+}
+
+function getLocalDraftBackupKey(draftId: string | null) {
+  return `${LOCAL_DRAFT_BACKUP_KEY_PREFIX}:${draftId ?? "__unsaved__"}`;
+}
+
+type LocalDraftBackup = {
+  savedAt?: string;
+  draftId?: string | null;
+  title?: string;
+  source?: string;
+  draft?: any;
+};
+
+type SessionRefreshResume = {
+  savedAt?: string;
+  draftId?: string | null;
+  draft?: any;
+};
+
+function canStoreSessionResumeDraft(draft: any) {
+  return Boolean(draft && typeof draft === "object" && draft.version === 1);
+}
+
+function draftSnapshotHasPaintedCells(draft: any): boolean {
+  if (!draft || typeof draft !== "object") return false;
+  if (!Array.isArray(draft.grid)) return false;
+  for (const cell of draft.grid) {
+    if (typeof cell === "number" && cell !== 0) return true;
+  }
+  return false;
 }
 
 class TraceSaveBlockedError extends Error {
@@ -116,11 +152,13 @@ type UseWipDraftsReturn = {
   viewVersion: (draftId: string, versionId: string, versionCreatedAt?: string) => Promise<void>;
   restoreVersion: (draftId: string, versionId: string) => Promise<void>;
   cancelVersionPreview: () => void;
+  forceSaveNow: () => Promise<boolean>;
   startNewWip: () => Promise<void>;
   formatDraftDate: (value: string) => string;
 };
 
 export function useWipDrafts({
+  authLoaded,
   isSignedIn,
   title,
   setTitle,
@@ -186,12 +224,21 @@ export function useWipDrafts({
   const saveInFlightRef = useRef(false);
   const autosaveInFlightRef = useRef(false);
   const ignoreDirtyRef = useRef(false);
+  const suppressDirtyBatchesRef = useRef(0);
   const hasMountedRef = useRef(false);
   const isDirtyRef = useRef(false);
   const editVersionRef = useRef(0);
   const pendingRestoreHandledRef = useRef(false);
+  const refreshResumeHandledRef = useRef(false);
+  const localStartupRestoreHandledRef = useRef(false);
+  const activeDraftStartupLoadHandledRef = useRef(false);
+  const activeDraftStartupLoadTimerRef = useRef<number | null>(null);
+  const suppressUnloadPersistRef = useRef(false);
+  const prevSignedInRef = useRef(isSignedIn);
   const wipStatusTimeoutRef = useRef<number | null>(null);
-  const saveDraftRef = useRef<(opts?: { silent?: boolean }) => Promise<boolean>>(async () => false);
+  const saveDraftRef = useRef<
+    (opts?: { silent?: boolean; forceVersion?: boolean }) => Promise<boolean>
+  >(async () => false);
   const draftInputRef = useRef<HTMLInputElement | null>(null);
   const gridRef = useRef(grid);
   const debugTitleRef = useRef(title);
@@ -203,6 +250,10 @@ export function useWipDrafts({
       return;
     }
     if (ignoreDirtyRef.current) return;
+    if (suppressDirtyBatchesRef.current > 0) {
+      suppressDirtyBatchesRef.current -= 1;
+      return;
+    }
     editVersionRef.current += 1;
     setIsDirty(true);
   }, [
@@ -239,8 +290,52 @@ export function useWipDrafts({
   }, [currentDraftId]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!authLoaded) return;
+    if (!isSignedIn) {
+      prevSignedInRef.current = isSignedIn;
+      return;
+    }
+    prevSignedInRef.current = isSignedIn;
+    if (currentDraftId) {
+      window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, currentDraftId);
+    }
+  }, [authLoaded, isSignedIn, currentDraftId]);
+
+  useEffect(() => {
     saveDraftRef.current = saveDraft;
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (refreshResumeHandledRef.current) return;
+    if (versionPreview) return;
+    if (currentDraftId) return;
+    if (isDirty) return;
+    if (hasPaintedCells()) return;
+
+    const raw = window.sessionStorage.getItem(SESSION_REFRESH_RESUME_KEY);
+    if (!raw) return;
+    refreshResumeHandledRef.current = true;
+    window.sessionStorage.removeItem(SESSION_REFRESH_RESUME_KEY);
+
+    try {
+      const parsed = JSON.parse(raw) as SessionRefreshResume | null;
+      if (!parsed || typeof parsed !== "object") return;
+      if (!parsed.draft || typeof parsed.draft !== "object") return;
+      // A successful session restore should win over other startup restore paths this mount.
+      localStartupRestoreHandledRef.current = true;
+      activeDraftStartupLoadHandledRef.current = true;
+      applyDraft(parsed.draft);
+      setCurrentDraftId(parsed.draftId ?? null);
+      if (parsed.draftId) {
+        window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, parsed.draftId);
+      }
+      setWipMessage("Restored your previous session.", "info");
+    } catch {
+      // Ignore invalid session resume payloads.
+    }
+  }, [currentDraftId, isDirty, versionPreview]);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -272,6 +367,210 @@ export function useWipDrafts({
 
     void saveDraftRef.current({ silent: true });
   }, [isSignedIn, currentDraftId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!authLoaded) return;
+    if (refreshResumeHandledRef.current) return;
+    if (!isSignedIn) {
+      activeDraftStartupLoadHandledRef.current = false;
+      return;
+    }
+    if (activeDraftStartupLoadHandledRef.current) return;
+    if (versionPreview) return;
+    if (currentDraftId) return;
+    if (isDirty) return;
+    if (hasPaintedCells()) return;
+
+    const lastDraftId = window.localStorage.getItem(LAST_ACTIVE_DRAFT_ID_KEY);
+    if (!lastDraftId) return;
+    activeDraftStartupLoadHandledRef.current = true;
+    debugAutosave("startup-last-draft-begin", { draftId: lastDraftId });
+
+    let cancelled = false;
+    let completed = false;
+    let attempts = 0;
+    const maxAttempts = 20;
+    const tryLoad = () => {
+      if (cancelled) return;
+      attempts += 1;
+      debugAutosave("startup-last-draft-attempt", { draftId: lastDraftId, attempts, maxAttempts });
+      void loadWipFromDb(lastDraftId, { quiet: attempts > 1 })
+        .then((result) => {
+          if (cancelled) return;
+          debugAutosave("startup-last-draft-result", { draftId: lastDraftId, attempts, result });
+          if (result === "ok" || result === "not_found") {
+            completed = true;
+            return;
+          }
+          if (attempts >= maxAttempts) {
+            activeDraftStartupLoadHandledRef.current = false;
+            debugAutosave("startup-last-draft-give-up", { draftId: lastDraftId, attempts, result });
+            return;
+          }
+          activeDraftStartupLoadTimerRef.current = window.setTimeout(tryLoad, 500);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempts >= maxAttempts) {
+            activeDraftStartupLoadHandledRef.current = false;
+            debugAutosave("startup-last-draft-give-up", { draftId: lastDraftId, attempts, result: "exception" });
+            return;
+          }
+          activeDraftStartupLoadTimerRef.current = window.setTimeout(tryLoad, 500);
+        });
+    };
+    tryLoad();
+
+    return () => {
+      cancelled = true;
+      if (!completed) {
+        activeDraftStartupLoadHandledRef.current = false;
+      }
+      if (activeDraftStartupLoadTimerRef.current) {
+        window.clearTimeout(activeDraftStartupLoadTimerRef.current);
+        activeDraftStartupLoadTimerRef.current = null;
+      }
+      debugAutosave("startup-last-draft-cancelled", { draftId: lastDraftId, attempts });
+    };
+  }, [authLoaded, isSignedIn, currentDraftId, isDirty, versionPreview]);
+
+  function readLocalDraftBackup(draftId: string): LocalDraftBackup | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(getLocalDraftBackupKey(draftId));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as LocalDraftBackup | null;
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.draft || typeof parsed.draft !== "object") return null;
+      if (!draftSnapshotHasPaintedCells(parsed.draft)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function readLocalDraftBackupByKey(storageKey: string): LocalDraftBackup | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as LocalDraftBackup | null;
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.draft || typeof parsed.draft !== "object") return null;
+      if (!draftSnapshotHasPaintedCells(parsed.draft)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSessionRefreshResume(draftId: string | null, draft: any) {
+    if (typeof window === "undefined") return;
+    if (!canStoreSessionResumeDraft(draft)) return;
+    try {
+      window.sessionStorage.setItem(
+        SESSION_REFRESH_RESUME_KEY,
+        JSON.stringify({
+          savedAt: new Date().toISOString(),
+          draftId,
+          draft,
+        } satisfies SessionRefreshResume)
+      );
+    } catch {
+      // Best-effort only.
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasMountedRef.current) return;
+    if (!isDirty) return;
+    if (ignoreDirtyRef.current) return;
+    if (versionPreview) return;
+
+    const timeout = window.setTimeout(() => {
+      try {
+        if (!hasPaintedCells()) return;
+        const draftSnapshot = buildDraftSnapshot();
+        const backup = {
+          savedAt: new Date().toISOString(),
+          draftId: currentDraftId,
+          title,
+          source: "local-debounce",
+          draft: draftSnapshot,
+        };
+        const backupKey = getLocalDraftBackupKey(currentDraftId);
+        window.localStorage.setItem(backupKey, JSON.stringify(backup));
+        window.localStorage.setItem(LOCAL_DRAFT_BACKUP_LAST_KEY, backupKey);
+        writeSessionRefreshResume(currentDraftId, draftSnapshot);
+      } catch {
+        // Best-effort local recovery only.
+      }
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [
+    isDirty,
+    versionPreview,
+    currentDraftId,
+    title,
+    gridW,
+    gridH,
+    grid,
+    gridMode,
+    meshCount,
+    widthIn,
+    heightIn,
+    traceImageUrl,
+    traceOpacity,
+    traceScale,
+    traceOffsetX,
+    traceOffsetY,
+    traceLocked,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!authLoaded) return;
+    if (refreshResumeHandledRef.current) return;
+    if (localStartupRestoreHandledRef.current) return;
+    if (versionPreview) return;
+    if (currentDraftId) return;
+    if (isDirty) return;
+    if (hasPaintedCells()) return;
+    if (isSignedIn && window.localStorage.getItem(LAST_ACTIVE_DRAFT_ID_KEY)) return;
+
+    localStartupRestoreHandledRef.current = true;
+    const lastBackupKey = window.localStorage.getItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
+    if (!lastBackupKey) return;
+
+    const localBackup = readLocalDraftBackupByKey(lastBackupKey);
+    if (!localBackup) {
+      window.localStorage.removeItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
+      return;
+    }
+
+    const backupLabel = localBackup.title?.trim() || "your local draft";
+    confirmActionRef.current = () => {
+      if (!localBackup?.draft) return;
+      applyDraft(localBackup.draft);
+      setCurrentDraftId(localBackup.draftId ?? null);
+      setWipMessage("Restored local changes." + (isSignedIn ? " Syncing to your account..." : ""), "info");
+      if (isSignedIn && localBackup.draftId) {
+        void saveDraftRef.current({ silent: false });
+      }
+    };
+    setConfirmDialog({
+      title: "Restore local changes?",
+      message: `We found unsynced local changes for ${backupLabel} from ${formatDraftDate(
+        localBackup.savedAt ?? ""
+      )}. Restore them?`,
+      confirmLabel: "Restore",
+    });
+  }, [authLoaded, currentDraftId, isDirty, isSignedIn, versionPreview, confirmActionRef, setConfirmDialog]);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -319,6 +618,15 @@ export function useWipDrafts({
     if (!isSignedIn) return;
     if (versionPreview) return;
     const handleFinalSave = () => {
+      if (suppressUnloadPersistRef.current) return;
+      try {
+        if (typeof window !== "undefined" && (currentDraftId || isDirtyRef.current)) {
+          const draft = buildDraftSnapshot();
+          writeSessionRefreshResume(currentDraftId, draft);
+        }
+      } catch {
+        // Best-effort only.
+      }
       if (!currentDraftId) return;
       if (!isDirtyRef.current) return;
       if (!hasPaintedCells()) return;
@@ -342,6 +650,12 @@ export function useWipDrafts({
       window.removeEventListener("pagehide", handleFinalSave);
     };
   }, [isSignedIn, versionPreview, currentDraftId, title]);
+
+  useEffect(() => {
+    if (!suppressUnloadPersistRef.current) return;
+    if (currentDraftId !== null) return;
+    suppressUnloadPersistRef.current = false;
+  }, [currentDraftId]);
 
   function hasPaintedCells() {
     const currentGrid = gridRef.current;
@@ -446,8 +760,10 @@ export function useWipDrafts({
     };
   }
 
-  async function saveDraft(options: { silent?: boolean } = {}): Promise<boolean> {
+  async function saveDraft(options: { silent?: boolean; forceVersion?: boolean } = {}): Promise<boolean> {
     const silent = Boolean(options.silent);
+    const forceVersion = Boolean(options.forceVersion);
+    const saveSource = silent ? "autosave" : "manual";
     if (silent && !hasPaintedCells()) {
       debugAutosave("save-skip", { reason: "no-painted-cells", silent });
       return false;
@@ -494,6 +810,8 @@ export function useWipDrafts({
 
       debugAutosave("save-request", {
         silent,
+        forceVersion,
+        saveSource,
         method: currentDraftId ? "PUT" : "POST",
         draftId: currentDraftId ?? null,
         title,
@@ -501,7 +819,7 @@ export function useWipDrafts({
       const res = await fetch(currentDraftId ? `/api/wip/${currentDraftId}` : "/api/wip", {
         method: currentDraftId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, draft }),
+        body: JSON.stringify({ title, draft, forceVersion, saveSource }),
       });
       if (res.status === 401) {
         debugAutosave("save-fail", { reason: "unauthorized", silent });
@@ -523,7 +841,13 @@ export function useWipDrafts({
         debugAutosave("save-fail", { reason: "http-error", status: res.status, silent });
         throw new Error("Save failed");
       }
-      const data = (await res.json()) as { id?: string; title?: string };
+      const data = (await res.json()) as {
+        id?: string;
+        title?: string;
+        createdAt?: string;
+        updatedAt?: string;
+        versioned?: boolean;
+      };
       if (!currentDraftId && data?.id) {
         setCurrentDraftId(data.id);
       }
@@ -538,13 +862,34 @@ export function useWipDrafts({
       if (editVersionRef.current === saveVersion) {
         setIsDirty(false);
       }
+      const serverTimestamp = data?.updatedAt ?? data?.createdAt;
+      const parsedSavedAt = serverTimestamp ? new Date(serverTimestamp) : new Date();
+      const savedAt = Number.isNaN(parsedSavedAt.getTime()) ? new Date() : parsedSavedAt;
+      setLastAutosaveAt(savedAt);
+      writeSessionRefreshResume(data?.id ?? currentDraftId ?? null, draft);
+      if (typeof window !== "undefined") {
+        const savedDraftId = data?.id ?? currentDraftId;
+        if (savedDraftId) {
+          window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, savedDraftId);
+          const backupKey = getLocalDraftBackupKey(savedDraftId);
+          window.localStorage.removeItem(backupKey);
+          if (window.localStorage.getItem(LOCAL_DRAFT_BACKUP_LAST_KEY) === backupKey) {
+            window.localStorage.removeItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
+          }
+        }
+        if (!currentDraftId && data?.id) {
+          const unsavedKey = getLocalDraftBackupKey(null);
+          window.localStorage.removeItem(unsavedKey);
+          if (window.localStorage.getItem(LOCAL_DRAFT_BACKUP_LAST_KEY) === unsavedKey) {
+            window.localStorage.removeItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
+          }
+        }
+      }
       if (silent) {
-        const now = new Date();
-        setLastAutosaveAt(now);
         debugAutosave("autosave-timestamp-updated", {
           draftId: data?.id ?? currentDraftId ?? null,
           title: savedTitle,
-          at: now.toISOString(),
+          at: savedAt.toISOString(),
         });
       }
       debugAutosave("save-success", { silent, draftId: data?.id ?? currentDraftId ?? null, title: savedTitle });
@@ -567,7 +912,19 @@ export function useWipDrafts({
       return;
     }
 
+    const applyStartEditVersion = editVersionRef.current;
+    const finalizeApplyDraft = () => {
+      window.setTimeout(() => {
+        ignoreDirtyRef.current = false;
+        // If the user edited while the draft (or its trace image) was still applying, preserve dirty state.
+        if (editVersionRef.current !== applyStartEditVersion) return;
+        editVersionRef.current = 0;
+        setIsDirty(false);
+      }, 0);
+    };
+
     ignoreDirtyRef.current = true;
+    suppressDirtyBatchesRef.current += 1;
     setTitle(parsed.title || "Untitled Pattern");
     setGridW(parsed.gridW);
     setGridH(parsed.gridH);
@@ -599,6 +956,8 @@ export function useWipDrafts({
         img.crossOrigin = "anonymous";
       }
       img.onload = () => {
+        ignoreDirtyRef.current = true;
+        suppressDirtyBatchesRef.current += 1;
         setTraceImage(img);
         setTraceImageUrl(trace.imageDataUrl);
         setTraceFileName("Draft image");
@@ -607,6 +966,20 @@ export function useWipDrafts({
         setTraceOffsetX(trace.offsetX ?? 0);
         setTraceOffsetY(trace.offsetY ?? 0);
         setTraceLocked(Boolean(trace.locked));
+        finalizeApplyDraft();
+      };
+      img.onerror = () => {
+        ignoreDirtyRef.current = true;
+        suppressDirtyBatchesRef.current += 1;
+        setTraceImage(null);
+        setTraceImageUrl(null);
+        setTraceFileName(null);
+        setTraceOpacity(0);
+        setTraceScale(1);
+        setTraceOffsetX(0);
+        setTraceOffsetY(0);
+        setTraceLocked(false);
+        finalizeApplyDraft();
       };
       img.src = trace.imageDataUrl;
     } else {
@@ -619,29 +992,94 @@ export function useWipDrafts({
       setTraceOffsetY(0);
       setTraceLocked(false);
     }
-    window.setTimeout(() => {
-      ignoreDirtyRef.current = false;
-      editVersionRef.current = 0;
-      setIsDirty(false);
-    }, 0);
+    finalizeApplyDraft();
   }
 
-  async function loadWipFromDb(id: string) {
-    setWipMessage("Loading from your account...", "info");
+  async function loadWipFromDb(id: string, options: { quiet?: boolean } = {}) {
+    debugAutosave("load-wip-request", { draftId: id, quiet: Boolean(options.quiet) });
+    if (!options.quiet) {
+      setWipMessage("Loading from your account...", "info");
+    }
     try {
       const res = await fetch(`/api/wip/${id}`);
+      debugAutosave("load-wip-response", { draftId: id, quiet: Boolean(options.quiet), status: res.status });
       if (res.status === 401) {
-        setWipMessage("Please sign in to load your WIP.", "error");
-        return;
+        maybeShowClockSkewDialog(res, "load your WIP");
+        if (!options.quiet) {
+          setWipMessage("Please sign in to load your WIP.", "error");
+        }
+        return "unauthorized" as const;
       }
-      if (!res.ok) throw new Error("Load failed");
-      const data = (await res.json()) as { draft?: any };
+      if (!res.ok) {
+        if (res.status === 404 && typeof window !== "undefined") {
+          const lastDraftId = window.localStorage.getItem(LAST_ACTIVE_DRAFT_ID_KEY);
+          if (lastDraftId === id) {
+            window.localStorage.removeItem(LAST_ACTIVE_DRAFT_ID_KEY);
+          }
+        }
+        return res.status === 404 ? ("not_found" as const) : ("error" as const);
+      }
+      const data = (await res.json()) as { draft?: any; updatedAt?: string };
       applyDraft(data.draft);
       setCurrentDraftId(id);
+      writeSessionRefreshResume(id, data.draft);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, id);
+      }
+      if (data?.updatedAt) {
+        const loadedUpdatedAt = new Date(data.updatedAt);
+        setLastAutosaveAt(Number.isNaN(loadedUpdatedAt.getTime()) ? null : loadedUpdatedAt);
+      } else {
+        setLastAutosaveAt(null);
+      }
+      const localBackup = readLocalDraftBackup(id);
+      const localSavedAt = localBackup?.savedAt ? Date.parse(localBackup.savedAt) : Number.NaN;
+      const serverUpdatedAt = data?.updatedAt ? Date.parse(data.updatedAt) : Number.NaN;
+      const hasNewerLocalBackup =
+        localBackup &&
+        Number.isFinite(localSavedAt) &&
+        (!Number.isFinite(serverUpdatedAt) || localSavedAt > serverUpdatedAt);
+
+      if (hasNewerLocalBackup) {
+        confirmActionRef.current = () => {
+          if (!localBackup?.draft) return;
+          applyDraft(localBackup.draft);
+          setCurrentDraftId(id);
+          setWipMessage("Restored local changes. Syncing to your account...", "info");
+          void saveDraftRef.current({ silent: false });
+        };
+        setConfirmDialog({
+          title: "Restore newer local changes?",
+          message: `We found local changes from ${formatDraftDate(localBackup?.savedAt ?? "")} that are newer than the saved draft. Restore them?`,
+          confirmLabel: "Restore",
+        });
+        setWipMessage("Loaded from your account. Newer local changes were found.", "info");
+        return "ok" as const;
+      }
+
       setWipMessage("Loaded from your account.", "success");
+      return "ok" as const;
     } catch {
-      setWipMessage("Could not load your WIP. Please try again.", "error");
+      if (!options.quiet) {
+        setWipMessage("Could not load your WIP. Please try again.", "error");
+      }
+      return "error" as const;
     }
+  }
+
+  async function flushPendingChangesBeforeDraftSwitch(nextDraftId: string) {
+    if (versionPreview) return true;
+    if (!isDirtyRef.current) return true;
+    if (currentDraftId === nextDraftId) return true;
+    if (!hasPaintedCells()) return true;
+
+    setWipMessage("Saving current draft before switching...", "info");
+    const saved = await saveDraftRef.current({ silent: false });
+    if (!saved) {
+      setWipMessage("Could not save before switching drafts. Please save and try again.", "error");
+      return false;
+    }
+    return true;
   }
 
   async function openDraftPicker() {
@@ -654,6 +1092,7 @@ export function useWipDrafts({
     try {
       const res = await fetch("/api/wip");
       if (res.status === 401) {
+        maybeShowClockSkewDialog(res, "load your WIP list");
         setWipMessage("Please sign in to load your WIP.", "error");
         setDraftPickerOpen(false);
         return;
@@ -691,6 +1130,8 @@ export function useWipDrafts({
   }
 
   async function selectDraft(id: string) {
+    const canSwitch = await flushPendingChangesBeforeDraftSwitch(id);
+    if (!canSwitch) return;
     setDraftPickerOpen(false);
     await loadWipFromDb(id);
   }
@@ -736,6 +1177,7 @@ export function useWipDrafts({
   async function fetchDraftData(id: string) {
     const res = await fetch(`/api/wip/${id}`);
     if (res.status === 401) {
+      maybeShowClockSkewDialog(res, "view drafts");
       setWipMessage("Please sign in to view drafts.", "error");
       return null;
     }
@@ -744,12 +1186,55 @@ export function useWipDrafts({
     return data?.draft ?? null;
   }
 
+  function showAuthRequiredDialog(actionLabel: string) {
+    confirmActionRef.current = null;
+    setConfirmDialog({
+      title: "Sign in required",
+      message: `Please sign in or create an account to ${actionLabel}.`,
+      confirmLabel: "OK",
+    });
+  }
+
+  function showInfoDialog(title: string, message: string) {
+    confirmActionRef.current = null;
+    setConfirmDialog({
+      title,
+      message,
+      confirmLabel: "OK",
+    });
+  }
+
+  function maybeShowClockSkewDialog(res: Response, actionLabel: string) {
+    if (!isSignedIn || res.status !== 401) return;
+
+    const serverDateHeader = res.headers.get("date");
+    const serverTime = serverDateHeader ? Date.parse(serverDateHeader) : Number.NaN;
+    const hasServerTime = Number.isFinite(serverTime);
+    const skewMs = hasServerTime ? Math.abs(Date.now() - serverTime) : 0;
+    const skewMinutes = hasServerTime ? Math.round(skewMs / 60000) : 0;
+
+    if (hasServerTime && skewMs >= 60_000) {
+      showInfoDialog(
+        "Device clock issue detected",
+        `We couldn't ${actionLabel} because your device clock appears out of sync (${skewMinutes} minute${skewMinutes === 1 ? "" : "s"}). Authentication can fail until your clock is corrected. Turn automatic time sync off/on, then try again.`
+      );
+      return;
+    }
+
+    showInfoDialog(
+      "Authentication failed",
+      `We couldn't ${actionLabel}. If you're signed in, your device clock may be out of sync and preventing authentication. Check your system time and try again.`
+    );
+  }
+
   async function openVersionHistory() {
     if (!isSignedIn) {
+      showAuthRequiredDialog("view version history");
       setWipMessage("Please sign in to view version history.", "info");
       return;
     }
     if (!currentDraftId) {
+      showInfoDialog("No version history yet", "Load or save a WIP first before viewing version history.");
       setWipMessage("Load a WIP first to view its history.", "info");
       return;
     }
@@ -759,6 +1244,7 @@ export function useWipDrafts({
     try {
       const res = await fetch(`/api/wip/${currentDraftId}/versions`);
       if (res.status === 401) {
+        maybeShowClockSkewDialog(res, "view versions");
         setWipMessage("Please sign in to view versions.", "error");
         return;
       }
@@ -785,6 +1271,7 @@ export function useWipDrafts({
 
       const res = await fetch(`/api/wip/${draftId}/versions/${versionId}`);
       if (res.status === 401) {
+        maybeShowClockSkewDialog(res, "view versions");
         setWipMessage("Please sign in to view versions.", "error");
         return;
       }
@@ -820,6 +1307,7 @@ export function useWipDrafts({
         body: JSON.stringify({ versionId }),
       });
       if (res.status === 401) {
+        maybeShowClockSkewDialog(res, "restore versions");
         setWipMessage("Please sign in to restore versions.", "error");
         return;
       }
@@ -848,9 +1336,18 @@ export function useWipDrafts({
     setWipMessage("Back to the latest version.", "info");
   }
 
+  async function forceSaveNow(): Promise<boolean> {
+    if (versionPreview) {
+      setWipMessage("Restore or cancel version preview before saving.", "info");
+      return false;
+    }
+    return saveDraft({ silent: false, forceVersion: true });
+  }
+
   async function loadWip() {
     if (!isSignedIn) {
-      draftInputRef.current?.click();
+      showAuthRequiredDialog("load saved WIPs");
+      setWipMessage("Please sign in to load saved WIPs.", "info");
       return;
     }
     await openDraftPicker();
@@ -885,8 +1382,19 @@ export function useWipDrafts({
     }
     const saved = await saveDraft();
     if (!saved) return;
-    applyDraft(buildBlankDraft());
+    const blankDraft = buildBlankDraft();
+    suppressUnloadPersistRef.current = true;
+    applyDraft(blankDraft);
     setCurrentDraftId(null);
+    if (typeof window !== "undefined") {
+      try {
+        writeSessionRefreshResume(null, blankDraft);
+        window.localStorage.removeItem(LAST_ACTIVE_DRAFT_ID_KEY);
+        window.localStorage.removeItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
+      } catch {
+        // Best-effort only.
+      }
+    }
     setWipMessage("New WIP started.", "success");
   }
 
@@ -981,6 +1489,7 @@ export function useWipDrafts({
     viewVersion,
     restoreVersion,
     cancelVersionPreview,
+    forceSaveNow,
     startNewWip,
     formatDraftDate,
   };

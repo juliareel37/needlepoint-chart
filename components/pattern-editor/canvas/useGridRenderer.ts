@@ -494,5 +494,6 @@ export function useGridRenderer({
     filterSelecting,
     filterEditMode,
     zoom,
+    gridBackground,
   ]);
 }

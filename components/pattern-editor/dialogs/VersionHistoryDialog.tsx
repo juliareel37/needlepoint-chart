@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 
 type DraftVersionItem = { id: string; createdAt: string };
 
@@ -24,7 +25,9 @@ export function VersionHistoryDialog({
   formatDraftDate,
 }: VersionHistoryDialogProps) {
   if (!open) return null;
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -34,7 +37,7 @@ export function VersionHistoryDialog({
         inset: 0,
         background: "rgba(0, 0, 0, 0.45)",
         display: "block",
-        zIndex: 55,
+        zIndex: 300,
         padding: 16,
       }}
       onClick={onClose}
@@ -121,6 +124,7 @@ export function VersionHistoryDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

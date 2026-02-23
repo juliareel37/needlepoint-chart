@@ -27,7 +27,7 @@ export function ConfirmDialog({ dialog, onClose, onConfirm }: ConfirmDialogProps
         inset: 0,
         background: "rgba(0, 0, 0, 0.45)",
         display: "block",
-        zIndex: 200,
+        zIndex: 400,
         padding: 16,
       }}
       onClick={onClose}

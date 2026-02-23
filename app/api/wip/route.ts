@@ -30,6 +30,12 @@ function hashDraft(draft: DraftPayload) {
   return createHash("sha256").update(JSON.stringify(draft)).digest("hex");
 }
 
+type SaveSourceInput = "manual" | "autosave";
+
+function toPrismaSaveSource(value: SaveSourceInput | undefined) {
+  return value === "autosave" ? "AUTOSAVE" : "MANUAL";
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) {
@@ -57,13 +63,15 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { draft?: DraftPayload; title?: string }
+    | { draft?: DraftPayload; title?: string; forceVersion?: boolean; saveSource?: SaveSourceInput }
     | null;
 
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
   const draft = body.draft;
+  const forceVersion = body?.forceVersion === true;
+  const saveSource = toPrismaSaveSource(body?.saveSource);
 
   const title =
     typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled Pattern";
@@ -71,6 +79,7 @@ export async function POST(req: Request) {
   const now = new Date();
   const dataHash = hashDraft(draft);
   const versioningEnabled = isWipVersioningEnabled();
+  const shouldVersion = versioningEnabled || forceVersion;
 
   const saved = await prisma.$transaction(async (tx) => {
     const created = await tx.patternDraft.create({
@@ -78,7 +87,8 @@ export async function POST(req: Request) {
         userId,
         title,
         data: draft,
-        ...(versioningEnabled
+        lastSaveSource: saveSource,
+        ...(shouldVersion
           ? {
               lastVersionAt: now,
               lastVersionHash: dataHash,
@@ -86,12 +96,13 @@ export async function POST(req: Request) {
           : {}),
       },
     });
-    if (versioningEnabled) {
+    if (shouldVersion) {
       await tx.patternVersion.create({
         data: {
           draftId: created.id,
           data: draft,
           dataHash,
+          saveSource,
         },
       });
     }
@@ -104,5 +115,6 @@ export async function POST(req: Request) {
     title: saved.title,
     createdAt: saved.createdAt,
     updatedAt: saved.updatedAt,
+    versioned: shouldVersion,
   });
 }

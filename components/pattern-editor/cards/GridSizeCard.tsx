@@ -76,38 +76,58 @@ export function GridSizeCard({
         <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{gridOpen ? "▾" : "▸"}</span>
       </button>
 
-      <div style={{ display: "grid", gap: 12, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "nowrap" }}>
+      <div style={{ display: "grid", gap: 10, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
+        <div
+          role="tablist"
+          aria-label="Canvas size mode"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: 2,
+            borderRadius: 10,
+            border: "1px solid var(--ui-border-subtle)",
+            background: "var(--ui-surface-soft)",
+          }}
+        >
           <button
             type="button"
+            role="tab"
             onClick={() => setDraftGridMode("stitches")}
             aria-pressed={draftGridMode === "stitches"}
+            aria-selected={draftGridMode === "stitches"}
+            data-active={draftGridMode === "stitches" ? "true" : undefined}
+            className="menu-tab-button"
             style={{
-              padding: "5px 9px",
-              borderRadius: 10,
-              border: draftGridMode === "stitches" ? "1px solid var(--accent-strong)" : "none",
-              background: draftGridMode === "stitches" ? "var(--accent-wash)" : "var(--muted-bg)",
-              color: draftGridMode === "stitches" ? "var(--accent-strong)" : "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 12,
+              padding: "6px 10px",
               flex: "1 1 0",
+              borderRadius: 8,
+              border: "none",
+              color: "var(--foreground)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontWeight: 600,
             }}
           >
             Stitch count
           </button>
           <button
             type="button"
+            role="tab"
             onClick={() => setDraftGridMode("inches")}
             aria-pressed={draftGridMode === "inches"}
+            aria-selected={draftGridMode === "inches"}
+            data-active={draftGridMode === "inches" ? "true" : undefined}
+            className="menu-tab-button"
             style={{
-              padding: "5px 9px",
-              borderRadius: 10,
-              border: draftGridMode === "inches" ? "1px solid var(--accent-strong)" : "none",
-              background: draftGridMode === "inches" ? "var(--accent-wash)" : "var(--muted-bg)",
-              color: draftGridMode === "inches" ? "var(--accent-strong)" : "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 12,
+              padding: "6px 10px",
               flex: "1 1 0",
+              borderRadius: 8,
+              border: "none",
+              color: "var(--foreground)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontWeight: 600,
             }}
           >
             Dimensions
@@ -117,7 +137,7 @@ export function GridSizeCard({
         {draftGridMode === "stitches" ? (
           <>
             <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>Width (stitches)</span>
+              <span style={{ fontSize: 12 }}>Width (stitches)</span>
               <input
                 type="number"
                 min={1}
@@ -133,7 +153,7 @@ export function GridSizeCard({
               />
             </label>
             <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>Height (stitches)</span>
+              <span style={{ fontSize: 12 }}>Height (stitches)</span>
               <input
                 type="number"
                 min={1}
@@ -152,7 +172,7 @@ export function GridSizeCard({
         ) : (
           <>
             <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>Width (inches)</span>
+              <span style={{ fontSize: 12 }}>Width (inches)</span>
               <input
                 type="number"
                 min={0.1}
@@ -169,7 +189,7 @@ export function GridSizeCard({
               />
             </label>
             <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>Height (inches)</span>
+              <span style={{ fontSize: 12 }}>Height (inches)</span>
               <input
                 type="number"
                 min={0.1}

@@ -268,7 +268,7 @@ export default function Palette({
                 gridColumn: "1 / -1",
                 padding: "12px 8px",
                 borderRadius: 10,
-                border: "1px dashed var(--ui-border-strong)",
+                border: "none",
                 background: "var(--ui-surface-faint)",
                 textAlign: "center",
                 fontSize: 12,
@@ -277,6 +277,22 @@ export default function Palette({
               }}
             >
               No colors used. Let's start painting!
+            </div>
+          ) : activePanel === "Favorites" && filteredPalette.length === 0 ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                padding: "12px 8px",
+                borderRadius: 10,
+                border: "none",
+                background: "var(--ui-surface-faint)",
+                textAlign: "center",
+                fontSize: 12,
+                color: "var(--foreground)",
+                opacity: 0.75,
+              }}
+            >
+              No favorites yet. Tap the heart to save colors.
             </div>
           ) : (
             filteredPalette.map((c) => {

@@ -43,7 +43,7 @@ export function useColorEdits({
   setLastEditCell,
   getTraceSnapshot,
 }: UseColorEditsArgs) {
-  const [remapMode, setRemapMode] = useState(true);
+  const [remapMode, setRemapMode] = useState(false);
   const [remapSourceId, setRemapSourceId] = useState<number | null>(null);
   const [remapTargetId, setRemapTargetId] = useState<number | null>(null);
   const [identifyColorId, setIdentifyColorId] = useState<number | null>(null);

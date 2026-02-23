@@ -31,6 +31,12 @@ function hashDraft(draft: DraftPayload) {
   return createHash("sha256").update(JSON.stringify(draft)).digest("hex");
 }
 
+type SaveSourceInput = "manual" | "autosave";
+
+function toPrismaSaveSource(value: SaveSourceInput | undefined) {
+  return value === "autosave" ? "AUTOSAVE" : "MANUAL";
+}
+
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, context: RouteContext) {
@@ -73,13 +79,15 @@ export async function PUT(req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
   const body = (await req.json().catch(() => null)) as
-    | { draft?: DraftPayload; title?: string }
+    | { draft?: DraftPayload; title?: string; forceVersion?: boolean; saveSource?: SaveSourceInput }
     | null;
 
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
   const draft = body.draft;
+  const forceVersion = body?.forceVersion === true;
+  const saveSource = toPrismaSaveSource(body?.saveSource);
 
   const existing = await prisma.patternDraft.findFirst({
     where: { id, userId },
@@ -97,10 +105,11 @@ export async function PUT(req: Request, context: RouteContext) {
   const lastVersionAt = existing.lastVersionAt ? new Date(existing.lastVersionAt) : null;
   const VERSION_INTERVAL_MS = 3 * 60 * 1000;
   const shouldVersion =
-    versioningEnabled &&
-    (!lastVersionAt ||
-      (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
-        dataHash !== existing.lastVersionHash));
+    (forceVersion && dataHash !== existing.lastVersionHash) ||
+    (versioningEnabled &&
+      (!lastVersionAt ||
+        (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
+          dataHash !== existing.lastVersionHash)));
 
   const saved = await prisma.$transaction(async (tx) => {
     const updated = await tx.patternDraft.update({
@@ -108,6 +117,7 @@ export async function PUT(req: Request, context: RouteContext) {
       data: {
         title,
         data: draft,
+        lastSaveSource: saveSource,
         ...(shouldVersion
           ? {
               lastVersionAt: now,
@@ -123,6 +133,7 @@ export async function PUT(req: Request, context: RouteContext) {
           draftId: id,
           data: draft,
           dataHash,
+          saveSource,
         },
       });
     }

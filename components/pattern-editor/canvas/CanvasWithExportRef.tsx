@@ -128,6 +128,7 @@ export function CanvasWithExportRef(props: any) {
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used" | "favorites">("all");
+  const [activePaletteFamily, setActivePaletteFamily] = useState("All");
   const [filterEditMode, setFilterEditMode] = useState(false);
   const [filterEditRect, setFilterEditRect] = useState(filterRect ?? null);
   const filterEditRectRef = useRef<typeof filterRect | null>(filterRect ?? null);
@@ -167,16 +168,69 @@ export function CanvasWithExportRef(props: any) {
   const paletteEntries = useMemo(() => {
     return sortPaletteByHsv(Array.from(paletteById.values()));
   }, [paletteById]);
+  const normalizePaletteFamily = (family?: string | null) => {
+    if (!family) return null;
+    const key = family.trim().toLowerCase();
+    const map: Record<string, string> = {
+      red: "red",
+      pink: "red",
+      orange: "orange",
+      yellow: "yellow",
+      green: "green",
+      blue: "blue",
+      purple: "violet",
+      violet: "violet",
+      gray: "neutrals",
+      grey: "neutrals",
+      white: "neutrals",
+      black: "neutrals",
+      beige: "neutrals",
+      brown: "neutrals",
+      neutral: "neutrals",
+      neutrals: "neutrals",
+      custom: "neutrals",
+    };
+    return map[key] ?? key;
+  };
+  const paletteFamilySwatches: Record<string, string> = {
+    red: "#d62b5b",
+    orange: "#f27842",
+    yellow: "#ffd24d",
+    green: "#4caf50",
+    blue: "#3b82f6",
+    violet: "#8b5cf6",
+    neutrals: "#9ca3af",
+  };
+  const paletteFamilies = useMemo(() => {
+    const set = new Set<string>();
+    paletteEntries.forEach((c) => {
+      const normalized = normalizePaletteFamily(c.family);
+      if (normalized) set.add(normalized);
+    });
+    set.delete("Extracted");
+    const order = ["All", "red", "orange", "yellow", "green", "blue", "violet", "neutrals"];
+    const rest = Array.from(set).filter((f) => !order.includes(f)).sort();
+    return ["All", ...order.filter((f) => f !== "All" && set.has(f)), ...rest];
+  }, [paletteEntries]);
   const favoriteColorSet = useMemo(() => new Set(favoriteColorIds ?? []), [favoriteColorIds]);
   const filteredPaletteEntries = useMemo(() => {
-    if (activePalettePanel === "used" && hasUsedColors) {
-      return paletteEntries.filter((color) => usedColorSet.has(color.id));
-    }
-    if (activePalettePanel === "favorites") {
-      return paletteEntries.filter((color) => favoriteColorSet.has(color.id));
-    }
-    return paletteEntries;
-  }, [activePalettePanel, hasUsedColors, paletteEntries, usedColorSet, favoriteColorSet]);
+    const panelFiltered =
+      activePalettePanel === "used" && hasUsedColors
+        ? paletteEntries.filter((color) => usedColorSet.has(color.id))
+        : activePalettePanel === "favorites"
+          ? paletteEntries.filter((color) => favoriteColorSet.has(color.id))
+          : paletteEntries;
+    if (activePalettePanel !== "all") return panelFiltered;
+    if (activePaletteFamily === "All") return panelFiltered;
+    return panelFiltered.filter((color) => normalizePaletteFamily(color.family) === activePaletteFamily);
+  }, [
+    activePalettePanel,
+    activePaletteFamily,
+    hasUsedColors,
+    paletteEntries,
+    usedColorSet,
+    favoriteColorSet,
+  ]);
   const effectiveGridBackground = darkMode ? "#1f252d" : gridBackground ?? "#ffffff";
 
   useEffect(() => {
@@ -763,11 +817,13 @@ export function CanvasWithExportRef(props: any) {
                         padding: 8,
                         boxShadow: "0 8px 18px var(--ui-border)",
                         border: "1px solid var(--ui-border-subtle)",
-                        maxHeight: 220,
                         overflow: "hidden",
                         display: "grid",
                         gap: 6,
                         minWidth: 200,
+                        width: 220,
+                        maxWidth: 220,
+                        boxSizing: "border-box",
                       }}
                     >
                       <div
@@ -792,7 +848,6 @@ export function CanvasWithExportRef(props: any) {
                             flex: "1 1 0",
                             borderRadius: 8,
                             border: "none",
-                            background: "transparent",
                             color: "var(--foreground)",
                             cursor: "pointer",
                             fontSize: 10,
@@ -812,7 +867,6 @@ export function CanvasWithExportRef(props: any) {
                             flex: "1 1 0",
                             borderRadius: 8,
                             border: "none",
-                            background: "transparent",
                             color: "var(--foreground)",
                             cursor: "pointer",
                             fontSize: 10,
@@ -832,7 +886,6 @@ export function CanvasWithExportRef(props: any) {
                             flex: "1 1 0",
                             borderRadius: 8,
                             border: "none",
-                            background: "transparent",
                             color: "var(--foreground)",
                             cursor: "pointer",
                             fontSize: 10,
@@ -842,27 +895,99 @@ export function CanvasWithExportRef(props: any) {
                           Favorites
                         </button>
                       </div>
+                      {activePalettePanel === "all" && (
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "0 8px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                width: "100%",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {paletteFamilies
+                                .filter((family) => family !== "All")
+                                .map((family) => {
+                                  const swatch = paletteFamilySwatches[family] ?? "#9ca3af";
+                                  const isActive = activePaletteFamily === family;
+                                  return (
+                                    <button
+                                      key={family}
+                                      type="button"
+                                      onClick={() => setActivePaletteFamily(isActive ? "All" : family)}
+                                      aria-pressed={isActive}
+                                      aria-label={`Filter ${family}`}
+                                      title={family}
+                                      style={{
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: 6,
+                                        background: swatch,
+                                        border: isActive
+                                          ? "2px solid var(--accent-strong)"
+                                          : "1px solid var(--ui-border-strong)",
+                                        boxShadow: isActive ? "0 0 0 2px var(--accent-soft)" : "none",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  );
+                                })}
+                            </div>
+                          </div>
+                          <div style={{ height: 1, background: "var(--ui-border-subtle)" }} />
+                        </div>
+                      )}
                       {activePalettePanel === "used" && !hasUsedColors ? (
                         <div
                           style={{
                             padding: "10px 8px",
                             borderRadius: 10,
-                            border: "1px dashed var(--ui-border-strong)",
+                            border: "none",
                             background: "var(--ui-surface-faint)",
                             textAlign: "center",
                             fontSize: 11,
+                            lineHeight: 1.3,
                             color: "var(--foreground)",
                             opacity: 0.75,
+                            overflowWrap: "anywhere",
                           }}
                         >
                           No colors used. Let's start painting!
                         </div>
+                      ) : activePalettePanel === "favorites" && filteredPaletteEntries.length === 0 ? (
+                        <div
+                          style={{
+                            padding: "10px 8px",
+                            borderRadius: 10,
+                            border: "none",
+                            background: "var(--ui-surface-faint)",
+                            textAlign: "center",
+                            fontSize: 11,
+                            lineHeight: 1.3,
+                            color: "var(--foreground)",
+                            opacity: 0.75,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          No favorites yet. Tap the heart to save colors.
+                        </div>
                       ) : (
                         <div
+                          className="toolbar-palette-scroll"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "repeat(4, 1fr)",
-                            gap: 10,
+                            columnGap: 6,
+                            rowGap: 6,
                             maxHeight: 170,
                             overflowY: "auto",
                             padding: "10px 8px 8px 8px",
@@ -884,7 +1009,7 @@ export function CanvasWithExportRef(props: any) {
                                   display: "grid",
                                   gap: 2,
                                   justifyItems: "center",
-                                  padding: 2,
+                                  padding: 1,
                                 }}
                               >
                                 <button

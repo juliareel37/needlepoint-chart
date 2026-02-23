@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 
 type DraftListItem = { id: string; title: string; updatedAt: string };
 
@@ -26,7 +27,9 @@ export function DraftPickerDialog({
   formatDraftDate,
 }: DraftPickerDialogProps) {
   if (!open) return null;
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -36,7 +39,7 @@ export function DraftPickerDialog({
         inset: 0,
         background: "rgba(0, 0, 0, 0.45)",
         display: "block",
-        zIndex: 55,
+        zIndex: 300,
         padding: 16,
       }}
       onClick={onClose}
@@ -184,6 +187,7 @@ export function DraftPickerDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

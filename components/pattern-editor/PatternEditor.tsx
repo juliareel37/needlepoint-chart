@@ -36,7 +36,7 @@ export default function PatternEditor() {
   const [isNarrow, setIsNarrow] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { isSignedIn: clerkSignedIn } = useAuth();
+  const { isSignedIn: clerkSignedIn, isLoaded: authLoaded } = useAuth();
   const isSignedIn = Boolean(clerkSignedIn);
 
   const [gridW, setGridW] = useState(112);
@@ -520,9 +520,11 @@ export default function PatternEditor() {
     viewVersion,
     restoreVersion,
     cancelVersionPreview,
+    forceSaveNow,
     startNewWip,
     formatDraftDate,
   } = useWipDrafts({
+    authLoaded,
     isSignedIn,
     title,
     setTitle,
@@ -1142,7 +1144,25 @@ export default function PatternEditor() {
           )}
         {headerAutosaveNode &&
           createPortal(
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => {
+                void forceSaveNow();
+              }}
+              title="Save now"
+              aria-label="Save now"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: "1px solid var(--ui-border-subtle)",
+                background: "var(--card-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+              }}
+            >
               <img
                 src={assetPath("/cloud_done.svg")}
                 alt=""
@@ -1152,12 +1172,16 @@ export default function PatternEditor() {
                 style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
               />
               <span style={{ fontSize: 12, opacity: 0.8 }}>
-                Autosaved{" "}
+                Saved{" "}
                 {lastAutosaveAt
-                  ? `at ${lastAutosaveAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                  ? `at ${lastAutosaveAt.toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}`
                   : ""}
               </span>
-            </div>,
+            </button>,
             headerAutosaveNode
           )}
         {headerTitleNode &&
