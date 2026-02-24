@@ -42,6 +42,7 @@ type UseWipDraftsArgs = {
   setWidthIn: (value: number) => void;
   heightIn: number;
   setHeightIn: (value: number) => void;
+  fitCellSize: number;
   traceImageUrl: string | null;
   setTraceImageUrl: (value: string | null) => void;
   traceOpacity: number;
@@ -52,6 +53,7 @@ type UseWipDraftsArgs = {
   setTraceOffsetX: (value: number) => void;
   traceOffsetY: number;
   setTraceOffsetY: (value: number) => void;
+  setPendingTraceCellSizeBasis: (value: number | null) => void;
   traceLocked: boolean;
   setTraceLocked: (value: boolean) => void;
   setTraceImage: (value: HTMLImageElement | null) => void;
@@ -71,11 +73,17 @@ type UseWipDraftsArgs = {
   paletteById: Map<number, { hex: string }>;
   confirmActionRef: MutableRefObject<(() => void) | null>;
   setConfirmDialog: (value: ConfirmDialogState) => void;
+  getSessionCanvasView: () => { zoom: number; panX: number; panY: number } | null;
+  restoreSessionCanvasView: (
+    view: { zoom?: number; panX?: number; panY?: number } | null | undefined
+  ) => void;
+  resetCanvasViewport: () => void;
 };
 
 type WipStatus = { message: string; tone: "info" | "success" | "error" } | null;
 
 const AUTOSAVE_DEBUG_KEY = "wippa:debugAutosave";
+const TRACE_DEBUG_KEY = "wippa:debugTrace";
 const LOCAL_DRAFT_BACKUP_KEY_PREFIX = "wippa:localDraftBackup";
 const LOCAL_DRAFT_BACKUP_LAST_KEY = "wippa:localDraftBackup:lastKey";
 const LAST_ACTIVE_DRAFT_ID_KEY = "wippa:lastActiveDraftId";
@@ -85,6 +93,15 @@ function debugAutosave(event: string, details?: Record<string, unknown>) {
   if (typeof window === "undefined") return;
   if (window.localStorage.getItem(AUTOSAVE_DEBUG_KEY) !== "1") return;
   console.info("[wippa autosave]", event, {
+    ...details,
+    at: new Date().toISOString(),
+  });
+}
+
+function debugTrace(event: string, details?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  if (window.localStorage.getItem(TRACE_DEBUG_KEY) !== "1") return;
+  console.info("[wippa trace]", event, {
     ...details,
     at: new Date().toISOString(),
   });
@@ -106,10 +123,28 @@ type SessionRefreshResume = {
   savedAt?: string;
   draftId?: string | null;
   draft?: any;
+  view?: { zoom?: number; panX?: number; panY?: number } | null;
 };
 
 function canStoreSessionResumeDraft(draft: any) {
   return Boolean(draft && typeof draft === "object" && draft.version === 1);
+}
+
+function withTraceCellSizeBasis(draft: any, fitCellSize: number) {
+  if (!draft || typeof draft !== "object") return draft;
+  if (!Number.isFinite(fitCellSize) || fitCellSize <= 0) return draft;
+  const trace = (draft as { trace?: any }).trace;
+  if (!trace || typeof trace !== "object") return draft;
+  if (typeof trace.cellSizeBasis === "number" && Number.isFinite(trace.cellSizeBasis) && trace.cellSizeBasis > 0) {
+    return draft;
+  }
+  return {
+    ...draft,
+    trace: {
+      ...trace,
+      cellSizeBasis: fitCellSize,
+    },
+  };
 }
 
 function draftSnapshotHasPaintedCells(draft: any): boolean {
@@ -176,6 +211,7 @@ export function useWipDrafts({
   setWidthIn,
   heightIn,
   setHeightIn,
+  fitCellSize,
   traceImageUrl,
   setTraceImageUrl,
   traceOpacity,
@@ -186,6 +222,7 @@ export function useWipDrafts({
   setTraceOffsetX,
   traceOffsetY,
   setTraceOffsetY,
+  setPendingTraceCellSizeBasis,
   traceLocked,
   setTraceLocked,
   setTraceImage,
@@ -205,6 +242,9 @@ export function useWipDrafts({
   paletteById,
   confirmActionRef,
   setConfirmDialog,
+  getSessionCanvasView,
+  restoreSessionCanvasView,
+  resetCanvasViewport,
 }: UseWipDraftsArgs): UseWipDraftsReturn {
   const [wipStatus, setWipStatus] = useState<WipStatus>(null);
   const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
@@ -265,12 +305,14 @@ export function useWipDrafts({
     meshCount,
     widthIn,
     heightIn,
+    fitCellSize,
     traceImageUrl,
     traceOpacity,
     traceScale,
     traceOffsetX,
     traceOffsetY,
     traceLocked,
+    getSessionCanvasView,
   ]);
 
   useEffect(() => {
@@ -323,10 +365,19 @@ export function useWipDrafts({
       const parsed = JSON.parse(raw) as SessionRefreshResume | null;
       if (!parsed || typeof parsed !== "object") return;
       if (!parsed.draft || typeof parsed.draft !== "object") return;
+      debugTrace("session-resume-read", {
+        draftId: parsed.draftId ?? null,
+        hasTraceImage: Boolean(parsed.draft?.trace?.imageDataUrl),
+        traceScale: parsed.draft?.trace?.scale ?? null,
+        traceOffsetX: parsed.draft?.trace?.offsetX ?? null,
+        traceOffsetY: parsed.draft?.trace?.offsetY ?? null,
+        traceCellSizeBasis: parsed.draft?.trace?.cellSizeBasis ?? null,
+      });
       // A successful session restore should win over other startup restore paths this mount.
       localStartupRestoreHandledRef.current = true;
       activeDraftStartupLoadHandledRef.current = true;
       applyDraft(parsed.draft);
+      restoreSessionCanvasView(parsed.view);
       setCurrentDraftId(parsed.draftId ?? null);
       if (parsed.draftId) {
         window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, parsed.draftId);
@@ -358,7 +409,7 @@ export function useWipDrafts({
     pendingRestoreHandledRef.current = true;
 
     if (pendingDraft && !currentDraftId) {
-      applyDraft(pendingDraft);
+      applyDraftWithResetViewport(pendingDraft);
       window.setTimeout(() => {
         void saveDraftRef.current({ silent: true });
       }, 0);
@@ -465,9 +516,22 @@ export function useWipDrafts({
     }
   }
 
-  function writeSessionRefreshResume(draftId: string | null, draft: any) {
+  function writeSessionRefreshResume(draftId: string | null, draft: any, source = "unknown") {
     if (typeof window === "undefined") return;
     if (!canStoreSessionResumeDraft(draft)) return;
+    const view = getSessionCanvasView();
+    debugTrace("session-resume-write", {
+      source,
+      draftId,
+      hasTraceImage: Boolean(draft?.trace?.imageDataUrl),
+      traceScale: draft?.trace?.scale ?? null,
+      traceOffsetX: draft?.trace?.offsetX ?? null,
+      traceOffsetY: draft?.trace?.offsetY ?? null,
+      traceCellSizeBasis: draft?.trace?.cellSizeBasis ?? null,
+      viewZoom: view?.zoom ?? null,
+      viewPanX: view?.panX ?? null,
+      viewPanY: view?.panY ?? null,
+    });
     try {
       window.sessionStorage.setItem(
         SESSION_REFRESH_RESUME_KEY,
@@ -475,6 +539,7 @@ export function useWipDrafts({
           savedAt: new Date().toISOString(),
           draftId,
           draft,
+          view,
         } satisfies SessionRefreshResume)
       );
     } catch {
@@ -503,7 +568,7 @@ export function useWipDrafts({
         const backupKey = getLocalDraftBackupKey(currentDraftId);
         window.localStorage.setItem(backupKey, JSON.stringify(backup));
         window.localStorage.setItem(LOCAL_DRAFT_BACKUP_LAST_KEY, backupKey);
-        writeSessionRefreshResume(currentDraftId, draftSnapshot);
+        writeSessionRefreshResume(currentDraftId, draftSnapshot, "local-backup-debounce");
       } catch {
         // Best-effort local recovery only.
       }
@@ -524,6 +589,7 @@ export function useWipDrafts({
     meshCount,
     widthIn,
     heightIn,
+    fitCellSize,
     traceImageUrl,
     traceOpacity,
     traceScale,
@@ -556,7 +622,7 @@ export function useWipDrafts({
     const backupLabel = localBackup.title?.trim() || "your local draft";
     confirmActionRef.current = () => {
       if (!localBackup?.draft) return;
-      applyDraft(localBackup.draft);
+      applyDraftWithResetViewport(localBackup.draft);
       setCurrentDraftId(localBackup.draftId ?? null);
       setWipMessage("Restored local changes." + (isSignedIn ? " Syncing to your account..." : ""), "info");
       if (isSignedIn && localBackup.draftId) {
@@ -620,9 +686,12 @@ export function useWipDrafts({
     const handleFinalSave = () => {
       if (suppressUnloadPersistRef.current) return;
       try {
-        if (typeof window !== "undefined" && (currentDraftId || isDirtyRef.current)) {
+        if (
+          typeof window !== "undefined" &&
+          (currentDraftId || isDirtyRef.current || hasPaintedCells() || Boolean(traceImageUrl))
+        ) {
           const draft = buildDraftSnapshot();
-          writeSessionRefreshResume(currentDraftId, draft);
+          writeSessionRefreshResume(currentDraftId, draft, "beforeunload");
         }
       } catch {
         // Best-effort only.
@@ -649,7 +718,25 @@ export function useWipDrafts({
       window.removeEventListener("beforeunload", handleFinalSave);
       window.removeEventListener("pagehide", handleFinalSave);
     };
-  }, [isSignedIn, versionPreview, currentDraftId, title]);
+  }, [
+    isSignedIn,
+    versionPreview,
+    currentDraftId,
+    title,
+    gridW,
+    gridH,
+    grid,
+    gridMode,
+    meshCount,
+    widthIn,
+    heightIn,
+    traceImageUrl,
+    traceOpacity,
+    traceScale,
+    traceOffsetX,
+    traceOffsetY,
+    traceLocked,
+  ]);
 
   useEffect(() => {
     if (!suppressUnloadPersistRef.current) return;
@@ -689,13 +776,14 @@ export function useWipDrafts({
       heightIn,
       trace: {
         imageDataUrl:
-          traceImageUrl && (traceImageUrl.startsWith("data:") || traceImageUrl.startsWith("https://"))
+          traceImageUrl && !traceImageUrl.startsWith("blob:")
             ? traceImageUrl
             : null,
         opacity: traceOpacity,
         scale: traceScale,
         offsetX: traceOffsetX,
         offsetY: traceOffsetY,
+        cellSizeBasis: fitCellSize,
         locked: traceLocked,
       },
     };
@@ -755,6 +843,7 @@ export function useWipDrafts({
         scale: traceScale,
         offsetX: traceOffsetX,
         offsetY: traceOffsetY,
+        cellSizeBasis: fitCellSize,
         locked: traceLocked,
       },
     };
@@ -866,7 +955,7 @@ export function useWipDrafts({
       const parsedSavedAt = serverTimestamp ? new Date(serverTimestamp) : new Date();
       const savedAt = Number.isNaN(parsedSavedAt.getTime()) ? new Date() : parsedSavedAt;
       setLastAutosaveAt(savedAt);
-      writeSessionRefreshResume(data?.id ?? currentDraftId ?? null, draft);
+      writeSessionRefreshResume(data?.id ?? currentDraftId ?? null, draft, silent ? "autosave-success" : "manual-save-success");
       if (typeof window !== "undefined") {
         const savedDraftId = data?.id ?? currentDraftId;
         if (savedDraftId) {
@@ -911,6 +1000,16 @@ export function useWipDrafts({
       setWipMessage("That draft could not be loaded.", "error");
       return;
     }
+    debugTrace("applyDraft", {
+      hasTraceImage: Boolean(parsed?.trace?.imageDataUrl),
+      traceScale: parsed?.trace?.scale ?? null,
+      traceOffsetX: parsed?.trace?.offsetX ?? null,
+      traceOffsetY: parsed?.trace?.offsetY ?? null,
+      traceCellSizeBasis: parsed?.trace?.cellSizeBasis ?? null,
+      fitCellSize,
+      gridW: parsed?.gridW ?? null,
+      gridH: parsed?.gridH ?? null,
+    });
 
     const applyStartEditVersion = editVersionRef.current;
     const finalizeApplyDraft = () => {
@@ -958,13 +1057,21 @@ export function useWipDrafts({
       img.onload = () => {
         ignoreDirtyRef.current = true;
         suppressDirtyBatchesRef.current += 1;
+        const savedScale = typeof trace.scale === "number" ? trace.scale : 1;
+        const savedOffsetX = typeof trace.offsetX === "number" ? trace.offsetX : 0;
+        const savedOffsetY = typeof trace.offsetY === "number" ? trace.offsetY : 0;
+        const savedBasis =
+          typeof trace.cellSizeBasis === "number" && Number.isFinite(trace.cellSizeBasis) && trace.cellSizeBasis > 0
+            ? trace.cellSizeBasis
+            : null;
         setTraceImage(img);
         setTraceImageUrl(trace.imageDataUrl);
         setTraceFileName("Draft image");
         setTraceOpacity(trace.opacity ?? 0.5);
-        setTraceScale(trace.scale ?? 1);
-        setTraceOffsetX(trace.offsetX ?? 0);
-        setTraceOffsetY(trace.offsetY ?? 0);
+        setPendingTraceCellSizeBasis(savedBasis);
+        setTraceScale(savedScale);
+        setTraceOffsetX(savedOffsetX);
+        setTraceOffsetY(savedOffsetY);
         setTraceLocked(Boolean(trace.locked));
         finalizeApplyDraft();
       };
@@ -975,6 +1082,7 @@ export function useWipDrafts({
         setTraceImageUrl(null);
         setTraceFileName(null);
         setTraceOpacity(0);
+        setPendingTraceCellSizeBasis(null);
         setTraceScale(1);
         setTraceOffsetX(0);
         setTraceOffsetY(0);
@@ -987,12 +1095,24 @@ export function useWipDrafts({
       setTraceImageUrl(null);
       setTraceFileName(null);
       setTraceOpacity(0);
+      setPendingTraceCellSizeBasis(null);
       setTraceScale(1);
       setTraceOffsetX(0);
       setTraceOffsetY(0);
       setTraceLocked(false);
     }
     finalizeApplyDraft();
+  }
+
+  function applyDraftWithResetViewport(parsed: any) {
+    applyDraft(parsed);
+    if (typeof window === "undefined") {
+      resetCanvasViewport();
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      resetCanvasViewport();
+    });
   }
 
   async function loadWipFromDb(id: string, options: { quiet?: boolean } = {}) {
@@ -1020,9 +1140,9 @@ export function useWipDrafts({
         return res.status === 404 ? ("not_found" as const) : ("error" as const);
       }
       const data = (await res.json()) as { draft?: any; updatedAt?: string };
-      applyDraft(data.draft);
+      applyDraftWithResetViewport(data.draft);
       setCurrentDraftId(id);
-      writeSessionRefreshResume(id, data.draft);
+      writeSessionRefreshResume(id, withTraceCellSizeBasis(data.draft, fitCellSize), "loadWipFromDb");
       if (typeof window !== "undefined") {
         window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, id);
       }
@@ -1043,7 +1163,7 @@ export function useWipDrafts({
       if (hasNewerLocalBackup) {
         confirmActionRef.current = () => {
           if (!localBackup?.draft) return;
-          applyDraft(localBackup.draft);
+          applyDraftWithResetViewport(localBackup.draft);
           setCurrentDraftId(id);
           setWipMessage("Restored local changes. Syncing to your account...", "info");
           void saveDraftRef.current({ silent: false });
@@ -1281,7 +1401,7 @@ export function useWipDrafts({
         setWipMessage("That version could not be loaded.", "error");
         return;
       }
-      applyDraft(data.draft);
+      applyDraftWithResetViewport(data.draft);
       setCurrentDraftId(draftId);
       setVersionPreview({
         draftId,
@@ -1314,7 +1434,7 @@ export function useWipDrafts({
       if (!res.ok) throw new Error("Restore failed");
       const data = (await res.json()) as { draft?: any };
       if (data?.draft) {
-        applyDraft(data.draft);
+        applyDraftWithResetViewport(data.draft);
         setCurrentDraftId(draftId);
         const preview = buildPreviewDataUrl(data.draft);
         setDraftPreviewUrls((prev) => ({ ...prev, [draftId]: preview }));
@@ -1330,7 +1450,7 @@ export function useWipDrafts({
 
   function cancelVersionPreview() {
     if (!versionPreview) return;
-    applyDraft(versionPreview.originalDraft);
+    applyDraftWithResetViewport(versionPreview.originalDraft);
     setCurrentDraftId(versionPreview.draftId);
     setVersionPreview(null);
     setWipMessage("Back to the latest version.", "info");
@@ -1384,11 +1504,11 @@ export function useWipDrafts({
     if (!saved) return;
     const blankDraft = buildBlankDraft();
     suppressUnloadPersistRef.current = true;
-    applyDraft(blankDraft);
+    applyDraftWithResetViewport(blankDraft);
     setCurrentDraftId(null);
     if (typeof window !== "undefined") {
       try {
-        writeSessionRefreshResume(null, blankDraft);
+        writeSessionRefreshResume(null, blankDraft, "startNewWip");
         window.localStorage.removeItem(LAST_ACTIVE_DRAFT_ID_KEY);
         window.localStorage.removeItem(LOCAL_DRAFT_BACKUP_LAST_KEY);
       } catch {
@@ -1403,7 +1523,7 @@ export function useWipDrafts({
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string);
-        applyDraft(parsed);
+        applyDraftWithResetViewport(parsed);
         setCurrentDraftId(null);
         setWipMessage("Loaded from file.", "success");
       } catch {

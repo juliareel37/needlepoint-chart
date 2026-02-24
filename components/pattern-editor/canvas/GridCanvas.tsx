@@ -23,6 +23,10 @@ type Props = {
   maxZoom: number;
   pinchEnabled: boolean;
   onZoomChange: (nextZoom: number) => void;
+  onPanOffsetChange?: (pan: { x: number; y: number }) => void;
+  restoredPanOffset?: { x: number; y: number } | null;
+  restoredPanToken?: number;
+  resetPanToken?: number;
   centerCanvasToken?: number;
   focusCell?: { x: number; y: number } | null;
   focusCellToken?: number;
@@ -81,6 +85,10 @@ export default function GridCanvas(props: Props) {
     maxZoom,
     pinchEnabled,
     onZoomChange,
+    onPanOffsetChange,
+    restoredPanOffset,
+    restoredPanToken,
+    resetPanToken,
     centerCanvasToken,
     focusCell,
     focusCellToken,
@@ -276,6 +284,10 @@ export default function GridCanvas(props: Props) {
     prevPanRef.current = panOffset;
   }, [panOffset]);
 
+  useEffect(() => {
+    onPanOffsetChange?.(panOffset);
+  }, [onPanOffsetChange, panOffset]);
+
   useLayoutEffect(() => {
     if (!Number.isFinite(containerWidth) || !Number.isFinite(containerHeight)) return;
     if (containerWidth <= 0 || containerHeight <= 0) return;
@@ -340,6 +352,25 @@ export default function GridCanvas(props: Props) {
     lastCenterTokenRef.current = centerCanvasToken;
     setPanOffset(() => clampPan(0, 0));
   }, [centerCanvasToken]);
+
+  const lastRestoredPanTokenRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (restoredPanToken === undefined) return;
+    if (restoredPanToken === lastRestoredPanTokenRef.current) return;
+    if (!restoredPanOffset) return;
+    if (containerWidth <= 1 || containerHeight <= 1) return;
+    lastRestoredPanTokenRef.current = restoredPanToken;
+    setPanOffset(() => clampPan(restoredPanOffset.x, restoredPanOffset.y));
+  }, [restoredPanOffset, restoredPanToken, containerWidth, containerHeight, canvasW, canvasH]);
+
+  const lastResetPanTokenRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (resetPanToken === undefined) return;
+    if (resetPanToken === lastResetPanTokenRef.current) return;
+    if (containerWidth <= 1 || containerHeight <= 1) return;
+    lastResetPanTokenRef.current = resetPanToken;
+    setPanOffset(() => clampPan(0, 0));
+  }, [resetPanToken, containerWidth, containerHeight, canvasW, canvasH]);
 
   useEffect(() => {
     if (focusCellToken === undefined || focusCellToken === lastFocusTokenRef.current) return;

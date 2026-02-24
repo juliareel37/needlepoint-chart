@@ -30,6 +30,16 @@ import { useWipDrafts } from "./hooks/useWipDrafts";
 import type { TraceSnapshot } from "./utils/historyTypes";
 
 const DEFAULT_PALETTE: Color[] = DMC_COLORS;
+const TRACE_DEBUG_KEY = "wippa:debugTrace";
+
+function debugTraceTransform(event: string, details?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  if (window.localStorage.getItem(TRACE_DEBUG_KEY) !== "1") return;
+  console.info("[wippa trace]", event, {
+    ...details,
+    at: new Date().toISOString(),
+  });
+}
 
 export default function PatternEditor() {
   const [title, setTitle] = useState("Untitled Pattern");
@@ -86,6 +96,7 @@ export default function PatternEditor() {
   const [traceEditMode, setTraceEditMode] = useState(false);
   const [pendingTraceUnlock, setPendingTraceUnlock] = useState(false);
   const pendingTraceRestoreRef = useRef<TraceSnapshot | null>(null);
+  const pendingTraceCellSizeBasisRef = useRef<number | null>(null);
   const traceTransformActiveRef = useRef(false);
   const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number } | null>(null);
   const [panMode, setPanMode] = useState(false);
@@ -176,6 +187,11 @@ export default function PatternEditor() {
   );
 
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
+  const canvasPanOffsetRef = useRef({ x: 0, y: 0 });
+  const [restoredCanvasPanOffset, setRestoredCanvasPanOffset] = useState<{ x: number; y: number } | null>(null);
+  const [restoredCanvasViewToken, setRestoredCanvasViewToken] = useState(0);
+  const [resetCanvasViewToken, setResetCanvasViewToken] = useState(0);
   const [canvasControlsHeight, setCanvasControlsHeight] = useState(0);
   const baseMinZoom = 0.25;
   const [minZoomOverride, setMinZoomOverride] = useState<number | null>(null);
@@ -183,7 +199,7 @@ export default function PatternEditor() {
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
   const [fitAfterResize, setFitAfterResize] = useState<{ w: number; h: number } | null>(null);
-  const [fitToken, setFitToken] = useState(0);
+  const [fitToken, setFitToken] = useState<number | undefined>(undefined);
 
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
@@ -348,13 +364,30 @@ export default function PatternEditor() {
         setTraceScale(pending.scale);
         setTraceOffsetX(pending.offsetX);
         setTraceOffsetY(pending.offsetY);
+        // Reset the fit-cell baseline so the restore transform is not re-scaled again on load.
+        prevFitCellSizeRef.current = fitCellSize;
         pendingTraceRestoreRef.current = null;
+        return;
+      }
+      if (!tracePostUpload) {
+        // Preserve saved transforms from draft loads/version restores.
+        // If a cell-size basis conversion is pending, defer it until layout is real (not startup 1x1).
+        const savedBasis = pendingTraceCellSizeBasisRef.current;
+        if (!savedBasis) {
+          prevFitCellSizeRef.current = fitCellSize;
+        }
+        debugTraceTransform("trace-image-onload", {
+          hasPendingBasis: Boolean(savedBasis),
+          savedBasis: savedBasis ?? null,
+          fitCellSize,
+          imageUrl: traceImageUrl,
+        });
         return;
       }
       fitTraceImageToGrid(img);
     };
     img.src = getSafeTraceImageUrl(traceImageUrl);
-  }, [traceImageUrl, fitCellSize]);
+  }, [traceImageUrl, fitCellSize, tracePostUpload]);
 
   useEffect(() => {
     if (pendingTraceUnlock && !traceLocked) {
@@ -367,6 +400,50 @@ export default function PatternEditor() {
   const containerHeight = Math.max(1, Math.round((containerWidth * gridH) / gridW));
   const canvasW = gridW * displayCellSize;
   const canvasH = gridH * displayCellSize;
+
+  useEffect(() => {
+    if (!traceImage) return;
+    const savedBasis = pendingTraceCellSizeBasisRef.current;
+    if (!(savedBasis && Number.isFinite(savedBasis) && savedBasis > 0)) return;
+
+    const layoutReady = containerWidth > 1 && containerHeight > 1;
+    if (!layoutReady || fitCellSize <= 0) {
+      debugTraceTransform("trace-basis-convert-deferred", {
+        imageUrl: traceImageUrl,
+        savedBasis,
+        fitCellSize,
+        containerWidth,
+        containerHeight,
+      });
+      return;
+    }
+
+    if (savedBasis !== fitCellSize) {
+      const ratio = fitCellSize / savedBasis;
+      setTraceScale((value) => value * ratio);
+      setTraceOffsetX((value) => value * ratio);
+      setTraceOffsetY((value) => value * ratio);
+      debugTraceTransform("trace-basis-convert-apply", {
+        imageUrl: traceImageUrl,
+        savedBasis,
+        fitCellSize,
+        ratio,
+        containerWidth,
+        containerHeight,
+      });
+    } else {
+      debugTraceTransform("trace-basis-convert-skip-same-basis", {
+        imageUrl: traceImageUrl,
+        savedBasis,
+        fitCellSize,
+        containerWidth,
+        containerHeight,
+      });
+    }
+
+    pendingTraceCellSizeBasisRef.current = null;
+    prevFitCellSizeRef.current = fitCellSize;
+  }, [containerHeight, containerWidth, fitCellSize, setTraceOffsetX, setTraceOffsetY, setTraceScale, traceImage, traceImageUrl]);
 
   const {
     lassoPoints,
@@ -542,6 +619,7 @@ export default function PatternEditor() {
     setWidthIn,
     heightIn,
     setHeightIn,
+    fitCellSize,
     traceImageUrl,
     setTraceImageUrl,
     traceOpacity,
@@ -552,6 +630,9 @@ export default function PatternEditor() {
     setTraceOffsetX,
     traceOffsetY,
     setTraceOffsetY,
+    setPendingTraceCellSizeBasis: (value) => {
+      pendingTraceCellSizeBasisRef.current = value;
+    },
     traceLocked,
     setTraceLocked,
     setTraceImage,
@@ -571,11 +652,27 @@ export default function PatternEditor() {
     paletteById,
     confirmActionRef,
     setConfirmDialog,
+    getSessionCanvasView: () => ({
+      zoom: zoomRef.current,
+      panX: canvasPanOffsetRef.current.x,
+      panY: canvasPanOffsetRef.current.y,
+    }),
+    restoreSessionCanvasView,
+    resetCanvasViewport,
   });
 
   useEffect(() => {
     if (!traceImage) {
       prevFitCellSizeRef.current = fitCellSize;
+      return;
+    }
+    if (pendingTraceCellSizeBasisRef.current) {
+      debugTraceTransform("fitCellSize-rescale-skip-pending-basis", {
+        imageUrl: traceImageUrl,
+        pendingBasis: pendingTraceCellSizeBasisRef.current,
+        fitCellSize,
+        prevFitCellSize: prevFitCellSizeRef.current,
+      });
       return;
     }
     const prev = prevFitCellSizeRef.current;
@@ -584,12 +681,45 @@ export default function PatternEditor() {
       setTraceScale((value) => value * ratio);
       setTraceOffsetX((value) => value * ratio);
       setTraceOffsetY((value) => value * ratio);
+      debugTraceTransform("fitCellSize-rescale-apply", {
+        imageUrl: traceImageUrl,
+        prevFitCellSize: prev,
+        fitCellSize,
+        ratio,
+      });
     }
     prevFitCellSizeRef.current = fitCellSize;
-  }, [fitCellSize, traceImage]);
+  }, [fitCellSize, traceImage, traceImageUrl]);
 
   function clampZoom(value: number) {
     return Math.min(maxZoom, Math.max(minZoom, Number(value.toFixed(2))));
+  }
+
+  function restoreSessionCanvasView(view: { zoom?: number; panX?: number; panY?: number } | null | undefined) {
+    if (!view) return;
+    const zoomValue = typeof view.zoom === "number" && Number.isFinite(view.zoom) ? view.zoom : null;
+    const panXValue = typeof view.panX === "number" && Number.isFinite(view.panX) ? view.panX : null;
+    const panYValue = typeof view.panY === "number" && Number.isFinite(view.panY) ? view.panY : null;
+    if (zoomValue !== null) {
+      const nextZoom = clampZoom(zoomValue);
+      zoomRef.current = nextZoom;
+      setZoom(nextZoom);
+    }
+    if (panXValue !== null && panYValue !== null) {
+      const nextPan = { x: panXValue, y: panYValue };
+      canvasPanOffsetRef.current = nextPan;
+      setRestoredCanvasPanOffset(nextPan);
+      setRestoredCanvasViewToken((tick) => tick + 1);
+    }
+  }
+
+  function resetCanvasViewport() {
+    canvasPanOffsetRef.current = { x: 0, y: 0 };
+    zoomRef.current = 1;
+    setZoom(1);
+    setRestoredCanvasPanOffset(null);
+    setResetCanvasViewToken((tick) => tick + 1);
+    setFitToken((tick) => (typeof tick === "number" ? tick + 1 : 1));
   }
 
   function fitTraceToGrid() {
@@ -811,7 +941,7 @@ export default function PatternEditor() {
   useEffect(() => {
     if (!fitAfterResize) return;
     if (gridW !== fitAfterResize.w || gridH !== fitAfterResize.h) {
-      setFitToken((token) => token + 1);
+      setFitToken((token) => (typeof token === "number" ? token + 1 : 1));
       setFitAfterResize(null);
     }
   }, [fitAfterResize, gridW, gridH]);
@@ -1735,7 +1865,17 @@ export default function PatternEditor() {
               minZoom={minZoom}
               maxZoom={maxZoom}
               pinchEnabled={isNarrow}
-              onZoomChange={(next: number) => setZoom(clampZoom(next))}
+              onZoomChange={(next: number) => {
+                const clamped = clampZoom(next);
+                zoomRef.current = clamped;
+                setZoom(clamped);
+              }}
+              onPanOffsetChange={(next: { x: number; y: number }) => {
+                canvasPanOffsetRef.current = next;
+              }}
+              restoredPanOffset={restoredCanvasPanOffset}
+              restoredViewToken={restoredCanvasViewToken}
+              resetViewToken={resetCanvasViewToken}
               darkCanvas={darkCanvas}
               onControlsHeightChange={setCanvasControlsHeight}
               onMinZoomChange={setMinZoomOverride}

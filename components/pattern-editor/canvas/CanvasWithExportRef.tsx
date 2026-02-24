@@ -71,6 +71,10 @@ export function CanvasWithExportRef(props: any) {
     maxZoom,
     pinchEnabled,
     onZoomChange,
+    onPanOffsetChange,
+    restoredPanOffset,
+    restoredViewToken,
+    resetViewToken,
     darkCanvas,
     onControlsHeightChange,
     onMinZoomChange,
@@ -239,6 +243,11 @@ export function CanvasWithExportRef(props: any) {
   }, [zoomPercent, fitPending]);
 
   useEffect(() => {
+    if (restoredViewToken === undefined) return;
+    userZoomedRef.current = true;
+  }, [restoredViewToken]);
+
+  useEffect(() => {
     const root = document.documentElement;
     if (darkMode) {
       root.setAttribute("data-theme", "dark");
@@ -293,10 +302,11 @@ export function CanvasWithExportRef(props: any) {
     if (!hasFitInputs) return;
     if (hasInitializedZoomRef.current) return;
     hasInitializedZoomRef.current = true;
+    if (restoredViewToken > 0) return;
     if (hasTraceImage) return;
     onZoomChange(baseFitZoom);
     setCenterCanvasTick((tick) => tick + 1);
-  }, [hasFitInputs, baseFitZoom, onZoomChange, hasTraceImage]);
+  }, [hasFitInputs, baseFitZoom, onZoomChange, hasTraceImage, restoredViewToken]);
 
   useEffect(() => {
     if (!hasFitInputs) return;
@@ -472,11 +482,12 @@ export function CanvasWithExportRef(props: any) {
 
   useEffect(() => {
     if (fitToBoundsToken === undefined) return;
+    if (!hasFitInputs) return;
     if (fitToBoundsToken === lastFitTokenRef.current) return;
     lastFitTokenRef.current = fitToBoundsToken;
     setFitPending(true);
     fitToBounds();
-  }, [fitToBoundsToken, baseFitZoom]);
+  }, [fitToBoundsToken, baseFitZoom, hasFitInputs]);
   useEffect(() => {
     if (!fitPending) return;
     if (Math.abs(zoomDisplay - 1) <= 0.01) {
@@ -1940,6 +1951,10 @@ export function CanvasWithExportRef(props: any) {
             maxZoom={maxZoom}
             pinchEnabled={pinchEnabled}
             onZoomChange={setUserZoom}
+            onPanOffsetChange={onPanOffsetChange}
+            restoredPanOffset={restoredPanOffset}
+            restoredPanToken={restoredViewToken}
+            resetPanToken={resetViewToken}
             centerCanvasToken={centerCanvasTick}
             focusCell={focusCell}
             focusCellToken={focusCellToken}

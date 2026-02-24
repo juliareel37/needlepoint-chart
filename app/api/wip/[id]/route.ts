@@ -23,6 +23,7 @@ type DraftPayload = {
     scale: number;
     offsetX: number;
     offsetY: number;
+    cellSizeBasis?: number;
     locked: boolean;
   };
 };
