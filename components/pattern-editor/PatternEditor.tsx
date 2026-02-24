@@ -1050,8 +1050,8 @@ export default function PatternEditor() {
 
   const menuPages = [
     { id: "main", label: "Main", icon: assetPath("/grid.svg") },
-    { id: "colors", label: "Colors", icon: assetPath("/palette.svg") },
     { id: "background", label: "Background", icon: assetPath("/photo.svg") },
+    { id: "colors", label: "Colors", icon: assetPath("/palette.svg") },
   ];
   const [activeMenuId, setActiveMenuId] = useState(menuPages[0].id);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
@@ -1513,6 +1513,8 @@ export default function PatternEditor() {
               height: "100%",
               background: "var(--card-bg)",
               borderRight: "1px solid var(--ui-divider)",
+              position: "relative",
+              zIndex: 100,
             }}
           >
             {menuPages.map((page) => (

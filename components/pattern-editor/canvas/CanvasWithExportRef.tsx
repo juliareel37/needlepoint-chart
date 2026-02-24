@@ -130,6 +130,7 @@ export function CanvasWithExportRef(props: any) {
   const [opacityPopoverLeft, setOpacityPopoverLeft] = useState<number | null>(null);
   const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
+  const [colorButtonHovered, setColorButtonHovered] = useState(false);
   const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used" | "favorites">("all");
   const [activePaletteFamily, setActivePaletteFamily] = useState("All");
@@ -789,8 +790,11 @@ export function CanvasWithExportRef(props: any) {
               <button
                 ref={colorButtonRef}
                 onClick={() => setColorMenuOpen((open) => !open)}
+                onMouseEnter={() => setColorButtonHovered(true)}
+                onMouseLeave={() => setColorButtonHovered(false)}
                 aria-pressed={colorMenuOpen}
                 aria-label="Select color"
+                data-active={colorMenuOpen ? "true" : undefined}
                 className="toolbar-button"
                 style={{
                   padding: "2px 6px",
@@ -804,14 +808,33 @@ export function CanvasWithExportRef(props: any) {
                 <span className="toolbar-icon" aria-hidden="true">
                   <span
                     style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 5,
+                      width: 26,
+                      height: 26,
+                      borderRadius: 6,
                       background: activeColor?.hex ?? "transparent",
-                      border: "1px solid rgba(0,0,0,0.2)",
-                      display: "inline-block",
+                      border: colorMenuOpen
+                        ? "2px solid var(--accent-strong)"
+                        : colorButtonHovered
+                          ? "1px solid var(--ui-border-strong)"
+                          : "1px solid rgba(255,255,255,0.4)",
+                      boxShadow: colorMenuOpen ? "0 0 0 2px var(--accent-soft)" : "none",
+                      display: "grid",
+                      placeItems: "center",
+                      padding: 0,
+                      transition: "border-color 120ms ease, box-shadow 120ms ease",
                     }}
-                  />
+                  >
+                    <span
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 4,
+                        background: activeColor?.hex ?? "transparent",
+                        display: "inline-block",
+                        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                      }}
+                    />
+                  </span>
                 </span>
               </button>
               {colorMenuOpen && colorMenuPos
