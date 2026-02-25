@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@clerk/nextjs";
 import type { Color } from "../../lib/grid";
@@ -97,8 +97,9 @@ export default function PatternEditor() {
   const [pendingTraceUnlock, setPendingTraceUnlock] = useState(false);
   const pendingTraceRestoreRef = useRef<TraceSnapshot | null>(null);
   const pendingTraceCellSizeBasisRef = useRef<number | null>(null);
+  const traceTransformBasisRef = useRef(1);
   const traceTransformActiveRef = useRef(false);
-  const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number } | null>(null);
+  const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number; basis: number } | null>(null);
   const [panMode, setPanMode] = useState(false);
   const prevToolRef = useRef<typeof tool>(tool);
   const prevPanModeRef = useRef<boolean>(panMode);
@@ -136,6 +137,7 @@ export default function PatternEditor() {
       scale: traceScale,
       offsetX: traceOffsetX,
       offsetY: traceOffsetY,
+      cellSizeBasis: traceTransformBasisRef.current,
       locked: traceLocked,
       editMode: traceEditMode,
       postUpload: tracePostUpload,
@@ -167,6 +169,12 @@ export default function PatternEditor() {
       setTraceFileName(snapshot.fileName ?? null);
       setTraceFileSize(snapshot.fileSize ?? null);
       setTraceOpacity(snapshot.opacity);
+      traceTransformBasisRef.current =
+        typeof snapshot.cellSizeBasis === "number" && Number.isFinite(snapshot.cellSizeBasis) && snapshot.cellSizeBasis > 0
+          ? snapshot.cellSizeBasis
+          : traceTransformBasisRef.current > 0
+            ? traceTransformBasisRef.current
+            : 1;
       setTraceScale(snapshot.scale);
       setTraceOffsetX(snapshot.offsetX);
       setTraceOffsetY(snapshot.offsetY);
@@ -305,6 +313,14 @@ export default function PatternEditor() {
     return () => observer.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    const el = canvasAreaRef.current;
+    if (!el) return;
+    const nextWidth = el.getBoundingClientRect().width;
+    if (!Number.isFinite(nextWidth) || nextWidth <= 0) return;
+    setCanvasAreaWidth((prev) => (Math.abs(prev - nextWidth) < 0.5 ? prev : nextWidth));
+  }, [sidebarCollapsed, isNarrow]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const narrowQuery = window.matchMedia("(max-width: 900px)");
@@ -333,17 +349,26 @@ export default function PatternEditor() {
   const sidebarCollapsedWidthMobileValue = `${sidebarCollapsedWidthMobile}px`;
   const canvasCardPadding = 0;
   const canvasInnerWidth = Math.max(1, canvasAreaWidth - canvasCardPadding * 2);
+  const canvasSizingWidth = canvasInnerWidth;
 
   const fitCellSize = useMemo(() => {
-    if (canvasInnerWidth <= 0) return 1;
-    return Math.max(1, canvasInnerWidth / gridW);
-  }, [canvasInnerWidth, gridW]);
+    if (canvasSizingWidth <= 0) return 1;
+    return Math.max(1, canvasSizingWidth / gridW);
+  }, [canvasSizingWidth, gridW]);
 
   const prevFitCellSizeRef = useRef(fitCellSize);
 
   const displayCellSize = useMemo(() => {
     return Math.max(1, Number((fitCellSize * zoom).toFixed(2)));
   }, [fitCellSize, zoom]);
+  const prevTraceRenderCellSizeRef = useRef(displayCellSize);
+  const traceRenderRatio =
+    traceTransformBasisRef.current > 0 && Number.isFinite(traceTransformBasisRef.current)
+      ? fitCellSize / traceTransformBasisRef.current
+      : 1;
+  const renderedTraceScale = traceScale * traceRenderRatio;
+  const renderedTraceOffsetX = traceOffsetX * traceRenderRatio;
+  const renderedTraceOffsetY = traceOffsetY * traceRenderRatio;
 
   useEffect(() => {
     if (!traceImageUrl) {
@@ -361,11 +386,16 @@ export default function PatternEditor() {
       setTraceImage(img);
       const pending = pendingTraceRestoreRef.current;
       if (pending && pending.imageUrl === traceImageUrl) {
+        traceTransformBasisRef.current =
+          typeof pending.cellSizeBasis === "number" && Number.isFinite(pending.cellSizeBasis) && pending.cellSizeBasis > 0
+            ? pending.cellSizeBasis
+            : fitCellSize;
         setTraceScale(pending.scale);
         setTraceOffsetX(pending.offsetX);
         setTraceOffsetY(pending.offsetY);
         // Reset the fit-cell baseline so the restore transform is not re-scaled again on load.
         prevFitCellSizeRef.current = fitCellSize;
+        prevTraceRenderCellSizeRef.current = displayCellSize;
         pendingTraceRestoreRef.current = null;
         return;
       }
@@ -375,6 +405,8 @@ export default function PatternEditor() {
         const savedBasis = pendingTraceCellSizeBasisRef.current;
         if (!savedBasis) {
           prevFitCellSizeRef.current = fitCellSize;
+          prevTraceRenderCellSizeRef.current = displayCellSize;
+          traceTransformBasisRef.current = fitCellSize;
         }
         debugTraceTransform("trace-image-onload", {
           hasPendingBasis: Boolean(savedBasis),
@@ -387,7 +419,7 @@ export default function PatternEditor() {
       fitTraceImageToGrid(img);
     };
     img.src = getSafeTraceImageUrl(traceImageUrl);
-  }, [traceImageUrl, fitCellSize, tracePostUpload]);
+  }, [traceImageUrl, tracePostUpload]);
 
   useEffect(() => {
     if (pendingTraceUnlock && !traceLocked) {
@@ -396,10 +428,37 @@ export default function PatternEditor() {
     }
   }, [pendingTraceUnlock, traceLocked]);
 
-  const containerWidth = Math.max(1, canvasInnerWidth);
+  const containerWidth = Math.max(1, canvasSizingWidth);
   const containerHeight = Math.max(1, Math.round((containerWidth * gridH) / gridW));
   const canvasW = gridW * displayCellSize;
   const canvasH = gridH * displayCellSize;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem("wippa:debugCanvasLayout") !== "1") return;
+    console.info("[wippa layout]", "sidebar/canvas", {
+      sidebarCollapsed,
+      isNarrow,
+      canvasAreaWidth,
+      canvasInnerWidth,
+      canvasSizingWidth,
+      fitCellSize,
+      displayCellSize,
+      containerWidth,
+      containerHeight,
+      at: new Date().toISOString(),
+    });
+  }, [
+    sidebarCollapsed,
+    isNarrow,
+    canvasAreaWidth,
+    canvasInnerWidth,
+    canvasSizingWidth,
+    fitCellSize,
+    displayCellSize,
+    containerWidth,
+    containerHeight,
+  ]);
 
   useEffect(() => {
     if (!traceImage) return;
@@ -418,32 +477,29 @@ export default function PatternEditor() {
       return;
     }
 
-    if (savedBasis !== fitCellSize) {
-      const ratio = fitCellSize / savedBasis;
-      setTraceScale((value) => value * ratio);
-      setTraceOffsetX((value) => value * ratio);
-      setTraceOffsetY((value) => value * ratio);
-      debugTraceTransform("trace-basis-convert-apply", {
-        imageUrl: traceImageUrl,
-        savedBasis,
-        fitCellSize,
-        ratio,
-        containerWidth,
-        containerHeight,
-      });
-    } else {
-      debugTraceTransform("trace-basis-convert-skip-same-basis", {
-        imageUrl: traceImageUrl,
-        savedBasis,
-        fitCellSize,
-        containerWidth,
-        containerHeight,
-      });
-    }
+    traceTransformBasisRef.current = savedBasis;
+    debugTraceTransform("trace-basis-adopt", {
+      imageUrl: traceImageUrl,
+      savedBasis,
+      fitCellSize,
+      containerWidth,
+      containerHeight,
+    });
 
     pendingTraceCellSizeBasisRef.current = null;
     prevFitCellSizeRef.current = fitCellSize;
-  }, [containerHeight, containerWidth, fitCellSize, setTraceOffsetX, setTraceOffsetY, setTraceScale, traceImage, traceImageUrl]);
+    prevTraceRenderCellSizeRef.current = displayCellSize;
+  }, [
+    containerHeight,
+    containerWidth,
+    fitCellSize,
+    displayCellSize,
+    setTraceOffsetX,
+    setTraceOffsetY,
+    setTraceScale,
+    traceImage,
+    traceImageUrl,
+  ]);
 
   const {
     lassoPoints,
@@ -630,6 +686,7 @@ export default function PatternEditor() {
     setTraceOffsetX,
     traceOffsetY,
     setTraceOffsetY,
+    traceCellSizeBasis: traceTransformBasisRef.current,
     setPendingTraceCellSizeBasis: (value) => {
       pendingTraceCellSizeBasisRef.current = value;
     },
@@ -664,6 +721,8 @@ export default function PatternEditor() {
   useEffect(() => {
     if (!traceImage) {
       prevFitCellSizeRef.current = fitCellSize;
+      prevTraceRenderCellSizeRef.current = displayCellSize;
+      traceTransformBasisRef.current = fitCellSize;
       return;
     }
     if (pendingTraceCellSizeBasisRef.current) {
@@ -677,19 +736,17 @@ export default function PatternEditor() {
     }
     const prev = prevFitCellSizeRef.current;
     if (prev > 0 && fitCellSize > 0 && prev !== fitCellSize) {
-      const ratio = fitCellSize / prev;
-      setTraceScale((value) => value * ratio);
-      setTraceOffsetX((value) => value * ratio);
-      setTraceOffsetY((value) => value * ratio);
-      debugTraceTransform("fitCellSize-rescale-apply", {
+      debugTraceTransform("fitCellSize-render-ratio-update", {
         imageUrl: traceImageUrl,
         prevFitCellSize: prev,
         fitCellSize,
-        ratio,
+        traceBasis: traceTransformBasisRef.current,
+        renderRatio: traceRenderRatio,
       });
     }
     prevFitCellSizeRef.current = fitCellSize;
-  }, [fitCellSize, traceImage, traceImageUrl]);
+    prevTraceRenderCellSizeRef.current = displayCellSize;
+  }, [fitCellSize, displayCellSize, traceImage, traceImageUrl, traceRenderRatio]);
 
   function clampZoom(value: number) {
     return Math.min(maxZoom, Math.max(minZoom, Number(value.toFixed(2))));
@@ -727,6 +784,7 @@ export default function PatternEditor() {
     const baseCanvasW = gridW * fitCellSize;
     const baseCanvasH = gridH * fitCellSize;
     const scale = Math.min(baseCanvasW / traceImage.width, baseCanvasH / traceImage.height);
+    traceTransformBasisRef.current = fitCellSize;
     setTraceScale(scale);
     setTraceOffsetX((baseCanvasW - traceImage.width * scale) / 2);
     setTraceOffsetY((baseCanvasH - traceImage.height * scale) / 2);
@@ -736,6 +794,7 @@ export default function PatternEditor() {
     const baseCanvasW = gridW * fitCellSize;
     const baseCanvasH = gridH * fitCellSize;
     const scale = Math.min(baseCanvasW / image.width, baseCanvasH / image.height);
+    traceTransformBasisRef.current = fitCellSize;
     setTraceScale(scale);
     setTraceOffsetX((baseCanvasW - image.width * scale) / 2);
     setTraceOffsetY((baseCanvasH - image.height * scale) / 2);
@@ -874,6 +933,7 @@ export default function PatternEditor() {
         scale: traceScale,
         x: traceOffsetX,
         y: traceOffsetY,
+        basis: traceTransformBasisRef.current,
       };
       setPendingTraceUnlock(true);
       setTracePostUpload(false);
@@ -890,6 +950,7 @@ export default function PatternEditor() {
         scale: traceScale,
         x: traceOffsetX,
         y: traceOffsetY,
+        basis: traceTransformBasisRef.current,
       };
       setPendingTraceUnlock(true);
       setTracePostUpload(false);
@@ -904,6 +965,7 @@ export default function PatternEditor() {
     if (traceEditMode) {
       const prevTransform = prevTraceTransformRef.current;
       if (prevTransform) {
+        traceTransformBasisRef.current = prevTransform.basis;
         setTraceScale(prevTransform.scale);
         setTraceOffsetX(prevTransform.x);
         setTraceOffsetY(prevTransform.y);
@@ -1116,14 +1178,12 @@ export default function PatternEditor() {
           minWidth: 0,
           height: "100%",
           minHeight: 0,
-          overflow: "visible",
+          overflow: "hidden",
           gridTemplateColumns: isNarrow
             ? "1fr"
-            : sidebarCollapsed
-              ? `${menuWidth}px minmax(0, 1fr)`
-              : `${menuWidth}px ${sidebarWidth}px minmax(0, 1fr)`,
-          transition: "grid-template-columns 220ms ease",
+            : `${menuWidth}px ${sidebarCollapsed ? 0 : sidebarWidth}px minmax(0, 1fr)`,
           position: "relative",
+          background: "var(--muted-bg)",
         }}
       >
         {headerActionsNode &&
@@ -1186,7 +1246,9 @@ export default function PatternEditor() {
                     onClick={() => {
                       setFileMenuOpen(false);
                       if (typeof window !== "undefined") {
-                        window.open(window.location.href, "_blank", "noopener,noreferrer");
+                        const nextUrl = new URL(window.location.href);
+                        nextUrl.searchParams.set("newWip", "1");
+                        window.open(nextUrl.toString(), "_blank", "noopener,noreferrer");
                       } else {
                         startNewWip();
                       }
@@ -1560,7 +1622,7 @@ export default function PatternEditor() {
           className="pattern-sidebar"
           ref={sidebarRef}
           style={{
-            display: sidebarCollapsed ? "none" : "grid",
+            display: isNarrow ? (sidebarCollapsed ? "none" : "grid") : "grid",
             gap: 16,
             alignContent: "start",
             minWidth: 0,
@@ -1582,7 +1644,6 @@ export default function PatternEditor() {
                 ? 0
                 : sidebarExpandedWidth,
             zIndex: isNarrow ? 80 : 90,
-            transition: "width 220ms ease",
           }}
         >
           <div
@@ -1600,7 +1661,6 @@ export default function PatternEditor() {
               overflowX: "hidden",
               opacity: sidebarCollapsed ? 0 : 1,
               transform: sidebarCollapsed ? "translateX(-6px)" : "translateX(0)",
-              transition: "opacity 180ms ease, transform 200ms ease",
               pointerEvents: sidebarCollapsed ? "none" : "auto",
             }}
           >
@@ -1775,18 +1835,19 @@ export default function PatternEditor() {
             {
               minWidth: 0,
               paddingInline: 0,
-              marginLeft: isNarrow && sidebarCollapsed ? 0 : 0,
-              transition: "margin-left 220ms ease",
+              width: "100%",
               height: "100%",
               display: "flex",
               flexDirection: "column",
               "--canvas-card-radius": "0px",
               "--canvas-card-shadow": "none",
+              "--canvas-card-bg": "var(--muted-bg)",
               background: "var(--muted-bg)",
               overflow: "visible",
               position: "relative",
               zIndex: 1,
-            } as React.CSSProperties & Record<"--canvas-card-radius" | "--canvas-card-shadow", string>
+            } as React.CSSProperties &
+              Record<"--canvas-card-radius" | "--canvas-card-shadow" | "--canvas-card-bg", string>
           }
         >
           {/* Canvas area */}
@@ -1798,6 +1859,7 @@ export default function PatternEditor() {
               flex: "1 1 0",
               minHeight: 0,
               height: "100%",
+              background: "var(--muted-bg)",
             }}
           >
             <CanvasWithExportRef
@@ -1842,19 +1904,23 @@ export default function PatternEditor() {
               traceImage={traceImage}
               traceImageUrl={traceImageUrl}
               traceOpacity={traceOpacity}
-              traceScale={traceScale}
-              traceOffsetX={traceOffsetX}
-              traceOffsetY={traceOffsetY}
+              traceScale={renderedTraceScale}
+              traceOffsetX={renderedTraceOffsetX}
+              traceOffsetY={renderedTraceOffsetY}
               traceAdjustMode={traceImage ? traceEditMode || tracePostUpload : false}
               traceLocked={traceLocked}
               onToggleTraceLock={handleToggleTraceLock}
               onTraceTransformStart={beginTraceTransform}
               onTraceTransformEnd={endTraceTransform}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
+                traceTransformBasisRef.current = fitCellSize;
                 setTraceOffsetX(x);
                 setTraceOffsetY(y);
               }}
-              onTraceScaleChange={(value: number) => setTraceScale(value)}
+              onTraceScaleChange={(value: number) => {
+                traceTransformBasisRef.current = fitCellSize;
+                setTraceScale(value);
+              }}
               panMode={panMode}
               onUndo={undo}
               onRedo={redo}

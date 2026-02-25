@@ -7,6 +7,7 @@ export type TraceSnapshot = {
   scale: number;
   offsetX: number;
   offsetY: number;
+  cellSizeBasis?: number;
   locked: boolean;
   editMode: boolean;
   postUpload: boolean;

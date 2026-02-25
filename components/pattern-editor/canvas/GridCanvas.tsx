@@ -131,6 +131,15 @@ export default function GridCanvas(props: Props) {
     gridBackground,
   } = props;
 
+  const debugCanvasLayout = (event: string, details?: Record<string, unknown>) => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem("wippa:debugCanvasLayout") !== "1") return;
+    console.info("[wippa canvas-layout]", event, {
+      ...details,
+      at: new Date().toISOString(),
+    });
+  };
+
   const canvasW = width * cellSize;
   const canvasH = height * cellSize;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -155,7 +164,9 @@ export default function GridCanvas(props: Props) {
   const prevZoomRef = useRef(zoom);
   const prevCellSizeRef = useRef(cellSize);
   const prevBaseOffsetRef = useRef({ x: 0, y: 0 });
+  const prevContainerSizeRef = useRef({ width: containerWidth, height: containerHeight });
   const prevPanRef = useRef({ x: 0, y: 0 });
+  const skipNextClampRef = useRef(false);
   const zoomAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const lastClampSignatureRef = useRef<string | null>(null);
   const clampDebugRef = useRef<{ count: number; last?: string }>({ count: 0 });
@@ -267,9 +278,8 @@ export default function GridCanvas(props: Props) {
     const edgeMaxX = -baseOffsetX;
     const edgeMinY = containerHeight - baseOffsetY - canvasH;
     const edgeMaxY = -baseOffsetY;
-    const baseOverscroll = Math.min(containerWidth, containerHeight) * 0.25;
-    const overscrollX = baseOverscroll + Math.max(0, baseOffsetY - baseOffsetX);
-    const overscrollY = baseOverscroll + Math.max(0, baseOffsetX - baseOffsetY);
+    const overscrollX = containerWidth * 0.25;
+    const overscrollY = containerHeight * 0.25;
     const minX = Math.min(edgeMinX, edgeMaxX) - overscrollX;
     const maxX = Math.max(edgeMinX, edgeMaxX) + overscrollX;
     const minY = Math.min(edgeMinY, edgeMaxY) - overscrollY;
@@ -294,16 +304,52 @@ export default function GridCanvas(props: Props) {
     const prevZoom = prevZoomRef.current;
     const prevCellSize = prevCellSizeRef.current;
     const prevBase = prevBaseOffsetRef.current;
-    if (prevZoom !== zoom && Number.isFinite(prevCellSize) && prevCellSize > 0) {
-      const anchor = zoomAnchorRef.current;
-      const centerX = anchor ? anchor.x : containerWidth / 2;
-      const centerY = anchor ? anchor.y : containerHeight / 2;
+    const prevContainer = prevContainerSizeRef.current;
+    const zoomChanged = prevZoom !== zoom;
+    const cellSizeChanged = prevCellSize !== cellSize;
+    const widthChanged = prevContainer.width !== containerWidth;
+    const heightChanged = prevContainer.height !== containerHeight;
+    const layoutChanged =
+      cellSizeChanged || widthChanged || heightChanged;
+    if ((zoomChanged || layoutChanged) && Number.isFinite(prevCellSize) && prevCellSize > 0) {
+      const anchor = zoomChanged ? zoomAnchorRef.current : null;
+      const prevCenterX = anchor ? anchor.x : prevContainer.width / 2;
+      const prevCenterY = anchor ? anchor.y : prevContainer.height / 2;
+      const nextCenterX = anchor ? anchor.x : containerWidth / 2;
+      const nextCenterY = anchor ? anchor.y : containerHeight / 2;
       const prevPan = prevPanRef.current;
-      const gridCenterX = (centerX - prevBase.x - prevPan.x) / prevCellSize;
-      const gridCenterY = (centerY - prevBase.y - prevPan.y) / prevCellSize;
-      if (Number.isFinite(gridCenterX) && Number.isFinite(gridCenterY)) {
-        const nextPanX = centerX - baseOffsetX - gridCenterX * cellSize;
-        const nextPanY = centerY - baseOffsetY - gridCenterY * cellSize;
+      const shouldRecomputeX = zoomChanged || cellSizeChanged || widthChanged;
+      const shouldRecomputeY = zoomChanged || cellSizeChanged || heightChanged;
+      const gridCenterX = (prevCenterX - prevBase.x - prevPan.x) / prevCellSize;
+      const gridCenterY = (prevCenterY - prevBase.y - prevPan.y) / prevCellSize;
+      const nextPanX =
+        shouldRecomputeX && Number.isFinite(gridCenterX)
+          ? nextCenterX - baseOffsetX - gridCenterX * cellSize
+          : prevPan.x;
+      const nextPanY =
+        shouldRecomputeY && Number.isFinite(gridCenterY)
+          ? nextCenterY - baseOffsetY - gridCenterY * cellSize
+          : prevPan.y;
+      if (Number.isFinite(nextPanX) && Number.isFinite(nextPanY)) {
+        debugCanvasLayout("preserve-anchor", {
+          zoomChanged,
+          cellSizeChanged,
+          widthChanged,
+          heightChanged,
+          prevContainerWidth: prevContainer.width,
+          nextContainerWidth: containerWidth,
+          prevContainerHeight: prevContainer.height,
+          nextContainerHeight: containerHeight,
+          prevCellSize,
+          nextCellSize: cellSize,
+          prevPanX: prevPan.x,
+          prevPanY: prevPan.y,
+          nextPanX,
+          nextPanY,
+          baseOffsetX,
+          baseOffsetY,
+        });
+        skipNextClampRef.current = true;
         setPanOffset((prev) => {
           const next = clampPan(nextPanX, nextPanY);
           if (next.x === prev.x && next.y === prev.y) return prev;
@@ -317,6 +363,7 @@ export default function GridCanvas(props: Props) {
     prevZoomRef.current = zoom;
     prevCellSizeRef.current = cellSize;
     prevBaseOffsetRef.current = { x: baseOffsetX, y: baseOffsetY };
+    prevContainerSizeRef.current = { width: containerWidth, height: containerHeight };
   }, [zoom, cellSize, containerWidth, containerHeight, baseOffsetX, baseOffsetY]);
 
   useLayoutEffect(() => {
@@ -327,6 +374,11 @@ export default function GridCanvas(props: Props) {
     const signature = `${canvasW}:${canvasH}:${containerWidth}:${containerHeight}`;
     if (lastClampSignatureRef.current === signature) return;
     lastClampSignatureRef.current = signature;
+    if (skipNextClampRef.current) {
+      debugCanvasLayout("clamp-skip", { signature });
+      skipNextClampRef.current = false;
+      return;
+    }
     if (clampDebugRef.current.count < 1) {
       clampDebugRef.current.count += 1;
       clampDebugRef.current.last = signature;
@@ -340,6 +392,20 @@ export default function GridCanvas(props: Props) {
     }
     setPanOffset((prev) => {
       const next = clampPan(prev.x, prev.y);
+      if (next.x !== prev.x || next.y !== prev.y) {
+        debugCanvasLayout("clamp-apply", {
+          signature,
+          prevPanX: prev.x,
+          prevPanY: prev.y,
+          nextPanX: next.x,
+          nextPanY: next.y,
+          containerWidth,
+          containerHeight,
+          cellSize,
+          baseOffsetX,
+          baseOffsetY,
+        });
+      }
       if (next.x === prev.x && next.y === prev.y) return prev;
       return next;
     });
@@ -403,6 +469,36 @@ export default function GridCanvas(props: Props) {
   const snapToDevicePixel = (value: number) => Math.round(value * devicePixelRatio) / devicePixelRatio;
   const drawTranslateX = shouldSnapDrawTranslate ? snapToDevicePixel(rawDrawTranslateX) : rawDrawTranslateX;
   const drawTranslateY = shouldSnapDrawTranslate ? snapToDevicePixel(rawDrawTranslateY) : rawDrawTranslateY;
+
+  useEffect(() => {
+    debugCanvasLayout("snapshot", {
+      containerWidth,
+      containerHeight,
+      canvasW,
+      canvasH,
+      cellSize,
+      zoom,
+      baseOffsetX,
+      baseOffsetY,
+      panX: panOffset.x,
+      panY: panOffset.y,
+      drawTranslateX,
+      drawTranslateY,
+    });
+  }, [
+    containerWidth,
+    containerHeight,
+    canvasW,
+    canvasH,
+    cellSize,
+    zoom,
+    baseOffsetX,
+    baseOffsetY,
+    panOffset.x,
+    panOffset.y,
+    drawTranslateX,
+    drawTranslateY,
+  ]);
 
   const paletteRgb = useMemo(() => {
     const arr: Array<{ id: number; r: number; g: number; b: number }> = [];

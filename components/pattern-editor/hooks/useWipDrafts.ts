@@ -53,6 +53,7 @@ type UseWipDraftsArgs = {
   setTraceOffsetX: (value: number) => void;
   traceOffsetY: number;
   setTraceOffsetY: (value: number) => void;
+  traceCellSizeBasis: number;
   setPendingTraceCellSizeBasis: (value: number | null) => void;
   traceLocked: boolean;
   setTraceLocked: (value: boolean) => void;
@@ -88,6 +89,8 @@ const LOCAL_DRAFT_BACKUP_KEY_PREFIX = "wippa:localDraftBackup";
 const LOCAL_DRAFT_BACKUP_LAST_KEY = "wippa:localDraftBackup:lastKey";
 const LAST_ACTIVE_DRAFT_ID_KEY = "wippa:lastActiveDraftId";
 const SESSION_REFRESH_RESUME_KEY = "wippa:refreshResumeDraft";
+const NEW_WIP_QUERY_PARAM = "newWip";
+const AUTO_LOAD_LAST_ACTIVE_DRAFT_ON_STARTUP = false;
 
 function debugAutosave(event: string, details?: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -222,6 +225,7 @@ export function useWipDrafts({
   setTraceOffsetX,
   traceOffsetY,
   setTraceOffsetY,
+  traceCellSizeBasis,
   setPendingTraceCellSizeBasis,
   traceLocked,
   setTraceLocked,
@@ -272,6 +276,7 @@ export function useWipDrafts({
   const refreshResumeHandledRef = useRef(false);
   const localStartupRestoreHandledRef = useRef(false);
   const activeDraftStartupLoadHandledRef = useRef(false);
+  const freshStartIntentRef = useRef(false);
   const activeDraftStartupLoadTimerRef = useRef<number | null>(null);
   const suppressUnloadPersistRef = useRef(false);
   const prevSignedInRef = useRef(isSignedIn);
@@ -350,6 +355,17 @@ export function useWipDrafts({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(NEW_WIP_QUERY_PARAM) !== "1") return;
+    freshStartIntentRef.current = true;
+    url.searchParams.delete(NEW_WIP_QUERY_PARAM);
+    window.history.replaceState(null, "", url.toString());
+    debugAutosave("startup-fresh-intent", {});
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (freshStartIntentRef.current) return;
     if (refreshResumeHandledRef.current) return;
     if (versionPreview) return;
     if (currentDraftId) return;
@@ -389,6 +405,7 @@ export function useWipDrafts({
   }, [currentDraftId, isDirty, versionPreview]);
 
   useEffect(() => {
+    if (freshStartIntentRef.current) return;
     if (!isSignedIn) {
       pendingRestoreHandledRef.current = false;
       return;
@@ -422,6 +439,8 @@ export function useWipDrafts({
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!authLoaded) return;
+    if (!AUTO_LOAD_LAST_ACTIVE_DRAFT_ON_STARTUP) return;
+    if (freshStartIntentRef.current) return;
     if (refreshResumeHandledRef.current) return;
     if (!isSignedIn) {
       activeDraftStartupLoadHandledRef.current = false;
@@ -601,6 +620,7 @@ export function useWipDrafts({
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!authLoaded) return;
+    if (freshStartIntentRef.current) return;
     if (refreshResumeHandledRef.current) return;
     if (localStartupRestoreHandledRef.current) return;
     if (versionPreview) return;
@@ -783,7 +803,7 @@ export function useWipDrafts({
         scale: traceScale,
         offsetX: traceOffsetX,
         offsetY: traceOffsetY,
-        cellSizeBasis: fitCellSize,
+        cellSizeBasis: traceCellSizeBasis,
         locked: traceLocked,
       },
     };
@@ -843,7 +863,7 @@ export function useWipDrafts({
         scale: traceScale,
         offsetX: traceOffsetX,
         offsetY: traceOffsetY,
-        cellSizeBasis: fitCellSize,
+        cellSizeBasis: traceCellSizeBasis,
         locked: traceLocked,
       },
     };

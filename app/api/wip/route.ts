@@ -37,6 +37,14 @@ function toPrismaSaveSource(value: SaveSourceInput | undefined) {
   return value === "autosave" ? "AUTOSAVE" : "MANUAL";
 }
 
+function isUnknownPrismaArgumentError(error: unknown, argumentName: string) {
+  return (
+    error instanceof Error &&
+    error.message.includes("Unknown argument") &&
+    error.message.includes(`\`${argumentName}\``)
+  );
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) {
@@ -82,33 +90,62 @@ export async function POST(req: Request) {
   const versioningEnabled = isWipVersioningEnabled();
   const shouldVersion = versioningEnabled || forceVersion;
 
-  const saved = await prisma.$transaction(async (tx) => {
-    const created = await tx.patternDraft.create({
-      data: {
-        userId,
-        title,
-        data: draft,
-        lastSaveSource: saveSource,
-        ...(shouldVersion
-          ? {
-              lastVersionAt: now,
-              lastVersionHash: dataHash,
-            }
-          : {}),
-      },
+  const persistDraft = async (includeSaveSourceFields: boolean) => {
+    const createData = {
+      userId,
+      title,
+      data: draft,
+      ...(includeSaveSourceFields ? { lastSaveSource: saveSource } : {}),
+      ...(shouldVersion
+        ? {
+            lastVersionAt: now,
+            lastVersionHash: dataHash,
+          }
+        : {}),
+    };
+
+    if (!shouldVersion) {
+      return prisma.patternDraft.create({
+        data: createData,
+      });
+    }
+
+    const created = await prisma.patternDraft.create({
+      data: createData,
     });
-    if (shouldVersion) {
-      await tx.patternVersion.create({
+
+    try {
+      await prisma.patternVersion.create({
         data: {
           draftId: created.id,
           data: draft,
           dataHash,
-          saveSource,
+          ...(includeSaveSourceFields ? { saveSource } : {}),
         },
       });
+      return created;
+    } catch (error) {
+      await prisma.patternDraft.delete({ where: { id: created.id } }).catch(() => null);
+      throw error;
     }
-    return created;
-  });
+  };
+
+  let saved: Awaited<ReturnType<typeof persistDraft>>;
+  try {
+    saved = await persistDraft(true);
+  } catch (error) {
+    if (
+      isUnknownPrismaArgumentError(error, "lastSaveSource") ||
+      isUnknownPrismaArgumentError(error, "saveSource")
+    ) {
+      console.warn(
+        "Prisma client/schema is missing save source fields; retrying WIP create without saveSource metadata."
+      );
+      saved = await persistDraft(false);
+    } else {
+      throw error;
+    }
+  }
 
   return NextResponse.json({
     ok: true,
