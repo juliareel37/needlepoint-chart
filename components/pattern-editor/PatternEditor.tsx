@@ -133,7 +133,6 @@ export default function PatternEditor() {
     (): TraceSnapshot => ({
       imageUrl: traceImageUrl,
       image: traceImage,
-      opacity: traceOpacity,
       scale: traceScale,
       offsetX: traceOffsetX,
       offsetY: traceOffsetY,
@@ -153,7 +152,6 @@ export default function PatternEditor() {
       traceLocked,
       traceOffsetX,
       traceOffsetY,
-      traceOpacity,
       tracePostUpload,
       traceScale,
     ]
@@ -168,7 +166,6 @@ export default function PatternEditor() {
       setTraceImageUrl(snapshot.imageUrl);
       setTraceFileName(snapshot.fileName ?? null);
       setTraceFileSize(snapshot.fileSize ?? null);
-      setTraceOpacity(snapshot.opacity);
       traceTransformBasisRef.current =
         typeof snapshot.cellSizeBasis === "number" && Number.isFinite(snapshot.cellSizeBasis) && snapshot.cellSizeBasis > 0
           ? snapshot.cellSizeBasis
@@ -189,7 +186,6 @@ export default function PatternEditor() {
       setTraceLocked,
       setTraceOffsetX,
       setTraceOffsetY,
-      setTraceOpacity,
       setTraceScale,
     ]
   );
@@ -206,10 +202,13 @@ export default function PatternEditor() {
   const minZoom = Math.max(0.05, Math.min(baseMinZoom, minZoomOverride ?? baseMinZoom));
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
+  const [showRuler, setShowRuler] = useState(true);
   const [fitAfterResize, setFitAfterResize] = useState<{ w: number; h: number } | null>(null);
   const [fitToken, setFitToken] = useState<number | undefined>(undefined);
 
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
+  const pendingCanvasFlipRectRef = useRef<DOMRect | null>(null);
+  const canvasFlipAnimationRef = useRef<Animation | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
   const [headerActionsNode, setHeaderActionsNode] = useState<HTMLElement | null>(null);
   const [headerTitleNode, setHeaderTitleNode] = useState<HTMLElement | null>(null);
@@ -320,6 +319,65 @@ export default function PatternEditor() {
     if (!Number.isFinite(nextWidth) || nextWidth <= 0) return;
     setCanvasAreaWidth((prev) => (Math.abs(prev - nextWidth) < 0.5 ? prev : nextWidth));
   }, [sidebarCollapsed, isNarrow]);
+
+  useLayoutEffect(() => {
+    const before = pendingCanvasFlipRectRef.current;
+    if (!before) return;
+    pendingCanvasFlipRectRef.current = null;
+    if (isNarrow) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const el = canvasAreaRef.current;
+    if (!el) return;
+    const after = el.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top - after.top;
+    const sx = after.width > 0 ? before.width / after.width : 1;
+    const sy = after.height > 0 ? before.height / after.height : 1;
+    const hasMotion =
+      Math.abs(dx) > 0.5 ||
+      Math.abs(dy) > 0.5 ||
+      Math.abs(sx - 1) > 0.002 ||
+      Math.abs(sy - 1) > 0.002;
+    if (!hasMotion) return;
+    canvasFlipAnimationRef.current?.cancel();
+    canvasFlipAnimationRef.current = el.animate(
+      [
+        { transformOrigin: "top left", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+        { transformOrigin: "top left", transform: "translate(0px, 0px) scale(1, 1)" },
+      ],
+      {
+        duration: 150,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        fill: "both",
+      }
+    );
+    canvasFlipAnimationRef.current.onfinish = () => {
+      if (canvasFlipAnimationRef.current) {
+        canvasFlipAnimationRef.current = null;
+      }
+    };
+    canvasFlipAnimationRef.current.oncancel = () => {
+      if (canvasFlipAnimationRef.current) {
+        canvasFlipAnimationRef.current = null;
+      }
+    };
+  }, [sidebarCollapsed, isNarrow]);
+
+  const setSidebarCollapsedWithFlip = useCallback(
+    (next: React.SetStateAction<boolean>) => {
+      if (!isNarrow) {
+        const el = canvasAreaRef.current;
+        if (el) {
+          pendingCanvasFlipRectRef.current = el.getBoundingClientRect();
+        }
+      } else {
+        pendingCanvasFlipRectRef.current = null;
+      }
+      setSidebarCollapsed(next);
+    },
+    [isNarrow]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1198,6 +1256,7 @@ export default function PatternEditor() {
               width={gridW}
               height={gridH}
               cellSize={EXPORT_CELL_SIZE}
+              threadView={threadView}
             />,
             headerActionsNode
           )}
@@ -1513,7 +1572,7 @@ export default function PatternEditor() {
         {!isNarrow && !sidebarCollapsed && (
           <button
             type="button"
-            onClick={() => setSidebarCollapsed((prev) => !prev)}
+            onClick={() => setSidebarCollapsedWithFlip((prev) => !prev)}
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
               position: "absolute",
@@ -1540,7 +1599,7 @@ export default function PatternEditor() {
         {isNarrow && !sidebarCollapsed && (
           <button
             type="button"
-            onClick={() => setSidebarCollapsed((prev) => !prev)}
+            onClick={() => setSidebarCollapsedWithFlip((prev) => !prev)}
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
               position: "fixed",
@@ -1585,10 +1644,10 @@ export default function PatternEditor() {
                 type="button"
                 onClick={() => {
                   if (activeMenuId === page.id) {
-                    setSidebarCollapsed((prev) => !prev);
+                    setSidebarCollapsedWithFlip((prev) => !prev);
                   } else {
                     setActiveMenuId(page.id);
-                    setSidebarCollapsed(false);
+                    setSidebarCollapsedWithFlip(false);
                   }
                 }}
                 title={page.label}
@@ -1875,6 +1934,7 @@ export default function PatternEditor() {
               containerWidth={containerWidth}
               containerHeight={containerHeight}
               showGridlines={showGridlines}
+              showRuler={showRuler}
               gridBackground="#ffffff"
               tool={tool}
               onToolChange={(nextTool: "paint" | "eraser" | "fill" | "eyedropper" | "lasso") => {
@@ -1962,6 +2022,7 @@ export default function PatternEditor() {
               onFilterSelectEnd={endFilterSelection}
               isNarrow={isNarrow}
               setShowGridlines={setShowGridlines}
+              setShowRuler={setShowRuler}
               setThreadView={setThreadView}
               setTraceOpacity={setTraceOpacity}
               tracePostUpload={tracePostUpload}

@@ -47,6 +47,7 @@ type UseGridRendererArgs = {
   filterEditMode?: boolean;
   zoom: number;
   showGridlines: boolean;
+  showRuler: boolean;
   gridBackground?: string;
 };
 
@@ -86,11 +87,66 @@ export function useGridRenderer({
   filterEditMode = false,
   zoom,
   showGridlines,
+  showRuler,
   gridBackground,
 }: UseGridRendererArgs) {
+  const THREAD_PAINTED_CELL_BG = "#6b7280";
+  const AXIS_STEP = 5;
   const stitchCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const stitchStyleVersion = 6;
   const lastSurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
+  const cellLayerRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const layer = cellLayerRef.current ?? document.createElement("canvas");
+    const layerW = Math.max(1, Math.round(canvasW));
+    const layerH = Math.max(1, Math.round(canvasH));
+    if (layer.width !== layerW) layer.width = layerW;
+    if (layer.height !== layerH) layer.height = layerH;
+    const layerCtx = layer.getContext("2d");
+    if (!layerCtx) return;
+
+    layerCtx.clearRect(0, 0, layerW, layerH);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const colorId = grid[idx(x, y, width)];
+        if (colorId === 0) continue;
+        const color = paletteById.get(colorId);
+        if (!color) continue;
+        if (threadView) {
+          const x0 = Math.round(x * cellSize);
+          const y0 = Math.round(y * cellSize);
+          const x1 = Math.round((x + 1) * cellSize);
+          const y1 = Math.round((y + 1) * cellSize);
+          layerCtx.fillStyle = THREAD_PAINTED_CELL_BG;
+          layerCtx.fillRect(x0, y0, x1 - x0, y1 - y0);
+          const stitch = getThreadStitchCanvas(color.hex, cellSize, stitchCacheRef.current, stitchStyleVersion);
+          layerCtx.drawImage(stitch, x * cellSize, y * cellSize, cellSize, cellSize);
+        } else {
+          const x0 = Math.round(x * cellSize);
+          const y0 = Math.round(y * cellSize);
+          const x1 = Math.round((x + 1) * cellSize);
+          const y1 = Math.round((y + 1) * cellSize);
+          layerCtx.fillStyle = color.hex;
+          layerCtx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+
+        if (showSymbols) {
+          const symbol = symbolForColorId(color.id, symbolMap);
+          if (!symbol) continue;
+          const centerX = x * cellSize + cellSize / 2;
+          const centerY = y * cellSize + cellSize / 2;
+          layerCtx.fillStyle = contrastForHex(color.hex);
+          layerCtx.textAlign = "center";
+          layerCtx.textBaseline = "middle";
+          layerCtx.font = `700 ${Math.max(6, Math.floor(cellSize * 0.7))}px ui-sans-serif, system-ui, sans-serif`;
+          layerCtx.fillText(symbol, centerX, centerY + 0.5);
+        }
+      }
+    }
+
+    cellLayerRef.current = layer;
+  }, [width, height, grid, paletteById, symbolMap, cellSize, canvasW, canvasH, threadView, showSymbols]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -136,7 +192,7 @@ export function useGridRenderer({
     // Grid background (only the grid area).
     ctx.save();
     ctx.translate(drawTranslateX, drawTranslateY);
-    ctx.fillStyle = gridBackground ?? (darkCanvas ? "#000000" : "#ffffff");
+    ctx.fillStyle = threadView ? "#ffffff" : gridBackground ?? (darkCanvas ? "#000000" : "#ffffff");
     ctx.fillRect(0, 0, canvasW, canvasH);
     ctx.restore();
 
@@ -163,45 +219,14 @@ export function useGridRenderer({
       ctx.restore();
     }
 
-    // Cells
+    // Cells (cached to avoid full per-frame redraw during pan/hover interactions)
     const gridAlpha = Math.min(1, Math.max(0, 1 - traceOpacity));
     ctx.save();
     ctx.translate(drawTranslateX, drawTranslateY);
     ctx.globalAlpha = gridAlpha;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const colorId = grid[idx(x, y, width)];
-        if (colorId === 0) continue;
-        const color = paletteById.get(colorId);
-        if (!color) continue;
-        ctx.fillStyle = color.hex;
-        if (threadView) {
-          const stitch = getThreadStitchCanvas(color.hex, cellSize, stitchCacheRef.current, stitchStyleVersion);
-          ctx.drawImage(stitch, x * cellSize, y * cellSize, cellSize, cellSize);
-        } else {
-          const x0 = Math.round(x * cellSize);
-          const y0 = Math.round(y * cellSize);
-          const x1 = Math.round((x + 1) * cellSize);
-          const y1 = Math.round((y + 1) * cellSize);
-          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        }
-
-        if (showSymbols) {
-          const symbol = symbolForColorId(color.id, symbolMap);
-          if (symbol) {
-            const centerX = x * cellSize + cellSize / 2;
-            const centerY = y * cellSize + cellSize / 2;
-            ctx.save();
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = contrastForHex(color.hex);
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.font = `700 ${Math.max(6, Math.floor(cellSize * 0.7))}px ui-sans-serif, system-ui, sans-serif`;
-            ctx.fillText(symbol, centerX, centerY + 0.5);
-            ctx.restore();
-          }
-        }
-      }
+    const cellLayer = cellLayerRef.current;
+    if (cellLayer) {
+      ctx.drawImage(cellLayer, 0, 0);
     }
     ctx.restore();
 
@@ -209,19 +234,21 @@ export function useGridRenderer({
     const darkGridSurface =
       darkCanvas || (typeof gridBackground === "string" && gridBackground.toLowerCase() !== "#ffffff");
     const gridlineStroke = darkGridSurface ? "rgba(130,142,160,0.62)" : "rgba(0,0,0,0.18)";
+    const majorGridlineStroke = darkGridSurface ? "rgba(183,193,207,0.9)" : "rgba(0,0,0,0.42)";
 
     if (showGridlines) {
       ctx.save();
       ctx.translate(drawTranslateX, drawTranslateY);
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = gridlineStroke;
-      ctx.lineWidth = 1;
       const maxX = Math.max(0, canvasW - 0.5);
       const maxY = Math.max(0, canvasH - 0.5);
 
       // Vertical lines
       for (let x = 0; x <= width; x++) {
+        const isMajor = x % 5 === 0;
         const px = Math.min(maxX, Math.round(x * cellSize) + 0.5);
+        ctx.strokeStyle = isMajor ? majorGridlineStroke : gridlineStroke;
+        ctx.lineWidth = isMajor ? 1.6 : 1;
         ctx.beginPath();
         ctx.moveTo(px, 0);
         ctx.lineTo(px, canvasH);
@@ -229,7 +256,10 @@ export function useGridRenderer({
       }
       // Horizontal lines
       for (let y = 0; y <= height; y++) {
+        const isMajor = y % 5 === 0;
         const py = Math.min(maxY, Math.round(y * cellSize) + 0.5);
+        ctx.strokeStyle = isMajor ? majorGridlineStroke : gridlineStroke;
+        ctx.lineWidth = isMajor ? 1.6 : 1;
         ctx.beginPath();
         ctx.moveTo(0, py);
         ctx.lineTo(canvasW, py);
@@ -246,6 +276,51 @@ export function useGridRenderer({
       const w = Math.max(0, canvasW - 1);
       const h = Math.max(0, canvasH - 1);
       ctx.strokeRect(0.5, 0.5, w, h);
+      ctx.restore();
+    }
+
+    if (showRuler) {
+      ctx.save();
+      ctx.translate(drawTranslateX, drawTranslateY);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = darkGridSurface ? "rgba(229,235,241,0.95)" : "rgba(31,41,55,0.9)";
+      const rulerScale = zoom < 1 ? Math.max(0.6, zoom) : 1;
+      const rulerFontSize = Math.max(6, Math.round(10 * rulerScale));
+      const rulerLabelInset = Math.max(4, Math.round(rulerFontSize * 0.6));
+      ctx.font = `600 ${rulerFontSize}px ui-sans-serif, system-ui, sans-serif`;
+
+      const topLabelY = -rulerLabelInset;
+      const bottomLabelY = canvasH + rulerLabelInset;
+      const leftLabelX = -rulerLabelInset;
+      const rightLabelX = canvasW + rulerLabelInset;
+
+      // Origin marker
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("0", leftLabelX, topLabelY);
+
+      // Column markers (top + bottom)
+      for (let x = AXIS_STEP; x <= width; x += AXIS_STEP) {
+        const px = Math.round(x * cellSize);
+        const label = String(x);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(label, px, topLabelY);
+        ctx.textBaseline = "top";
+        ctx.fillText(label, px, bottomLabelY);
+      }
+
+      // Row markers (left + right)
+      for (let y = AXIS_STEP; y <= height; y += AXIS_STEP) {
+        const py = Math.round(y * cellSize);
+        const label = String(y);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, leftLabelX, py);
+        ctx.textAlign = "left";
+        ctx.fillText(label, rightLabelX, py);
+      }
+
       ctx.restore();
     }
 
@@ -467,6 +542,7 @@ export function useGridRenderer({
     symbolMap,
     cellSize,
     showGridlines,
+    showRuler,
     canvasW,
     canvasH,
     containerWidth,

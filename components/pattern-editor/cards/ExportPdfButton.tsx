@@ -15,6 +15,7 @@ type Props = {
   width: number;
   height: number;
   cellSize: number;
+  threadView?: boolean;
 };
 
 export default function ExportPdfButton({
@@ -27,25 +28,27 @@ export default function ExportPdfButton({
   width,
   height,
   cellSize,
+  threadView = false,
 }: Props) {
   return (
     <button
       onClick={() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        exportPatternPdf({ title, canvas, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
+        exportPatternPdf({ title, canvas, threadView, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
-        padding: "8px 12px",
-        borderRadius: 10,
-        border: "none",
+        padding: "4px 8px",
+        borderRadius: 8,
+        border: "1px solid var(--ui-border-subtle)",
         background: "var(--accent)",
         color: "#ffffff",
         cursor: "pointer",
-        fontSize: 14,
+        fontSize: 12,
+        fontWeight: 600,
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
+        gap: 6,
         justifyContent: "center",
       }}
     >

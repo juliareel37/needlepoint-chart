@@ -516,6 +516,12 @@ button:disabled {
 .canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
   --canvas-toolbar-bg: rgba(255, 255, 255, 0.92);
 }
+:root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"]:hover {
+  --canvas-toolbar-bg: rgba(45, 53, 64, 0.94);
+}
+:root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
+  --canvas-toolbar-bg: rgba(58, 68, 82, 0.94);
+}
 .canvas-toolbar .canvas-toolbar-scroll {
   display: flex;
   gap: 4px;
@@ -554,7 +560,7 @@ button:disabled {
 .menu-tab-button {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
-.menu-tab-button:hover:not(:disabled) {
+.menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
   background: var(--ui-hover-soft);
   box-shadow: 0 1px 3px var(--ui-border-subtle);
 }
@@ -566,7 +572,7 @@ button:disabled {
   background: transparent !important;
   border-color: transparent !important;
 }
-.used-colors-toolbar .menu-tab-button:hover:not(:disabled) {
+.used-colors-toolbar .menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
   background: var(--ui-hover-soft) !important;
   border-color: transparent !important;
   box-shadow: 0 1px 3px var(--ui-border-subtle) !important;

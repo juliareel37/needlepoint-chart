@@ -26,6 +26,7 @@ export function CanvasWithExportRef(props: any) {
     containerWidth,
     containerHeight,
     showGridlines,
+    showRuler,
     tool,
     brushSize,
     onBrushSizeChange,
@@ -91,6 +92,7 @@ export function CanvasWithExportRef(props: any) {
     onClearFilterSelection,
     isNarrow,
     setShowGridlines,
+    setShowRuler,
     setThreadView,
     setTraceOpacity,
     tracePostUpload,
@@ -1920,6 +1922,7 @@ export function CanvasWithExportRef(props: any) {
           >
             <div style={{ display: "grid", gap: 8 }}>
               <Toggle label="Gridlines" checked={showGridlines} onChange={setShowGridlines} />
+              <Toggle label="Ruler" checked={showRuler} onChange={setShowRuler} />
               <Toggle label="Thread view" checked={threadView} onChange={setThreadView} />
               <Toggle label="Color symbols" checked={showSymbols} onChange={setShowSymbols} />
               <Toggle label="Dark mode" checked={darkMode} onChange={setDarkMode} />
@@ -1939,6 +1942,7 @@ export function CanvasWithExportRef(props: any) {
             containerWidth={containerWidth}
             containerHeight={effectiveContainerHeight}
             showGridlines={showGridlines}
+            showRuler={showRuler}
             tool={tool}
             brushSize={brushSize}
             lassoPoints={lassoPoints}
@@ -2021,6 +2025,7 @@ export function CanvasWithExportRef(props: any) {
           symbolMap={symbolMap}
           cellSize={exportCellSize}
           showGridlines={true}
+          showRuler={true}
         />
       </div>
     </div>
@@ -2036,6 +2041,7 @@ function ExportCanvas({
   symbolMap,
   cellSize,
   showGridlines,
+  showRuler,
 }: {
   exportCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   width: number;
@@ -2045,9 +2051,12 @@ function ExportCanvas({
   symbolMap?: Map<number, string>;
   cellSize: number;
   showGridlines: boolean;
+  showRuler: boolean;
 }) {
-  const canvasW = width * cellSize;
-  const canvasH = height * cellSize;
+  const MAX_EXPORT_SURFACE = 8192;
+  const targetScale = 4;
+  const gridCanvasW = width * cellSize;
+  const gridCanvasH = height * cellSize;
 
   React.useEffect(() => {
     const canvas = exportCanvasRef.current;
@@ -2055,10 +2064,25 @@ function ExportCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const AXIS_STEP = 5;
+    const rulerPad = showRuler ? Math.max(18, Math.round(cellSize + 4)) : 0;
+    const gridOffsetX = showRuler ? rulerPad : 0;
+    const gridOffsetY = showRuler ? rulerPad : 0;
+    const logicalCanvasW = gridCanvasW + gridOffsetX * 2;
+    const logicalCanvasH = gridCanvasH + gridOffsetY * 2;
+    const maxLogical = Math.max(logicalCanvasW, logicalCanvasH, 1);
+    const renderScale = Math.max(1, Math.min(targetScale, Math.floor(MAX_EXPORT_SURFACE / maxLogical)));
+    const canvasW = Math.max(1, Math.round(logicalCanvasW * renderScale));
+    const canvasH = Math.max(1, Math.round(logicalCanvasH * renderScale));
+
     canvas.width = canvasW;
     canvas.height = canvasH;
 
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvasW, canvasH);
+    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, logicalCanvasW, logicalCanvasH);
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -2067,7 +2091,7 @@ function ExportCanvas({
         const color = paletteById.get(colorId);
         if (!color) continue;
         ctx.fillStyle = color.hex;
-        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        ctx.fillRect(gridOffsetX + x * cellSize, gridOffsetY + y * cellSize, cellSize, cellSize);
 
         const symbol = symbolForColorId(color.id, symbolMap);
         if (symbol) {
@@ -2076,32 +2100,78 @@ function ExportCanvas({
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.font = `700 ${Math.max(10, Math.floor(cellSize * 0.7))}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.fillText(symbol, x * cellSize + cellSize / 2, y * cellSize + cellSize / 2 + 0.5);
+          ctx.fillText(
+            symbol,
+            gridOffsetX + x * cellSize + cellSize / 2,
+            gridOffsetY + y * cellSize + cellSize / 2 + 0.5
+          );
           ctx.restore();
         }
       }
     }
 
     if (showGridlines) {
-      ctx.strokeStyle = "rgba(0,0,0,0.18)";
-      ctx.lineWidth = 1;
+    const maxX = Math.max(0, gridCanvasW - 0.5);
+    const maxY = Math.max(0, gridCanvasH - 0.5);
       for (let x = 0; x <= width; x++) {
+        const isMajor = x % AXIS_STEP === 0;
+        const px = Math.min(maxX, Math.round(x * cellSize) + 0.5);
+        ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.18)";
+        ctx.lineWidth = isMajor ? 1.6 : 1;
         ctx.beginPath();
-        ctx.moveTo(x * cellSize + 0.5, 0);
-        ctx.lineTo(x * cellSize + 0.5, canvasH);
+        ctx.moveTo(gridOffsetX + px, gridOffsetY);
+        ctx.lineTo(gridOffsetX + px, gridOffsetY + gridCanvasH);
         ctx.stroke();
       }
       for (let y = 0; y <= height; y++) {
+        const isMajor = y % AXIS_STEP === 0;
+        const py = Math.min(maxY, Math.round(y * cellSize) + 0.5);
+        ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.18)";
+        ctx.lineWidth = isMajor ? 1.6 : 1;
         ctx.beginPath();
-        ctx.moveTo(0, y * cellSize + 0.5);
-        ctx.lineTo(canvasW, y * cellSize + 0.5);
+        ctx.moveTo(gridOffsetX, gridOffsetY + py);
+        ctx.lineTo(gridOffsetX + gridCanvasW, gridOffsetY + py);
         ctx.stroke();
+      }
+    }
+
+    if (showRuler) {
+      ctx.fillStyle = "rgba(31,41,55,0.9)";
+      ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
+
+      const topLabelY = gridOffsetY - 6;
+      const bottomLabelY = gridOffsetY + gridCanvasH + 6;
+      const leftLabelX = gridOffsetX - 6;
+      const rightLabelX = gridOffsetX + gridCanvasW + 6;
+
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("0", leftLabelX, topLabelY);
+
+      for (let x = AXIS_STEP; x <= width; x += AXIS_STEP) {
+        const px = gridOffsetX + Math.round(x * cellSize);
+        const label = String(x);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(label, px, topLabelY);
+        ctx.textBaseline = "top";
+        ctx.fillText(label, px, bottomLabelY);
+      }
+
+      for (let y = AXIS_STEP; y <= height; y += AXIS_STEP) {
+        const py = gridOffsetY + Math.round(y * cellSize);
+        const label = String(y);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, leftLabelX, py);
+        ctx.textAlign = "left";
+        ctx.fillText(label, rightLabelX, py);
       }
     }
   }, [
     exportCanvasRef,
-    canvasW,
-    canvasH,
+    gridCanvasW,
+    gridCanvasH,
     width,
     height,
     grid,
@@ -2109,6 +2179,7 @@ function ExportCanvas({
     symbolMap,
     cellSize,
     showGridlines,
+    showRuler,
   ]);
 
   return <canvas ref={exportCanvasRef} />;

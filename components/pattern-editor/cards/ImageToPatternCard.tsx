@@ -31,6 +31,8 @@ export function ImageToPatternCard({
   setConvertSmoothing,
   onConvert,
 }: ImageToPatternCardProps) {
+  const convertEnabled = Boolean(traceImage);
+
   return (
     <div
       className="app-card"
@@ -95,17 +97,23 @@ export function ImageToPatternCard({
         </div>
         <button
           onClick={onConvert}
-          disabled={!traceImage}
+          disabled={!convertEnabled}
           style={{
-            padding: "8px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            padding: "4px 8px",
             marginTop: 6,
-            borderRadius: 10,
-            border: "none",
-            background: "var(--muted-bg)",
+            borderRadius: 8,
+            border: "1px solid var(--ui-border-subtle)",
+            background: "var(--card-bg)",
             color: "var(--foreground)",
             cursor: "pointer",
-            opacity: traceImage ? 1 : 0.5,
+            opacity: convertEnabled ? 1 : 0.5,
             width: "100%",
+            fontWeight: 600,
+            fontSize: 12,
           }}
         >
           Convert

@@ -47,6 +47,7 @@ type Props = {
   filterEditMode?: boolean;
   panMode: boolean;
   showGridlines: boolean;
+  showRuler: boolean;
   tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
   brushSize: number;
   lassoPoints: { x: number; y: number }[];
@@ -109,6 +110,7 @@ export default function GridCanvas(props: Props) {
     filterEditMode = false,
     panMode,
     showGridlines,
+    showRuler,
     tool,
     brushSize,
     lassoPoints,
@@ -550,6 +552,7 @@ export default function GridCanvas(props: Props) {
     filterEditMode,
     zoom,
     showGridlines,
+    showRuler,
     gridBackground,
   });
 

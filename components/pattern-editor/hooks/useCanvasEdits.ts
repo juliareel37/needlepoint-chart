@@ -211,7 +211,19 @@ export function useCanvasEdits({
     setFutureState([]);
     setGridW(newW);
     setGridH(newH);
-    setGrid(makeGrid(newW, newH, 0));
+    setGrid((prev) => {
+      const next = makeGrid(newW, newH, 0);
+      const copyW = Math.min(gridW, newW);
+      const copyH = Math.min(gridH, newH);
+      for (let y = 0; y < copyH; y += 1) {
+        const srcRow = y * gridW;
+        const dstRow = y * newW;
+        for (let x = 0; x < copyW; x += 1) {
+          next[dstRow + x] = prev[srcRow + x];
+        }
+      }
+      return next;
+    });
   }
 
   function applyGridFromInches(inW: number, inH: number, mesh: number) {
@@ -253,6 +265,27 @@ export function useCanvasEdits({
     return false;
   }
 
+  function getDraftTargetSize(): { w: number; h: number } | null {
+    if (draftGridMode === "stitches") {
+      return { w: draftGridW, h: draftGridH };
+    }
+    const safeMesh = Math.max(1, draftMeshCount);
+    return {
+      w: Math.max(1, Math.round(draftWidthIn * safeMesh)),
+      h: Math.max(1, Math.round(draftHeightIn * safeMesh)),
+    };
+  }
+
+  function getResizeType(nextW: number, nextH: number): "none" | "expand" | "crop" | "mixed" {
+    const widthChange = nextW - gridW;
+    const heightChange = nextH - gridH;
+    if (widthChange === 0 && heightChange === 0) return "none";
+    const expands = widthChange > 0 || heightChange > 0;
+    const crops = widthChange < 0 || heightChange < 0;
+    if (expands && crops) return "mixed";
+    return expands ? "expand" : "crop";
+  }
+
   function openConfirmDialog(opts: {
     title: string;
     message: string;
@@ -280,10 +313,18 @@ export function useCanvasEdits({
   }
 
   function confirmAndApplyGrid() {
-    if (hasPaintedCells()) {
+    const targetSize = getDraftTargetSize();
+    const resizeType = targetSize ? getResizeType(targetSize.w, targetSize.h) : "none";
+    if (hasPaintedCells() && resizeType !== "none") {
+      const message =
+        resizeType === "crop"
+          ? "Shrinking the canvas will crop stitches outside the new width/height. This action can be undone."
+          : resizeType === "expand"
+            ? "Expanding the canvas will keep your current stitches and add empty space around them."
+            : "Changing to this canvas size will crop stitches outside the new bounds and add empty space where expanded. This action can be undone.";
       openConfirmDialog({
         title: "Change canvas size?",
-        message: "Changing the grid size will clear your current stitches. Do you want to continue?",
+        message,
         confirmLabel: "Continue",
         onConfirm: applyDraftGrid,
       });

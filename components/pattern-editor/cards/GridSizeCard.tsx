@@ -206,7 +206,7 @@ export function GridSizeCard({
               />
             </label>
             <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>Mesh (stitches/in)</span>
+              <span style={{ fontSize: 12 }}>Mesh (stitches/in)</span>
               <input
                 type="number"
                 min={1}
@@ -223,16 +223,23 @@ export function GridSizeCard({
             </label>
           </>
         )}
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: 4 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginTop: 4, width: "100%" }}>
           <button
             onClick={onApply}
             style={{
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "none",
-              background: "var(--accent)",
-              color: "var(--card-bg)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "4px 8px",
+              borderRadius: 8,
+              border: "1px solid var(--ui-border-subtle)",
+              background: "var(--card-bg)",
+              color: "var(--foreground)",
               cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+              width: "100%",
             }}
           >
             Apply

@@ -3,7 +3,6 @@
 export type TraceSnapshot = {
   imageUrl: string | null;
   image: HTMLImageElement | null;
-  opacity: number;
   scale: number;
   offsetX: number;
   offsetY: number;
