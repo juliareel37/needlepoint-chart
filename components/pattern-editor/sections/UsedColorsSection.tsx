@@ -138,7 +138,7 @@ export function UsedColorsSection({
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ display: "grid", gap: 2 }}>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>Apply to Area</div>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>Apply to area</div>
               <div style={{ fontSize: 11, opacity: 0.7 }}>Limit color changes to a selected region</div>
             </div>
             <span

@@ -52,6 +52,10 @@ export function CanvasWithExportRef(props: any) {
     traceScale,
     traceOffsetX,
     traceOffsetY,
+    pendingTextPlacement,
+    onPendingTextPlacementChange,
+    onConfirmTextPlacement,
+    onCancelTextPlacement,
     traceAdjustMode,
     traceLocked,
     onToggleTraceLock,
@@ -1356,6 +1360,59 @@ export function CanvasWithExportRef(props: any) {
             </button>
           </div>
         )}
+        {uiReady && pendingTextPlacement && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 70,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 6,
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              background: "var(--card-bg)",
+              borderRadius: 12,
+              padding: "8px 10px",
+              boxShadow: "var(--ui-shadow-lg)",
+              border: "1px solid var(--ui-border-subtle)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={onCancelTextPlacement}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--ui-border-subtle)",
+                background: "var(--muted-bg)",
+                color: "var(--foreground)",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmTextPlacement}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "var(--accent-strong)",
+                color: "#ffffff",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Set
+            </button>
+          </div>
+        )}
         {/*
         {uiReady && filterEditMode && filterEditRect && (
           <div
@@ -1967,6 +2024,8 @@ export function CanvasWithExportRef(props: any) {
             traceScale={traceScale}
             traceOffsetX={traceOffsetX}
             traceOffsetY={traceOffsetY}
+            pendingTextPlacement={pendingTextPlacement}
+            onPendingTextPlacementChange={onPendingTextPlacementChange}
             traceAdjustMode={traceAdjustMode}
             onTraceTransformStart={onTraceTransformStart}
             onTraceTransformEnd={onTraceTransformEnd}

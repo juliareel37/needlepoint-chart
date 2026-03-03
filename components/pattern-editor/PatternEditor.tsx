@@ -22,6 +22,7 @@ import { WipCard } from "./cards/WipCard";
 import { GridSizeCard } from "./cards/GridSizeCard";
 import { TraceImageCard } from "./cards/TraceImageCard";
 import { ImageToPatternCard } from "./cards/ImageToPatternCard";
+import { TextToolCard } from "./cards/TextToolCard";
 import ExportPdfButton from "./cards/ExportPdfButton";
 import { useCanvasEdits } from "./hooks/useCanvasEdits";
 import { useColorEdits } from "./hooks/useColorEdits";
@@ -31,6 +32,17 @@ import type { TraceSnapshot } from "./utils/historyTypes";
 
 const DEFAULT_PALETTE: Color[] = DMC_COLORS;
 const TRACE_DEBUG_KEY = "wippa:debugTrace";
+type PendingTextPlacement = {
+  text: string;
+  font: string;
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  colorId: number;
+  x: number;
+  y: number;
+};
 
 function debugTraceTransform(event: string, details?: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -83,6 +95,7 @@ export default function PatternEditor() {
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [usedColorsOpen, setUsedColorsOpen] = useState(true);
   const [imageToPatternOpen, setImageToPatternOpen] = useState(true);
+  const [textOpen, setTextOpen] = useState(true);
   const [traceImageUrl, setTraceImageUrl] = useState<string | null>(null);
   const [traceFileName, setTraceFileName] = useState<string | null>(null);
   const [traceFileSize, setTraceFileSize] = useState<number | null>(null);
@@ -117,12 +130,33 @@ export default function PatternEditor() {
     () => extractedPaletteIds.filter((id) => paletteById.has(id)),
     [extractedPaletteIds, paletteById]
   );
+  const textFontOptions = useMemo(
+    () => [
+      { label: "Arial", value: "Arial, sans-serif" },
+      { label: "Georgia", value: "Georgia, serif" },
+      { label: "Times New Roman", value: "\"Times New Roman\", Times, serif" },
+      { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+      { label: "Trebuchet MS", value: "\"Trebuchet MS\", sans-serif" },
+      { label: "Courier New", value: "\"Courier New\", Courier, monospace" },
+      { label: "Palatino", value: "\"Palatino Linotype\", \"Book Antiqua\", Palatino, serif" },
+      { label: "Lucida Console", value: "\"Lucida Console\", Monaco, monospace" },
+    ],
+    []
+  );
 
   const [activeColorId, setActiveColorId] = useState<number>(DEFAULT_PALETTE[3].id);
   const [favoriteColorIds, setFavoriteColorIds] = useState<number[]>([]);
   const [extractPaletteSize, setExtractPaletteSize] = useState(12);
   const [extractingPalette, setExtractingPalette] = useState(false);
   const [extractPaletteOpen, setExtractPaletteOpen] = useState(false);
+  const [textContent, setTextContent] = useState("");
+  const [textFont, setTextFont] = useState("Arial, sans-serif");
+  const [textFontSize, setTextFontSize] = useState(24);
+  const [textBold, setTextBold] = useState(false);
+  const [textItalic, setTextItalic] = useState(false);
+  const [textUnderline, setTextUnderline] = useState(false);
+  const [textColorId, setTextColorId] = useState<number>(DEFAULT_PALETTE[3].id);
+  const [pendingTextPlacement, setPendingTextPlacement] = useState<PendingTextPlacement | null>(null);
   const [convertMaxColors, setConvertMaxColors] = useState(20);
   const [convertSmoothing, setConvertSmoothing] = useState(0.25);
   const [lastEditCell, setLastEditCell] = useState<{ x: number; y: number } | null>(null);
@@ -415,6 +449,7 @@ export default function PatternEditor() {
   }, [canvasSizingWidth, gridW]);
 
   const prevFitCellSizeRef = useRef(fitCellSize);
+  const prevGridSizeRef = useRef({ w: gridW, h: gridH });
 
   const displayCellSize = useMemo(() => {
     return Math.max(1, Number((fitCellSize * zoom).toFixed(2)));
@@ -735,6 +770,8 @@ export default function PatternEditor() {
     setHeightIn,
     fitCellSize,
     traceImageUrl,
+    traceFileName,
+    traceFileSize,
     setTraceImageUrl,
     traceOpacity,
     setTraceOpacity,
@@ -752,6 +789,7 @@ export default function PatternEditor() {
     setTraceLocked,
     setTraceImage,
     setTraceFileName,
+    setTraceFileSize,
     traceUploadState,
     setTraceUploadState,
     setDraftGridMode,
@@ -775,6 +813,43 @@ export default function PatternEditor() {
     restoreSessionCanvasView,
     resetCanvasViewport,
   });
+
+  useEffect(() => {
+    const prev = prevGridSizeRef.current;
+    const gridSizeChanged = prev.w !== gridW || prev.h !== gridH;
+    prevGridSizeRef.current = { w: gridW, h: gridH };
+    if (!gridSizeChanged) return;
+    if (!traceImage) return;
+    if (pendingTraceCellSizeBasisRef.current) return;
+    const currentBasis = traceTransformBasisRef.current;
+    if (!(Number.isFinite(currentBasis) && currentBasis > 0 && Number.isFinite(fitCellSize) && fitCellSize > 0)) return;
+    if (currentBasis === fitCellSize) return;
+    const ratio = fitCellSize / currentBasis;
+    traceTransformBasisRef.current = fitCellSize;
+    setTraceScale((prevScale) => prevScale * ratio);
+    setTraceOffsetX((prevX) => prevX * ratio);
+    setTraceOffsetY((prevY) => prevY * ratio);
+    prevFitCellSizeRef.current = fitCellSize;
+    prevTraceRenderCellSizeRef.current = displayCellSize;
+    debugTraceTransform("grid-resize-normalize-trace-basis", {
+      imageUrl: traceImageUrl,
+      prevBasis: currentBasis,
+      nextBasis: fitCellSize,
+      ratio,
+      gridW,
+      gridH,
+    });
+  }, [
+    displayCellSize,
+    fitCellSize,
+    gridH,
+    gridW,
+    setTraceOffsetX,
+    setTraceOffsetY,
+    setTraceScale,
+    traceImage,
+    traceImageUrl,
+  ]);
 
   useEffect(() => {
     if (!traceImage) {
@@ -1079,6 +1154,91 @@ export default function PatternEditor() {
     });
   }
 
+  function commitTextPlacement(placement: PendingTextPlacement) {
+    if (!placement.text.trim()) return;
+    if (!paletteById.has(placement.colorId)) return;
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = gridW;
+    maskCanvas.height = gridH;
+    const maskCtx = maskCanvas.getContext("2d");
+    if (!maskCtx) return;
+
+    maskCtx.clearRect(0, 0, gridW, gridH);
+    maskCtx.fillStyle = "#ffffff";
+    maskCtx.textAlign = "center";
+    maskCtx.textBaseline = "middle";
+    maskCtx.font = `${placement.italic ? "italic " : ""}${placement.bold ? "700 " : ""}${Math.max(
+      6,
+      placement.fontSize
+    )}px ${placement.font}`;
+
+    const lines = placement.text.split(/\r?\n/);
+    const lineHeight = Math.max(6, Math.round(placement.fontSize * 1.2));
+    const totalHeight = Math.max(lineHeight, lines.length * lineHeight);
+    const startY = Math.round(placement.y - totalHeight / 2 + lineHeight / 2);
+    const centerX = Math.round(placement.x);
+
+    lines.forEach((line, index) => {
+      if (!line.trim()) return;
+      const lineY = startY + index * lineHeight;
+      maskCtx.fillText(line, centerX, lineY);
+      if (placement.underline) {
+        const w = maskCtx.measureText(line).width;
+        const underlineY = lineY + Math.max(1, Math.round(placement.fontSize * 0.15));
+        maskCtx.fillRect(centerX - w / 2, underlineY, w, Math.max(1, Math.round(placement.fontSize * 0.08)));
+      }
+    });
+
+    const pixels = maskCtx.getImageData(0, 0, gridW, gridH).data;
+    let wroteAny = false;
+    const nextGrid = new Uint16Array(grid);
+    for (let y = 0; y < gridH; y += 1) {
+      const row = y * gridW;
+      for (let x = 0; x < gridW; x += 1) {
+        const pixelIdx = (row + x) * 4;
+        if (pixels[pixelIdx + 3] < 120) continue;
+        nextGrid[row + x] = placement.colorId;
+        wroteAny = true;
+      }
+    }
+    if (!wroteAny) return;
+
+    pushHistory({ gridW, gridH, grid, trace: buildTraceSnapshot() });
+    setFutureState([]);
+    setGrid(nextGrid);
+    setLastEditCell({
+      x: Math.max(0, Math.min(gridW - 1, Math.round(placement.x))),
+      y: Math.max(0, Math.min(gridH - 1, Math.round(placement.y))),
+    });
+  }
+
+  function addTextBoxToCanvas() {
+    const text = textContent.trim();
+    if (!text) return;
+    if (!paletteById.has(textColorId)) return;
+    setPendingTextPlacement({
+      text,
+      font: textFont,
+      fontSize: textFontSize,
+      bold: textBold,
+      italic: textItalic,
+      underline: textUnderline,
+      colorId: textColorId,
+      x: gridW / 2,
+      y: gridH / 2,
+    });
+  }
+
+  function confirmTextPlacement() {
+    if (!pendingTextPlacement) return;
+    commitTextPlacement(pendingTextPlacement);
+    setPendingTextPlacement(null);
+  }
+
+  function cancelTextPlacement() {
+    setPendingTextPlacement(null);
+  }
+
   async function extractPaletteFromTrace() {
     if (!traceImage || extractingPalette) return;
     const targetSize = Math.max(2, Math.min(32, Math.floor(extractPaletteSize)));
@@ -1172,12 +1332,48 @@ export default function PatternEditor() {
     { id: "main", label: "Main", icon: assetPath("/grid.svg") },
     { id: "background", label: "Background", icon: assetPath("/photo.svg") },
     { id: "colors", label: "Colors", icon: assetPath("/palette.svg") },
+    { id: "text", label: "Text", icon: assetPath("/text_icon.svg") },
   ];
   const [activeMenuId, setActiveMenuId] = useState(menuPages[0].id);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const sidebarInnerRef = useRef<HTMLDivElement | null>(null);
   const sidebarContentRef = useRef<HTMLDivElement | null>(null);
   const [sidebarScrollable, setSidebarScrollable] = useState(false);
+
+  useEffect(() => {
+    if (!paletteById.has(textColorId)) {
+      setTextColorId(activeColorId);
+    }
+  }, [activeColorId, paletteById, textColorId]);
+
+  useEffect(() => {
+    setPendingTextPlacement((prev) => {
+      if (!prev) return prev;
+      const nextText = textContent.trim();
+      if (!nextText) return prev;
+      return {
+        ...prev,
+        text: nextText,
+        font: textFont,
+        fontSize: textFontSize,
+        bold: textBold,
+        italic: textItalic,
+        underline: textUnderline,
+        colorId: textColorId,
+      };
+    });
+  }, [textContent, textFont, textFontSize, textBold, textItalic, textUnderline, textColorId]);
+
+  useEffect(() => {
+    setPendingTextPlacement((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        x: Math.max(0, Math.min(gridW - 1, prev.x)),
+        y: Math.max(0, Math.min(gridH - 1, prev.y)),
+      };
+    });
+  }, [gridW, gridH]);
 
   useEffect(() => {
     const container = sidebarInnerRef.current;
@@ -1871,6 +2067,35 @@ export default function PatternEditor() {
                   />
                 </div>
               </div>
+            ) : activeMenuId === "text" ? (
+              <div style={{ padding: "12px 0" }}>
+                <TextToolCard
+                  cardStyle={sidebarCardStyle}
+                  cardShadow={sidebarCardShadow}
+                  cardShadowCollapsed={sidebarCardShadowCollapsed}
+                  collapseStyle={collapseStyle}
+                  textOpen={textOpen}
+                  setTextOpen={setTextOpen}
+                  textValue={textContent}
+                  onTextValueChange={setTextContent}
+                  fontValue={textFont}
+                  onFontValueChange={setTextFont}
+                  fontOptions={textFontOptions}
+                  bold={textBold}
+                  italic={textItalic}
+                  underline={textUnderline}
+                  onBoldChange={setTextBold}
+                  onItalicChange={setTextItalic}
+                  onUnderlineChange={setTextUnderline}
+                  fontSize={textFontSize}
+                  onFontSizeChange={setTextFontSize}
+                  selectedColorId={textColorId}
+                  onSelectColor={setTextColorId}
+                  palette={palette}
+                  placementActive={Boolean(pendingTextPlacement)}
+                  onAddTextBox={addTextBoxToCanvas}
+                />
+              </div>
             ) : (
               <div
                 style={{
@@ -1967,6 +2192,35 @@ export default function PatternEditor() {
               traceScale={renderedTraceScale}
               traceOffsetX={renderedTraceOffsetX}
               traceOffsetY={renderedTraceOffsetY}
+              pendingTextPlacement={
+                pendingTextPlacement
+                  ? {
+                      text: pendingTextPlacement.text,
+                      font: pendingTextPlacement.font,
+                      fontSize: pendingTextPlacement.fontSize,
+                      bold: pendingTextPlacement.bold,
+                      italic: pendingTextPlacement.italic,
+                      underline: pendingTextPlacement.underline,
+                      colorHex: paletteById.get(pendingTextPlacement.colorId)?.hex ?? "#111111",
+                      x: pendingTextPlacement.x,
+                      y: pendingTextPlacement.y,
+                    }
+                  : null
+              }
+              onPendingTextPlacementChange={(next: { x: number; y: number; fontSize?: number }) => {
+                setPendingTextPlacement((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        x: next.x,
+                        y: next.y,
+                        fontSize: typeof next.fontSize === "number" && Number.isFinite(next.fontSize) ? next.fontSize : prev.fontSize,
+                      }
+                    : prev
+                );
+              }}
+              onConfirmTextPlacement={confirmTextPlacement}
+              onCancelTextPlacement={cancelTextPlacement}
               traceAdjustMode={traceImage ? traceEditMode || tracePostUpload : false}
               traceLocked={traceLocked}
               onToggleTraceLock={handleToggleTraceLock}

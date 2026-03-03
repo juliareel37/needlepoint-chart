@@ -31,6 +31,17 @@ type UseGridRendererArgs = {
   traceScale: number;
   traceOffsetX: number;
   traceOffsetY: number;
+  pendingTextPlacement?: {
+    text: string;
+    font: string;
+    fontSize: number;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    colorHex: string;
+    x: number;
+    y: number;
+  } | null;
   traceAdjustMode: boolean;
   darkCanvas: boolean;
   drawTranslateX: number;
@@ -71,6 +82,7 @@ export function useGridRenderer({
   traceScale,
   traceOffsetX,
   traceOffsetY,
+  pendingTextPlacement,
   traceAdjustMode,
   darkCanvas,
   drawTranslateX,
@@ -92,6 +104,7 @@ export function useGridRenderer({
 }: UseGridRendererArgs) {
   const THREAD_PAINTED_CELL_BG = "#6b7280";
   const AXIS_STEP = 5;
+  const SYMBOL_MIN_CELL_SIZE = 10;
   const stitchCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const stitchStyleVersion = 6;
   const lastSurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
@@ -107,6 +120,7 @@ export function useGridRenderer({
     if (!layerCtx) return;
 
     layerCtx.clearRect(0, 0, layerW, layerH);
+    const drawSymbols = showSymbols && cellSize >= SYMBOL_MIN_CELL_SIZE;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const colorId = grid[idx(x, y, width)];
@@ -131,7 +145,7 @@ export function useGridRenderer({
           layerCtx.fillRect(x0, y0, x1 - x0, y1 - y0);
         }
 
-        if (showSymbols) {
+        if (drawSymbols) {
           const symbol = symbolForColorId(color.id, symbolMap);
           if (!symbol) continue;
           const centerX = x * cellSize + cellSize / 2;
@@ -417,6 +431,56 @@ export function useGridRenderer({
       ctx.restore();
     }
 
+    if (pendingTextPlacement) {
+      ctx.save();
+      ctx.translate(drawTranslateX, drawTranslateY);
+      const lines = pendingTextPlacement.text.split(/\r?\n/);
+      const fontPx = Math.max(6, pendingTextPlacement.fontSize) * cellSize;
+      const lineHeight = Math.max(6, Math.round(pendingTextPlacement.fontSize * 1.2)) * cellSize;
+      ctx.font = `${pendingTextPlacement.italic ? "italic " : ""}${pendingTextPlacement.bold ? "700 " : ""}${fontPx}px ${pendingTextPlacement.font}`;
+      const maxLineWidth = lines.reduce((acc, line) => Math.max(acc, ctx.measureText(line || " ").width), 0);
+      const boxW = Math.max(cellSize, maxLineWidth + cellSize * 0.6);
+      const boxH = Math.max(lineHeight, lineHeight * Math.max(1, lines.length) + cellSize * 0.4);
+      const centerX = pendingTextPlacement.x * cellSize;
+      const centerY = pendingTextPlacement.y * cellSize;
+      const x0 = centerX - boxW / 2;
+      const y0 = centerY - boxH / 2;
+
+      ctx.strokeStyle = "rgba(0,0,0,0.75)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(x0, y0, boxW, boxH);
+      ctx.setLineDash([]);
+      ctx.fillStyle = pendingTextPlacement.colorHex;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      lines.forEach((line, index) => {
+        if (!line.trim()) return;
+        const lineY = centerY - (lineHeight * (Math.max(1, lines.length) - 1)) / 2 + index * lineHeight;
+        ctx.fillText(line, centerX, lineY);
+        if (pendingTextPlacement.underline) {
+          const w = ctx.measureText(line).width;
+          const underlineY = lineY + Math.max(1, Math.round(fontPx * 0.15));
+          ctx.fillRect(centerX - w / 2, underlineY, w, Math.max(1, Math.round(fontPx * 0.06)));
+        }
+      });
+      const handleSize = 8;
+      const half = handleSize / 2;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeStyle = "rgba(0,0,0,0.75)";
+      const handles = [
+        [x0, y0],
+        [x0 + boxW, y0],
+        [x0, y0 + boxH],
+        [x0 + boxW, y0 + boxH],
+      ];
+      handles.forEach(([hx, hy]) => {
+        ctx.fillRect(hx - half, hy - half, handleSize, handleSize);
+        ctx.strokeRect(hx - half, hy - half, handleSize, handleSize);
+      });
+      ctx.restore();
+    }
+
     // Lasso overlay
     if (lassoPoints.length > 0) {
       ctx.save();
@@ -555,6 +619,7 @@ export function useGridRenderer({
     traceScale,
     traceOffsetX,
     traceOffsetY,
+    pendingTextPlacement,
     traceAdjustMode,
     darkCanvas,
     drawTranslateX,

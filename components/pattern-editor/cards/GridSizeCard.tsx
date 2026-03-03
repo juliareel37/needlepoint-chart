@@ -45,6 +45,26 @@ export function GridSizeCard({
   setDraftMeshCount,
   onApply,
 }: GridSizeCardProps) {
+  const fieldRowStyle: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    alignItems: "center",
+  };
+
+  const fieldLabelStyle: React.CSSProperties = {
+    fontSize: 12,
+  };
+
+  const fieldInputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: 6,
+    borderRadius: 8,
+    border: "1px solid rgba(0,0,0,0.2)",
+    fontSize: 12,
+    boxSizing: "border-box",
+  };
+
   return (
     <div
       className="app-card"
@@ -136,89 +156,59 @@ export function GridSizeCard({
 
         {draftGridMode === "stitches" ? (
           <>
-            <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Width (stitches)</span>
+            <label style={fieldRowStyle}>
+              <span style={fieldLabelStyle}>Width (stitches)</span>
               <input
                 type="number"
                 min={1}
                 value={draftGridW}
                 onChange={(e) => setDraftGridW(parseInt(e.target.value || "1", 10))}
-                style={{
-                  width: 72,
-                  padding: 6,
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 14,
-                }}
+                style={fieldInputStyle}
               />
             </label>
-            <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Height (stitches)</span>
+            <label style={fieldRowStyle}>
+              <span style={fieldLabelStyle}>Height (stitches)</span>
               <input
                 type="number"
                 min={1}
                 value={draftGridH}
                 onChange={(e) => setDraftGridH(parseInt(e.target.value || "1", 10))}
-                style={{
-                  width: 72,
-                  padding: 6,
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 14,
-                }}
+                style={fieldInputStyle}
               />
             </label>
           </>
         ) : (
           <>
-            <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Width (inches)</span>
+            <label style={fieldRowStyle}>
+              <span style={fieldLabelStyle}>Width (inches)</span>
               <input
                 type="number"
                 min={0.1}
                 step={0.1}
                 value={draftWidthIn}
                 onChange={(e) => setDraftWidthIn(parseFloat(e.target.value || "0"))}
-                style={{
-                  width: 72,
-                  padding: 6,
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 14,
-                }}
+                style={fieldInputStyle}
               />
             </label>
-            <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Height (inches)</span>
+            <label style={fieldRowStyle}>
+              <span style={fieldLabelStyle}>Height (inches)</span>
               <input
                 type="number"
                 min={0.1}
                 step={0.1}
                 value={draftHeightIn}
                 onChange={(e) => setDraftHeightIn(parseFloat(e.target.value || "0"))}
-                style={{
-                  width: 72,
-                  padding: 6,
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 14,
-                }}
+                style={fieldInputStyle}
               />
             </label>
-            <label style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 12 }}>Mesh (stitches/in)</span>
+            <label style={fieldRowStyle}>
+              <span style={fieldLabelStyle}>Mesh (stitches/in)</span>
               <input
                 type="number"
                 min={1}
                 value={draftMeshCount}
                 onChange={(e) => setDraftMeshCount(parseInt(e.target.value || "1", 10))}
-                style={{
-                  width: 72,
-                  padding: 6,
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  fontSize: 14,
-                }}
+                style={fieldInputStyle}
               />
             </label>
           </>

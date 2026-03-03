@@ -39,6 +39,18 @@ type Props = {
   traceScale: number;
   traceOffsetX: number;
   traceOffsetY: number;
+  pendingTextPlacement?: {
+    text: string;
+    font: string;
+    fontSize: number;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    colorHex: string;
+    x: number;
+    y: number;
+  } | null;
+  onPendingTextPlacementChange?: (next: { x: number; y: number; fontSize?: number }) => void;
   traceAdjustMode: boolean;
   onTraceTransformStart?: () => void;
   onTraceTransformEnd?: () => void;
@@ -102,6 +114,8 @@ export default function GridCanvas(props: Props) {
     traceScale,
     traceOffsetX,
     traceOffsetY,
+    pendingTextPlacement,
+    onPendingTextPlacementChange,
     traceAdjustMode,
     onTraceTransformStart,
     onTraceTransformEnd,
@@ -196,6 +210,19 @@ export default function GridCanvas(props: Props) {
       }
     | null
   >(null);
+  const isTextDraggingRef = useRef(false);
+  const isTextResizingRef = useRef(false);
+  const textDragStartRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const textResizeRef = useRef<{
+    handle: "tl" | "tr" | "bl" | "br";
+    startX: number;
+    startY: number;
+    startFontSize: number;
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+  } | null>(null);
   const isPanningRef = useRef(false);
   const pinchActiveRef = useRef(false);
   const fillTokenRef = useRef(0);
@@ -536,6 +563,7 @@ export default function GridCanvas(props: Props) {
     traceScale,
     traceOffsetX,
     traceOffsetY,
+    pendingTextPlacement,
     traceAdjustMode,
     darkCanvas,
     drawTranslateX,
@@ -791,6 +819,41 @@ export default function GridCanvas(props: Props) {
     return null;
   }
 
+  function getPendingTextBounds() {
+    if (!pendingTextPlacement) return null;
+    const measureCanvas = document.createElement("canvas");
+    const measureCtx = measureCanvas.getContext("2d");
+    if (!measureCtx) return null;
+    const fontPx = Math.max(6, pendingTextPlacement.fontSize) * cellSize;
+    measureCtx.font = `${pendingTextPlacement.italic ? "italic " : ""}${pendingTextPlacement.bold ? "700 " : ""}${fontPx}px ${pendingTextPlacement.font}`;
+    const lines = pendingTextPlacement.text.split(/\r?\n/);
+    const lineHeight = Math.max(6, Math.round(pendingTextPlacement.fontSize * 1.2)) * cellSize;
+    const maxLineWidth = lines.reduce((acc, line) => Math.max(acc, measureCtx.measureText(line || " ").width), 0);
+    const boxW = Math.max(cellSize, maxLineWidth + cellSize * 0.6);
+    const boxH = Math.max(lineHeight, lineHeight * Math.max(1, lines.length) + cellSize * 0.4);
+    const centerX = pendingTextPlacement.x * cellSize;
+    const centerY = pendingTextPlacement.y * cellSize;
+    return {
+      x0: centerX - boxW / 2,
+      y0: centerY - boxH / 2,
+      x1: centerX + boxW / 2,
+      y1: centerY + boxH / 2,
+    };
+  }
+
+  function getPendingTextHandle(point: { x: number; y: number }) {
+    const bounds = getPendingTextBounds();
+    if (!bounds) return null;
+    const radius = 8;
+    const near = (px: number, py: number, cx: number, cy: number) =>
+      Math.abs(px - cx) <= radius && Math.abs(py - cy) <= radius;
+    if (near(point.x, point.y, bounds.x0, bounds.y0)) return "tl" as const;
+    if (near(point.x, point.y, bounds.x1, bounds.y0)) return "tr" as const;
+    if (near(point.x, point.y, bounds.x0, bounds.y1)) return "bl" as const;
+    if (near(point.x, point.y, bounds.x1, bounds.y1)) return "br" as const;
+    return null;
+  }
+
   const alignX = "flex-start";
   const alignY = "flex-start";
   const effectivePanMode = panMode && !(traceAdjustMode && traceImage);
@@ -866,7 +929,9 @@ export default function GridCanvas(props: Props) {
           position: "relative",
           zIndex: 1,
           cursor:
-            filterEditMode
+            pendingTextPlacement
+              ? "grab"
+              : filterEditMode
               ? "default"
               : filterSelecting
               ? "crosshair"
@@ -922,6 +987,43 @@ export default function GridCanvas(props: Props) {
             (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
             filterDragStartRef.current = cell;
             setFilterPreviewRect({ x0: cell.x, y0: cell.y, x1: cell.x, y1: cell.y });
+            return;
+          }
+          if (pendingTextPlacement) {
+            e.preventDefault();
+            const point = getCanvasPoint(e);
+            const bounds = getPendingTextBounds();
+            if (!bounds || !onPendingTextPlacementChange) return;
+            const handle = getPendingTextHandle(point);
+            if (handle) {
+              (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+              isTextResizingRef.current = true;
+              textResizeRef.current = {
+                handle,
+                startX: point.x,
+                startY: point.y,
+                startFontSize: pendingTextPlacement.fontSize,
+                x0: bounds.x0,
+                y0: bounds.y0,
+                x1: bounds.x1,
+                y1: bounds.y1,
+              };
+              return;
+            }
+            const inside =
+              point.x >= bounds.x0 &&
+              point.x <= bounds.x1 &&
+              point.y >= bounds.y0 &&
+              point.y <= bounds.y1;
+            if (!inside) return;
+            (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+            isTextDraggingRef.current = true;
+            textDragStartRef.current = {
+              x: e.clientX,
+              y: e.clientY,
+              tx: pendingTextPlacement.x,
+              ty: pendingTextPlacement.y,
+            };
             return;
           }
           if (tool === "paint" || tool === "eraser") {
@@ -1056,9 +1158,73 @@ export default function GridCanvas(props: Props) {
             }
             return;
           }
+          if (isTextResizingRef.current && textResizeRef.current && onPendingTextPlacementChange) {
+            e.preventDefault();
+            const point = getCanvasPoint(e);
+            const { handle, startFontSize, x0, y0, x1, y1 } = textResizeRef.current;
+            const baseW = Math.max(1, x1 - x0);
+            const baseH = Math.max(1, y1 - y0);
+            let anchorX = x0;
+            let anchorY = y0;
+            let directionX = 1;
+            let directionY = 1;
+            if (handle === "tl") {
+              anchorX = x1;
+              anchorY = y1;
+              directionX = -1;
+              directionY = -1;
+            } else if (handle === "tr") {
+              anchorX = x0;
+              anchorY = y1;
+              directionX = 1;
+              directionY = -1;
+            } else if (handle === "bl") {
+              anchorX = x1;
+              anchorY = y0;
+              directionX = -1;
+              directionY = 1;
+            } else if (handle === "br") {
+              anchorX = x0;
+              anchorY = y0;
+              directionX = 1;
+              directionY = 1;
+            }
+            const pointerW = Math.max(0, Math.abs(point.x - anchorX));
+            const pointerH = Math.max(0, Math.abs(point.y - anchorY));
+            const minScale = Math.max(8 / baseW, 8 / baseH);
+            const scale = Math.max(minScale, Math.max(pointerW / baseW, pointerH / baseH));
+            const nextW = baseW * scale;
+            const nextH = baseH * scale;
+            const nextFontSize = Math.max(6, Math.min(220, startFontSize * scale));
+            const movingX = anchorX + directionX * nextW;
+            const movingY = anchorY + directionY * nextH;
+            const centerX = (anchorX + movingX) / 2;
+            const centerY = (anchorY + movingY) / 2;
+            onPendingTextPlacementChange({
+              x: Math.max(0, Math.min(width - 1, centerX / cellSize)),
+              y: Math.max(0, Math.min(height - 1, centerY / cellSize)),
+              fontSize: nextFontSize,
+            });
+            return;
+          }
+          if (isTextDraggingRef.current && textDragStartRef.current && onPendingTextPlacementChange) {
+            e.preventDefault();
+            const dxCells = (e.clientX - textDragStartRef.current.x) / cellSize;
+            const dyCells = (e.clientY - textDragStartRef.current.y) / cellSize;
+            const nextX = Math.max(0, Math.min(width - 1, textDragStartRef.current.tx + dxCells));
+            const nextY = Math.max(0, Math.min(height - 1, textDragStartRef.current.ty + dyCells));
+            onPendingTextPlacementChange({ x: nextX, y: nextY });
+            return;
+          }
+          if (pendingTextPlacement) {
+            updateHoverCell(null);
+            return;
+          }
           if (tool === "paint" || tool === "eraser") {
             if (
               isPanningRef.current ||
+              isTextResizingRef.current ||
+              isTextDraggingRef.current ||
               traceResizeRef.current ||
               isTracingDragRef.current ||
               isLassoing ||
@@ -1189,6 +1355,16 @@ export default function GridCanvas(props: Props) {
           lastPaintCellRef.current = cell;
         }}
         onPointerUp={(e) => {
+          if (isTextResizingRef.current) {
+            isTextResizingRef.current = false;
+            textResizeRef.current = null;
+            return;
+          }
+          if (isTextDraggingRef.current) {
+            isTextDraggingRef.current = false;
+            textDragStartRef.current = null;
+            return;
+          }
           if (filterResizeRef.current) {
             filterResizeRef.current = null;
             return;
@@ -1229,6 +1405,16 @@ export default function GridCanvas(props: Props) {
           onStrokeEnd();
         }}
         onPointerCancel={(e) => {
+          if (isTextResizingRef.current) {
+            isTextResizingRef.current = false;
+            textResizeRef.current = null;
+            return;
+          }
+          if (isTextDraggingRef.current) {
+            isTextDraggingRef.current = false;
+            textDragStartRef.current = null;
+            return;
+          }
           if (filterResizeRef.current) {
             filterResizeRef.current = null;
             return;

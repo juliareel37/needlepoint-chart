@@ -44,6 +44,8 @@ type UseWipDraftsArgs = {
   setHeightIn: (value: number) => void;
   fitCellSize: number;
   traceImageUrl: string | null;
+  traceFileName: string | null;
+  traceFileSize: number | null;
   setTraceImageUrl: (value: string | null) => void;
   traceOpacity: number;
   setTraceOpacity: (value: number) => void;
@@ -59,6 +61,7 @@ type UseWipDraftsArgs = {
   setTraceLocked: (value: boolean) => void;
   setTraceImage: (value: HTMLImageElement | null) => void;
   setTraceFileName: (value: string | null) => void;
+  setTraceFileSize: (value: number | null) => void;
   traceUploadState: "idle" | "uploading" | "error";
   setTraceUploadState: (value: "idle" | "uploading" | "error") => void;
   setDraftGridMode: (value: "stitches" | "inches") => void;
@@ -216,6 +219,8 @@ export function useWipDrafts({
   setHeightIn,
   fitCellSize,
   traceImageUrl,
+  traceFileName,
+  traceFileSize,
   setTraceImageUrl,
   traceOpacity,
   setTraceOpacity,
@@ -231,6 +236,7 @@ export function useWipDrafts({
   setTraceLocked,
   setTraceImage,
   setTraceFileName,
+  setTraceFileSize,
   traceUploadState,
   setTraceUploadState,
   setDraftGridMode,
@@ -312,6 +318,8 @@ export function useWipDrafts({
     heightIn,
     fitCellSize,
     traceImageUrl,
+    traceFileName,
+    traceFileSize,
     traceOpacity,
     traceScale,
     traceOffsetX,
@@ -610,6 +618,8 @@ export function useWipDrafts({
     heightIn,
     fitCellSize,
     traceImageUrl,
+    traceFileName,
+    traceFileSize,
     traceOpacity,
     traceScale,
     traceOffsetX,
@@ -751,6 +761,8 @@ export function useWipDrafts({
     widthIn,
     heightIn,
     traceImageUrl,
+    traceFileName,
+    traceFileSize,
     traceOpacity,
     traceScale,
     traceOffsetX,
@@ -799,6 +811,8 @@ export function useWipDrafts({
           traceImageUrl && !traceImageUrl.startsWith("blob:")
             ? traceImageUrl
             : null,
+        fileName: traceImageUrl ? traceFileName : null,
+        fileSize: traceImageUrl ? traceFileSize : null,
         opacity: traceOpacity,
         scale: traceScale,
         offsetX: traceOffsetX,
@@ -859,6 +873,8 @@ export function useWipDrafts({
       heightIn,
       trace: {
         imageDataUrl: imageUrl ?? null,
+        fileName: imageUrl ? traceFileName : null,
+        fileSize: imageUrl ? traceFileSize : null,
         opacity: traceOpacity,
         scale: traceScale,
         offsetX: traceOffsetX,
@@ -1086,7 +1102,8 @@ export function useWipDrafts({
             : null;
         setTraceImage(img);
         setTraceImageUrl(trace.imageDataUrl);
-        setTraceFileName("Draft image");
+        setTraceFileName(typeof trace.fileName === "string" && trace.fileName.trim() ? trace.fileName : "Draft image");
+        setTraceFileSize(typeof trace.fileSize === "number" && Number.isFinite(trace.fileSize) ? trace.fileSize : null);
         setTraceOpacity(trace.opacity ?? 0.5);
         setPendingTraceCellSizeBasis(savedBasis);
         setTraceScale(savedScale);
@@ -1101,6 +1118,7 @@ export function useWipDrafts({
         setTraceImage(null);
         setTraceImageUrl(null);
         setTraceFileName(null);
+        setTraceFileSize(null);
         setTraceOpacity(0);
         setPendingTraceCellSizeBasis(null);
         setTraceScale(1);
@@ -1114,6 +1132,7 @@ export function useWipDrafts({
       setTraceImage(null);
       setTraceImageUrl(null);
       setTraceFileName(null);
+      setTraceFileSize(null);
       setTraceOpacity(0);
       setPendingTraceCellSizeBasis(null);
       setTraceScale(1);
