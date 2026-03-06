@@ -16,6 +16,7 @@ type Props = {
   height: number;
   cellSize: number;
   threadView?: boolean;
+  compact?: boolean;
 };
 
 export default function ExportPdfButton({
@@ -29,6 +30,7 @@ export default function ExportPdfButton({
   height,
   cellSize,
   threadView = false,
+  compact = false,
 }: Props) {
   return (
     <button
@@ -38,7 +40,7 @@ export default function ExportPdfButton({
         exportPatternPdf({ title, canvas, threadView, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
-        padding: "4px 8px",
+        padding: compact ? "4px 6px" : "4px 8px",
         borderRadius: 8,
         border: "1px solid var(--ui-border-subtle)",
         background: "var(--accent)",
@@ -53,14 +55,14 @@ export default function ExportPdfButton({
       }}
     >
       <img
-        src={assetPath("/download.svg")}
+        src={assetPath("/icons/download.svg")}
         alt=""
         aria-hidden="true"
         width={16}
         height={16}
-        style={{ display: "block", filter: "var(--icon-on-fg-filter)" }}
+        style={{ display: "block", filter: "brightness(0) invert(1)" }}
       />
-      Export PDF
+      {!compact && "Export PDF"}
     </button>
   );
 }

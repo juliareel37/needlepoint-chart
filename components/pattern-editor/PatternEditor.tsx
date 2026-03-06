@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import type { Color } from "../../lib/grid";
 import { makeGrid } from "../../lib/grid";
 import { DMC_COLORS } from "../../lib/dmcColors";
@@ -12,6 +13,7 @@ import { EXPORT_CELL_SIZE } from "./utils/constants";
 import { extractPaletteFromImage, rgbToOklab } from "./utils/colorUtils";
 import { convertImageToPattern as buildImageToPattern } from "./utils/imageToPattern";
 import { type FilterRect } from "./utils/geometry";
+import { TEXT_FONT_OPTIONS } from "./utils/textFontOptions";
 import { PaletteSection } from "./sections/PaletteSection";
 import { UsedColorsSection } from "./sections/UsedColorsSection";
 import { DraftPickerDialog } from "./dialogs/DraftPickerDialog";
@@ -54,10 +56,17 @@ function debugTraceTransform(event: string, details?: Record<string, unknown>) {
 }
 
 export default function PatternEditor() {
+  const router = useRouter();
+  const clerk = useClerk();
   const [title, setTitle] = useState("Untitled Pattern");
   const [isNarrow, setIsNarrow] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [isVerySmall, setIsVerySmall] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("wippa:theme") === "dark";
+  });
   const { isSignedIn: clerkSignedIn, isLoaded: authLoaded } = useAuth();
   const isSignedIn = Boolean(clerkSignedIn);
 
@@ -68,7 +77,7 @@ export default function PatternEditor() {
     useHistoryStack();
   const canUndo = history.length > 0;
   const canRedo = future.length > 0;
-  const [tool, setTool] = useState<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso">("none");
+  const [tool, setTool] = useState<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror">("none");
   const [brushSize, setBrushSize] = useState(1);
   const [gridMode, setGridMode] = useState<"stitches" | "inches">("stitches");
   const [meshCount, setMeshCount] = useState(10);
@@ -115,6 +124,7 @@ export default function PatternEditor() {
   const prevTraceTransformRef = useRef<{ scale: number; x: number; y: number; basis: number } | null>(null);
   const [panMode, setPanMode] = useState(false);
   const prevToolRef = useRef<typeof tool>(tool);
+  const mirrorPrevToolRef = useRef<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso">("paint");
   const prevPanModeRef = useRef<boolean>(panMode);
   const [traceUploadState, setTraceUploadState] = useState<"idle" | "uploading" | "error">("idle");
   const tracePreviewObjectUrlRef = useRef<string | null>(null);
@@ -130,19 +140,7 @@ export default function PatternEditor() {
     () => extractedPaletteIds.filter((id) => paletteById.has(id)),
     [extractedPaletteIds, paletteById]
   );
-  const textFontOptions = useMemo(
-    () => [
-      { label: "Arial", value: "Arial, sans-serif" },
-      { label: "Georgia", value: "Georgia, serif" },
-      { label: "Times New Roman", value: "\"Times New Roman\", Times, serif" },
-      { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
-      { label: "Trebuchet MS", value: "\"Trebuchet MS\", sans-serif" },
-      { label: "Courier New", value: "\"Courier New\", Courier, monospace" },
-      { label: "Palatino", value: "\"Palatino Linotype\", \"Book Antiqua\", Palatino, serif" },
-      { label: "Lucida Console", value: "\"Lucida Console\", Monaco, monospace" },
-    ],
-    []
-  );
+  const textFontOptions = TEXT_FONT_OPTIONS;
 
   const [activeColorId, setActiveColorId] = useState<number>(DEFAULT_PALETTE[3].id);
   const [favoriteColorIds, setFavoriteColorIds] = useState<number[]>([]);
@@ -150,7 +148,7 @@ export default function PatternEditor() {
   const [extractingPalette, setExtractingPalette] = useState(false);
   const [extractPaletteOpen, setExtractPaletteOpen] = useState(false);
   const [textContent, setTextContent] = useState("");
-  const [textFont, setTextFont] = useState("Arial, sans-serif");
+  const [textFont, setTextFont] = useState(TEXT_FONT_OPTIONS[0]?.value ?? "Inter");
   const [textFontSize, setTextFontSize] = useState(24);
   const [textBold, setTextBold] = useState(false);
   const [textItalic, setTextItalic] = useState(false);
@@ -233,10 +231,15 @@ export default function PatternEditor() {
   const [canvasControlsHeight, setCanvasControlsHeight] = useState(0);
   const baseMinZoom = 0.25;
   const [minZoomOverride, setMinZoomOverride] = useState<number | null>(null);
-  const minZoom = Math.max(0.05, Math.min(baseMinZoom, minZoomOverride ?? baseMinZoom));
+  const effectiveFitZoom = minZoomOverride ?? baseMinZoom;
+  const minZoom = isNarrow
+    ? Math.max(0.05, effectiveFitZoom * 0.6)
+    : Math.max(0.05, Math.min(baseMinZoom, effectiveFitZoom));
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
   const [showRuler, setShowRuler] = useState(true);
+  const [hasEditedSinceLoad, setHasEditedSinceLoad] = useState(false);
+  const prevSignedInRef = useRef(isSignedIn);
   const [fitAfterResize, setFitAfterResize] = useState<{ w: number; h: number } | null>(null);
   const [fitToken, setFitToken] = useState<number | undefined>(undefined);
 
@@ -245,10 +248,13 @@ export default function PatternEditor() {
   const canvasFlipAnimationRef = useRef<Animation | null>(null);
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0);
   const [headerActionsNode, setHeaderActionsNode] = useState<HTMLElement | null>(null);
+  const [headerHistoryNode, setHeaderHistoryNode] = useState<HTMLElement | null>(null);
   const [headerTitleNode, setHeaderTitleNode] = useState<HTMLElement | null>(null);
-  const [headerFileNode, setHeaderFileNode] = useState<HTMLElement | null>(null);
+  const [headerFileLeftNode, setHeaderFileLeftNode] = useState<HTMLElement | null>(null);
+  const [headerFileRightNode, setHeaderFileRightNode] = useState<HTMLElement | null>(null);
   const [headerAutosaveNode, setHeaderAutosaveNode] = useState<HTMLElement | null>(null);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const fileMenuRef = useRef<HTMLDivElement | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
@@ -263,9 +269,27 @@ export default function PatternEditor() {
   }, [isNarrow]);
 
   useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") return;
+    const root = document.documentElement;
+    if (darkMode) {
+      root.setAttribute("data-theme", "dark");
+      window.localStorage.setItem("wippa:theme", "dark");
+      return;
+    }
+    root.removeAttribute("data-theme");
+    window.localStorage.setItem("wippa:theme", "light");
+  }, [darkMode]);
+
+  useEffect(() => {
     if (typeof document === "undefined") return;
     const node = document.getElementById("app-header-actions");
     setHeaderActionsNode(node);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const node = document.getElementById("app-header-history");
+    setHeaderHistoryNode(node);
   }, []);
 
   useEffect(() => {
@@ -276,8 +300,8 @@ export default function PatternEditor() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const node = document.getElementById("app-header-file");
-    setHeaderFileNode(node);
+    setHeaderFileLeftNode(document.getElementById("app-header-file-left"));
+    setHeaderFileRightNode(document.getElementById("app-header-file-right"));
   }, []);
 
   useEffect(() => {
@@ -288,15 +312,42 @@ export default function PatternEditor() {
 
   useEffect(() => {
     if (!fileMenuOpen) return;
-    const handleClick = (event: MouseEvent) => {
+    const handleOutside = (event: Event) => {
       const target = event.target as Node;
       if (!fileMenuRef.current || !target) return;
       if (fileMenuRef.current.contains(target)) return;
       setFileMenuOpen(false);
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    if (typeof window !== "undefined" && "PointerEvent" in window) {
+      document.addEventListener("pointerdown", handleOutside);
+      return () => document.removeEventListener("pointerdown", handleOutside);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
   }, [fileMenuOpen]);
+
+  useEffect(() => {
+    if (fileMenuOpen) return;
+    setMobileSettingsOpen(false);
+  }, [fileMenuOpen]);
+
+  useEffect(() => {
+    if (history.length === 0) return;
+    setHasEditedSinceLoad(true);
+  }, [history.length]);
+
+  useEffect(() => {
+    if (!authLoaded) return;
+    const wasSignedIn = prevSignedInRef.current;
+    if (wasSignedIn && !isSignedIn) {
+      setHasEditedSinceLoad(false);
+    }
+    prevSignedInRef.current = isSignedIn;
+  }, [authLoaded, isSignedIn]);
 
   useEffect(() => {
     if (!isRenaming) return;
@@ -308,6 +359,22 @@ export default function PatternEditor() {
   function commitRename() {
     setTitle(draftTitle.trim() || "Untitled Pattern");
     setIsRenaming(false);
+  }
+
+  function requestRename() {
+    const isUntitled = title.trim() === "Untitled Pattern";
+    if (!isSignedIn && isUntitled) {
+      confirmActionRef.current = () => {
+        router.push("/sign-in");
+      };
+      setConfirmDialog({
+        title: "Sign in to rename",
+        message: "Sign in to rename this untitled pattern and keep your changes saved.",
+        confirmLabel: "Sign in",
+      });
+      return;
+    }
+    setIsRenaming(true);
   }
 
   function getSafeTraceImageUrl(inputUrl: string) {
@@ -414,28 +481,40 @@ export default function PatternEditor() {
   );
 
   useEffect(() => {
+    const needsCanvasInteraction = tracePostUpload || traceEditMode || Boolean(pendingTextPlacement);
+    if (!needsCanvasInteraction || sidebarCollapsed) return;
+    setSidebarCollapsedWithFlip(true);
+  }, [pendingTextPlacement, setSidebarCollapsedWithFlip, sidebarCollapsed, traceEditMode, tracePostUpload]);
+
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const narrowQuery = window.matchMedia("(max-width: 900px)");
+    const narrowQuery = window.matchMedia("(max-width: 600px)");
     const compactQuery = window.matchMedia("(max-width: 640px)");
+    const verySmallQuery = window.matchMedia("(max-width: 399px)");
 
     const handleChange = () => {
       setIsNarrow(narrowQuery.matches);
       setIsCompact(compactQuery.matches);
+      setIsVerySmall(verySmallQuery.matches);
     };
 
     handleChange();
     narrowQuery.addEventListener("change", handleChange);
     compactQuery.addEventListener("change", handleChange);
+    verySmallQuery.addEventListener("change", handleChange);
     return () => {
       narrowQuery.removeEventListener("change", handleChange);
       compactQuery.removeEventListener("change", handleChange);
+      verySmallQuery.removeEventListener("change", handleChange);
     };
   }, []);
 
   const sidebarWidth = 260;
   const sidebarCollapsedWidth = 40;
   const sidebarCollapsedWidthMobile = 0;
-  const menuWidth = 56;
+  const sidebarBottomSheetHeight = "min(70vh, 520px)";
+  const bottomMenuBarHeight = 64;
+  const menuWidth = isNarrow ? 56 : 72;
   const sidebarExpandedWidth = isNarrow ? "min(80vw, 320px)" : `${sidebarWidth}px`;
   const sidebarCollapsedWidthValue = `${sidebarCollapsedWidth}px`;
   const sidebarCollapsedWidthMobileValue = `${sidebarCollapsedWidthMobile}px`;
@@ -599,12 +678,19 @@ export default function PatternEditor() {
     lassoClosed,
     filterMode,
     filterSelecting,
+    mirrorRect,
+    mirrorSelecting,
     activeFilterRect,
     isIndexInFilter,
     setFilterRect,
     startFilterSelection,
     clearFilterSelection,
     endFilterSelection,
+    startMirrorSelection,
+    clearMirrorSelection,
+    endMirrorSelection,
+    setMirrorRect,
+    applyMirror,
     addLassoPoint,
     resetLasso,
     closeLasso,
@@ -933,6 +1019,26 @@ export default function PatternEditor() {
     setTraceOffsetY((baseCanvasH - image.height * scale) / 2);
   }
 
+  function rebaseTraceTransformToCurrentFit() {
+    const currentBasis = traceTransformBasisRef.current;
+    if (!(Number.isFinite(fitCellSize) && fitCellSize > 0)) return;
+    if (!(Number.isFinite(currentBasis) && currentBasis > 0)) {
+      traceTransformBasisRef.current = fitCellSize;
+      return;
+    }
+    if (Math.abs(currentBasis - fitCellSize) < 0.0001) {
+      traceTransformBasisRef.current = fitCellSize;
+      return;
+    }
+    const ratio = fitCellSize / currentBasis;
+    setTraceScale((prev) => prev * ratio);
+    setTraceOffsetX((prev) => prev * ratio);
+    setTraceOffsetY((prev) => prev * ratio);
+    traceTransformBasisRef.current = fitCellSize;
+    prevFitCellSizeRef.current = fitCellSize;
+    prevTraceRenderCellSizeRef.current = displayCellSize;
+  }
+
   function convertImageToPattern() {
     if (!traceImage) return;
 
@@ -1113,6 +1219,7 @@ export default function PatternEditor() {
   }
 
   function handleTraceSetImage() {
+    rebaseTraceTransformToCurrentFit();
     setTracePostUpload(false);
     setTraceEditMode(false);
     setTraceLockedState(true);
@@ -1329,12 +1436,15 @@ export default function PatternEditor() {
     }) as const;
 
   const menuPages = [
-    { id: "main", label: "Main", icon: assetPath("/grid.svg") },
-    { id: "background", label: "Background", icon: assetPath("/photo.svg") },
-    { id: "colors", label: "Colors", icon: assetPath("/palette.svg") },
-    { id: "text", label: "Text", icon: assetPath("/text_icon.svg") },
+    { id: "main", label: "Size", icon: assetPath("/icons/grid.svg") },
+    { id: "background", label: "Image", icon: assetPath("/icons/photo.svg") },
+    { id: "colors", label: "Colors", icon: assetPath("/icons/palette.svg") },
+    { id: "text", label: "Text", icon: assetPath("/icons/text_icon.svg") },
   ];
+  const mobileMenuPages = [{ id: "tools", label: "Tools", icon: assetPath("/icons/tools.svg") }, ...menuPages];
   const [activeMenuId, setActiveMenuId] = useState(menuPages[0].id);
+  const [mobileToolbarVisible, setMobileToolbarVisible] = useState(true);
+  const [mobileToolbarCollapsed, setMobileToolbarCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const sidebarInnerRef = useRef<HTMLDivElement | null>(null);
   const sidebarContentRef = useRef<HTMLDivElement | null>(null);
@@ -1412,6 +1522,7 @@ export default function PatternEditor() {
       className="pattern-editor"
       style={{
         display: "grid",
+        gridTemplateRows: !isSignedIn && hasEditedSinceLoad ? "auto minmax(0, 1fr)" : "minmax(0, 1fr)",
         gap: 0,
         padding: 0,
         width: "100%",
@@ -1421,6 +1532,57 @@ export default function PatternEditor() {
         overflow: "hidden",
       }}
     >
+      {!isSignedIn && hasEditedSinceLoad && (
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 210,
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "nowrap",
+            gap: 8,
+            height: 36,
+            padding: "4px 10px",
+            background: "var(--accent-wash)",
+            borderBottom: "1px solid var(--ui-border-subtle)",
+            color: "var(--foreground)",
+            fontSize: 12,
+            fontWeight: 600,
+            overflow: "hidden",
+          }}
+        >
+          <span
+            style={{
+              flex: "1 1 auto",
+              minWidth: 0,
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            You're signed out! Sign in or create an account to save your edits and access your WIPs later.
+          </span>
+          <button
+            type="button"
+            onClick={() => router.push("/sign-in")}
+            style={{
+              padding: "3px 8px",
+              borderRadius: 8,
+              border: "1px solid var(--panel-border)",
+              background: "var(--card-bg)",
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Sign in
+          </button>
+        </div>
+      )}
       <div
         className="pattern-main"
         style={{
@@ -1430,7 +1592,7 @@ export default function PatternEditor() {
           alignItems: "stretch",
           width: "100%",
           minWidth: 0,
-          height: "100%",
+          height: "auto",
           minHeight: 0,
           overflow: "hidden",
           gridTemplateColumns: isNarrow
@@ -1453,10 +1615,11 @@ export default function PatternEditor() {
               height={gridH}
               cellSize={EXPORT_CELL_SIZE}
               threadView={threadView}
+              compact={isCompact}
             />,
             headerActionsNode
           )}
-        {headerFileNode &&
+        {(isCompact ? headerFileRightNode : headerFileLeftNode) &&
           createPortal(
             <div ref={fileMenuRef} style={{ position: "relative" }}>
               <button
@@ -1464,36 +1627,448 @@ export default function PatternEditor() {
                 onClick={() => setFileMenuOpen((open) => !open)}
                 aria-expanded={fileMenuOpen}
                 aria-haspopup="menu"
+                aria-label={isCompact ? "More options" : "File"}
                 style={{
-                  padding: "4px 8px",
+                  padding: isCompact ? "2px 8px" : "4px 8px",
                   borderRadius: 8,
                   border: "none",
                   background: "var(--card-bg)",
-                  fontSize: 13,
+                  fontSize: isCompact ? 16 : 13,
                   fontWeight: 600,
                   cursor: "pointer",
+                  lineHeight: 1,
                 }}
               >
-                File
+                {isCompact ? "⋯" : "File"}
               </button>
               {fileMenuOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    left: 0,
-                    minWidth: 160,
-                    background: "var(--card-bg)",
-                    border: "1px solid var(--ui-border-subtle)",
-                    borderRadius: 10,
-                    boxShadow: "var(--ui-shadow-lg)",
-                    padding: 6,
-                    display: "grid",
-                    gap: 4,
-                    zIndex: 50,
-                  }}
-                >
+                <>
+                  <button
+                    type="button"
+                    aria-label="Close file menu"
+                    onClick={() => setFileMenuOpen(false)}
+                    style={{
+                      position: "fixed",
+                      inset: 0,
+                      border: "none",
+                      margin: 0,
+                      padding: 0,
+                      background: "transparent",
+                      zIndex: 49,
+                      cursor: "default",
+                    }}
+                  />
+                  <div
+                    role="menu"
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      left: isCompact ? "auto" : 0,
+                      right: isCompact ? 0 : "auto",
+                      minWidth: 160,
+                      background: "var(--card-bg)",
+                      border: "1px solid var(--ui-border-subtle)",
+                      borderRadius: 10,
+                      boxShadow: "var(--ui-shadow-lg)",
+                      padding: 6,
+                      display: "grid",
+                      gap: 4,
+                      zIndex: 50,
+                    }}
+                  >
+                  {isCompact && (
+                    <>
+                      <div
+                        style={{
+                          padding: "8px 10px 6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        {isRenaming ? (
+                          <input
+                            ref={renameInputRef}
+                            value={draftTitle}
+                            onChange={(e) => setDraftTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                commitRename();
+                              }
+                              if (e.key === "Escape") {
+                                setIsRenaming(false);
+                                setDraftTitle(title);
+                              }
+                            }}
+                            aria-label="Pattern name"
+                            style={{
+                              flex: "1 1 auto",
+                              minWidth: 0,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              border: "1px solid var(--panel-border)",
+                              borderRadius: 8,
+                              background: "transparent",
+                              color: "var(--foreground)",
+                              outline: "none",
+                              padding: "4px 8px",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              flex: "1 1 auto",
+                              minWidth: 0,
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: "var(--foreground)",
+                              lineHeight: 1.2,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {title.trim() || "Untitled Pattern"}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={isRenaming ? "Confirm rename" : "Rename pattern"}
+                          onClick={() => {
+                            if (isRenaming) {
+                              commitRename();
+                              return;
+                            }
+                            requestRename();
+                          }}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 8,
+                            border: "1px solid var(--panel-border)",
+                            background: "var(--card-bg)",
+                            cursor: "pointer",
+                            display: "grid",
+                            placeItems: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            lineHeight: 1,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isRenaming ? "✓" : "✎"}
+                        </button>
+                      </div>
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          height: 1,
+                          margin: "0 6px 2px",
+                          background: "var(--ui-divider)",
+                        }}
+                      />
+                    </>
+                  )}
+                  {isCompact && isSignedIn && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="menu-item"
+                      onClick={() => {
+                        setFileMenuOpen(false);
+                        void forceSaveNow();
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "transparent",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Saved{" "}
+                      {lastAutosaveAt
+                        ? `at ${lastAutosaveAt.toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}`
+                        : ""}
+                    </button>
+                  )}
+                  {isCompact && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="menu-item"
+                      onClick={() => {
+                        setFileMenuOpen(false);
+                        openVersionHistory();
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "transparent",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      View version history
+                    </button>
+                  )}
+                  {isCompact && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="menu-item"
+                      disabled={!authLoaded}
+                      onClick={() => {
+                        setFileMenuOpen(false);
+                        if (isSignedIn) {
+                          void clerk.signOut();
+                          return;
+                        }
+                        router.push("/sign-in");
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "transparent",
+                        textAlign: "left",
+                        cursor: authLoaded ? "pointer" : "not-allowed",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        opacity: authLoaded ? 1 : 0.6,
+                      }}
+                    >
+                      {isSignedIn ? "Sign out" : "Sign in"}
+                    </button>
+                  )}
+                  {isCompact && (
+                    <>
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          height: 1,
+                          margin: "2px 6px",
+                          background: "var(--ui-divider)",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        aria-expanded={mobileSettingsOpen}
+                        className="menu-item"
+                        onClick={() => setMobileSettingsOpen((open) => !open)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "none",
+                          background: "transparent",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 8,
+                        }}
+                      >
+                        <span>Settings</span>
+                        <span aria-hidden="true" style={{ opacity: 0.75 }}>
+                          {mobileSettingsOpen ? "▾" : "▸"}
+                        </span>
+                      </button>
+                      {mobileSettingsOpen && (
+                        <>
+                          <button
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={showGridlines}
+                            className="menu-item"
+                            onClick={() => setShowGridlines((value) => !value)}
+                            style={{
+                              padding: "6px 10px 6px 18px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <img
+                                src={assetPath("/icons/grid3.svg")}
+                                alt=""
+                                aria-hidden="true"
+                                width={12}
+                                height={12}
+                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                              />
+                              Gridlines
+                            </span>
+                            <span style={{ opacity: 0.75 }}>{showGridlines ? "On" : "Off"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={showRuler}
+                            className="menu-item"
+                            onClick={() => setShowRuler((value) => !value)}
+                            style={{
+                              padding: "6px 10px 6px 18px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <img
+                                src={assetPath("/icons/sqfoot.svg")}
+                                alt=""
+                                aria-hidden="true"
+                                width={12}
+                                height={12}
+                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                              />
+                              Ruler
+                            </span>
+                            <span style={{ opacity: 0.75 }}>{showRuler ? "On" : "Off"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={threadView}
+                            className="menu-item"
+                            onClick={() => setThreadView((value) => !value)}
+                            style={{
+                              padding: "6px 10px 6px 18px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <img
+                                src={assetPath("/icons/thread.svg")}
+                                alt=""
+                                aria-hidden="true"
+                                width={12}
+                                height={12}
+                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                              />
+                              Thread view
+                            </span>
+                            <span style={{ opacity: 0.75 }}>{threadView ? "On" : "Off"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={showSymbols}
+                            className="menu-item"
+                            onClick={() => setShowSymbols((value) => !value)}
+                            style={{
+                              padding: "6px 10px 6px 18px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <img
+                                src={assetPath("/icons/glyphs.svg")}
+                                alt=""
+                                aria-hidden="true"
+                                width={12}
+                                height={12}
+                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                              />
+                              Symbols
+                            </span>
+                            <span style={{ opacity: 0.75 }}>{showSymbols ? "On" : "Off"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={darkMode}
+                            className="menu-item"
+                            onClick={() => setDarkMode((value) => !value)}
+                            style={{
+                              padding: "6px 10px 6px 18px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "transparent",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <img
+                                src={assetPath("/icons/moon.svg")}
+                                alt=""
+                                aria-hidden="true"
+                                width={12}
+                                height={12}
+                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                              />
+                              Dark mode
+                            </span>
+                            <span style={{ opacity: 0.75 }}>{darkMode ? "On" : "Off"}</span>
+                          </button>
+                        </>
+                      )}
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          height: 1,
+                          margin: "2px 6px",
+                          background: "var(--ui-divider)",
+                        }}
+                      />
+                    </>
+                  )}
                   <button
                     type="button"
                     role="menuitem"
@@ -1542,34 +2117,38 @@ export default function PatternEditor() {
                   >
                     Load WIP
                   </button>
+                  {!isCompact && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="menu-item"
+                      onClick={() => {
+                        setFileMenuOpen(false);
+                        openVersionHistory();
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "transparent",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      View version history
+                    </button>
+                  )}
                   <button
                     type="button"
                     role="menuitem"
                     className="menu-item"
                     onClick={() => {
-                      setFileMenuOpen(false);
-                      openVersionHistory();
-                    }}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Version History
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="menu-item"
-                    onClick={() => {
-                      setFileMenuOpen(false);
-                      setIsRenaming(true);
+                      if (!isCompact) {
+                        setFileMenuOpen(false);
+                      }
+                      requestRename();
                     }}
                     style={{
                       padding: "6px 10px",
@@ -1584,12 +2163,15 @@ export default function PatternEditor() {
                   >
                     Rename
                   </button>
-                </div>
+                  </div>
+                </>
               )}
             </div>,
-            headerFileNode
+            isCompact ? headerFileRightNode : headerFileLeftNode
           )}
         {headerAutosaveNode &&
+          isSignedIn &&
+          !isCompact &&
           createPortal(
             <button
               type="button"
@@ -1611,7 +2193,7 @@ export default function PatternEditor() {
               }}
             >
               <img
-                src={assetPath("/cloud_done.svg")}
+                src={assetPath("/icons/cloud_done.svg")}
                 alt=""
                 aria-hidden="true"
                 width={16}
@@ -1631,10 +2213,76 @@ export default function PatternEditor() {
             </button>,
             headerAutosaveNode
           )}
+        {headerHistoryNode &&
+          isCompact &&
+          createPortal(
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                onClick={undo}
+                disabled={!canUndo}
+                aria-label="Undo"
+                title="Undo"
+                style={{
+                  padding: "4px 6px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--card-bg)",
+                  cursor: canUndo ? "pointer" : "not-allowed",
+                  opacity: canUndo ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={assetPath("/icons/undo.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                disabled={!canRedo}
+                aria-label="Redo"
+                title="Redo"
+                style={{
+                  padding: "4px 6px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--card-bg)",
+                  cursor: canRedo ? "pointer" : "not-allowed",
+                  opacity: canRedo ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={assetPath("/icons/redo.svg")}
+                  alt=""
+                  aria-hidden="true"
+                  width={18}
+                  height={18}
+                  style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                />
+              </button>
+            </div>,
+            headerHistoryNode
+          )}
         {headerTitleNode &&
           createPortal(
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, zIndex: 2 }}>
-              {isRenaming ? (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                zIndex: 2,
+                minWidth: 0,
+                maxWidth: isVerySmall ? "calc(100vw - 128px)" : undefined,
+              }}
+            >
+              {isRenaming && !isCompact ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <input
                     ref={renameInputRef}
@@ -1682,91 +2330,91 @@ export default function PatternEditor() {
                     ✓
                   </button>
                 </div>
-              ) : (
+              ) : !isCompact ? (
                 <span
-                  onDoubleClick={() => setIsRenaming(true)}
-                  style={{ fontWeight: 700, fontSize: 14, color: "var(--foreground)", cursor: "text" }}
+                  onDoubleClick={requestRename}
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: "var(--foreground)",
+                    cursor: "text",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
                 >
                   {title}
                 </span>
+              ) : null}
+              {!isCompact && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginLeft: isVerySmall ? 8 : 24,
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={undo}
+                    disabled={!canUndo}
+                    aria-label="Undo"
+                    title="Undo"
+                    style={{
+                      padding: "4px 6px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "var(--card-bg)",
+                      cursor: canUndo ? "pointer" : "not-allowed",
+                      opacity: canUndo ? 1 : 0.5,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={assetPath("/icons/undo.svg")}
+                      alt=""
+                      aria-hidden="true"
+                      width={18}
+                      height={18}
+                      style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={redo}
+                    disabled={!canRedo}
+                    aria-label="Redo"
+                    title="Redo"
+                    style={{
+                      padding: "4px 6px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "var(--card-bg)",
+                      cursor: canRedo ? "pointer" : "not-allowed",
+                      opacity: canRedo ? 1 : 0.5,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={assetPath("/icons/redo.svg")}
+                      alt=""
+                      aria-hidden="true"
+                      width={18}
+                      height={18}
+                      style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                    />
+                  </button>
+                </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 24 }}>
-                <button
-                  type="button"
-                  onClick={undo}
-                  disabled={!canUndo}
-                  aria-label="Undo"
-                  title="Undo"
-                  style={{
-                    padding: "4px 6px",
-                    borderRadius: 8,
-                    border: "none",
-                    background: "var(--card-bg)",
-                    cursor: canUndo ? "pointer" : "not-allowed",
-                    opacity: canUndo ? 1 : 0.5,
-                  }}
-                >
-                  <img
-                    src={assetPath("/undo.svg")}
-                    alt=""
-                    aria-hidden="true"
-                    width={18}
-                    height={18}
-                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={redo}
-                  disabled={!canRedo}
-                  aria-label="Redo"
-                  title="Redo"
-                  style={{
-                    padding: "4px 6px",
-                    borderRadius: 8,
-                    border: "none",
-                    background: "var(--card-bg)",
-                    cursor: canRedo ? "pointer" : "not-allowed",
-                    opacity: canRedo ? 1 : 0.5,
-                  }}
-                >
-                  <img
-                    src={assetPath("/redo.svg")}
-                    alt=""
-                    aria-hidden="true"
-                    width={18}
-                    height={18}
-                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={clearGrid}
-                  aria-label="Clear"
-                  title="Clear"
-                  style={{
-                    padding: "4px 6px",
-                    borderRadius: 8,
-                    border: "none",
-                    background: "var(--card-bg)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <img
-                    src={assetPath("/trash.svg")}
-                    alt=""
-                    aria-hidden="true"
-                    width={18}
-                    height={18}
-                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                  />
-                </button>
-              </div>
             </div>,
             headerTitleNode
           )}
         {!isNarrow && !sidebarCollapsed && (
           <button
+            className="pattern-sidebar-toggle-desktop"
             type="button"
             onClick={() => setSidebarCollapsedWithFlip((prev) => !prev)}
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -1795,15 +2443,15 @@ export default function PatternEditor() {
         {isNarrow && !sidebarCollapsed && (
           <button
             type="button"
-            onClick={() => setSidebarCollapsedWithFlip((prev) => !prev)}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setSidebarCollapsedWithFlip(true)}
+            aria-label="Collapse sidebar"
             style={{
               position: "fixed",
-              top: "50%",
-              left: sidebarCollapsed ? 14 : "min(80vw, 320px)",
-              transform: sidebarCollapsed ? "translateY(-50%)" : "translate(-50%, -50%)",
-              width: 22,
-              height: 40,
+              left: "50%",
+              bottom: `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) + ${sidebarBottomSheetHeight} - 10px)`,
+              transform: "translateX(-50%)",
+              width: 42,
+              height: 22,
               borderRadius: 999,
               border: "1px solid var(--ui-border)",
               background: "var(--card-bg)",
@@ -1811,17 +2459,15 @@ export default function PatternEditor() {
               display: "grid",
               placeItems: "center",
               cursor: "pointer",
-              zIndex: 200,
+              zIndex: 202,
             }}
           >
-            <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.7 }}>
-              {sidebarCollapsed ? "▸" : "◂"}
-            </span>
+            <span style={{ fontSize: 13, lineHeight: 1, opacity: 0.7 }}>▾</span>
           </button>
         )}
         {!isNarrow && (
           <div
-            className="pattern-menu"
+            className="pattern-menu pattern-menu-desktop"
             style={{
               display: "grid",
               gap: 10,
@@ -1837,6 +2483,7 @@ export default function PatternEditor() {
             {menuPages.map((page) => (
               <button
                 key={page.id}
+                className="pattern-menu-button"
                 type="button"
                 onClick={() => {
                   if (activeMenuId === page.id) {
@@ -1847,17 +2494,21 @@ export default function PatternEditor() {
                   }
                 }}
                 title={page.label}
+                aria-label={page.label}
                 aria-pressed={activeMenuId === page.id}
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: 52,
+                  height: 54,
                   borderRadius: 12,
                   border: "none",
-                  background: activeMenuId === page.id ? "var(--accent-wash)" : "var(--card-bg)",
-                  color: activeMenuId === page.id ? "var(--accent-strong)" : "var(--foreground)",
+                  background: activeMenuId === page.id && !sidebarCollapsed ? "var(--accent-wash)" : "var(--card-bg)",
+                  color: "var(--foreground)",
                   fontSize: 16,
-                  display: "grid",
-                  placeItems: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 3,
                   cursor: "pointer",
                 }}
               >
@@ -1869,15 +2520,93 @@ export default function PatternEditor() {
                   height={18}
                   style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
                 />
+                <span style={{ fontSize: 10, lineHeight: 1.1, whiteSpace: "nowrap" }}>{page.label}</span>
               </button>
             ))}
           </div>
         )}
+        {isNarrow && (
+          <div
+            className="pattern-menu pattern-menu-mobile"
+            style={{
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: "flex",
+              gap: 8,
+              justifyContent: "center",
+              padding: "6px 10px calc(8px + env(safe-area-inset-bottom, 0px))",
+              background: "var(--card-bg)",
+              borderTop: "1px solid var(--ui-divider)",
+              zIndex: 200,
+            }}
+          >
+            {mobileMenuPages.map((page) => {
+              const isToolsButton = page.id === "tools";
+              const isPressed = isToolsButton
+                ? mobileToolbarVisible && !mobileToolbarCollapsed
+                : activeMenuId === page.id;
+              const showSelected = isToolsButton
+                ? mobileToolbarVisible && !mobileToolbarCollapsed
+                : isPressed && !sidebarCollapsed;
+              return (
+                <button
+                  key={page.id}
+                  className="pattern-menu-button"
+                  type="button"
+                  onClick={() => {
+                    if (isToolsButton) {
+                      setMobileToolbarVisible((prev) => !prev);
+                      setSidebarCollapsedWithFlip(true);
+                      return;
+                    }
+                    if (activeMenuId === page.id) {
+                      setSidebarCollapsedWithFlip((prev) => !prev);
+                    } else {
+                      setActiveMenuId(page.id);
+                      setSidebarCollapsedWithFlip(false);
+                    }
+                  }}
+                  title={page.label}
+                  aria-label={page.label}
+                  aria-pressed={isPressed}
+                  style={{
+                    width: 56,
+                    height: 48,
+                    borderRadius: 12,
+                    border: "none",
+                    background: showSelected ? "var(--accent-wash)" : "var(--card-bg)",
+                    color: "var(--foreground)",
+                    fontSize: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 2,
+                    cursor: "pointer",
+                  }}
+                >
+                  <img
+                    src={page.icon}
+                    alt=""
+                    aria-hidden="true"
+                    width={18}
+                    height={18}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
+                  <span style={{ fontSize: 10, lineHeight: 1.1, whiteSpace: "nowrap" }}>{page.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div
           className="pattern-sidebar"
+          data-layout={isNarrow ? "mobile" : "desktop"}
           ref={sidebarRef}
           style={{
-            display: isNarrow ? (sidebarCollapsed ? "none" : "grid") : "grid",
+            display: "grid",
             gap: 16,
             alignContent: "start",
             minWidth: 0,
@@ -1888,17 +2617,28 @@ export default function PatternEditor() {
             overflowX: "visible",
             alignSelf: "stretch",
             position: isNarrow ? "fixed" : "relative",
-            top: isNarrow ? "var(--app-header-height, 0px)" : undefined,
+            top: isNarrow ? "auto" : undefined,
             left: isNarrow ? 0 : undefined,
-            bottom: isNarrow ? 0 : undefined,
+            right: isNarrow ? 0 : undefined,
+            bottom: isNarrow ? `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px))` : undefined,
             width: isNarrow
               ? sidebarCollapsed
                 ? sidebarCollapsedWidthMobileValue
-                : sidebarExpandedWidth
+                : "100%"
               : sidebarCollapsed
                 ? 0
                 : sidebarExpandedWidth,
+            height: isNarrow ? (sidebarCollapsed ? 0 : sidebarBottomSheetHeight) : "100%",
+            maxHeight: isNarrow ? sidebarBottomSheetHeight : "100%",
             zIndex: isNarrow ? 80 : 90,
+            borderTop: isNarrow ? "1px solid var(--ui-divider)" : undefined,
+            borderTopLeftRadius: isNarrow ? 14 : undefined,
+            borderTopRightRadius: isNarrow ? 14 : undefined,
+            boxShadow: isNarrow ? "0 -10px 24px var(--ui-border)" : undefined,
+            opacity: isNarrow ? (sidebarCollapsed ? 0 : 1) : 1,
+            transform: isNarrow ? (sidebarCollapsed ? "translateY(12px)" : "translateY(0)") : undefined,
+            transition: isNarrow ? "height 220ms ease, opacity 180ms ease, transform 220ms ease" : undefined,
+            pointerEvents: isNarrow && sidebarCollapsed ? "none" : "auto",
           }}
         >
           <div
@@ -1908,14 +2648,21 @@ export default function PatternEditor() {
               display: "grid",
               gap: 0,
               alignContent: "start",
-              padding: "12px 18px",
+              padding: isNarrow ? "10px 14px" : "12px 18px",
               height: "100%",
               minHeight: 0,
               maxHeight: "100%",
               overflowY: sidebarScrollable ? "auto" : "hidden",
               overflowX: "hidden",
               opacity: sidebarCollapsed ? 0 : 1,
-              transform: sidebarCollapsed ? "translateX(-6px)" : "translateX(0)",
+              transform: isNarrow
+                ? sidebarCollapsed
+                  ? "translateY(8px)"
+                  : "translateY(0)"
+                : sidebarCollapsed
+                  ? "translateX(-6px)"
+                  : "translateX(0)",
+              transition: isNarrow ? "opacity 180ms ease, transform 220ms ease" : undefined,
               pointerEvents: sidebarCollapsed ? "none" : "auto",
             }}
           >
@@ -2092,6 +2839,7 @@ export default function PatternEditor() {
                   selectedColorId={textColorId}
                   onSelectColor={setTextColorId}
                   palette={palette}
+                  usedColorCounts={usedColorCounts}
                   placementActive={Boolean(pendingTextPlacement)}
                   onAddTextBox={addTextBoxToCanvas}
                 />
@@ -2119,6 +2867,7 @@ export default function PatternEditor() {
             {
               minWidth: 0,
               paddingInline: 0,
+              paddingBottom: isNarrow ? `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px))` : 0,
               width: "100%",
               height: "100%",
               display: "flex",
@@ -2162,7 +2911,10 @@ export default function PatternEditor() {
               showRuler={showRuler}
               gridBackground="#ffffff"
               tool={tool}
-              onToolChange={(nextTool: "paint" | "eraser" | "fill" | "eyedropper" | "lasso") => {
+              onToolChange={(nextTool: "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror") => {
+                if (nextTool === "mirror" && tool !== "mirror") {
+                  mirrorPrevToolRef.current = tool;
+                }
                 setTool(nextTool);
                 setPanMode(false);
               }}
@@ -2227,12 +2979,12 @@ export default function PatternEditor() {
               onTraceTransformStart={beginTraceTransform}
               onTraceTransformEnd={endTraceTransform}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
-                traceTransformBasisRef.current = fitCellSize;
+                rebaseTraceTransformToCurrentFit();
                 setTraceOffsetX(x);
                 setTraceOffsetY(y);
               }}
               onTraceScaleChange={(value: number) => {
-                traceTransformBasisRef.current = fitCellSize;
+                rebaseTraceTransformToCurrentFit();
                 setTraceScale(value);
               }}
               panMode={panMode}
@@ -2274,10 +3026,29 @@ export default function PatternEditor() {
               onClearFilterSelection={clearFilterSelection}
               onFilterRectChange={(rect: FilterRect | null) => setFilterRect(rect)}
               onFilterSelectEnd={endFilterSelection}
+              mirrorRect={mirrorRect}
+              mirrorSelecting={mirrorSelecting}
+              onMirrorDone={() => {
+                clearMirrorSelection();
+                setTool(mirrorPrevToolRef.current);
+                setPanMode(false);
+              }}
+              onMirrorRectChange={setMirrorRect}
+              onMirrorSelectEnd={endMirrorSelection}
+              onMirrorApply={applyMirror}
               isNarrow={isNarrow}
+              isCompact={isCompact}
+              bottomMenuBarHeight={bottomMenuBarHeight}
+              toolbarVisible={!isNarrow || mobileToolbarVisible}
+              onToolbarCollapsedChange={(collapsed: boolean) => {
+                if (!isNarrow) return;
+                setMobileToolbarCollapsed(collapsed);
+              }}
               setShowGridlines={setShowGridlines}
               setShowRuler={setShowRuler}
               setThreadView={setThreadView}
+              darkMode={darkMode}
+              onDarkModeChange={setDarkMode}
               setTraceOpacity={setTraceOpacity}
               tracePostUpload={tracePostUpload}
               traceEditMode={traceEditMode}
@@ -2327,34 +3098,41 @@ export default function PatternEditor() {
           confirmActionRef.current?.();
         }}
       />
-      {wipStatus && (
-        <div
-          style={{
-            position: "fixed",
-            top: 16,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 80,
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "var(--card-bg)",
-            border: "1px solid var(--ui-border-subtle)",
-            boxShadow: "var(--ui-shadow-lg)",
-            color:
-              wipStatus.tone === "error"
-                ? "#b91c1c"
-                : wipStatus.tone === "success"
-                  ? "var(--accent-strong)"
-                  : "var(--foreground)",
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-          role="status"
-          aria-live="polite"
-        >
-          {wipStatus.message}
-        </div>
-      )}
+      {wipStatus &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: "calc(var(--app-header-height, 0px) + env(safe-area-inset-top, 0px) + 8px)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 260,
+              maxWidth: "min(92vw, 560px)",
+              width: "max-content",
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "var(--card-bg)",
+              border: "1px solid var(--ui-border-subtle)",
+              boxShadow: "var(--ui-shadow-lg)",
+              color:
+                wipStatus.tone === "error"
+                  ? "#b91c1c"
+                  : wipStatus.tone === "success"
+                    ? "var(--accent-strong)"
+                    : "var(--foreground)",
+              fontSize: 12,
+              fontWeight: 600,
+              textAlign: "center",
+              whiteSpace: "normal",
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            {wipStatus.message}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
+const SAVE_LOG_ENABLED = process.env.NODE_ENV !== "production";
 
 type DraftPayload = {
   version: number;
@@ -84,6 +85,17 @@ export async function POST(req: Request) {
 
   const title =
     typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled Pattern";
+
+  if (SAVE_LOG_ENABLED) {
+    console.info("[wippa save][create] request", {
+      userId,
+      title,
+      saveSource,
+      forceVersion,
+      gridW: draft.gridW,
+      gridH: draft.gridH,
+    });
+  }
 
   const now = new Date();
   const dataHash = hashDraft(draft);

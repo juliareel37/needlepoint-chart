@@ -6,6 +6,7 @@ import { deleteBlobIfExists, extractBlobUrl } from "@/lib/blob";
 import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
+const SAVE_LOG_ENABLED = process.env.NODE_ENV !== "production";
 
 type DraftPayload = {
   version: number;
@@ -107,6 +108,18 @@ export async function PUT(req: Request, context: RouteContext) {
   }
 
   const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
+
+  if (SAVE_LOG_ENABLED) {
+    console.info("[wippa save][update] request", {
+      userId,
+      draftId: id,
+      title,
+      saveSource,
+      forceVersion,
+      gridW: draft.gridW,
+      gridH: draft.gridH,
+    });
+  }
 
   const dataHash = hashDraft(draft);
   const now = new Date();

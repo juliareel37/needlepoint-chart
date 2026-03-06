@@ -108,7 +108,7 @@ export function TraceImageCard({
                   }}
                 >
                   <img
-                    src={assetPath("/file.svg")}
+                    src={assetPath("/icons/file.svg")}
                     alt=""
                     aria-hidden="true"
                     width={14}
@@ -152,7 +152,7 @@ export function TraceImageCard({
                 aria-label="Remove image"
               >
                 <img
-                  src={assetPath("/trash.svg")}
+                  src={assetPath("/icons/trash.svg")}
                   alt=""
                   aria-hidden="true"
                   width={16}
@@ -184,7 +184,7 @@ export function TraceImageCard({
               }}
             >
               <img
-                src={assetPath("/upload.svg")}
+                src={assetPath("/icons/upload.svg")}
                 alt=""
                 aria-hidden="true"
                 width={18}

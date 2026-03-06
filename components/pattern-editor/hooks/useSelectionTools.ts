@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { idx } from "../../../lib/grid";
-import { clampFilterRect, pointInPolygon, type FilterRect, type Point } from "../utils/geometry";
+import {
+  clampFilterRect,
+  getMirrorTargetRect,
+  pointInPolygon,
+  type FilterRect,
+  type MirrorDirection,
+  type Point,
+} from "../utils/geometry";
 
-type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror";
 
 type UseSelectionToolsArgs = {
   tool: ToolName;
@@ -30,6 +37,9 @@ export function useSelectionTools({
   const [filterMode, setFilterMode] = useState(false);
   const [filterRect, setFilterRect] = useState<FilterRect | null>(null);
   const [filterSelecting, setFilterSelecting] = useState(false);
+  const [mirrorRect, setMirrorRect] = useState<FilterRect | null>(null);
+  const [mirrorSelecting, setMirrorSelecting] = useState(false);
+  const prevToolRef = useRef<ToolName>(tool);
 
   useEffect(() => {
     if (tool !== "lasso") {
@@ -45,6 +55,18 @@ export function useSelectionTools({
   }, [filterMode, filterSelecting]);
 
   useEffect(() => {
+    const prevTool = prevToolRef.current;
+    prevToolRef.current = tool;
+    if (tool !== "mirror") {
+      setMirrorSelecting(false);
+      return;
+    }
+    if (prevTool !== "mirror" && !mirrorRect && !mirrorSelecting) {
+      setMirrorSelecting(true);
+    }
+  }, [tool, mirrorRect, mirrorSelecting]);
+
+  useEffect(() => {
     if (!filterRect) return;
     if (gridW <= 0 || gridH <= 0) return;
     const clamped = clampFilterRect(filterRect, gridW, gridH);
@@ -57,6 +79,20 @@ export function useSelectionTools({
       setFilterRect(clamped);
     }
   }, [filterRect, gridW, gridH]);
+
+  useEffect(() => {
+    if (!mirrorRect) return;
+    if (gridW <= 0 || gridH <= 0) return;
+    const clamped = clampFilterRect(mirrorRect, gridW, gridH);
+    if (
+      clamped.x0 !== mirrorRect.x0 ||
+      clamped.y0 !== mirrorRect.y0 ||
+      clamped.x1 !== mirrorRect.x1 ||
+      clamped.y1 !== mirrorRect.y1
+    ) {
+      setMirrorRect(clamped);
+    }
+  }, [mirrorRect, gridW, gridH]);
 
   const activeFilterRect = useMemo(() => {
     if (!filterMode || !filterRect) return null;
@@ -161,12 +197,72 @@ export function useSelectionTools({
     setLassoClosed(false);
   }
 
+  function clearMirrorSelection() {
+    setMirrorRect(null);
+    setMirrorSelecting(false);
+  }
+
+  function startMirrorSelection() {
+    setMirrorRect(null);
+    setMirrorSelecting(true);
+  }
+
+  function endMirrorSelection() {
+    setMirrorSelecting(false);
+  }
+
+  function setMirrorRectClamped(next: FilterRect | null) {
+    if (!next) {
+      setMirrorRect(null);
+      return;
+    }
+    setMirrorRect(clampFilterRect(next, gridW, gridH));
+  }
+
+  function applyMirror(direction: MirrorDirection) {
+    if (!mirrorRect) return;
+    const targetRect = getMirrorTargetRect(mirrorRect, direction);
+    updateGrid((prev) => {
+      const next = new Uint16Array(prev);
+      let changed = false;
+      for (let sy = mirrorRect.y0; sy <= mirrorRect.y1; sy++) {
+        for (let sx = mirrorRect.x0; sx <= mirrorRect.x1; sx++) {
+          const rx = sx - mirrorRect.x0;
+          const ry = sy - mirrorRect.y0;
+          const tx =
+            direction === "left" || direction === "right"
+              ? targetRect.x0 + (mirrorRect.x1 - sx)
+              : targetRect.x0 + rx;
+          const ty =
+            direction === "top" || direction === "bottom"
+              ? targetRect.y0 + (mirrorRect.y1 - sy)
+              : targetRect.y0 + ry;
+          if (tx < 0 || ty < 0 || tx >= gridW || ty >= gridH) continue;
+          const sourceColorId = prev[idx(sx, sy, gridW)];
+          const targetIndex = idx(tx, ty, gridW);
+          if (next[targetIndex] === sourceColorId) continue;
+          next[targetIndex] = sourceColorId;
+          changed = true;
+        }
+      }
+      if (changed) {
+        setLastEditCell({
+          x: Math.round((targetRect.x0 + targetRect.x1) / 2),
+          y: Math.round((targetRect.y0 + targetRect.y1) / 2),
+        });
+      }
+      return changed ? next : prev;
+    });
+  }
+
   return {
     lassoPoints,
     lassoClosed,
     filterMode,
     filterRect,
     filterSelecting,
+    mirrorRect,
+    mirrorSelecting,
     activeFilterRect,
     isCellInFilter,
     isIndexInFilter,
@@ -179,5 +275,10 @@ export function useSelectionTools({
     resetLasso,
     closeLasso,
     fillLasso,
+    startMirrorSelection,
+    clearMirrorSelection,
+    endMirrorSelection,
+    setMirrorRect: setMirrorRectClamped,
+    applyMirror,
   };
 }

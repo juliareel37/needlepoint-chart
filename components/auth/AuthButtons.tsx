@@ -13,14 +13,16 @@ export default function AuthButtons() {
           <button
             type="button"
             style={{
-              padding: "6px 10px",
+              padding: "4px 8px",
               borderRadius: 8,
-              border: "1px solid var(--panel-border)",
+              border: "1px solid var(--ui-border-subtle)",
               background: "var(--card-bg)",
               color: "var(--foreground)",
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 600,
+              lineHeight: 1.2,
+              transition: "background-color 150ms ease, border-color 150ms ease",
             }}
           >
             Sign in

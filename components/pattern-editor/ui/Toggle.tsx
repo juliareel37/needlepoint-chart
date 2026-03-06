@@ -3,7 +3,7 @@
 import React from "react";
 
 type ToggleProps = {
-  label: string;
+  label: React.ReactNode;
   checked: boolean;
   onChange: (next: boolean) => void;
 };
@@ -12,14 +12,28 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
   return (
     <label
       style={{
-        display: "grid",
-        gap: 4,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
         width: "100%",
-        justifyItems: "end",
+        gap: 10,
         cursor: "pointer",
       }}
     >
-      <span style={{ fontSize: 12, opacity: 0.8, textAlign: "right", width: "100%" }}>{label}</span>
+      <span
+        style={{
+          fontSize: 12,
+          opacity: 0.8,
+          textAlign: "left",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: 6,
+        }}
+      >
+        {label}
+      </span>
       <input
         type="checkbox"
         checked={checked}
@@ -29,12 +43,13 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
       <span
         aria-hidden="true"
         style={{
+          flexShrink: 0,
           width: 36,
           height: 20,
           borderRadius: 999,
           border: "1px solid var(--toggle-track-border)",
           background: checked ? "var(--toggle-track-on)" : "var(--toggle-track-off)",
-          justifySelf: "end",
+          justifySelf: "start",
           position: "relative",
           transition: "background 150ms ease",
         }}

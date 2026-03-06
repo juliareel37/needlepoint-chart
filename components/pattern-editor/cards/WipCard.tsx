@@ -128,7 +128,7 @@ export function WipCard({
                 }}
               >
                 <img
-                  src={assetPath("/save.svg")}
+                  src={assetPath("/icons/save.svg")}
                   alt=""
                   aria-hidden="true"
                   width={16}
@@ -157,7 +157,7 @@ export function WipCard({
               }}
             >
               <img
-                src={assetPath("/draft_add.svg")}
+                src={assetPath("/icons/draft_add.svg")}
                 alt=""
                 aria-hidden="true"
                 width={20}
@@ -183,7 +183,7 @@ export function WipCard({
               }}
             >
               <img
-                src={assetPath("/unarchive.svg")}
+                src={assetPath("/icons/unarchive.svg")}
                 alt=""
                 aria-hidden="true"
                 width={20}
@@ -218,7 +218,7 @@ export function WipCard({
               }}
             >
               <img
-                src={assetPath("/cloud_done.svg")}
+                src={assetPath("/icons/cloud_done.svg")}
                 alt=""
                 aria-hidden="true"
                 width={14}

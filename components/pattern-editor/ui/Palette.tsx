@@ -253,12 +253,12 @@ export default function Palette({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            columnGap: 4,
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+            columnGap: 3,
             rowGap: 6,
             maxHeight: 240,
             overflowY: "auto",
-            padding: "6px 4px 4px 6px",
+            padding: "4px 2px 2px 2px",
             overscrollBehavior: "contain",
           }}
         >
@@ -316,7 +316,7 @@ export default function Palette({
                     display: "grid",
                     gap: 2,
                     justifyItems: "center",
-                    padding: 2,
+                    padding: 1,
                   }}
                   onMouseEnter={() => setHoveredSwatchId(c.id)}
                   onMouseLeave={() => setHoveredSwatchId((prev) => (prev === c.id ? null : prev))}
@@ -327,8 +327,8 @@ export default function Palette({
                     aria-label={`Select ${c.name}`}
                     title={`${c.name} (${c.code ?? c.hex})`}
                     style={{
-                      width: 38,
-                      height: 38,
+                      width: 34,
+                      height: 34,
                       borderRadius: 6,
                       border:
                         isRemapTarget || showRemapSource
@@ -345,8 +345,8 @@ export default function Palette({
                   >
                     <span
                       style={{
-                        width: 34,
-                        height: 34,
+                        width: 30,
+                        height: 30,
                         borderRadius: 4,
                         background: c.hex,
                         display: "inline-block",
@@ -404,7 +404,7 @@ export default function Palette({
                         }}
                       >
                         <img
-                          src={assetPath(isFavorite ? "/heart_fill.svg" : "/heart_empty.svg")}
+                          src={assetPath(isFavorite ? "/icons/heart_fill.svg" : "/icons/heart_empty.svg")}
                           alt=""
                           aria-hidden="true"
                           width={14}

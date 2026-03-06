@@ -67,6 +67,7 @@ export default function RootLayout({
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
           <div style={appShellStyle}>
             <div
+              className="app-shell-header"
               style={{
                 height: 52,
                 display: "flex",
@@ -79,17 +80,19 @@ export default function RootLayout({
                 zIndex: 200,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+              <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
                 <img
                   src={assetPath("/wippa_logo.png")}
                   alt="Wippa"
                   style={{ height: 24, width: "auto", display: "block" }}
                 />
-                <div id="app-header-file" />
+                <div id="app-header-history" />
+                <div id="app-header-file-left" />
                 <div id="app-header-autosave" />
               </div>
               <div
                 id="app-header-title"
+                className="app-header-title-slot"
                 style={{
                   position: "absolute",
                   left: "50%",
@@ -97,8 +100,11 @@ export default function RootLayout({
                   zIndex: 0,
                 }}
               />
-              <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-                <div id="app-header-actions" />
+              <div className="app-shell-header-right" style={{ display: "flex", alignItems: "center", gap: 16, position: "relative", zIndex: 3 }}>
+                <div className="app-shell-header-controls" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div id="app-header-file-right" />
+                  <div id="app-header-actions" />
+                </div>
                 <HeaderAuth />
               </div>
             </div>

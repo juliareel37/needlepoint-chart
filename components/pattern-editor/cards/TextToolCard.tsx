@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Color } from "../../../lib/grid";
-import { hexToRgb } from "../utils/colorUtils";
+import { sortPaletteByHsv } from "../utils/paletteSort";
 
 type FontOption = {
   label: string;
@@ -32,6 +33,7 @@ type TextToolCardProps = {
   selectedColorId: number;
   onSelectColor: (id: number) => void;
   palette: Color[];
+  usedColorCounts: Record<number, number>;
   placementActive: boolean;
   onAddTextBox: () => void;
 };
@@ -59,58 +61,83 @@ export function TextToolCard({
   selectedColorId,
   onSelectColor,
   palette,
+  usedColorCounts,
   placementActive,
   onAddTextBox,
 }: TextToolCardProps) {
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
+  const [activePaletteFamily, setActivePaletteFamily] = useState("All");
+  const [colorButtonHovered, setColorButtonHovered] = useState(false);
   const [hoveredFontIndex, setHoveredFontIndex] = useState<number | null>(null);
-  const [hoveredColorId, setHoveredColorId] = useState<number | null>(null);
+  const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
   const colorMenuRef = useRef<HTMLDivElement | null>(null);
+  const colorButtonRef = useRef<HTMLButtonElement | null>(null);
   const selectedColor = useMemo(() => palette.find((color) => color.id === selectedColorId) ?? null, [palette, selectedColorId]);
-  const orderedPalette = useMemo(() => {
-    const toHueSat = (hex: string) => {
-      const rgb = hexToRgb(hex);
-      if (!rgb) return { hue: 0, sat: 0 };
-      const r = rgb[0] / 255;
-      const g = rgb[1] / 255;
-      const b = rgb[2] / 255;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      const d = max - min;
-      const sat = max === 0 ? 0 : d / max;
-      let hue = 0;
-      if (d !== 0) {
-        if (max === r) hue = ((g - b) / d) % 6;
-        else if (max === g) hue = (b - r) / d + 2;
-        else hue = (r - g) / d + 4;
-        hue *= 60;
-        if (hue < 0) hue += 360;
-      }
-      return { hue, sat };
+  const orderedPalette = useMemo(() => sortPaletteByHsv(palette), [palette]);
+  const normalizePaletteFamily = (family?: string | null) => {
+    if (!family) return null;
+    const key = family.trim().toLowerCase();
+    const map: Record<string, string> = {
+      red: "red",
+      pink: "red",
+      orange: "orange",
+      yellow: "yellow",
+      green: "green",
+      blue: "blue",
+      purple: "violet",
+      violet: "violet",
+      gray: "neutrals",
+      grey: "neutrals",
+      white: "neutrals",
+      black: "neutrals",
+      beige: "neutrals",
+      brown: "neutrals",
+      neutral: "neutrals",
+      neutrals: "neutrals",
+      custom: "neutrals",
     };
-
-    return [...palette].sort((a, b) => {
-      const ah = toHueSat(a.hex);
-      const bh = toHueSat(b.hex);
-      const aNeutral = ah.sat < 0.12;
-      const bNeutral = bh.sat < 0.12;
-      if (aNeutral !== bNeutral) return aNeutral ? 1 : -1;
-      if (aNeutral && bNeutral) return a.name.localeCompare(b.name);
-      return ah.hue - bh.hue;
+    return map[key] ?? key;
+  };
+  const paletteFamilySwatches: Record<string, string> = {
+    red: "#d62b5b",
+    orange: "#f27842",
+    yellow: "#ffd24d",
+    green: "#4caf50",
+    blue: "#3b82f6",
+    violet: "#8b5cf6",
+    neutrals: "#9ca3af",
+  };
+  const paletteFamilies = useMemo(() => {
+    const set = new Set<string>();
+    orderedPalette.forEach((c) => {
+      const normalized = normalizePaletteFamily(c.family);
+      if (normalized) set.add(normalized);
     });
-  }, [palette]);
+    set.delete("Extracted");
+    const order = ["All", "red", "orange", "yellow", "green", "blue", "violet", "neutrals"];
+    const rest = Array.from(set).filter((f) => !order.includes(f)).sort();
+    return ["All", ...order.filter((f) => f !== "All" && set.has(f)), ...rest];
+  }, [orderedPalette]);
+  const filteredPaletteEntries = useMemo(() => {
+    if (activePaletteFamily === "All") return orderedPalette;
+    return orderedPalette.filter((color) => normalizePaletteFamily(color.family) === activePaletteFamily);
+  }, [activePaletteFamily, orderedPalette]);
   const selectedFontLabel = useMemo(
     () => fontOptions.find((option) => option.value === fontValue)?.label ?? "Select font",
     [fontOptions, fontValue]
   );
+  const visibleFontOptions = useMemo(() => {
+    return [...fontOptions].sort((a, b) => a.label.localeCompare(b.label));
+  }, [fontOptions]);
 
   useEffect(() => {
     if (!fontMenuOpen && !colorMenuOpen) return;
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (fontMenuRef.current && fontMenuRef.current.contains(target)) return;
+      if (colorButtonRef.current && colorButtonRef.current.contains(target)) return;
       if (colorMenuRef.current && colorMenuRef.current.contains(target)) return;
       setFontMenuOpen(false);
       setColorMenuOpen(false);
@@ -118,6 +145,31 @@ export function TextToolCard({
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [fontMenuOpen, colorMenuOpen]);
+
+  useEffect(() => {
+    if (!colorMenuOpen) return;
+    const updateColorMenuPos = () => {
+      const trigger = colorButtonRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const panelWidth = 220;
+      const estimatedPanelHeight = 320;
+      const gap = 6;
+      const openUp = rect.bottom + gap + estimatedPanelHeight > viewportH - 8 && rect.top - gap - estimatedPanelHeight > 8;
+      const left = Math.min(Math.max(8, rect.left), Math.max(8, viewportW - panelWidth - 8));
+      const top = openUp ? rect.top - gap : rect.bottom + gap;
+      setColorMenuPos({ top, left, openUp });
+    };
+    updateColorMenuPos();
+    window.addEventListener("resize", updateColorMenuPos);
+    window.addEventListener("scroll", updateColorMenuPos, true);
+    return () => {
+      window.removeEventListener("resize", updateColorMenuPos);
+      window.removeEventListener("scroll", updateColorMenuPos, true);
+    };
+  }, [colorMenuOpen]);
 
   return (
     <div
@@ -192,7 +244,7 @@ export function TextToolCard({
               border: "1px solid var(--ui-border-subtle)",
               background: "var(--card-bg)",
               color: "var(--foreground)",
-              fontSize: 12,
+              fontSize: 13,
               cursor: "pointer",
             }}
           >
@@ -229,7 +281,7 @@ export function TextToolCard({
                 boxShadow: "var(--ui-shadow-lg)",
               }}
             >
-              {fontOptions.map((option, index) => {
+              {visibleFontOptions.map((option, index) => {
                 const active = option.value === fontValue;
                 const hovered = hoveredFontIndex === index;
                 return (
@@ -259,7 +311,7 @@ export function TextToolCard({
                       transition: "background-color 120ms ease",
                     }}
                   >
-                    <span style={{ fontSize: 12, fontFamily: option.value, fontWeight: 500 }}>{option.label}</span>
+                    <span style={{ fontSize: 13, fontFamily: option.value, fontWeight: 500 }}>{option.label}</span>
                   </button>
                 );
               })}
@@ -269,12 +321,259 @@ export function TextToolCard({
 
         <div style={{ display: "grid", gap: 6 }}>
           <span style={{ fontSize: 12, fontWeight: 600 }}>Style</span>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "28px 28px 28px 28px",
+              gap: 6,
+              justifyContent: "start",
+              alignItems: "center",
+            }}
+          >
+            <div ref={colorMenuRef} style={{ position: "relative" }}>
+              <button
+                ref={colorButtonRef}
+                type="button"
+                onClick={() => {
+                  setColorMenuOpen((open) => !open);
+                  setFontMenuOpen(false);
+                }}
+                onMouseEnter={() => setColorButtonHovered(true)}
+                onMouseLeave={() => setColorButtonHovered(false)}
+                aria-label="Text color"
+                title={selectedColor ? selectedColor.name : "Select color"}
+                style={{
+                  width: 28,
+                  height: 28,
+                  padding: 0,
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  display: "grid",
+                  gap: 1,
+                  justifyItems: "center",
+                  border: "none",
+                  background: "transparent",
+                }}
+              >
+                <span
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: selectedColor?.hex ?? "transparent",
+                    border: colorMenuOpen
+                      ? "2px solid var(--accent-strong)"
+                      : colorButtonHovered
+                        ? "1px solid var(--ui-border-strong)"
+                        : "1px solid rgba(0,0,0,0.18)",
+                    boxShadow: colorMenuOpen ? "0 0 0 2px var(--accent-soft)" : "none",
+                    display: "grid",
+                    placeItems: "center",
+                    padding: 0,
+                    transition: "border-color 120ms ease, box-shadow 120ms ease",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 4,
+                      background: selectedColor?.hex ?? "transparent",
+                      display: "inline-block",
+                      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                </span>
+              </button>
+              {colorMenuOpen && colorMenuPos
+                ? createPortal(
+                <div
+                  ref={colorMenuRef}
+                  style={{
+                    position: "fixed",
+                    top: colorMenuPos.top,
+                    left: colorMenuPos.left,
+                    transform: colorMenuPos.openUp ? "translateY(-100%)" : "none",
+                    zIndex: 999,
+                    background: "var(--surface-elevated)",
+                    borderRadius: 12,
+                    padding: 8,
+                    boxShadow: "0 8px 18px var(--ui-border)",
+                    border: "1px solid var(--ui-border-subtle)",
+                    overflow: "hidden",
+                    display: "grid",
+                    gap: 6,
+                    minWidth: 200,
+                    width: 220,
+                    maxWidth: 220,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          width: "100%",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {paletteFamilies
+                          .filter((family) => family !== "All")
+                          .map((family) => {
+                            const swatch = paletteFamilySwatches[family] ?? "#9ca3af";
+                            const isActive = activePaletteFamily === family;
+                            return (
+                              <button
+                                key={family}
+                                type="button"
+                                onClick={() => setActivePaletteFamily(isActive ? "All" : family)}
+                                aria-pressed={isActive}
+                                aria-label={`Filter ${family}`}
+                                title={family}
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: 6,
+                                  background: swatch,
+                                  border: isActive ? "2px solid var(--accent-strong)" : "1px solid var(--ui-border-strong)",
+                                  boxShadow: isActive ? "0 0 0 2px var(--accent-soft)" : "none",
+                                  cursor: "pointer",
+                                }}
+                              />
+                            );
+                          })}
+                      </div>
+                    </div>
+                    <div style={{ height: 1, background: "var(--ui-border-subtle)" }} />
+                  </div>
+                  <div
+                    className="toolbar-palette-scroll"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      columnGap: 4,
+                      rowGap: 6,
+                      maxHeight: 170,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      padding: "10px 6px 8px 6px",
+                    }}
+                  >
+                      {filteredPaletteEntries.map((color) => {
+                        const usedCount = usedColorCounts[color.id];
+                        const isActive = color.id === selectedColorId;
+                        return (
+                          <div
+                            key={color.id}
+                            style={{
+                              display: "grid",
+                              gap: 2,
+                              justifyItems: "center",
+                              padding: 1,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              aria-label={color.name}
+                              title={color.name}
+                              onClick={() => {
+                                onSelectColor(color.id);
+                                setColorMenuOpen(false);
+                              }}
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 6,
+                                border: isActive ? "2px solid var(--accent-strong)" : "1px solid rgba(0,0,0,0.18)",
+                                background: color.hex,
+                                cursor: "pointer",
+                                display: "grid",
+                                placeItems: "center",
+                                padding: 0,
+                                overflow: "visible",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 5,
+                                  background: color.hex,
+                                  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
+                                  display: "block",
+                                  position: "relative",
+                                }}
+                              >
+                                {usedCount != null && usedCount > 0 && (
+                                  <span
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      left: 0,
+                                      minWidth: 14,
+                                      height: 14,
+                                      padding: "0 3px",
+                                      borderRadius: 999,
+                                      background: "#ffffff",
+                                      color: "rgba(15,23,42,0.9)",
+                                      fontSize: 8,
+                                      fontWeight: 700,
+                                      display: "grid",
+                                      placeItems: "center",
+                                      boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                                      pointerEvents: "none",
+                                      transform: "translate(-50%, -50%)",
+                                      zIndex: 2,
+                                    }}
+                                    aria-hidden="true"
+                                  >
+                                    {usedCount}
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                lineHeight: 1.1,
+                                textAlign: "center",
+                                color: "var(--foreground)",
+                                opacity: 0.8,
+                                width: 44,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {color.id}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                </div>
+                ,
+                document.body
+                  )
+                : null}
+            </div>
             <button
               type="button"
               onClick={() => onBoldChange(!bold)}
               style={{
-                padding: "6px 8px",
+                width: 28,
+                height: 28,
+                padding: 0,
                 borderRadius: 8,
                 border: bold ? "1px solid var(--accent-strong)" : "1px solid var(--ui-border-subtle)",
                 background: bold ? "var(--accent-wash)" : "var(--card-bg)",
@@ -282,6 +581,9 @@ export function TextToolCard({
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                lineHeight: 1,
               }}
             >
               B
@@ -290,7 +592,9 @@ export function TextToolCard({
               type="button"
               onClick={() => onItalicChange(!italic)}
               style={{
-                padding: "6px 8px",
+                width: 28,
+                height: 28,
+                padding: 0,
                 borderRadius: 8,
                 border: italic ? "1px solid var(--accent-strong)" : "1px solid var(--ui-border-subtle)",
                 background: italic ? "var(--accent-wash)" : "var(--card-bg)",
@@ -298,6 +602,9 @@ export function TextToolCard({
                 fontSize: 12,
                 fontStyle: "italic",
                 cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                lineHeight: 1,
               }}
             >
               I
@@ -306,7 +613,9 @@ export function TextToolCard({
               type="button"
               onClick={() => onUnderlineChange(!underline)}
               style={{
-                padding: "6px 8px",
+                width: 28,
+                height: 28,
+                padding: 0,
                 borderRadius: 8,
                 border: underline ? "1px solid var(--accent-strong)" : "1px solid var(--ui-border-subtle)",
                 background: underline ? "var(--accent-wash)" : "var(--card-bg)",
@@ -314,100 +623,13 @@ export function TextToolCard({
                 fontSize: 12,
                 textDecoration: "underline",
                 cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                lineHeight: 1,
               }}
             >
               U
             </button>
-            <div ref={colorMenuRef} style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setColorMenuOpen((open) => !open);
-                  setFontMenuOpen(false);
-                }}
-                aria-label="Text color"
-                title={selectedColor ? selectedColor.name : "Select color"}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: 32,
-                  padding: 0,
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  display: "grid",
-                  placeItems: "center",
-                  outline: "none",
-                  boxShadow: "none",
-                }}
-              >
-                <span
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 5,
-                    border: "1px solid rgba(15, 23, 42, 0.35)",
-                    background: selectedColor?.hex ?? "#000000",
-                    display: "block",
-                  }}
-                />
-              </button>
-              {colorMenuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    width: 220,
-                    zIndex: 20,
-                    display: "grid",
-                    gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
-                    gap: 6,
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    border: "1px solid var(--ui-border-subtle)",
-                    borderRadius: 10,
-                    padding: 8,
-                    background: "var(--card-bg)",
-                    boxShadow: "var(--ui-shadow-lg)",
-                  }}
-                >
-                  {orderedPalette.map((color) => {
-                    const isActive = color.id === selectedColorId;
-                    const hovered = hoveredColorId === color.id;
-                    return (
-                      <button
-                        key={color.id}
-                        type="button"
-                        aria-label={color.name}
-                        title={color.name}
-                        onClick={() => {
-                          onSelectColor(color.id);
-                          setColorMenuOpen(false);
-                        }}
-                        onMouseEnter={() => setHoveredColorId(color.id)}
-                        onMouseLeave={() => setHoveredColorId(null)}
-                        style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: 5,
-                          background: color.hex,
-                          border: isActive ? "2px solid var(--accent-strong)" : "1px solid rgba(15, 23, 42, 0.35)",
-                          boxShadow: isActive
-                            ? "0 0 0 2px var(--accent-soft)"
-                            : hovered
-                              ? "0 0 0 2px rgba(15, 23, 42, 0.18)"
-                              : "none",
-                          cursor: "pointer",
-                          justifySelf: "center",
-                          transition: "box-shadow 120ms ease",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         </div>
 

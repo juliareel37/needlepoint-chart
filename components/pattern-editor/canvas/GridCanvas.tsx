@@ -4,7 +4,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import type { Color } from "../../../lib/grid";
 import { idx } from "../../../lib/grid";
 import { assetPath } from "../../../lib/assetPath";
-import { pointInPolygon } from "../utils/geometry";
+import { getMirrorTargetRect, pointInPolygon, type MirrorDirection } from "../utils/geometry";
 import { scanlineFillChunked, scanlineFillSync } from "./fillUtils";
 import { useGridRenderer } from "./useGridRenderer";
 
@@ -60,7 +60,7 @@ type Props = {
   panMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
-  tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+  tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror";
   brushSize: number;
   lassoPoints: { x: number; y: number }[];
   lassoClosed: boolean;
@@ -79,6 +79,11 @@ type Props = {
   filterSelecting?: boolean;
   onFilterRectChange?: (rect: { x0: number; y0: number; x1: number; y1: number } | null) => void;
   onFilterSelectEnd?: () => void;
+  mirrorRect?: { x0: number; y0: number; x1: number; y1: number } | null;
+  mirrorSelecting?: boolean;
+  onMirrorRectChange?: (rect: { x0: number; y0: number; x1: number; y1: number } | null) => void;
+  onMirrorSelectEnd?: () => void;
+  onMirrorApply?: (direction: MirrorDirection) => void;
   gridBackground?: string;
 };
 
@@ -144,6 +149,11 @@ export default function GridCanvas(props: Props) {
     filterSelecting = false,
     onFilterRectChange,
     onFilterSelectEnd,
+    mirrorRect,
+    mirrorSelecting = false,
+    onMirrorRectChange,
+    onMirrorSelectEnd,
+    onMirrorApply,
     gridBackground,
   } = props;
 
@@ -164,12 +174,18 @@ export default function GridCanvas(props: Props) {
   const traceSamplerRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPainting, setIsPainting] = useState(false);
+  const [activeRulerLines, setActiveRulerLines] = useState<Array<{ axis: "x" | "y"; value: number }>>([]);
+  const [isHoveringRulerLabel, setIsHoveringRulerLabel] = useState(false);
   const [isLassoing, setIsLassoing] = useState(false);
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
   const [filterPreviewRect, setFilterPreviewRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(
     null
   );
+  const [mirrorPreviewRect, setMirrorPreviewRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(
+    null
+  );
   const filterDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const mirrorDragStartRef = useRef<{ x: number; y: number } | null>(null);
   const filterResizeRef = useRef<{
     handle: "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se" | "move";
     startRect: { x0: number; y0: number; x1: number; y1: number };
@@ -192,6 +208,12 @@ export default function GridCanvas(props: Props) {
       filterDragStartRef.current = null;
     }
   }, [filterSelecting, filterPreviewRect]);
+  useEffect(() => {
+    if (!mirrorSelecting && mirrorPreviewRect) {
+      setMirrorPreviewRect(null);
+      mirrorDragStartRef.current = null;
+    }
+  }, [mirrorSelecting, mirrorPreviewRect]);
   useEffect(() => {
     focusCellRef.current = focusCell ?? null;
   }, [focusCell]);
@@ -230,6 +252,17 @@ export default function GridCanvas(props: Props) {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const activeFilterRect =
     filterSelecting && filterPreviewRect ? filterPreviewRect : filterRect ?? filterPreviewRect;
+  const activeMirrorRect =
+    mirrorSelecting && mirrorPreviewRect ? mirrorPreviewRect : mirrorRect ?? mirrorPreviewRect;
+  const mirrorTargets = useMemo(() => {
+    if (mirrorSelecting || !mirrorRect) return null;
+    return {
+      top: getMirrorTargetRect(mirrorRect, "top"),
+      right: getMirrorTargetRect(mirrorRect, "right"),
+      bottom: getMirrorTargetRect(mirrorRect, "bottom"),
+      left: getMirrorTargetRect(mirrorRect, "left"),
+    };
+  }, [mirrorSelecting, mirrorRect]);
 
   const normalizeRect = (start: { x: number; y: number }, end: { x: number; y: number }) => ({
     x0: Math.min(start.x, end.x),
@@ -274,6 +307,19 @@ export default function GridCanvas(props: Props) {
       if (within(cx, cy)) return handle;
     }
     if (point.x >= x0 && point.x <= x1 && point.y >= y0 && point.y <= y1) return "move";
+    return null;
+  };
+
+  const getMirrorDirectionAtCell = (cell: { x: number; y: number }): MirrorDirection | null => {
+    if (!mirrorTargets) return null;
+    const directions: MirrorDirection[] = ["top", "right", "bottom", "left"];
+    for (const direction of directions) {
+      const rect = mirrorTargets[direction];
+      if (!rect) continue;
+      if (cell.x >= rect.x0 && cell.x <= rect.x1 && cell.y >= rect.y0 && cell.y <= rect.y1) {
+        return direction;
+      }
+    }
     return null;
   };
 
@@ -576,11 +622,15 @@ export default function GridCanvas(props: Props) {
     activeColorId,
     panMode,
     activeFilterRect,
+    activeMirrorRect,
+    mirrorTargets,
     filterSelecting,
+    mirrorSelecting,
     filterEditMode,
     zoom,
     showGridlines,
     showRuler,
+    activeRulerLines,
     gridBackground,
   });
 
@@ -605,6 +655,40 @@ export default function GridCanvas(props: Props) {
   function getCanvasPoint(e: React.PointerEvent<HTMLCanvasElement>) {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     return { x: e.clientX - rect.left - drawTranslateX, y: e.clientY - rect.top - drawTranslateY };
+  }
+
+  function getRulerLabelHit(point: { x: number; y: number }) {
+    if (!showRuler) return null;
+    const rulerScale = zoom < 1 ? Math.max(0.6, zoom) : 1;
+    const rulerFontSize = Math.max(6, Math.round(10 * rulerScale));
+    const rulerLabelInset = Math.max(4, Math.round(rulerFontSize * 0.6));
+    const topLabelY = -rulerLabelInset;
+    const bottomLabelY = canvasH + rulerLabelInset;
+    const leftLabelX = -rulerLabelInset;
+    const rightLabelX = canvasW + rulerLabelInset;
+    const axisStep = 5;
+    const hitAlongAxis = Math.max(8, Math.round(cellSize * 0.45));
+    const hitAcrossAxis = Math.max(8, Math.round(rulerFontSize * 0.8));
+
+    for (let x = axisStep; x <= width; x += axisStep) {
+      const px = Math.round(x * cellSize);
+      if (Math.abs(point.x - px) <= hitAlongAxis && Math.abs(point.y - topLabelY) <= hitAcrossAxis) {
+        return { axis: "x" as const, value: x };
+      }
+      if (Math.abs(point.x - px) <= hitAlongAxis && Math.abs(point.y - bottomLabelY) <= hitAcrossAxis) {
+        return { axis: "x" as const, value: x };
+      }
+    }
+    for (let y = axisStep; y <= height; y += axisStep) {
+      const py = Math.round(y * cellSize);
+      if (Math.abs(point.y - py) <= hitAlongAxis && Math.abs(point.x - leftLabelX) <= hitAcrossAxis) {
+        return { axis: "y" as const, value: y };
+      }
+      if (Math.abs(point.y - py) <= hitAlongAxis && Math.abs(point.x - rightLabelX) <= hitAcrossAxis) {
+        return { axis: "y" as const, value: y };
+      }
+    }
+    return null;
   }
 
   function findClosestPaletteColor(r: number, g: number, b: number) {
@@ -929,7 +1013,9 @@ export default function GridCanvas(props: Props) {
           position: "relative",
           zIndex: 1,
           cursor:
-            pendingTextPlacement
+            isHoveringRulerLabel
+              ? "default"
+              : pendingTextPlacement
               ? "grab"
               : filterEditMode
               ? "default"
@@ -940,15 +1026,31 @@ export default function GridCanvas(props: Props) {
                 : traceAdjustMode && traceImage
                   ? "grab"
                   : tool === "eyedropper"
-                    ? `url(${assetPath("/dropper_cursor.svg")}) 2 14, auto`
+                    ? `url(${assetPath("/icons/dropper_cursor.svg")}) 2 14, auto`
                     : tool === "paint" || tool === "eraser"
                       ? "crosshair"
-                      : "auto",
+                      : tool === "mirror" && mirrorSelecting
+                        ? "crosshair"
+                    : "auto",
         }}
         onContextMenu={(e) => {
           e.preventDefault();
         }}
         onPointerDown={(e) => {
+          if (showRuler) {
+            const point = getCanvasPoint(e);
+            const rulerHit = getRulerLabelHit(point);
+            if (rulerHit) {
+              e.preventDefault();
+              const key = `${rulerHit.axis}:${rulerHit.value}`;
+              setActiveRulerLines((prev) => {
+                const exists = prev.some((line) => `${line.axis}:${line.value}` === key);
+                if (exists) return prev.filter((line) => `${line.axis}:${line.value}` !== key);
+                return [...prev, rulerHit];
+              });
+              return;
+            }
+          }
           if (pinchEnabled && e.pointerType === "touch") {
             e.preventDefault();
             (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
@@ -988,6 +1090,22 @@ export default function GridCanvas(props: Props) {
             filterDragStartRef.current = cell;
             setFilterPreviewRect({ x0: cell.x, y0: cell.y, x1: cell.x, y1: cell.y });
             return;
+          }
+          if (tool === "mirror" && !effectivePanMode && !(traceAdjustMode && traceImage)) {
+            const cell = getClampedCellFromEvent(e);
+            if (mirrorSelecting) {
+              e.preventDefault();
+              (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+              mirrorDragStartRef.current = cell;
+              setMirrorPreviewRect({ x0: cell.x, y0: cell.y, x1: cell.x, y1: cell.y });
+              return;
+            }
+            const direction = getMirrorDirectionAtCell(cell);
+            if (direction) {
+              e.preventDefault();
+              onMirrorApply?.(direction);
+              return;
+            }
           }
           if (pendingTextPlacement) {
             e.preventDefault();
@@ -1123,9 +1241,16 @@ export default function GridCanvas(props: Props) {
         }}
         onPointerMove={(e) => {
           if (pinchEnabled && e.pointerType === "touch" && pinchPointersRef.current.size >= 2) {
+            if (isHoveringRulerLabel) setIsHoveringRulerLabel(false);
             e.preventDefault();
             updatePinchPointer(e.pointerId, e.clientX, e.clientY);
             return;
+          }
+          if (showRuler) {
+            const point = getCanvasPoint(e);
+            setIsHoveringRulerLabel(Boolean(getRulerLabelHit(point)));
+          } else if (isHoveringRulerLabel) {
+            setIsHoveringRulerLabel(false);
           }
           if (filterResizeRef.current) {
             const { handle, startRect, startCell } = filterResizeRef.current;
@@ -1155,6 +1280,13 @@ export default function GridCanvas(props: Props) {
             if (filterDragStartRef.current) {
               const cell = getClampedCellFromEvent(e);
               setFilterPreviewRect(normalizeRect(filterDragStartRef.current, cell));
+            }
+            return;
+          }
+          if (mirrorSelecting) {
+            if (mirrorDragStartRef.current) {
+              const cell = getClampedCellFromEvent(e);
+              setMirrorPreviewRect(normalizeRect(mirrorDragStartRef.current, cell));
             }
             return;
           }
@@ -1378,6 +1510,15 @@ export default function GridCanvas(props: Props) {
             onFilterSelectEnd?.();
             return;
           }
+          if (mirrorSelecting && mirrorDragStartRef.current) {
+            const endPoint = getClampedCellFromEvent(e);
+            const rect = normalizeRect(mirrorDragStartRef.current, endPoint);
+            mirrorDragStartRef.current = null;
+            setMirrorPreviewRect(null);
+            onMirrorRectChange?.(rect);
+            onMirrorSelectEnd?.();
+            return;
+          }
           if (isPanningRef.current) {
             isPanningRef.current = false;
             panDragStartRef.current = null;
@@ -1428,6 +1569,15 @@ export default function GridCanvas(props: Props) {
             onFilterSelectEnd?.();
             return;
           }
+          if (mirrorSelecting && mirrorDragStartRef.current) {
+            const endPoint = getClampedCellFromEvent(e);
+            const rect = normalizeRect(mirrorDragStartRef.current, endPoint);
+            mirrorDragStartRef.current = null;
+            setMirrorPreviewRect(null);
+            onMirrorRectChange?.(rect);
+            onMirrorSelectEnd?.();
+            return;
+          }
           if (isPanningRef.current) {
             isPanningRef.current = false;
             panDragStartRef.current = null;
@@ -1455,9 +1605,10 @@ export default function GridCanvas(props: Props) {
           onStrokeEnd();
         }}
         onPointerLeave={() => {
-          if (filterSelecting) {
+          if (filterSelecting || mirrorSelecting) {
             return;
           }
+          if (isHoveringRulerLabel) setIsHoveringRulerLabel(false);
           updateHoverCell(null);
         }}
         onPointerUpCapture={(e) => {

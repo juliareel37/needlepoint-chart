@@ -6,7 +6,7 @@ import { idx, makeGrid } from "../../../lib/grid";
 import { useSelectionTools } from "./useSelectionTools";
 import type { Snapshot, TraceSnapshot } from "../utils/historyTypes";
 
-type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror";
 
 type ConfirmDialogState = {
   title: string;

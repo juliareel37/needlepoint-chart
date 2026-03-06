@@ -6,10 +6,12 @@ import { idx } from "../../../lib/grid";
 import { symbolForColorId } from "../../../lib/symbols";
 import { contrastForHex, hexToRgb } from "../utils/colorUtils";
 import { getThreadRadii, getThreadStitchCanvas } from "./stitchUtils";
+import type { MirrorDirection } from "../utils/geometry";
 
 type FilterRect = { x0: number; y0: number; x1: number; y1: number };
-type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso";
+type ToolName = "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror";
 type Point = { x: number; y: number };
+type RulerLine = { axis: "x" | "y"; value: number };
 
 type UseGridRendererArgs = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -55,10 +57,14 @@ type UseGridRendererArgs = {
   panMode: boolean;
   activeFilterRect: FilterRect | null;
   filterSelecting: boolean;
+  activeMirrorRect: FilterRect | null;
+  mirrorTargets: Record<MirrorDirection, FilterRect | null> | null;
+  mirrorSelecting: boolean;
   filterEditMode?: boolean;
   zoom: number;
   showGridlines: boolean;
   showRuler: boolean;
+  activeRulerLines?: RulerLine[];
   gridBackground?: string;
 };
 
@@ -96,10 +102,14 @@ export function useGridRenderer({
   panMode,
   activeFilterRect,
   filterSelecting,
+  activeMirrorRect,
+  mirrorTargets,
+  mirrorSelecting,
   filterEditMode = false,
   zoom,
   showGridlines,
   showRuler,
+  activeRulerLines,
   gridBackground,
 }: UseGridRendererArgs) {
   const THREAD_PAINTED_CELL_BG = "#6b7280";
@@ -206,7 +216,7 @@ export function useGridRenderer({
     // Grid background (only the grid area).
     ctx.save();
     ctx.translate(drawTranslateX, drawTranslateY);
-    ctx.fillStyle = threadView ? "#ffffff" : gridBackground ?? (darkCanvas ? "#000000" : "#ffffff");
+    ctx.fillStyle = gridBackground ?? (darkCanvas ? "#000000" : "#ffffff");
     ctx.fillRect(0, 0, canvasW, canvasH);
     ctx.restore();
 
@@ -278,6 +288,31 @@ export function useGridRenderer({
         ctx.moveTo(0, py);
         ctx.lineTo(canvasW, py);
         ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (activeRulerLines && activeRulerLines.length > 0) {
+      ctx.save();
+      ctx.translate(drawTranslateX, drawTranslateY);
+      ctx.globalAlpha = 1;
+      const highlightStroke = darkGridSurface ? "rgba(255,255,255,0.95)" : "rgba(15,23,42,0.92)";
+      ctx.strokeStyle = highlightStroke;
+      ctx.lineWidth = 2.6;
+      for (const line of activeRulerLines) {
+        if (line.axis === "x") {
+          const px = Math.min(Math.max(0.5, Math.round(line.value * cellSize) + 0.5), Math.max(0.5, canvasW - 0.5));
+          ctx.beginPath();
+          ctx.moveTo(px, 0);
+          ctx.lineTo(px, canvasH);
+          ctx.stroke();
+        } else {
+          const py = Math.min(Math.max(0.5, Math.round(line.value * cellSize) + 0.5), Math.max(0.5, canvasH - 0.5));
+          ctx.beginPath();
+          ctx.moveTo(0, py);
+          ctx.lineTo(canvasW, py);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
@@ -598,6 +633,55 @@ export function useGridRenderer({
         ctx.restore();
       }
     }
+
+    if (mirrorSelecting && !activeMirrorRect) {
+      ctx.save();
+      ctx.translate(drawTranslateX, drawTranslateY);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.35)";
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      ctx.restore();
+    }
+
+    if (activeMirrorRect) {
+      const sourceX0 = Math.round(activeMirrorRect.x0 * cellSize);
+      const sourceY0 = Math.round(activeMirrorRect.y0 * cellSize);
+      const sourceX1 = Math.round((activeMirrorRect.x1 + 1) * cellSize);
+      const sourceY1 = Math.round((activeMirrorRect.y1 + 1) * cellSize);
+      const sourceW = sourceX1 - sourceX0;
+      const sourceH = sourceY1 - sourceY0;
+      if (sourceW > 0 && sourceH > 0) {
+        ctx.save();
+        ctx.translate(drawTranslateX, drawTranslateY);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.16)";
+        ctx.fillRect(sourceX0, sourceY0, sourceW, sourceH);
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.95)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash(mirrorSelecting ? [6, 4] : []);
+        ctx.strokeRect(sourceX0 + 1, sourceY0 + 1, Math.max(0, sourceW - 2), Math.max(0, sourceH - 2));
+        ctx.setLineDash([]);
+
+        if (mirrorTargets) {
+          const directions: MirrorDirection[] = ["top", "right", "bottom", "left"];
+          for (const direction of directions) {
+            const rect = mirrorTargets[direction];
+            if (!rect) continue;
+            const x0 = Math.round(rect.x0 * cellSize);
+            const y0 = Math.round(rect.y0 * cellSize);
+            const x1 = Math.round((rect.x1 + 1) * cellSize);
+            const y1 = Math.round((rect.y1 + 1) * cellSize);
+            const w = x1 - x0;
+            const h = y1 - y0;
+            if (w <= 0 || h <= 0) continue;
+            ctx.fillStyle = "rgba(34, 197, 94, 0.22)";
+            ctx.fillRect(x0, y0, w, h);
+            ctx.strokeStyle = "rgba(22, 163, 74, 0.92)";
+            ctx.lineWidth = 1.6;
+            ctx.strokeRect(x0 + 1, y0 + 1, Math.max(0, w - 2), Math.max(0, h - 2));
+          }
+        }
+        ctx.restore();
+      }
+    }
   }, [
     width,
     height,
@@ -607,6 +691,7 @@ export function useGridRenderer({
     cellSize,
     showGridlines,
     showRuler,
+    activeRulerLines,
     canvasW,
     canvasH,
     containerWidth,
@@ -633,6 +718,9 @@ export function useGridRenderer({
     panMode,
     activeFilterRect,
     filterSelecting,
+    activeMirrorRect,
+    mirrorTargets,
+    mirrorSelecting,
     filterEditMode,
     zoom,
     gridBackground,

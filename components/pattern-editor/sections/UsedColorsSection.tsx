@@ -192,7 +192,7 @@ export function UsedColorsSection({
             >
               <span className="toolbar-icon" aria-hidden="true" style={{ marginRight: 2 }}>
                 <img
-                  src={assetPath("/pic_in_pic.svg")}
+                  src={assetPath("/icons/pic_in_pic.svg")}
                   alt=""
                   aria-hidden="true"
                   width={16}
@@ -247,7 +247,7 @@ export function UsedColorsSection({
               style={{ width: 16, height: 16, display: "grid", placeItems: "center", flexShrink: 0 }}
             >
               <img
-                src={assetPath("/swap.svg")}
+                src={assetPath("/icons/swap.svg")}
                 alt=""
                 aria-hidden="true"
                 width={12}
@@ -283,7 +283,7 @@ export function UsedColorsSection({
           >
             <span className="toolbar-icon" aria-hidden="true">
               <img
-                src={assetPath("/merge.svg")}
+                src={assetPath("/icons/merge.svg")}
                 alt=""
                 aria-hidden="true"
                 width={12}
@@ -319,7 +319,7 @@ export function UsedColorsSection({
           >
             <span className="toolbar-icon" aria-hidden="true">
               <img
-                src={assetPath("/deselect.svg")}
+                src={assetPath("/icons/deselect.svg")}
                 alt=""
                 aria-hidden="true"
                 width={12}
@@ -706,7 +706,7 @@ export function UsedColorsSection({
                     }}
                   >
                     <img
-                      src={assetPath("/identify.svg")}
+                      src={assetPath("/icons/identify.svg")}
                       alt=""
                       aria-hidden="true"
                       width={14}
