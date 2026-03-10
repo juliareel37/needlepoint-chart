@@ -4,17 +4,12 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { createPortal } from "react-dom";
 import GridCanvas from "./GridCanvas";
 import type { Color } from "../../../lib/grid";
-import { idx } from "../../../lib/grid";
-import { symbolForColorId } from "../../../lib/symbols";
 import { assetPath } from "../../../lib/assetPath";
-import { EXPORT_CELL_SIZE } from "../utils/constants";
-import { contrastForHex, hexToRgb } from "../utils/colorUtils";
 import { Toggle } from "../ui/Toggle";
 import { sortPaletteByHsv } from "../utils/paletteSort";
 
 export function CanvasWithExportRef(props: any) {
   const {
-    exportCanvasRef,
     width,
     height,
     grid,
@@ -118,7 +113,6 @@ export function CanvasWithExportRef(props: any) {
     onDarkModeChange,
   } = props;
 
-  const exportCellSize = EXPORT_CELL_SIZE;
   const activeColor = paletteById.get(activeColorId);
   const canvasCardRef = useRef<HTMLDivElement | null>(null);
   const [canvasCardMaxHeight, setCanvasCardMaxHeight] = useState<number | null>(null);
@@ -2334,172 +2328,6 @@ export function CanvasWithExportRef(props: any) {
         )}
       </div>
 
-      <div style={{ position: "absolute", left: -10000, top: -10000 }}>
-        <ExportCanvas
-          exportCanvasRef={exportCanvasRef}
-          width={width}
-          height={height}
-          grid={grid}
-          paletteById={paletteById}
-          symbolMap={symbolMap}
-          cellSize={exportCellSize}
-          showGridlines={true}
-          showRuler={true}
-        />
-      </div>
     </div>
   );
-}
-
-function ExportCanvas({
-  exportCanvasRef,
-  width,
-  height,
-  grid,
-  paletteById,
-  symbolMap,
-  cellSize,
-  showGridlines,
-  showRuler,
-}: {
-  exportCanvasRef: React.RefObject<HTMLCanvasElement | null>;
-  width: number;
-  height: number;
-  grid: Uint16Array;
-  paletteById: Map<number, Color>;
-  symbolMap?: Map<number, string>;
-  cellSize: number;
-  showGridlines: boolean;
-  showRuler: boolean;
-}) {
-  const MAX_EXPORT_SURFACE = 8192;
-  const targetScale = 4;
-  const gridCanvasW = width * cellSize;
-  const gridCanvasH = height * cellSize;
-
-  React.useEffect(() => {
-    const canvas = exportCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const AXIS_STEP = 5;
-    const rulerPad = showRuler ? Math.max(18, Math.round(cellSize + 4)) : 0;
-    const gridOffsetX = showRuler ? rulerPad : 0;
-    const gridOffsetY = showRuler ? rulerPad : 0;
-    const logicalCanvasW = gridCanvasW + gridOffsetX * 2;
-    const logicalCanvasH = gridCanvasH + gridOffsetY * 2;
-    const maxLogical = Math.max(logicalCanvasW, logicalCanvasH, 1);
-    const renderScale = Math.max(1, Math.min(targetScale, Math.floor(MAX_EXPORT_SURFACE / maxLogical)));
-    const canvasW = Math.max(1, Math.round(logicalCanvasW * renderScale));
-    const canvasH = Math.max(1, Math.round(logicalCanvasH * renderScale));
-
-    canvas.width = canvasW;
-    canvas.height = canvasH;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvasW, canvasH);
-    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, logicalCanvasW, logicalCanvasH);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const colorId = grid[idx(x, y, width)];
-        if (colorId === 0) continue;
-        const color = paletteById.get(colorId);
-        if (!color) continue;
-        ctx.fillStyle = color.hex;
-        ctx.fillRect(gridOffsetX + x * cellSize, gridOffsetY + y * cellSize, cellSize, cellSize);
-
-        const symbol = symbolForColorId(color.id, symbolMap);
-        if (symbol) {
-          ctx.save();
-          ctx.fillStyle = contrastForHex(color.hex);
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.font = `700 ${Math.max(10, Math.floor(cellSize * 0.7))}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.fillText(
-            symbol,
-            gridOffsetX + x * cellSize + cellSize / 2,
-            gridOffsetY + y * cellSize + cellSize / 2 + 0.5
-          );
-          ctx.restore();
-        }
-      }
-    }
-
-    if (showGridlines) {
-    const maxX = Math.max(0, gridCanvasW - 0.5);
-    const maxY = Math.max(0, gridCanvasH - 0.5);
-      for (let x = 0; x <= width; x++) {
-        const isMajor = x % AXIS_STEP === 0;
-        const px = Math.min(maxX, Math.round(x * cellSize) + 0.5);
-        ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.18)";
-        ctx.lineWidth = isMajor ? 1.6 : 1;
-        ctx.beginPath();
-        ctx.moveTo(gridOffsetX + px, gridOffsetY);
-        ctx.lineTo(gridOffsetX + px, gridOffsetY + gridCanvasH);
-        ctx.stroke();
-      }
-      for (let y = 0; y <= height; y++) {
-        const isMajor = y % AXIS_STEP === 0;
-        const py = Math.min(maxY, Math.round(y * cellSize) + 0.5);
-        ctx.strokeStyle = isMajor ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.18)";
-        ctx.lineWidth = isMajor ? 1.6 : 1;
-        ctx.beginPath();
-        ctx.moveTo(gridOffsetX, gridOffsetY + py);
-        ctx.lineTo(gridOffsetX + gridCanvasW, gridOffsetY + py);
-        ctx.stroke();
-      }
-    }
-
-    if (showRuler) {
-      ctx.fillStyle = "rgba(31,41,55,0.9)";
-      ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
-
-      const topLabelY = gridOffsetY - 6;
-      const bottomLabelY = gridOffsetY + gridCanvasH + 6;
-      const leftLabelX = gridOffsetX - 6;
-      const rightLabelX = gridOffsetX + gridCanvasW + 6;
-
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-      ctx.fillText("0", leftLabelX, topLabelY);
-
-      for (let x = AXIS_STEP; x <= width; x += AXIS_STEP) {
-        const px = gridOffsetX + Math.round(x * cellSize);
-        const label = String(x);
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(label, px, topLabelY);
-        ctx.textBaseline = "top";
-        ctx.fillText(label, px, bottomLabelY);
-      }
-
-      for (let y = AXIS_STEP; y <= height; y += AXIS_STEP) {
-        const py = gridOffsetY + Math.round(y * cellSize);
-        const label = String(y);
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        ctx.fillText(label, leftLabelX, py);
-        ctx.textAlign = "left";
-        ctx.fillText(label, rightLabelX, py);
-      }
-    }
-  }, [
-    exportCanvasRef,
-    gridCanvasW,
-    gridCanvasH,
-    width,
-    height,
-    grid,
-    paletteById,
-    symbolMap,
-    cellSize,
-    showGridlines,
-    showRuler,
-  ]);
-
-  return <canvas ref={exportCanvasRef} />;
 }

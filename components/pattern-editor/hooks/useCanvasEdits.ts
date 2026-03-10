@@ -100,6 +100,9 @@ export function useCanvasEdits({
   const strokeSnapshotRef = useRef<Snapshot | null>(null);
   const strokePendingCommitRef = useRef(false);
   const strokeVersionRef = useRef(0);
+  const pendingStrokeCellsRef = useRef<Map<number, number>>(new Map());
+  const pendingStrokeLastCellRef = useRef<{ x: number; y: number } | null>(null);
+  const strokeFlushRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     gridRef.current = grid;
@@ -109,7 +112,55 @@ export function useCanvasEdits({
     strokeVersionRef.current += 1;
   }
 
+  function cancelScheduledStrokeFlush() {
+    if (strokeFlushRafRef.current === null) return;
+    window.cancelAnimationFrame(strokeFlushRafRef.current);
+    strokeFlushRafRef.current = null;
+  }
+
+  function flushPendingStrokePreview() {
+    cancelScheduledStrokeFlush();
+
+    const pendingCells = pendingStrokeCellsRef.current;
+    const lastCell = pendingStrokeLastCellRef.current;
+    pendingStrokeLastCellRef.current = null;
+    if (pendingCells.size === 0) {
+      if (lastCell) {
+        setLastEditCell(lastCell);
+      }
+      return;
+    }
+
+    const entries = Array.from(pendingCells.entries());
+    pendingStrokeCellsRef.current = new Map();
+
+    setGrid((prev) => {
+      let next: Uint16Array | null = null;
+      for (const [cellIdx, colorId] of entries) {
+        if (prev[cellIdx] === colorId) continue;
+        if (!next) {
+          next = new Uint16Array(prev);
+        }
+        next[cellIdx] = colorId;
+      }
+      return next ?? prev;
+    });
+
+    if (lastCell) {
+      setLastEditCell(lastCell);
+    }
+  }
+
+  function scheduleStrokePreviewFlush() {
+    if (strokeFlushRafRef.current !== null) return;
+    strokeFlushRafRef.current = window.requestAnimationFrame(() => {
+      strokeFlushRafRef.current = null;
+      flushPendingStrokePreview();
+    });
+  }
+
   function commitPendingStroke() {
+    flushPendingStrokePreview();
     if (!strokePendingCommitRef.current) return;
     const snapshot = strokeSnapshotRef.current;
     if (snapshot) {
@@ -149,11 +200,17 @@ export function useCanvasEdits({
     if (!isCellInFilter(x, y)) return;
     const currentGrid = gridRef.current ?? grid;
     const cellIdx = idx(x, y, gridW);
-    if (currentGrid[cellIdx] === colorId) return;
-    setLastEditCell({ x, y });
+    const pendingColor = pendingStrokeCellsRef.current.get(cellIdx);
+    const currentColor = pendingColor ?? currentGrid[cellIdx];
+    if (currentColor === colorId) return;
     if (strokeActiveRef.current) {
       strokeDirtyRef.current = true;
+      pendingStrokeCellsRef.current.set(cellIdx, colorId);
+      pendingStrokeLastCellRef.current = { x, y };
+      scheduleStrokePreviewFlush();
+      return;
     }
+    setLastEditCell({ x, y });
     const version = strokeVersionRef.current;
     updateGrid((prev) => {
       const next = new Uint16Array(prev);
@@ -206,6 +263,7 @@ export function useCanvasEdits({
   }
 
   function resetGrid(newW: number, newH: number) {
+    flushPendingStrokePreview();
     bumpStrokeVersion();
     pushHistory({ gridW, gridH, grid, trace: getTraceSnapshot() });
     setFutureState([]);
@@ -374,6 +432,7 @@ export function useCanvasEdits({
   }
 
   function performClearGrid() {
+    flushPendingStrokePreview();
     bumpStrokeVersion();
     updateGrid(() => makeGrid(gridW, gridH, 0));
   }
@@ -417,6 +476,9 @@ export function useCanvasEdits({
   }
 
   function beginStroke() {
+    pendingStrokeCellsRef.current = new Map();
+    pendingStrokeLastCellRef.current = null;
+    cancelScheduledStrokeFlush();
     strokeActiveRef.current = true;
     strokeDirtyRef.current = false;
     strokeSnapshotRef.current = { gridW, gridH, grid, trace: getTraceSnapshot() };
@@ -425,6 +487,7 @@ export function useCanvasEdits({
 
   function endStroke() {
     if (!strokeActiveRef.current) return;
+    flushPendingStrokePreview();
     if (strokeSnapshotRef.current && strokeDirtyRef.current) {
       strokePendingCommitRef.current = true;
       queueMicrotask(() => {
@@ -436,6 +499,12 @@ export function useCanvasEdits({
     strokeActiveRef.current = false;
     strokeDirtyRef.current = false;
   }
+
+  useEffect(() => {
+    return () => {
+      cancelScheduledStrokeFlush();
+    };
+  }, []);
 
   return {
     ...selection,

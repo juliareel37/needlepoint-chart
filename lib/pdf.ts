@@ -10,7 +10,6 @@ const RULER_TEXT_RGB = { r: 31, g: 41, b: 55 };
 
 export function exportPatternPdf(opts: {
   title: string;
-  canvas: HTMLCanvasElement;
   threadView?: boolean;
   usedColors: { color: Color; count: number }[];
   grid: Uint16Array;
@@ -20,8 +19,7 @@ export function exportPatternPdf(opts: {
   height: number;
   cellSize: number;
 }) {
-  const { title, canvas: _canvas, threadView = false, usedColors, grid, paletteById, symbolMap, width, height, cellSize } = opts;
-  void _canvas;
+  const { title, threadView = false, usedColors, grid, paletteById, symbolMap, width, height, cellSize } = opts;
   void threadView;
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });

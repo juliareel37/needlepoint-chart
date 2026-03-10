@@ -113,6 +113,20 @@ function debugTrace(event: string, details?: Record<string, unknown>) {
   });
 }
 
+function setLocalStorageWithTiming(key: string, value: string, source: string) {
+  if (typeof window === "undefined") return;
+  const hasPerfNow = typeof window.performance !== "undefined" && typeof window.performance.now === "function";
+  const startedAt = hasPerfNow ? window.performance.now() : Date.now();
+  window.localStorage.setItem(key, value);
+  const finishedAt = hasPerfNow ? window.performance.now() : Date.now();
+  debugAutosave("localstorage-setitem", {
+    source,
+    key,
+    bytes: value.length,
+    latencyMs: Number((finishedAt - startedAt).toFixed(3)),
+  });
+}
+
 function getLocalDraftBackupKey(draftId: string | null) {
   return `${LOCAL_DRAFT_BACKUP_KEY_PREFIX}:${draftId ?? "__unsaved__"}`;
 }
@@ -352,7 +366,7 @@ export function useWipDrafts({
     if (!authLoaded) return;
     const wasSignedIn = prevSignedInRef.current;
     if (isSignedIn && currentDraftId) {
-      window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, currentDraftId);
+      setLocalStorageWithTiming(LAST_ACTIVE_DRAFT_ID_KEY, currentDraftId, "auth-sync-current-draft");
     }
     if (wasSignedIn && !isSignedIn) {
       beginSignedOutDraft();
@@ -407,7 +421,7 @@ export function useWipDrafts({
       restoreSessionCanvasView(parsed.view);
       setCurrentDraftId(parsed.draftId ?? null);
       if (parsed.draftId) {
-        window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, parsed.draftId);
+        setLocalStorageWithTiming(LAST_ACTIVE_DRAFT_ID_KEY, parsed.draftId, "session-restore");
       }
       setWipMessage("Restored your previous session.", "info");
     } catch {
@@ -596,8 +610,9 @@ export function useWipDrafts({
           draft: draftSnapshot,
         };
         const backupKey = getLocalDraftBackupKey(currentDraftId);
-        window.localStorage.setItem(backupKey, JSON.stringify(backup));
-        window.localStorage.setItem(LOCAL_DRAFT_BACKUP_LAST_KEY, backupKey);
+        const serializedBackup = JSON.stringify(backup);
+        setLocalStorageWithTiming(backupKey, serializedBackup, "local-backup-debounce");
+        setLocalStorageWithTiming(LOCAL_DRAFT_BACKUP_LAST_KEY, backupKey, "local-backup-last-key");
         writeSessionRefreshResume(currentDraftId, draftSnapshot, "local-backup-debounce");
       } catch {
         // Best-effort local recovery only.
@@ -1013,7 +1028,7 @@ export function useWipDrafts({
       if (typeof window !== "undefined") {
         const savedDraftId = data?.id ?? requestDraftId;
         if (savedDraftId) {
-          window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, savedDraftId);
+          setLocalStorageWithTiming(LAST_ACTIVE_DRAFT_ID_KEY, savedDraftId, silent ? "autosave-success" : "manual-save-success");
           const backupKey = getLocalDraftBackupKey(savedDraftId);
           window.localStorage.removeItem(backupKey);
           if (window.localStorage.getItem(LOCAL_DRAFT_BACKUP_LAST_KEY) === backupKey) {
@@ -1207,7 +1222,7 @@ export function useWipDrafts({
       setCurrentDraftId(id);
       writeSessionRefreshResume(id, withTraceCellSizeBasis(data.draft, fitCellSize), "loadWipFromDb");
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(LAST_ACTIVE_DRAFT_ID_KEY, id);
+        setLocalStorageWithTiming(LAST_ACTIVE_DRAFT_ID_KEY, id, "load-wip-success");
       }
       if (data?.updatedAt) {
         const loadedUpdatedAt = new Date(data.updatedAt);

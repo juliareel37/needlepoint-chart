@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { SignInButton } from "@clerk/nextjs";
-import ExportPdfButton from "./ExportPdfButton";
 import type { Color } from "../../../lib/grid";
 import { assetPath } from "../../../lib/assetPath";
 
@@ -25,14 +24,12 @@ type WipCardProps = {
   draftInputRef: React.RefObject<HTMLInputElement | null>;
   onDraftFileSelected: (file: File) => void;
   lastAutosaveAt: Date | null;
-  exportCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   usedColors: UsedColorEntry[];
   grid: Uint16Array;
   paletteById: Map<number, Color>;
   symbolMap: Map<number, string>;
   gridW: number;
   gridH: number;
-  exportCellSize: number;
 };
 
 export function WipCard({
@@ -52,14 +49,12 @@ export function WipCard({
   draftInputRef,
   onDraftFileSelected,
   lastAutosaveAt,
-  exportCanvasRef,
   usedColors,
   grid,
   paletteById,
   symbolMap,
   gridW,
   gridH,
-  exportCellSize,
 }: WipCardProps) {
   const [autosaveMenuOpen, setAutosaveMenuOpen] = useState(false);
   const autosaveMenuRef = useRef<HTMLDivElement | null>(null);

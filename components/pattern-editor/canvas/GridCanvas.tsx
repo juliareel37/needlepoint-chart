@@ -168,9 +168,9 @@ export default function GridCanvas(props: Props) {
 
   const canvasW = width * cellSize;
   const canvasH = height * cellSize;
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const gridRef = useRef(grid);
-  gridRef.current = grid;
   const traceSamplerRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPainting, setIsPainting] = useState(false);
@@ -202,6 +202,9 @@ export default function GridCanvas(props: Props) {
   const zoomAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const lastClampSignatureRef = useRef<string | null>(null);
   const clampDebugRef = useRef<{ count: number; last?: string }>({ count: 0 });
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
   useEffect(() => {
     if (!filterSelecting && filterPreviewRect) {
       setFilterPreviewRect(null);
@@ -590,7 +593,8 @@ export default function GridCanvas(props: Props) {
   }, [paletteById]);
 
   useGridRenderer({
-    canvasRef,
+    baseCanvasRef,
+    overlayCanvasRef,
     width,
     height,
     grid,
@@ -1007,11 +1011,23 @@ export default function GridCanvas(props: Props) {
         }}
       />
       <canvas
-        ref={canvasRef}
+        ref={baseCanvasRef}
+        aria-hidden="true"
         style={{
           touchAction: "none",
-          position: "relative",
+          position: "absolute",
+          inset: 0,
           zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+      <canvas
+        ref={overlayCanvasRef}
+        style={{
+          touchAction: "none",
+          position: "absolute",
+          inset: 0,
+          zIndex: 2,
           cursor:
             isHoveringRulerLabel
               ? "default"

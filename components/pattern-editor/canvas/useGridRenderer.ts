@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import type { Color } from "../../../lib/grid";
 import { idx } from "../../../lib/grid";
 import { symbolForColorId } from "../../../lib/symbols";
@@ -14,7 +14,8 @@ type Point = { x: number; y: number };
 type RulerLine = { axis: "x" | "y"; value: number };
 
 type UseGridRendererArgs = {
-  canvasRef: RefObject<HTMLCanvasElement | null>;
+  baseCanvasRef: RefObject<HTMLCanvasElement | null>;
+  overlayCanvasRef: RefObject<HTMLCanvasElement | null>;
   width: number;
   height: number;
   grid: Uint16Array;
@@ -69,7 +70,8 @@ type UseGridRendererArgs = {
 };
 
 export function useGridRenderer({
-  canvasRef,
+  baseCanvasRef,
+  overlayCanvasRef,
   width,
   height,
   grid,
@@ -117,8 +119,37 @@ export function useGridRenderer({
   const SYMBOL_MIN_CELL_SIZE = 10;
   const stitchCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const stitchStyleVersion = 6;
-  const lastSurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
+  const baseSurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
+  const overlaySurfaceRef = useRef<{ w: number; h: number; dpr: number } | null>(null);
   const cellLayerRef = useRef<HTMLCanvasElement | null>(null);
+
+  const syncCanvasSurface = useCallback((
+    canvas: HTMLCanvasElement,
+    surfaceRef: { current: { w: number; h: number; dpr: number } | null }
+  ) => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const dpr = window.devicePixelRatio || 1;
+    const surfaceW = containerWidth || canvasW;
+    const surfaceH = containerHeight || canvasH;
+    const nextW = Math.floor(surfaceW * dpr);
+    const nextH = Math.floor(surfaceH * dpr);
+    const last = surfaceRef.current;
+    if (!last || last.w !== nextW || last.h !== nextH || last.dpr !== dpr) {
+      canvas.width = nextW;
+      canvas.height = nextH;
+      canvas.style.width = `${surfaceW}px`;
+      canvas.style.height = `${surfaceH}px`;
+      surfaceRef.current = { w: nextW, h: nextH, dpr };
+    } else {
+      if (canvas.style.width !== `${surfaceW}px`) canvas.style.width = `${surfaceW}px`;
+      if (canvas.style.height !== `${surfaceH}px`) canvas.style.height = `${surfaceH}px`;
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, surfaceW, surfaceH };
+  }, [canvasH, canvasW, containerHeight, containerWidth]);
 
   useEffect(() => {
     const layer = cellLayerRef.current ?? document.createElement("canvas");
@@ -173,30 +204,11 @@ export function useGridRenderer({
   }, [width, height, grid, paletteById, symbolMap, cellSize, canvasW, canvasH, threadView, showSymbols]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = baseCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Crisp lines on high DPI screens
-    const dpr = window.devicePixelRatio || 1;
-    const surfaceW = containerWidth || canvasW;
-    const surfaceH = containerHeight || canvasH;
-    const nextW = Math.floor(surfaceW * dpr);
-    const nextH = Math.floor(surfaceH * dpr);
-    const last = lastSurfaceRef.current;
-    if (!last || last.w !== nextW || last.h !== nextH || last.dpr !== dpr) {
-      canvas.width = nextW;
-      canvas.height = nextH;
-      canvas.style.width = `${surfaceW}px`;
-      canvas.style.height = `${surfaceH}px`;
-      lastSurfaceRef.current = { w: nextW, h: nextH, dpr };
-    } else {
-      // Keep CSS size in sync even if the backing store is unchanged.
-      if (canvas.style.width !== `${surfaceW}px`) canvas.style.width = `${surfaceW}px`;
-      if (canvas.style.height !== `${surfaceH}px`) canvas.style.height = `${surfaceH}px`;
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const surface = syncCanvasSurface(canvas, baseSurfaceRef);
+    if (!surface) return;
+    const { ctx, surfaceW, surfaceH } = surface;
 
     // Background
     ctx.clearRect(0, 0, surfaceW, surfaceH);
@@ -233,13 +245,6 @@ export function useGridRenderer({
       const drawW = traceImage.width * traceScale * zoom;
       const drawH = traceImage.height * traceScale * zoom;
       ctx.drawImage(traceImage, traceOffsetX * zoom, traceOffsetY * zoom, drawW, drawH);
-      if (traceAdjustMode) {
-        const accent = getComputedStyle(canvas).getPropertyValue("--accent-strong").trim() || "#7c3aed";
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(traceOffsetX * zoom + 1, traceOffsetY * zoom + 1, Math.max(0, drawW - 2), Math.max(0, drawH - 2));
-      }
       ctx.restore();
     }
 
@@ -434,6 +439,47 @@ export function useGridRenderer({
       ctx.restore();
     }
 
+  }, [
+    baseCanvasRef,
+    width,
+    height,
+    grid,
+    paletteById,
+    symbolMap,
+    cellSize,
+    showGridlines,
+    showRuler,
+    activeRulerLines,
+    canvasW,
+    canvasH,
+    containerWidth,
+    containerHeight,
+    threadView,
+    traceImage,
+    traceOpacity,
+    traceScale,
+    traceOffsetX,
+    traceOffsetY,
+    traceAdjustMode,
+    darkCanvas,
+    drawTranslateX,
+    drawTranslateY,
+    showSymbols,
+    identifyColorId,
+    syncCanvasSurface,
+    zoom,
+    gridBackground,
+  ]);
+
+  useEffect(() => {
+    const canvas = overlayCanvasRef.current;
+    if (!canvas) return;
+    const surface = syncCanvasSurface(canvas, overlaySurfaceRef);
+    if (!surface) return;
+    const { ctx, surfaceW, surfaceH } = surface;
+
+    ctx.clearRect(0, 0, surfaceW, surfaceH);
+
     if (traceAdjustMode && traceImage) {
       ctx.save();
       ctx.translate(drawTranslateX, drawTranslateY);
@@ -494,9 +540,9 @@ export function useGridRenderer({
         const lineY = centerY - (lineHeight * (Math.max(1, lines.length) - 1)) / 2 + index * lineHeight;
         ctx.fillText(line, centerX, lineY);
         if (pendingTextPlacement.underline) {
-          const w = ctx.measureText(line).width;
+          const textWidth = ctx.measureText(line).width;
           const underlineY = lineY + Math.max(1, Math.round(fontPx * 0.15));
-          ctx.fillRect(centerX - w / 2, underlineY, w, Math.max(1, Math.round(fontPx * 0.06)));
+          ctx.fillRect(centerX - textWidth / 2, underlineY, textWidth, Math.max(1, Math.round(fontPx * 0.06)));
         }
       });
       const handleSize = 8;
@@ -516,7 +562,6 @@ export function useGridRenderer({
       ctx.restore();
     }
 
-    // Lasso overlay
     if (lassoPoints.length > 0) {
       ctx.save();
       ctx.translate(drawTranslateX, drawTranslateY);
@@ -525,12 +570,11 @@ export function useGridRenderer({
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
       ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
-      for (let i = 1; i < lassoPoints.length; i++) {
+      for (let i = 1; i < lassoPoints.length; i += 1) {
         ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
       }
       if (lassoClosed) ctx.closePath();
       ctx.stroke();
-
       ctx.restore();
     }
 
@@ -569,12 +613,7 @@ export function useGridRenderer({
         ctx.strokeStyle = darkCanvas ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.7)";
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
-        ctx.strokeRect(
-          x0 + 0.5,
-          y0 + 0.5,
-          Math.max(0, previewW - 1),
-          Math.max(0, previewH - 1)
-        );
+        ctx.strokeRect(x0 + 0.5, y0 + 0.5, Math.max(0, previewW - 1), Math.max(0, previewH - 1));
         ctx.restore();
       }
     }
@@ -604,11 +643,7 @@ export function useGridRenderer({
         ctx.fill("evenodd");
         ctx.strokeStyle = "rgba(191, 100, 217, 0.95)";
         ctx.lineWidth = 2;
-        if (filterSelecting) {
-          ctx.setLineDash([6, 4]);
-        } else {
-          ctx.setLineDash([]);
-        }
+        ctx.setLineDash(filterSelecting ? [6, 4] : []);
         ctx.strokeRect(x0 + 1, y0 + 1, Math.max(0, w - 2), Math.max(0, h - 2));
         if (filterEditMode) {
           const handleSize = 8;
@@ -683,24 +718,18 @@ export function useGridRenderer({
       }
     }
   }, [
+    overlayCanvasRef,
     width,
     height,
-    grid,
     paletteById,
-    symbolMap,
     cellSize,
-    showGridlines,
-    showRuler,
-    activeRulerLines,
     canvasW,
     canvasH,
     containerWidth,
     containerHeight,
     lassoPoints,
     lassoClosed,
-    threadView,
     traceImage,
-    traceOpacity,
     traceScale,
     traceOffsetX,
     traceOffsetY,
@@ -709,8 +738,6 @@ export function useGridRenderer({
     darkCanvas,
     drawTranslateX,
     drawTranslateY,
-    showSymbols,
-    identifyColorId,
     hoverCell,
     tool,
     brushSize,
@@ -722,7 +749,7 @@ export function useGridRenderer({
     mirrorTargets,
     mirrorSelecting,
     filterEditMode,
+    syncCanvasSurface,
     zoom,
-    gridBackground,
   ]);
 }

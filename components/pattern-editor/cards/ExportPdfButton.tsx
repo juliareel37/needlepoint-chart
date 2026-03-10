@@ -7,7 +7,6 @@ import { assetPath } from "../../../lib/assetPath";
 
 type Props = {
   title: string;
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   usedColors: { color: Color; count: number }[];
   grid: Uint16Array;
   paletteById: Map<number, Color>;
@@ -21,7 +20,6 @@ type Props = {
 
 export default function ExportPdfButton({
   title,
-  canvasRef,
   usedColors,
   grid,
   paletteById,
@@ -35,9 +33,7 @@ export default function ExportPdfButton({
   return (
     <button
       onClick={() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        exportPatternPdf({ title, canvas, threadView, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
+        exportPatternPdf({ title, threadView, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
         padding: compact ? "4px 6px" : "4px 8px",

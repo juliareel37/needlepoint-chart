@@ -9,7 +9,6 @@ import { makeGrid } from "../../lib/grid";
 import { DMC_COLORS } from "../../lib/dmcColors";
 import { assetPath } from "../../lib/assetPath";
 import { CanvasWithExportRef } from "./canvas/CanvasWithExportRef";
-import { EXPORT_CELL_SIZE } from "./utils/constants";
 import { extractPaletteFromImage, rgbToOklab } from "./utils/colorUtils";
 import { convertImageToPattern as buildImageToPattern } from "./utils/imageToPattern";
 import { type FilterRect } from "./utils/geometry";
@@ -131,8 +130,6 @@ export default function PatternEditor() {
   const traceUploadSeqRef = useRef(0);
   const traceInputRef = useRef<HTMLInputElement | null>(null);
   const traceSampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   const [palette, setPalette] = useState<Color[]>(DEFAULT_PALETTE);
   const [extractedPaletteIds, setExtractedPaletteIds] = useState<number[]>([]);
   const paletteById = useMemo(() => new Map(palette.map((c) => [c.id, c])), [palette]);
@@ -481,10 +478,11 @@ export default function PatternEditor() {
   );
 
   useEffect(() => {
+    if (!isNarrow) return;
     const needsCanvasInteraction = tracePostUpload || traceEditMode || Boolean(pendingTextPlacement);
     if (!needsCanvasInteraction || sidebarCollapsed) return;
     setSidebarCollapsedWithFlip(true);
-  }, [pendingTextPlacement, setSidebarCollapsedWithFlip, sidebarCollapsed, traceEditMode, tracePostUpload]);
+  }, [isNarrow, pendingTextPlacement, setSidebarCollapsedWithFlip, sidebarCollapsed, traceEditMode, tracePostUpload]);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -1449,6 +1447,66 @@ export default function PatternEditor() {
   const sidebarInnerRef = useRef<HTMLDivElement | null>(null);
   const sidebarContentRef = useRef<HTMLDivElement | null>(null);
   const [sidebarScrollable, setSidebarScrollable] = useState(false);
+  const [sidebarContentVisible, setSidebarContentVisible] = useState(!sidebarCollapsed);
+  const sidebarInnerVisible = !sidebarCollapsed && sidebarContentVisible;
+  const sidebarContentRevealTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const clearRevealTimeout = () => {
+      if (sidebarContentRevealTimeoutRef.current !== null) {
+        window.clearTimeout(sidebarContentRevealTimeoutRef.current);
+        sidebarContentRevealTimeoutRef.current = null;
+      }
+    };
+
+    clearRevealTimeout();
+    if (sidebarCollapsed) {
+      setSidebarContentVisible(false);
+      return;
+    }
+
+    const sidebarNode = sidebarRef.current;
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!sidebarNode || prefersReducedMotion) {
+      setSidebarContentVisible(true);
+      return;
+    }
+
+    setSidebarContentVisible(false);
+    const transitionProperty = isNarrow ? "transform" : "width";
+    const handleTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== sidebarNode) return;
+      if (event.propertyName !== transitionProperty) return;
+      setSidebarContentVisible(true);
+      clearRevealTimeout();
+      sidebarNode.removeEventListener("transitionend", handleTransitionEnd);
+    };
+    sidebarNode.addEventListener("transitionend", handleTransitionEnd);
+
+    const fallbackDelayMs = isNarrow ? 260 : 240;
+    sidebarContentRevealTimeoutRef.current = window.setTimeout(() => {
+      setSidebarContentVisible(true);
+      sidebarContentRevealTimeoutRef.current = null;
+      sidebarNode.removeEventListener("transitionend", handleTransitionEnd);
+    }, fallbackDelayMs);
+
+    return () => {
+      sidebarNode.removeEventListener("transitionend", handleTransitionEnd);
+      clearRevealTimeout();
+    };
+  }, [isNarrow, sidebarCollapsed]);
+
+  useEffect(() => {
+    return () => {
+      if (sidebarContentRevealTimeoutRef.current !== null) {
+        window.clearTimeout(sidebarContentRevealTimeoutRef.current);
+        sidebarContentRevealTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!paletteById.has(textColorId)) {
@@ -1486,6 +1544,10 @@ export default function PatternEditor() {
   }, [gridW, gridH]);
 
   useEffect(() => {
+    if (sidebarCollapsed || !sidebarContentVisible) {
+      setSidebarScrollable(false);
+      return;
+    }
     const container = sidebarInnerRef.current;
     const content = sidebarContentRef.current;
     if (!container || !content) return;
@@ -1515,7 +1577,7 @@ export default function PatternEditor() {
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("resize", update);
     };
-  }, []);
+  }, [sidebarCollapsed, sidebarContentVisible]);
 
   return (
     <div
@@ -1606,20 +1668,19 @@ export default function PatternEditor() {
           createPortal(
             <ExportPdfButton
               title={title}
-              canvasRef={exportCanvasRef}
               usedColors={usedColors}
               grid={grid}
               paletteById={paletteById}
               symbolMap={symbolMap}
               width={gridW}
               height={gridH}
-              cellSize={EXPORT_CELL_SIZE}
+              cellSize={24}
               threadView={threadView}
               compact={isCompact}
             />,
             headerActionsNode
           )}
-        {(isCompact ? headerFileRightNode : headerFileLeftNode) &&
+        {((isCompact ? headerFileRightNode : headerFileLeftNode) != null) &&
           createPortal(
             <div ref={fileMenuRef} style={{ position: "relative" }}>
               <button
@@ -2167,7 +2228,7 @@ export default function PatternEditor() {
                 </>
               )}
             </div>,
-            isCompact ? headerFileRightNode : headerFileLeftNode
+            isCompact ? headerFileRightNode! : headerFileLeftNode!
           )}
         {headerAutosaveNode &&
           isSignedIn &&
@@ -2412,16 +2473,16 @@ export default function PatternEditor() {
             </div>,
             headerTitleNode
           )}
-        {!isNarrow && !sidebarCollapsed && (
+        {!isNarrow && (
           <button
             className="pattern-sidebar-toggle-desktop"
             type="button"
-            onClick={() => setSidebarCollapsedWithFlip((prev) => !prev)}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setSidebarCollapsedWithFlip(true)}
+            aria-label="Collapse sidebar"
             style={{
               position: "absolute",
               top: "50%",
-              left: menuWidth + (sidebarCollapsed ? sidebarCollapsedWidth : sidebarWidth),
+              left: menuWidth + (sidebarCollapsed ? 0 : sidebarWidth),
               transform: "translate(-50%, -50%)",
               width: 22,
               height: 40,
@@ -2431,16 +2492,19 @@ export default function PatternEditor() {
               boxShadow: "var(--ui-shadow-md)",
               display: "grid",
               placeItems: "center",
-              cursor: "pointer",
+              cursor: sidebarCollapsed ? "default" : "pointer",
+              opacity: sidebarCollapsed ? 0 : 1,
+              pointerEvents: sidebarCollapsed ? "none" : "auto",
+              transition: "left 200ms ease, opacity 200ms ease",
               zIndex: 200,
             }}
           >
             <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.7 }}>
-              {sidebarCollapsed ? "▸" : "◂"}
+              ◂
             </span>
           </button>
         )}
-        {isNarrow && !sidebarCollapsed && (
+        {isNarrow && (
           <button
             type="button"
             onClick={() => setSidebarCollapsedWithFlip(true)}
@@ -2448,7 +2512,9 @@ export default function PatternEditor() {
             style={{
               position: "fixed",
               left: "50%",
-              bottom: `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) + ${sidebarBottomSheetHeight} - 10px)`,
+              bottom: sidebarCollapsed
+                ? `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) - 10px)`
+                : `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) + ${sidebarBottomSheetHeight} - 10px)`,
               transform: "translateX(-50%)",
               width: 42,
               height: 22,
@@ -2458,7 +2524,10 @@ export default function PatternEditor() {
               boxShadow: "var(--ui-shadow-md)",
               display: "grid",
               placeItems: "center",
-              cursor: "pointer",
+              cursor: sidebarCollapsed ? "default" : "pointer",
+              opacity: sidebarCollapsed ? 0 : 1,
+              pointerEvents: sidebarCollapsed ? "none" : "auto",
+              transition: "bottom 220ms ease, opacity 220ms ease",
               zIndex: 202,
             }}
           >
@@ -2611,8 +2680,8 @@ export default function PatternEditor() {
             alignContent: "start",
             minWidth: 0,
             minHeight: 0,
-            height: "100%",
-            maxHeight: "100%",
+            height: isNarrow ? sidebarBottomSheetHeight : "100%",
+            maxHeight: isNarrow ? sidebarBottomSheetHeight : "100%",
             overflowY: "hidden",
             overflowX: "visible",
             alignSelf: "stretch",
@@ -2622,22 +2691,22 @@ export default function PatternEditor() {
             right: isNarrow ? 0 : undefined,
             bottom: isNarrow ? `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px))` : undefined,
             width: isNarrow
-              ? sidebarCollapsed
-                ? sidebarCollapsedWidthMobileValue
-                : "100%"
+              ? "100%"
               : sidebarCollapsed
                 ? 0
                 : sidebarExpandedWidth,
-            height: isNarrow ? (sidebarCollapsed ? 0 : sidebarBottomSheetHeight) : "100%",
-            maxHeight: isNarrow ? sidebarBottomSheetHeight : "100%",
             zIndex: isNarrow ? 80 : 90,
             borderTop: isNarrow ? "1px solid var(--ui-divider)" : undefined,
             borderTopLeftRadius: isNarrow ? 14 : undefined,
             borderTopRightRadius: isNarrow ? 14 : undefined,
             boxShadow: isNarrow ? "0 -10px 24px var(--ui-border)" : undefined,
             opacity: isNarrow ? (sidebarCollapsed ? 0 : 1) : 1,
-            transform: isNarrow ? (sidebarCollapsed ? "translateY(12px)" : "translateY(0)") : undefined,
-            transition: isNarrow ? "height 220ms ease, opacity 180ms ease, transform 220ms ease" : undefined,
+            transform: isNarrow
+              ? sidebarCollapsed
+                ? "translateY(calc(100% + 12px))"
+                : "translateY(0)"
+              : undefined,
+            transition: isNarrow ? "transform 220ms ease, opacity 180ms ease" : undefined,
             pointerEvents: isNarrow && sidebarCollapsed ? "none" : "auto",
           }}
         >
@@ -2652,9 +2721,10 @@ export default function PatternEditor() {
               height: "100%",
               minHeight: 0,
               maxHeight: "100%",
-              overflowY: sidebarScrollable ? "auto" : "hidden",
+              overflowY: sidebarInnerVisible && sidebarScrollable ? "auto" : "hidden",
               overflowX: "hidden",
-              opacity: sidebarCollapsed ? 0 : 1,
+              scrollbarGutter: "stable both-edges",
+              opacity: sidebarInnerVisible ? 1 : 0,
               transform: isNarrow
                 ? sidebarCollapsed
                   ? "translateY(8px)"
@@ -2662,8 +2732,8 @@ export default function PatternEditor() {
                 : sidebarCollapsed
                   ? "translateX(-6px)"
                   : "translateX(0)",
-              transition: isNarrow ? "opacity 180ms ease, transform 220ms ease" : undefined,
-              pointerEvents: sidebarCollapsed ? "none" : "auto",
+              transition: isNarrow ? "opacity 180ms ease, transform 220ms ease" : "opacity 170ms ease",
+              pointerEvents: sidebarInnerVisible ? "auto" : "none",
             }}
           >
             <div ref={sidebarContentRef} style={{ display: "grid", gap: 0, alignContent: "start" }}>
@@ -2896,7 +2966,6 @@ export default function PatternEditor() {
             }}
           >
             <CanvasWithExportRef
-              exportCanvasRef={exportCanvasRef}
               title={title}
               usedColors={usedColors}
               width={gridW}
