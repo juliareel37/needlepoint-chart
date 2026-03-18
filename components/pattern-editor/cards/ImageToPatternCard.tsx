@@ -99,7 +99,7 @@ export function ImageToPatternCard({
           onClick={onConvert}
           disabled={!convertEnabled}
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
@@ -107,8 +107,8 @@ export function ImageToPatternCard({
             marginTop: 6,
             borderRadius: 8,
             border: "1px solid var(--ui-border-subtle)",
-            background: "var(--card-bg)",
-            color: "var(--foreground)",
+            background: "var(--accent)",
+            color: "#ffffff",
             cursor: "pointer",
             opacity: convertEnabled ? 1 : 0.5,
             width: "100%",

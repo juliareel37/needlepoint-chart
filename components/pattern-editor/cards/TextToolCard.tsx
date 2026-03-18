@@ -684,15 +684,15 @@ export function TextToolCard({
           onClick={onAddTextBox}
           disabled={!textValue.trim() || placementActive}
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             width: "100%",
             padding: "7px 10px",
             borderRadius: 8,
             border: "1px solid var(--ui-border-subtle)",
-            background: "var(--card-bg)",
-            color: "var(--foreground)",
+            background: "var(--accent)",
+            color: "#ffffff",
             cursor: !textValue.trim() || placementActive ? "not-allowed" : "pointer",
             fontSize: 12,
             fontWeight: 600,

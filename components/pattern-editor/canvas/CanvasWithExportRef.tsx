@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import GridCanvas from "./GridCanvas";
 import type { Color } from "../../../lib/grid";
 import { assetPath } from "../../../lib/assetPath";
+import { DMC_PALETTE_BANDS } from "../../../lib/dmcPaletteBands";
 import { Toggle } from "../ui/Toggle";
 import { sortPaletteByHsv } from "../utils/paletteSort";
 
@@ -142,7 +143,7 @@ export function CanvasWithExportRef(props: any) {
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [colorButtonHovered, setColorButtonHovered] = useState(false);
   const [colorMenuPos, setColorMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used" | "favorites">("all");
+  const [activePalettePanel, setActivePalettePanel] = useState<"all" | "used" | "custom">("all");
   const [activePaletteFamily, setActivePaletteFamily] = useState("All");
   const [filterEditMode, setFilterEditMode] = useState(false);
   const [filterEditRect, setFilterEditRect] = useState(filterRect ?? null);
@@ -162,6 +163,10 @@ export function CanvasWithExportRef(props: any) {
   const usedColorSet = useMemo(
     () => new Set((usedColors ?? []).map((entry: { color: Color }) => entry.color.id)),
     [usedColors],
+  );
+  const curatedPaletteIds = useMemo(
+    () => new Set<number>(DMC_PALETTE_BANDS.flatMap((band) => band.rows.flat())),
+    [],
   );
   const hasUsedColors = usedColorSet.size > 0;
 
@@ -234,13 +239,12 @@ export function CanvasWithExportRef(props: any) {
     const rest = Array.from(set).filter((f) => !order.includes(f)).sort();
     return ["All", ...order.filter((f) => f !== "All" && set.has(f)), ...rest];
   }, [paletteEntries]);
-  const favoriteColorSet = useMemo(() => new Set(favoriteColorIds ?? []), [favoriteColorIds]);
   const filteredPaletteEntries = useMemo(() => {
     const panelFiltered =
       activePalettePanel === "used" && hasUsedColors
         ? paletteEntries.filter((color) => usedColorSet.has(color.id))
-        : activePalettePanel === "favorites"
-          ? paletteEntries.filter((color) => favoriteColorSet.has(color.id))
+        : activePalettePanel === "custom"
+          ? paletteEntries.filter((color) => !curatedPaletteIds.has(color.id))
           : paletteEntries;
     if (activePalettePanel !== "all") return panelFiltered;
     if (activePaletteFamily === "All") return panelFiltered;
@@ -251,7 +255,7 @@ export function CanvasWithExportRef(props: any) {
     hasUsedColors,
     paletteEntries,
     usedColorSet,
-    favoriteColorSet,
+    curatedPaletteIds,
   ]);
   const effectiveGridBackground = darkMode ? "#1f252d" : gridBackground ?? "#ffffff";
   const brushSizePresets = [1, 3, 5, 8, 12] as const;
@@ -976,9 +980,9 @@ export function CanvasWithExportRef(props: any) {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setActivePalettePanel("favorites")}
-                          aria-pressed={activePalettePanel === "favorites"}
-                          data-active={activePalettePanel === "favorites" ? "true" : undefined}
+                          onClick={() => setActivePalettePanel("custom")}
+                          aria-pressed={activePalettePanel === "custom"}
+                          data-active={activePalettePanel === "custom" ? "true" : undefined}
                           className="menu-tab-button"
                           style={{
                             padding: "6px 10px",
@@ -991,7 +995,7 @@ export function CanvasWithExportRef(props: any) {
                             fontWeight: 600,
                           }}
                         >
-                          Favorites
+                          Custom
                         </button>
                       </div>
                       {activePalettePanel === "all" && (
@@ -1062,7 +1066,7 @@ export function CanvasWithExportRef(props: any) {
                         >
                           No colors used. Let's start painting!
                         </div>
-                      ) : activePalettePanel === "favorites" && filteredPaletteEntries.length === 0 ? (
+                      ) : activePalettePanel === "custom" && filteredPaletteEntries.length === 0 ? (
                         <div
                           style={{
                             padding: "10px 8px",
@@ -1077,7 +1081,7 @@ export function CanvasWithExportRef(props: any) {
                             overflowWrap: "anywhere",
                           }}
                         >
-                          No favorites yet. Tap the heart to save colors.
+                          No custom colors yet.
                         </div>
                       ) : (
                         <div

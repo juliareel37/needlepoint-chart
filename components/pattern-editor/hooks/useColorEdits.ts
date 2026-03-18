@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Color } from "../../../lib/grid";
 import { idx } from "../../../lib/grid";
 import { SYMBOLS } from "../../../lib/symbols";
@@ -43,70 +43,108 @@ export function useColorEdits({
   setLastEditCell,
   getTraceSnapshot,
 }: UseColorEditsArgs) {
-  const [remapMode, setRemapMode] = useState(false);
+  const [remapMode, setRemapMode] = useState(true);
   const [remapSourceId, setRemapSourceId] = useState<number | null>(null);
   const [remapTargetId, setRemapTargetId] = useState<number | null>(null);
+  const [remapPreviewEnabled, setRemapPreviewEnabled] = useState(false);
   const [identifyColorId, setIdentifyColorId] = useState<number | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSelectedIds, setMergeSelectedIds] = useState<number[]>([]);
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
+  const [mergePreviewEnabled, setMergePreviewEnabled] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteSelectedIds, setDeleteSelectedIds] = useState<number[]>([]);
-  const remapOriginalRef = useRef<Uint16Array | null>(null);
-  const mergeOriginalRef = useRef<Uint16Array | null>(null);
-  const deleteOriginalRef = useRef<Uint16Array | null>(null);
+  const [deletePreviewEnabled, setDeletePreviewEnabled] = useState(false);
+  const [remapOriginalGrid, setRemapOriginalGrid] = useState<Uint16Array | null>(null);
+  const [mergeOriginalGrid, setMergeOriginalGrid] = useState<Uint16Array | null>(null);
+  const [deleteOriginalGrid, setDeleteOriginalGrid] = useState<Uint16Array | null>(null);
 
   function beginRemap(sourceId: number) {
+    const original = new Uint16Array(grid);
     setRemapSourceId(sourceId);
     setRemapTargetId(null);
-    remapOriginalRef.current = new Uint16Array(grid);
+    setRemapPreviewEnabled(false);
+    setRemapOriginalGrid(original);
   }
 
-  function previewRemap(targetId: number) {
+  function setRemapPreviewTarget(targetId: number) {
     if (remapSourceId === null) return;
-    const original = remapOriginalRef.current ?? new Uint16Array(grid);
-    remapOriginalRef.current = original;
+    if (remapOriginalGrid === null) {
+      setRemapOriginalGrid(new Uint16Array(grid));
+    }
     setRemapTargetId(targetId);
-    setGrid(() => {
-      const next = new Uint16Array(original);
-      for (let i = 0; i < next.length; i++) {
-        if (!isIndexInFilter(i)) continue;
-        if (next[i] === remapSourceId) next[i] = targetId;
-      }
-      return next;
-    });
+  }
+
+  function clearRemapTarget() {
+    if (remapOriginalGrid) {
+      setGrid(remapOriginalGrid);
+    }
+    setRemapTargetId(null);
+    setRemapPreviewEnabled(false);
+  }
+
+  function clearRemapSource() {
+    if (remapOriginalGrid) {
+      setGrid(remapOriginalGrid);
+    }
+    setRemapSourceId(null);
+    setRemapTargetId(null);
+    setRemapPreviewEnabled(false);
+    setRemapOriginalGrid(null);
+  }
+
+  function setRemapPreviewEnabledState(enabled: boolean) {
+    setRemapPreviewEnabled(enabled);
+    if (!enabled && remapOriginalGrid) {
+      setGrid(remapOriginalGrid);
+    }
   }
 
   function cancelRemap() {
-    if (remapOriginalRef.current) {
-      setGrid(remapOriginalRef.current);
+    if (remapOriginalGrid) {
+      setGrid(remapOriginalGrid);
     }
-    remapOriginalRef.current = null;
+    setRemapOriginalGrid(null);
     setRemapSourceId(null);
     setRemapTargetId(null);
+    setRemapPreviewEnabled(false);
   }
 
   function cancelMerge() {
-    if (mergeOriginalRef.current) {
-      setGrid(mergeOriginalRef.current);
+    if (mergeOriginalGrid) {
+      setGrid(mergeOriginalGrid);
     }
-    mergeOriginalRef.current = null;
+    setMergeOriginalGrid(null);
     setMergeSelectedIds([]);
     setMergeTargetId(null);
+    setMergePreviewEnabled(false);
+  }
+
+  function setMergePreviewEnabledState(enabled: boolean) {
+    setMergePreviewEnabled(enabled);
+    if (!enabled && mergeOriginalGrid) {
+      setGrid(mergeOriginalGrid);
+    }
   }
 
   function cancelDelete() {
-    if (deleteOriginalRef.current) {
-      setGrid(deleteOriginalRef.current);
+    if (deleteOriginalGrid) {
+      setGrid(deleteOriginalGrid);
     }
-    deleteOriginalRef.current = null;
+    setDeleteOriginalGrid(null);
     setDeleteSelectedIds([]);
+    setDeletePreviewEnabled(false);
+  }
+
+  function setDeletePreviewEnabledState(enabled: boolean) {
+    setDeletePreviewEnabled(enabled);
+    if (!enabled && deleteOriginalGrid) {
+      setGrid(deleteOriginalGrid);
+    }
   }
 
   function toggleRemapMode() {
     if (remapMode) {
-      cancelRemap();
-      setRemapMode(false);
       return;
     }
     if (mergeMode) {
@@ -123,8 +161,6 @@ export function useColorEdits({
 
   function toggleMergeMode() {
     if (mergeMode) {
-      cancelMerge();
-      setMergeMode(false);
       return;
     }
     if (remapMode) {
@@ -136,14 +172,12 @@ export function useColorEdits({
       setDeleteMode(false);
     }
     cancelMerge();
-    mergeOriginalRef.current = new Uint16Array(grid);
+    setMergeOriginalGrid(new Uint16Array(grid));
     setMergeMode(true);
   }
 
   function toggleDeleteMode() {
     if (deleteMode) {
-      cancelDelete();
-      setDeleteMode(false);
       return;
     }
     if (remapMode) {
@@ -155,7 +189,7 @@ export function useColorEdits({
       setMergeMode(false);
     }
     cancelDelete();
-    deleteOriginalRef.current = new Uint16Array(grid);
+    setDeleteOriginalGrid(new Uint16Array(grid));
     setDeleteMode(true);
   }
 
@@ -164,7 +198,7 @@ export function useColorEdits({
       cancelRemap();
       return;
     }
-    const original = remapOriginalRef.current ?? new Uint16Array(grid);
+    const original = remapOriginalGrid ?? new Uint16Array(grid);
     bumpStrokeVersion();
     pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
@@ -186,10 +220,10 @@ export function useColorEdits({
       setLastEditCell(focusCell);
     }
     setActiveColorId(remapTargetId);
-    remapOriginalRef.current = null;
+    setRemapOriginalGrid(null);
     setRemapSourceId(null);
     setRemapTargetId(null);
-    setRemapMode(false);
+    setRemapPreviewEnabled(false);
   }
 
   function confirmMerge() {
@@ -200,8 +234,8 @@ export function useColorEdits({
     const sourceIds = mergeSelectedIds.filter((id) => id !== targetId);
     if (sourceIds.length === 0) return;
     const sourceSet = new Set(sourceIds);
-    const original = mergeOriginalRef.current ?? new Uint16Array(grid);
-    mergeOriginalRef.current = original;
+    const original = mergeOriginalGrid ?? new Uint16Array(grid);
+    setMergeOriginalGrid(original);
     bumpStrokeVersion();
     pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
@@ -225,10 +259,10 @@ export function useColorEdits({
       setLastEditCell(focusCell);
     }
     setActiveColorId(targetId);
-    mergeOriginalRef.current = null;
+    setMergeOriginalGrid(null);
     setMergeSelectedIds([]);
     setMergeTargetId(null);
-    setMergeMode(false);
+    setMergePreviewEnabled(false);
   }
 
   function confirmDeleteColors() {
@@ -281,8 +315,8 @@ export function useColorEdits({
       replacementById.set(id, bestId);
     }
 
-    const original = deleteOriginalRef.current ?? new Uint16Array(grid);
-    deleteOriginalRef.current = original;
+    const original = deleteOriginalGrid ?? new Uint16Array(grid);
+    setDeleteOriginalGrid(original);
     bumpStrokeVersion();
     pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
@@ -309,18 +343,18 @@ export function useColorEdits({
     if (replacementById.has(activeColorId)) {
       setActiveColorId(replacementById.get(activeColorId) ?? activeColorId);
     }
-    deleteOriginalRef.current = null;
+    setDeleteOriginalGrid(null);
     setDeleteSelectedIds([]);
-    setDeleteMode(false);
+    setDeletePreviewEnabled(false);
   }
 
   const usedColorsGrid =
-    remapMode && remapOriginalRef.current
-      ? remapOriginalRef.current
-      : mergeMode && mergeOriginalRef.current
-        ? mergeOriginalRef.current
-        : deleteMode && deleteOriginalRef.current
-          ? deleteOriginalRef.current
+    remapMode && remapOriginalGrid
+      ? remapOriginalGrid
+      : mergeMode && mergeOriginalGrid
+        ? mergeOriginalGrid
+        : deleteMode && deleteOriginalGrid
+          ? deleteOriginalGrid
           : grid;
   const usedColorsAll = useMemo(() => {
     const counts = new Map<number, number>();
@@ -392,10 +426,30 @@ export function useColorEdits({
   }, [usedColorIds]);
 
   useEffect(() => {
-    if (!mergeMode) return;
-    const original = mergeOriginalRef.current;
+    if (!remapMode) return;
+    const original = remapOriginalGrid;
     if (!original) return;
-    if (mergeSelectedIds.length < 2 || mergeTargetId === null || !mergeSelectedIds.includes(mergeTargetId)) {
+    if (!remapPreviewEnabled || remapSourceId === null || remapTargetId === null) {
+      setGrid(original);
+      return;
+    }
+    setGrid(() => {
+      const next = new Uint16Array(original);
+      for (let i = 0; i < next.length; i++) {
+        if (!isIndexInFilter(i)) continue;
+        if (next[i] === remapSourceId) {
+          next[i] = remapTargetId;
+        }
+      }
+      return next;
+    });
+  }, [remapMode, remapPreviewEnabled, remapSourceId, remapTargetId, remapOriginalGrid, activeFilterRect, gridW, isIndexInFilter, setGrid]);
+
+  useEffect(() => {
+    if (!mergeMode) return;
+    const original = mergeOriginalGrid;
+    if (!original) return;
+    if (!mergePreviewEnabled || mergeSelectedIds.length < 2 || mergeTargetId === null || !mergeSelectedIds.includes(mergeTargetId)) {
       setGrid(original);
       return;
     }
@@ -415,13 +469,13 @@ export function useColorEdits({
       }
       return next;
     });
-  }, [mergeMode, mergeSelectedIds, mergeTargetId, activeFilterRect, gridW]);
+  }, [mergeMode, mergePreviewEnabled, mergeSelectedIds, mergeTargetId, mergeOriginalGrid, activeFilterRect, gridW, isIndexInFilter, setGrid]);
 
   useEffect(() => {
     if (!deleteMode) return;
-    const original = deleteOriginalRef.current;
+    const original = deleteOriginalGrid;
     if (!original) return;
-    if (deleteSelectedIds.length === 0) {
+    if (!deletePreviewEnabled || deleteSelectedIds.length === 0) {
       setGrid(original);
       return;
     }
@@ -485,18 +539,21 @@ export function useColorEdits({
       }
       return next;
     });
-  }, [deleteMode, deleteSelectedIds, usedColorIds, paletteById, activeFilterRect, gridW]);
+  }, [deleteMode, deletePreviewEnabled, deleteSelectedIds, usedColorIds, paletteById, deleteOriginalGrid, activeFilterRect, gridW, isIndexInFilter, setGrid]);
 
   return {
     remapMode,
     remapSourceId,
     remapTargetId,
+    remapPreviewEnabled,
+    mergePreviewEnabled,
     identifyColorId,
     mergeMode,
     mergeSelectedIds,
     mergeTargetId,
     deleteMode,
     deleteSelectedIds,
+    deletePreviewEnabled,
     symbolMap,
     usedColors,
     hasAnyPaintedCells,
@@ -504,14 +561,19 @@ export function useColorEdits({
     setRemapMode,
     setRemapSourceId,
     setRemapTargetId,
+    setRemapPreviewEnabled: setRemapPreviewEnabledState,
     setIdentifyColorId,
     setMergeMode,
     setMergeSelectedIds,
     setMergeTargetId,
+    setMergePreviewEnabled: setMergePreviewEnabledState,
     setDeleteMode,
     setDeleteSelectedIds,
+    setDeletePreviewEnabled: setDeletePreviewEnabledState,
     beginRemap,
-    previewRemap,
+    setRemapPreviewTarget,
+    clearRemapSource,
+    clearRemapTarget,
     cancelRemap,
     cancelMerge,
     cancelDelete,

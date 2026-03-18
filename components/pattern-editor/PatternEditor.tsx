@@ -9,11 +9,10 @@ import { makeGrid } from "../../lib/grid";
 import { DMC_COLORS } from "../../lib/dmcColors";
 import { assetPath } from "../../lib/assetPath";
 import { CanvasWithExportRef } from "./canvas/CanvasWithExportRef";
-import { extractPaletteFromImage, rgbToOklab } from "./utils/colorUtils";
 import { convertImageToPattern as buildImageToPattern } from "./utils/imageToPattern";
 import { type FilterRect } from "./utils/geometry";
 import { TEXT_FONT_OPTIONS } from "./utils/textFontOptions";
-import { PaletteSection } from "./sections/PaletteSection";
+import { CustomPalettesSection } from "./sections/CustomPalettesSection";
 import { UsedColorsSection } from "./sections/UsedColorsSection";
 import { DraftPickerDialog } from "./dialogs/DraftPickerDialog";
 import { VersionHistoryDialog } from "./dialogs/VersionHistoryDialog";
@@ -100,7 +99,6 @@ export default function PatternEditor() {
   const [gridOpen, setGridOpen] = useState(true);
   const [wipOpen, setWipOpen] = useState(true);
   const [traceOpen, setTraceOpen] = useState(true);
-  const [paletteOpen, setPaletteOpen] = useState(true);
   const [usedColorsOpen, setUsedColorsOpen] = useState(true);
   const [imageToPatternOpen, setImageToPatternOpen] = useState(true);
   const [textOpen, setTextOpen] = useState(true);
@@ -141,9 +139,6 @@ export default function PatternEditor() {
 
   const [activeColorId, setActiveColorId] = useState<number>(DEFAULT_PALETTE[3].id);
   const [favoriteColorIds, setFavoriteColorIds] = useState<number[]>([]);
-  const [extractPaletteSize, setExtractPaletteSize] = useState(12);
-  const [extractingPalette, setExtractingPalette] = useState(false);
-  const [extractPaletteOpen, setExtractPaletteOpen] = useState(false);
   const [textContent, setTextContent] = useState("");
   const [textFont, setTextFont] = useState(TEXT_FONT_OPTIONS[0]?.value ?? "Inter");
   const [textFontSize, setTextFontSize] = useState(24);
@@ -260,8 +255,6 @@ export default function PatternEditor() {
   useEffect(() => {
     if (isNarrow) {
       setSidebarCollapsed(true);
-      // setCanvasSettingsOpen(false);
-      // setPaletteOpen(false);
     }
   }, [isNarrow]);
 
@@ -507,7 +500,7 @@ export default function PatternEditor() {
     };
   }, []);
 
-  const sidebarWidth = 260;
+  const sidebarWidth = 300;
   const sidebarCollapsedWidth = 40;
   const sidebarCollapsedWidthMobile = 0;
   const sidebarBottomSheetHeight = "min(70vh, 520px)";
@@ -750,12 +743,15 @@ export default function PatternEditor() {
     remapMode,
     remapSourceId,
     remapTargetId,
+    remapPreviewEnabled,
     identifyColorId,
     mergeMode,
     mergeSelectedIds,
     mergeTargetId,
+    mergePreviewEnabled,
     deleteMode,
     deleteSelectedIds,
+    deletePreviewEnabled,
     symbolMap,
     usedColors,
     hasAnyPaintedCells,
@@ -763,14 +759,19 @@ export default function PatternEditor() {
     setRemapMode,
     setRemapSourceId,
     setRemapTargetId,
+    setRemapPreviewEnabled,
     setIdentifyColorId,
     setMergeMode,
     setMergeSelectedIds,
     setMergeTargetId,
+    setMergePreviewEnabled,
     setDeleteMode,
     setDeleteSelectedIds,
+    setDeletePreviewEnabled,
     beginRemap,
-    previewRemap,
+    setRemapPreviewTarget,
+    clearRemapSource,
+    clearRemapTarget,
     cancelRemap,
     cancelMerge,
     cancelDelete,
@@ -1342,62 +1343,6 @@ export default function PatternEditor() {
 
   function cancelTextPlacement() {
     setPendingTextPlacement(null);
-  }
-
-  async function extractPaletteFromTrace() {
-    if (!traceImage || extractingPalette) return;
-    const targetSize = Math.max(2, Math.min(32, Math.floor(extractPaletteSize)));
-    setExtractingPalette(true);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const hexes = extractPaletteFromImage(traceImage, targetSize);
-    setExtractingPalette(false);
-    if (hexes.length === 0) return;
-    const toRgb = (hex: string) => {
-      const clean = hex.replace("#", "");
-      if (clean.length !== 6) return null;
-      const r = parseInt(clean.slice(0, 2), 16) / 255;
-      const g = parseInt(clean.slice(2, 4), 16) / 255;
-      const b = parseInt(clean.slice(4, 6), 16) / 255;
-      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-      return { r, g, b };
-    };
-
-    const paletteLabs = palette
-      .map((c) => {
-        const rgb = toRgb(c.hex);
-        if (!rgb) return null;
-        const lab = rgbToOklab(rgb.r, rgb.g, rgb.b);
-        return { id: c.id, L: lab.L, A: lab.A, B: lab.B };
-      })
-      .filter((entry): entry is { id: number; L: number; A: number; B: number } => Boolean(entry));
-
-    const picked: number[] = [];
-    const seen = new Set<number>();
-    for (const hex of hexes) {
-      const rgb = toRgb(hex);
-      if (!rgb) continue;
-      const lab = rgbToOklab(rgb.r, rgb.g, rgb.b);
-      let bestId: number | null = null;
-      let bestDist = Number.POSITIVE_INFINITY;
-      for (const candidate of paletteLabs) {
-        if (seen.has(candidate.id)) continue;
-        const dx = lab.L - candidate.L;
-        const dy = lab.A - candidate.A;
-        const dz = lab.B - candidate.B;
-        const dist = dx * dx + dy * dy + dz * dz;
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestId = candidate.id;
-        }
-      }
-      if (bestId == null) continue;
-      seen.add(bestId);
-      picked.push(bestId);
-    }
-
-    if (picked.length === 0) return;
-    setExtractedPaletteIds(picked);
-    setActiveColorId(picked[0]);
   }
 
   const cardShadow = "var(--ui-shadow-md)";
@@ -2717,7 +2662,7 @@ export default function PatternEditor() {
               display: "grid",
               gap: 0,
               alignContent: "start",
-              padding: isNarrow ? "10px 14px" : "12px 18px",
+              padding: isNarrow ? "10px 14px 28px" : "12px 18px 32px",
               height: "100%",
               minHeight: 0,
               maxHeight: "100%",
@@ -2767,36 +2712,13 @@ export default function PatternEditor() {
             ) : activeMenuId === "colors" ? (
               <div style={{ display: "grid", gap: 0 }}>
                 <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
-                  <PaletteSection
+                  <CustomPalettesSection
                     cardStyle={sidebarCardStyle}
                     cardShadow={sidebarCardShadow}
                     cardShadowCollapsed={sidebarCardShadowCollapsed}
-                    paletteOpen={paletteOpen}
-                    setPaletteOpen={setPaletteOpen}
                     collapseStyle={collapseStyle}
-                    traceImage={traceImage}
-                    extractPaletteOpen={extractPaletteOpen}
-                    setExtractPaletteOpen={setExtractPaletteOpen}
-                    extractPaletteSize={extractPaletteSize}
-                    setExtractPaletteSize={setExtractPaletteSize}
-                    extractPaletteFromTrace={extractPaletteFromTrace}
-                    extractingPalette={extractingPalette}
-                  palette={palette}
-                  extractedIds={extractedIds}
-                  usedColorIds={usedColorIds}
-                  usedColorCounts={usedColorCounts}
-                  favoriteIds={favoriteColorIds}
-                  setFavoriteIds={setFavoriteColorIds}
-                  activeColorId={activeColorId}
-                  remapTargetId={remapTargetId}
-                  remapSourceId={remapSourceId}
-                    onSelectActive={(id) => {
-                      setActiveColorId(id);
-                      setTool("paint");
-                      setPanMode(false);
-                    }}
-                    onRemapSelect={previewRemap}
-                    onAddColor={addColor}
+                    palette={palette}
+                    usedColorIds={usedColorIds}
                   />
                 </div>
                 <div style={{ padding: "12px 0" }}>
@@ -2809,6 +2731,7 @@ export default function PatternEditor() {
                     collapseStyle={collapseStyle}
                     usedColors={usedColors}
                     usedColorIds={usedColorIds}
+                    palette={palette}
                     hasAnyPaintedCells={hasAnyPaintedCells}
                     remapMode={remapMode}
                     mergeMode={mergeMode}
@@ -2823,8 +2746,11 @@ export default function PatternEditor() {
                     deleteSelectedIds={deleteSelectedIds}
                     mergeSelectedIds={mergeSelectedIds}
                     mergeTargetId={mergeTargetId}
+                    mergePreviewEnabled={mergePreviewEnabled}
+                    deletePreviewEnabled={deletePreviewEnabled}
                     remapSourceId={remapSourceId}
                     remapTargetId={remapTargetId}
+                    remapPreviewEnabled={remapPreviewEnabled}
                     identifyColorId={identifyColorId}
                     showSymbols={showSymbols}
                     symbolMap={symbolMap}
@@ -2833,8 +2759,13 @@ export default function PatternEditor() {
                     setDeleteSelectedIds={setDeleteSelectedIds}
                     setMergeSelectedIds={setMergeSelectedIds}
                     setMergeTargetId={setMergeTargetId}
+                    setMergePreviewEnabled={setMergePreviewEnabled}
+                    setDeletePreviewEnabled={setDeletePreviewEnabled}
+                    setRemapPreviewEnabled={setRemapPreviewEnabled}
                     beginRemap={beginRemap}
-                    previewRemap={previewRemap}
+                    setRemapPreviewTarget={setRemapPreviewTarget}
+                    clearRemapSource={clearRemapSource}
+                    clearRemapTarget={clearRemapTarget}
                     confirmRemap={confirmRemap}
                     confirmMerge={confirmMerge}
                     confirmDeleteColors={confirmDeleteColors}

@@ -261,7 +261,7 @@
   --accent: #a77bd8;
   --accent-soft: #3f3354;
   --accent-strong: #d2a7ff;
-  --accent-wash: #31263f;
+  --accent-wash: #5c4172;
   --surface-floating: rgba(23, 27, 33, 0.92);
   --surface-elevated: rgba(23, 27, 33, 0.96);
   --canvas-surround-bg: #181818;
@@ -1085,7 +1085,7 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 .canvas-toolbar:not([data-trace-adjust="true"]) .toolbar-button:hover .toolbar-icon {
-  background: var(--accent-wash) !important;
+  background: var(--ui-hover-soft) !important;
 }
 .used-colors-toolbar .toolbar-button:hover .toolbar-icon {
   background: transparent !important;
@@ -1099,7 +1099,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon,
 .canvas-toolbar .toolbar-button[data-active="true"]:hover .toolbar-icon {
-  background: var(--accent-soft) !important;
+  background: var(--accent-wash) !important;
 }
 .canvas-toolbar .toolbar-button[data-color-swatch="true"]:hover .toolbar-icon,
 .canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"] .toolbar-icon,

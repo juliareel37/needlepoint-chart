@@ -217,15 +217,15 @@ export function GridSizeCard({
           <button
             onClick={onApply}
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
               padding: "4px 8px",
               borderRadius: 8,
               border: "1px solid var(--ui-border-subtle)",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
+              background: "var(--accent)",
+              color: "#ffffff",
               cursor: "pointer",
               fontSize: 12,
               fontWeight: 600,
