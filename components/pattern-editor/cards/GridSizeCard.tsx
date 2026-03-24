@@ -45,9 +45,11 @@ export function GridSizeCard({
   setDraftMeshCount,
   onApply,
 }: GridSizeCardProps) {
+  const fieldRowColumns = "minmax(84px, 1fr) minmax(160px, 1.25fr)";
+
   const fieldRowStyle: React.CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: fieldRowColumns,
     gap: 10,
     alignItems: "center",
   };
@@ -63,6 +65,31 @@ export function GridSizeCard({
     border: "1px solid rgba(0,0,0,0.2)",
     fontSize: 12,
     boxSizing: "border-box",
+  };
+
+  const unitInputWrapperStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+    width: "100%",
+    minWidth: 0,
+    padding: "0 8px",
+    borderRadius: 8,
+    border: "1px solid rgba(0,0,0,0.2)",
+    background: "#ffffff",
+    boxSizing: "border-box",
+  };
+
+  const unitInputStyle: React.CSSProperties = {
+    width: "100%",
+    minWidth: 0,
+    padding: "6px 0",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 12,
+    textAlign: "left",
   };
 
   return (
@@ -87,8 +114,8 @@ export function GridSizeCard({
           padding: 0,
           marginBottom: gridOpen ? 10 : 0,
           cursor: "pointer",
-          fontWeight: 600,
-          fontSize: 14,
+          fontWeight: 700,
+          fontSize: 15,
         }}
         type="button"
       >
@@ -97,119 +124,139 @@ export function GridSizeCard({
       </button>
 
       <div style={{ display: "grid", gap: 10, width: "100%", ...collapseStyle(gridOpen, 1400) }}>
-        <div
-          role="tablist"
-          aria-label="Canvas size mode"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            padding: 2,
-            borderRadius: 10,
-            border: "1px solid var(--ui-border-subtle)",
-            background: "var(--ui-surface-soft)",
-          }}
-        >
-          <button
-            type="button"
-            role="tab"
-            onClick={() => setDraftGridMode("stitches")}
-            aria-pressed={draftGridMode === "stitches"}
-            aria-selected={draftGridMode === "stitches"}
-            data-active={draftGridMode === "stitches" ? "true" : undefined}
-            className="menu-tab-button"
+        <div style={{ display: "grid", gridTemplateColumns: fieldRowColumns, gap: 10, alignItems: "center" }}>
+          <span style={fieldLabelStyle}>Unit</span>
+          <div
+            role="tablist"
+            aria-label="Canvas size mode"
             style={{
-              padding: "6px 10px",
-              flex: "1 1 0",
-              borderRadius: 8,
-              border: "none",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              alignItems: "center",
+              gap: 4,
+              width: "100%",
+              padding: 2,
+              borderRadius: 10,
+              border: "1px solid var(--ui-border-subtle)",
+              background: "var(--ui-surface-soft)",
             }}
           >
-            Stitch count
-          </button>
-          <button
-            type="button"
-            role="tab"
-            onClick={() => setDraftGridMode("inches")}
-            aria-pressed={draftGridMode === "inches"}
-            aria-selected={draftGridMode === "inches"}
-            data-active={draftGridMode === "inches" ? "true" : undefined}
-            className="menu-tab-button"
-            style={{
-              padding: "6px 10px",
-              flex: "1 1 0",
-              borderRadius: 8,
-              border: "none",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          >
-            Dimensions
-          </button>
+            <button
+              type="button"
+              role="tab"
+              onClick={() => setDraftGridMode("stitches")}
+              aria-pressed={draftGridMode === "stitches"}
+              aria-selected={draftGridMode === "stitches"}
+              data-active={draftGridMode === "stitches" ? "true" : undefined}
+              className="menu-tab-button"
+              style={{
+                padding: "6px 10px",
+                width: "100%",
+                borderRadius: 8,
+                border: "none",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              Stitches
+            </button>
+            <button
+              type="button"
+              role="tab"
+              onClick={() => setDraftGridMode("inches")}
+              aria-pressed={draftGridMode === "inches"}
+              aria-selected={draftGridMode === "inches"}
+              data-active={draftGridMode === "inches" ? "true" : undefined}
+              className="menu-tab-button"
+              style={{
+                padding: "6px 10px",
+                width: "100%",
+                borderRadius: 8,
+                border: "none",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              Inches
+            </button>
+          </div>
         </div>
 
         {draftGridMode === "stitches" ? (
           <>
             <label style={fieldRowStyle}>
-              <span style={fieldLabelStyle}>Width (stitches)</span>
-              <input
-                type="number"
-                min={1}
-                value={draftGridW}
-                onChange={(e) => setDraftGridW(parseInt(e.target.value || "1", 10))}
-                style={fieldInputStyle}
-              />
+              <span style={fieldLabelStyle}>Width</span>
+              <span style={unitInputWrapperStyle}>
+                <input
+                  type="number"
+                  min={1}
+                  value={draftGridW}
+                  onChange={(e) => setDraftGridW(parseInt(e.target.value || "1", 10))}
+                  style={unitInputStyle}
+                />
+                <span style={{ fontSize: 12, opacity: 0.72, flexShrink: 0 }}>stitches</span>
+              </span>
             </label>
             <label style={fieldRowStyle}>
-              <span style={fieldLabelStyle}>Height (stitches)</span>
-              <input
-                type="number"
-                min={1}
-                value={draftGridH}
-                onChange={(e) => setDraftGridH(parseInt(e.target.value || "1", 10))}
-                style={fieldInputStyle}
-              />
+              <span style={fieldLabelStyle}>Height</span>
+              <span style={unitInputWrapperStyle}>
+                <input
+                  type="number"
+                  min={1}
+                  value={draftGridH}
+                  onChange={(e) => setDraftGridH(parseInt(e.target.value || "1", 10))}
+                  style={unitInputStyle}
+                />
+                <span style={{ fontSize: 12, opacity: 0.72, flexShrink: 0 }}>stitches</span>
+              </span>
             </label>
           </>
         ) : (
           <>
             <label style={fieldRowStyle}>
-              <span style={fieldLabelStyle}>Width (inches)</span>
-              <input
-                type="number"
-                min={0.1}
-                step={0.1}
-                value={draftWidthIn}
-                onChange={(e) => setDraftWidthIn(parseFloat(e.target.value || "0"))}
-                style={fieldInputStyle}
-              />
+              <span style={fieldLabelStyle}>Width</span>
+              <span style={unitInputWrapperStyle}>
+                <input
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  value={draftWidthIn}
+                  onChange={(e) => setDraftWidthIn(parseFloat(e.target.value || "0"))}
+                  style={unitInputStyle}
+                />
+                <span style={{ fontSize: 12, opacity: 0.72, flexShrink: 0 }}>inches</span>
+              </span>
             </label>
             <label style={fieldRowStyle}>
-              <span style={fieldLabelStyle}>Height (inches)</span>
-              <input
-                type="number"
-                min={0.1}
-                step={0.1}
-                value={draftHeightIn}
-                onChange={(e) => setDraftHeightIn(parseFloat(e.target.value || "0"))}
-                style={fieldInputStyle}
-              />
+              <span style={fieldLabelStyle}>Height</span>
+              <span style={unitInputWrapperStyle}>
+                <input
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  value={draftHeightIn}
+                  onChange={(e) => setDraftHeightIn(parseFloat(e.target.value || "0"))}
+                  style={unitInputStyle}
+                />
+                <span style={{ fontSize: 12, opacity: 0.72, flexShrink: 0 }}>inches</span>
+              </span>
             </label>
             <label style={fieldRowStyle}>
-              <span style={fieldLabelStyle}>Mesh (stitches/in)</span>
-              <input
-                type="number"
-                min={1}
-                value={draftMeshCount}
-                onChange={(e) => setDraftMeshCount(parseInt(e.target.value || "1", 10))}
-                style={fieldInputStyle}
-              />
+              <span style={fieldLabelStyle}>Mesh</span>
+              <span style={unitInputWrapperStyle}>
+                <input
+                  type="number"
+                  min={1}
+                  value={draftMeshCount}
+                  onChange={(e) => setDraftMeshCount(parseInt(e.target.value || "1", 10))}
+                  style={unitInputStyle}
+                />
+                <span style={{ fontSize: 12, opacity: 0.72, flexShrink: 0 }}>stitch/in</span>
+              </span>
             </label>
           </>
         )}
@@ -221,7 +268,10 @@ export function GridSizeCard({
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              padding: "4px 8px",
+              padding: "8px 10px",
+              height: 34,
+              minHeight: 34,
+              boxSizing: "border-box",
               borderRadius: 8,
               border: "1px solid var(--ui-border-subtle)",
               background: "var(--accent)",
@@ -229,6 +279,7 @@ export function GridSizeCard({
               cursor: "pointer",
               fontSize: 12,
               fontWeight: 600,
+              lineHeight: 1,
               width: "100%",
             }}
           >

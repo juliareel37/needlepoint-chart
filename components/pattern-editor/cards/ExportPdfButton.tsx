@@ -36,7 +36,7 @@ export default function ExportPdfButton({
         exportPatternPdf({ title, threadView, usedColors, grid, paletteById, symbolMap, width, height, cellSize });
       }}
       style={{
-        padding: compact ? "4px 6px" : "4px 8px",
+        padding: compact ? "5px 8px" : "6px 10px",
         borderRadius: 8,
         border: "1px solid var(--ui-border-subtle)",
         background: "var(--accent)",
@@ -58,7 +58,7 @@ export default function ExportPdfButton({
         height={16}
         style={{ display: "block", filter: "brightness(0) invert(1)" }}
       />
-      {!compact && "Export PDF"}
+      {!compact && "Export"}
     </button>
   );
 }

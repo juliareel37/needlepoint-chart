@@ -194,8 +194,8 @@ export function TextToolCard({
           padding: 0,
           marginBottom: textOpen ? 10 : 0,
           cursor: "pointer",
-          fontWeight: 600,
-          fontSize: 14,
+          fontWeight: 700,
+          fontSize: 15,
         }}
       >
         <span>Text</span>
@@ -633,8 +633,15 @@ export function TextToolCard({
           </div>
         </div>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 600 }}>Font size: {fontSize}px</span>
+        <label
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto minmax(0, 1fr) auto",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600 }}>Font size</span>
           <input
             type="range"
             min={6}
@@ -642,6 +649,31 @@ export function TextToolCard({
             step={1}
             value={fontSize}
             onChange={(e) => onFontSizeChange(Number(e.target.value))}
+          />
+          <input
+            type="number"
+            min={6}
+            max={96}
+            step={1}
+            value={fontSize}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              if (!Number.isFinite(next)) return;
+              onFontSizeChange(Math.max(6, Math.min(96, Math.round(next))));
+            }}
+            aria-label="Font size"
+            style={{
+              width: 50,
+              minWidth: 0,
+              padding: "4px 6px",
+              borderRadius: 8,
+              border: "1px solid var(--ui-border-subtle)",
+              background: "var(--card-bg)",
+              color: "var(--foreground)",
+              fontSize: 12,
+              fontWeight: 400,
+              textAlign: "left",
+            }}
           />
         </label>
 

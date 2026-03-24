@@ -3,6 +3,46 @@
 import React from "react";
 import { Toggle } from "../ui/Toggle";
 
+const VALUE_INPUT_STYLE: React.CSSProperties = {
+  width: 46,
+  minWidth: 0,
+  padding: "4px 6px",
+  borderRadius: 8,
+  border: "1px solid var(--ui-border-subtle)",
+  background: "var(--card-bg)",
+  color: "var(--foreground)",
+  fontSize: 12,
+  fontWeight: 400,
+  textAlign: "left",
+};
+
+const PERCENT_INPUT_WRAPPER_STYLE: React.CSSProperties = {
+  width: 46,
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 2,
+  padding: "4px 6px",
+  borderRadius: 8,
+  border: "1px solid var(--ui-border-subtle)",
+  background: "var(--card-bg)",
+  color: "var(--foreground)",
+};
+
+const PERCENT_INPUT_STYLE: React.CSSProperties = {
+  minWidth: 0,
+  width: "100%",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  fontSize: 12,
+  fontWeight: 400,
+  textAlign: "left",
+  outline: "none",
+};
+
 type CanvasSettingsCardProps = {
   cardStyle: React.CSSProperties;
   cardShadow: string;
@@ -42,6 +82,8 @@ export function CanvasSettingsCard({
   setTraceOpacity,
   containerStyle,
 }: CanvasSettingsCardProps) {
+  const opacityPercent = Math.round(traceOpacity * 100);
+
   return (
     <div
       className="app-card"
@@ -64,7 +106,8 @@ export function CanvasSettingsCard({
           background: "transparent",
           padding: 0,
           cursor: "pointer",
-          fontWeight: 600,
+          fontWeight: 700,
+          fontSize: 15,
         }}
         type="button"
       >
@@ -87,16 +130,41 @@ export function CanvasSettingsCard({
           <Toggle label="Color symbols" checked={showSymbols} onChange={setShowSymbols} />
         </div>
         {traceImage && (
-          <label style={{ display: "grid", gap: 6, padding: "10px 0 5px" }}>
+          <label
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto minmax(0, 1fr) auto",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 0 5px",
+            }}
+          >
             <span style={{ fontSize: 12, opacity: 0.7 }}>Image opacity</span>
             <input
               type="range"
               min={0}
               max={100}
-              value={Math.round(traceOpacity * 100)}
+              value={opacityPercent}
               onChange={(e) => setTraceOpacity(parseInt(e.target.value, 10) / 100)}
-              style={{ width: 120 }}
+              style={{ width: "100%", minWidth: 0, cursor: "pointer" }}
             />
+            <span style={PERCENT_INPUT_WRAPPER_STYLE}>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={String(opacityPercent)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^\d]/g, "");
+                  if (!digits) return;
+                  const next = Number(digits);
+                  if (!Number.isFinite(next)) return;
+                  setTraceOpacity(Math.max(0, Math.min(100, Math.round(next))) / 100);
+                }}
+                aria-label="Image opacity percentage"
+                style={PERCENT_INPUT_STYLE}
+              />
+              <span style={{ fontSize: 12, opacity: 0.72 }}>%</span>
+            </span>
           </label>
         )}
       </div>

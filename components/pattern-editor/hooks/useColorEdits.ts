@@ -43,7 +43,7 @@ export function useColorEdits({
   setLastEditCell,
   getTraceSnapshot,
 }: UseColorEditsArgs) {
-  const [remapMode, setRemapMode] = useState(true);
+  const [remapMode, setRemapMode] = useState(false);
   const [remapSourceId, setRemapSourceId] = useState<number | null>(null);
   const [remapTargetId, setRemapTargetId] = useState<number | null>(null);
   const [remapPreviewEnabled, setRemapPreviewEnabled] = useState(false);
@@ -104,6 +104,7 @@ export function useColorEdits({
     if (remapOriginalGrid) {
       setGrid(remapOriginalGrid);
     }
+    setRemapMode(false);
     setRemapOriginalGrid(null);
     setRemapSourceId(null);
     setRemapTargetId(null);
@@ -114,6 +115,7 @@ export function useColorEdits({
     if (mergeOriginalGrid) {
       setGrid(mergeOriginalGrid);
     }
+    setMergeMode(false);
     setMergeOriginalGrid(null);
     setMergeSelectedIds([]);
     setMergeTargetId(null);
@@ -131,6 +133,7 @@ export function useColorEdits({
     if (deleteOriginalGrid) {
       setGrid(deleteOriginalGrid);
     }
+    setDeleteMode(false);
     setDeleteOriginalGrid(null);
     setDeleteSelectedIds([]);
     setDeletePreviewEnabled(false);
@@ -145,6 +148,8 @@ export function useColorEdits({
 
   function toggleRemapMode() {
     if (remapMode) {
+      cancelRemap();
+      setRemapMode(false);
       return;
     }
     if (mergeMode) {
@@ -161,6 +166,8 @@ export function useColorEdits({
 
   function toggleMergeMode() {
     if (mergeMode) {
+      cancelMerge();
+      setMergeMode(false);
       return;
     }
     if (remapMode) {
@@ -178,6 +185,8 @@ export function useColorEdits({
 
   function toggleDeleteMode() {
     if (deleteMode) {
+      cancelDelete();
+      setDeleteMode(false);
       return;
     }
     if (remapMode) {
@@ -198,7 +207,12 @@ export function useColorEdits({
       cancelRemap();
       return;
     }
-    const original = remapOriginalGrid ?? new Uint16Array(grid);
+    replaceColor(remapSourceId, remapTargetId, remapOriginalGrid ?? new Uint16Array(grid));
+  }
+
+  function replaceColor(sourceId: number, targetId: number, originalOverride?: Uint16Array) {
+    if (sourceId === targetId) return;
+    const original = originalOverride ?? new Uint16Array(grid);
     bumpStrokeVersion();
     pushHistory({ gridW, gridH, grid: original, trace: getTraceSnapshot() });
     setFutureState([]);
@@ -207,8 +221,8 @@ export function useColorEdits({
       const next = new Uint16Array(original);
       for (let i = 0; i < next.length; i++) {
         if (!isIndexInFilter(i)) continue;
-        if (next[i] === remapSourceId) {
-          next[i] = remapTargetId;
+        if (next[i] === sourceId) {
+          next[i] = targetId;
           if (focusCell == null) {
             focusCell = { x: i % gridW, y: Math.floor(i / gridW) };
           }
@@ -219,7 +233,7 @@ export function useColorEdits({
     if (focusCell) {
       setLastEditCell(focusCell);
     }
-    setActiveColorId(remapTargetId);
+    setActiveColorId(targetId);
     setRemapOriginalGrid(null);
     setRemapSourceId(null);
     setRemapTargetId(null);
@@ -227,7 +241,7 @@ export function useColorEdits({
   }
 
   function confirmMerge() {
-    if (mergeSelectedIds.length < 2 || mergeTargetId === null || !mergeSelectedIds.includes(mergeTargetId)) {
+    if (mergeSelectedIds.length < 2 || mergeTargetId === null) {
       return;
     }
     const targetId = mergeTargetId;
@@ -417,10 +431,10 @@ export function useColorEdits({
     setMergeSelectedIds((prev) => prev.filter((id) => usedColorIds.includes(id)));
   }, [usedColorIds]);
   useEffect(() => {
-    if (mergeTargetId !== null && !usedColorIds.includes(mergeTargetId)) {
+    if (mergeTargetId !== null && !paletteById.has(mergeTargetId)) {
       setMergeTargetId(null);
     }
-  }, [mergeTargetId, usedColorIds]);
+  }, [mergeTargetId, paletteById]);
   useEffect(() => {
     setDeleteSelectedIds((prev) => prev.filter((id) => usedColorIds.includes(id)));
   }, [usedColorIds]);
@@ -449,7 +463,7 @@ export function useColorEdits({
     if (!mergeMode) return;
     const original = mergeOriginalGrid;
     if (!original) return;
-    if (!mergePreviewEnabled || mergeSelectedIds.length < 2 || mergeTargetId === null || !mergeSelectedIds.includes(mergeTargetId)) {
+    if (!mergePreviewEnabled || mergeSelectedIds.length < 2 || mergeTargetId === null) {
       setGrid(original);
       return;
     }
@@ -581,6 +595,7 @@ export function useColorEdits({
     toggleMergeMode,
     toggleDeleteMode,
     confirmRemap,
+    replaceColor,
     confirmMerge,
     confirmDeleteColors,
   };

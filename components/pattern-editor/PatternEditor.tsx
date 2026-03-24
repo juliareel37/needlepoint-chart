@@ -76,6 +76,10 @@ export default function PatternEditor() {
   const canUndo = history.length > 0;
   const canRedo = future.length > 0;
   const [tool, setTool] = useState<"none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror">("none");
+  const [customPaletteEyedropperTargetId, setCustomPaletteEyedropperTargetId] = useState<string | null>(null);
+  const [customPalettePickEvent, setCustomPalettePickEvent] = useState<{ paletteId: string; colorId: number; nonce: number } | null>(null);
+  const [actionTargetEyedropperMode, setActionTargetEyedropperMode] = useState<null | "replace" | "merge">(null);
+  const [actionTargetPickEvent, setActionTargetPickEvent] = useState<{ mode: "replace" | "merge"; colorId: number; nonce: number } | null>(null);
   const [brushSize, setBrushSize] = useState(1);
   const [gridMode, setGridMode] = useState<"stitches" | "inches">("stitches");
   const [meshCount, setMeshCount] = useState(10);
@@ -100,6 +104,10 @@ export default function PatternEditor() {
   const [wipOpen, setWipOpen] = useState(true);
   const [traceOpen, setTraceOpen] = useState(true);
   const [usedColorsOpen, setUsedColorsOpen] = useState(true);
+  const [colorsSidebarTab, setColorsSidebarTab] = useState<"palettes" | "manage">("manage");
+  const [colorsNewPage, setColorsNewPage] = useState<"overview" | "manage">("overview");
+  const [colorsNewActionsOpen, setColorsNewActionsOpen] = useState(true);
+  const [colorsNewPalettesOpen, setColorsNewPalettesOpen] = useState(true);
   const [imageToPatternOpen, setImageToPatternOpen] = useState(true);
   const [textOpen, setTextOpen] = useState(true);
   const [traceImageUrl, setTraceImageUrl] = useState<string | null>(null);
@@ -107,6 +115,7 @@ export default function PatternEditor() {
   const [traceFileSize, setTraceFileSize] = useState<number | null>(null);
   const [traceImage, setTraceImage] = useState<HTMLImageElement | null>(null);
   const [traceOpacity, setTraceOpacity] = useState(0.6);
+  const [traceVisible, setTraceVisible] = useState(true);
   const [traceScale, setTraceScale] = useState(1);
   const [traceOffsetX, setTraceOffsetX] = useState(0);
   const [traceOffsetY, setTraceOffsetY] = useState(0);
@@ -190,6 +199,7 @@ export default function PatternEditor() {
       setTraceImageUrl(snapshot.imageUrl);
       setTraceFileName(snapshot.fileName ?? null);
       setTraceFileSize(snapshot.fileSize ?? null);
+      setTraceVisible(true);
       traceTransformBasisRef.current =
         typeof snapshot.cellSizeBasis === "number" && Number.isFinite(snapshot.cellSizeBasis) && snapshot.cellSizeBasis > 0
           ? snapshot.cellSizeBasis
@@ -779,6 +789,7 @@ export default function PatternEditor() {
     toggleMergeMode,
     toggleDeleteMode,
     confirmRemap,
+    replaceColor,
     confirmMerge,
     confirmDeleteColors,
   } = useColorEdits({
@@ -1100,6 +1111,7 @@ export default function PatternEditor() {
     setTracePostUpload(true);
     setTraceEditMode(false);
     setTraceOpacity(0.5);
+    setTraceVisible(true);
 
     try {
       const { upload } = await import("@vercel/blob/client");
@@ -1134,6 +1146,7 @@ export default function PatternEditor() {
     setTraceFileSize(null);
     setTraceImage(null);
     setTraceOpacity(0);
+    setTraceVisible(true);
     setTraceLocked(false);
     setTracePostUpload(false);
     setTraceEditMode(false);
@@ -1180,23 +1193,6 @@ export default function PatternEditor() {
       setTracePostUpload(false);
     }
     toggleTraceLock();
-  }
-
-  function handleSetTraceLockedState(nextLocked: boolean) {
-    if (!nextLocked) {
-      prevTraceTransformRef.current = {
-        scale: traceScale,
-        x: traceOffsetX,
-        y: traceOffsetY,
-        basis: traceTransformBasisRef.current,
-      };
-      setPendingTraceUnlock(true);
-      setTracePostUpload(false);
-    } else {
-      setTraceEditMode(false);
-      setTracePostUpload(false);
-    }
-    setTraceLockedState(nextLocked);
   }
 
   function handleTraceCancel() {
@@ -1395,6 +1391,35 @@ export default function PatternEditor() {
   const [sidebarContentVisible, setSidebarContentVisible] = useState(!sidebarCollapsed);
   const sidebarInnerVisible = !sidebarCollapsed && sidebarContentVisible;
   const sidebarContentRevealTimeoutRef = useRef<number | null>(null);
+  const showingDetailedColorActions =
+    activeMenuId === "colors" && colorsNewPage === "manage";
+
+  useEffect(() => {
+    if (showingDetailedColorActions) return;
+    if (remapMode) {
+      cancelRemap();
+      setRemapMode(false);
+    }
+    if (mergeMode) {
+      cancelMerge();
+      setMergeMode(false);
+    }
+    if (deleteMode) {
+      cancelDelete();
+      setDeleteMode(false);
+    }
+  }, [
+    showingDetailedColorActions,
+    remapMode,
+    mergeMode,
+    deleteMode,
+    cancelRemap,
+    cancelMerge,
+    cancelDelete,
+    setRemapMode,
+    setMergeMode,
+    setDeleteMode,
+  ]);
 
   useEffect(() => {
     const clearRevealTimeout = () => {
@@ -1493,6 +1518,10 @@ export default function PatternEditor() {
       setSidebarScrollable(false);
       return;
     }
+    if (showingDetailedColorActions) {
+      setSidebarScrollable(false);
+      return;
+    }
     const container = sidebarInnerRef.current;
     const content = sidebarContentRef.current;
     if (!container || !content) return;
@@ -1522,7 +1551,104 @@ export default function PatternEditor() {
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("resize", update);
     };
-  }, [sidebarCollapsed, sidebarContentVisible]);
+  }, [showingDetailedColorActions, sidebarCollapsed, sidebarContentVisible]);
+
+  const detailedColorActionsPanel = (
+    <div style={{ display: "grid", gridTemplateRows: "minmax(0, 1fr)", minHeight: 0, height: "100%" }}>
+      <UsedColorsSection
+        cardStyle={sidebarCardStyle}
+        cardShadow={sidebarCardShadow}
+        cardShadowCollapsed={sidebarCardShadowCollapsed}
+        embedded
+        usedColorsOpen={usedColorsOpen}
+        setUsedColorsOpen={setUsedColorsOpen}
+        collapseStyle={collapseStyle}
+        usedColors={usedColors}
+        usedColorIds={usedColorIds}
+        palette={palette}
+        hasAnyPaintedCells={hasAnyPaintedCells}
+        remapMode={remapMode}
+        mergeMode={mergeMode}
+        deleteMode={deleteMode}
+        toggleRemapMode={toggleRemapMode}
+        toggleMergeMode={toggleMergeMode}
+        toggleDeleteMode={toggleDeleteMode}
+        filterMode={filterMode}
+        filterSelecting={filterSelecting}
+        hasActiveSelection={activeFilterRect !== null}
+        startFilterSelection={startFilterSelection}
+        clearFilterSelection={clearFilterSelection}
+        deleteSelectedIds={deleteSelectedIds}
+        mergeSelectedIds={mergeSelectedIds}
+        mergeTargetId={mergeTargetId}
+        mergePreviewEnabled={mergePreviewEnabled}
+        deletePreviewEnabled={deletePreviewEnabled}
+        remapSourceId={remapSourceId}
+        remapTargetId={remapTargetId}
+        remapPreviewEnabled={remapPreviewEnabled}
+        identifyColorId={identifyColorId}
+        showSymbols={showSymbols}
+        symbolMap={symbolMap}
+        actionTargetEyedropperMode={actionTargetEyedropperMode}
+        actionTargetPickEvent={actionTargetPickEvent}
+        setIdentifyColorId={setIdentifyColorId}
+        setActiveColorId={setActiveColorId}
+        setDeleteSelectedIds={setDeleteSelectedIds}
+        setMergeSelectedIds={setMergeSelectedIds}
+        setMergeTargetId={setMergeTargetId}
+        setMergePreviewEnabled={setMergePreviewEnabled}
+        setDeletePreviewEnabled={setDeletePreviewEnabled}
+        setRemapPreviewEnabled={setRemapPreviewEnabled}
+        beginRemap={beginRemap}
+        setRemapPreviewTarget={setRemapPreviewTarget}
+        clearRemapSource={clearRemapSource}
+        clearRemapTarget={clearRemapTarget}
+        confirmRemap={confirmRemap}
+        replaceColor={replaceColor}
+        confirmMerge={confirmMerge}
+        confirmDeleteColors={confirmDeleteColors}
+        cancelRemap={cancelRemap}
+        cancelMerge={cancelMerge}
+        cancelDelete={cancelDelete}
+        setRemapMode={setRemapMode}
+        setMergeMode={setMergeMode}
+        setDeleteMode={setDeleteMode}
+        startActionTargetEyedropper={(mode: "replace" | "merge") => {
+          setCustomPaletteEyedropperTargetId(null);
+          setActionTargetEyedropperMode(mode);
+          setPanMode(false);
+        }}
+        cancelActionTargetEyedropper={() => {
+          setActionTargetEyedropperMode(null);
+          setPanMode(false);
+        }}
+      />
+    </div>
+  );
+
+  const customPalettesPanel = (
+    <CustomPalettesSection
+      cardStyle={sidebarCardStyle}
+      cardShadow={sidebarCardShadow}
+      cardShadowCollapsed={sidebarCardShadowCollapsed}
+      collapseStyle={collapseStyle}
+      embedded
+      palette={palette}
+      usedColors={usedColors}
+      usedColorIds={usedColorIds}
+      customPaletteEyedropperTargetId={customPaletteEyedropperTargetId}
+      customPalettePickEvent={customPalettePickEvent}
+      startCustomPaletteEyedropper={(paletteId: string) => {
+        setActionTargetEyedropperMode(null);
+        setCustomPaletteEyedropperTargetId(paletteId);
+        setPanMode(false);
+      }}
+      cancelCustomPaletteEyedropper={() => {
+        setCustomPaletteEyedropperTargetId(null);
+        setPanMode(false);
+      }}
+    />
+  );
 
   return (
     <div
@@ -1635,7 +1761,7 @@ export default function PatternEditor() {
                 aria-haspopup="menu"
                 aria-label={isCompact ? "More options" : "File"}
                 style={{
-                  padding: isCompact ? "2px 8px" : "4px 8px",
+                  padding: isCompact ? "6px 12px" : "8px 14px",
                   borderRadius: 8,
                   border: "none",
                   background: "var(--card-bg)",
@@ -1773,7 +1899,7 @@ export default function PatternEditor() {
                       />
                     </>
                   )}
-                  {isCompact && isSignedIn && (
+                  {isSignedIn && (
                     <button
                       type="button"
                       role="menuitem"
@@ -2175,50 +2301,6 @@ export default function PatternEditor() {
             </div>,
             isCompact ? headerFileRightNode! : headerFileLeftNode!
           )}
-        {headerAutosaveNode &&
-          isSignedIn &&
-          !isCompact &&
-          createPortal(
-            <button
-              type="button"
-              onClick={() => {
-                void forceSaveNow();
-              }}
-              title="Save now"
-              aria-label="Save now"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "4px 8px",
-                borderRadius: 8,
-                border: "1px solid var(--ui-border-subtle)",
-                background: "var(--card-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-              }}
-            >
-              <img
-                src={assetPath("/icons/cloud_done.svg")}
-                alt=""
-                aria-hidden="true"
-                width={16}
-                height={16}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
-              <span style={{ fontSize: 12, opacity: 0.8 }}>
-                Saved{" "}
-                {lastAutosaveAt
-                  ? `at ${lastAutosaveAt.toLocaleTimeString([], {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}`
-                  : ""}
-              </span>
-            </button>,
-            headerAutosaveNode
-          )}
         {headerHistoryNode &&
           isCompact &&
           createPortal(
@@ -2591,6 +2673,7 @@ export default function PatternEditor() {
                     borderRadius: 12,
                     border: "none",
                     background: showSelected ? "var(--accent-wash)" : "var(--card-bg)",
+                    boxShadow: showSelected ? "0 2px 6px var(--ui-border-subtle)" : "none",
                     color: "var(--foreground)",
                     fontSize: 16,
                     display: "flex",
@@ -2659,9 +2742,9 @@ export default function PatternEditor() {
             className="pattern-sidebar-inner"
             ref={sidebarInnerRef}
             style={{
-              display: "grid",
+              display: "flex",
+              flexDirection: "column",
               gap: 0,
-              alignContent: "start",
               padding: isNarrow ? "10px 14px 28px" : "12px 18px 32px",
               height: "100%",
               minHeight: 0,
@@ -2681,7 +2764,7 @@ export default function PatternEditor() {
               pointerEvents: sidebarInnerVisible ? "auto" : "none",
             }}
           >
-            <div ref={sidebarContentRef} style={{ display: "grid", gap: 0, alignContent: "start" }}>
+            <div ref={sidebarContentRef} style={{ display: "flex", flexDirection: "column", gap: 0, flex: 1, minHeight: 0, height: "100%" }}>
             {activeMenuId === "main" ? (
               <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
                 <GridSizeCard
@@ -2709,78 +2792,9 @@ export default function PatternEditor() {
                   }}
                 />
               </div>
-            ) : activeMenuId === "colors" ? (
-              <div style={{ display: "grid", gap: 0 }}>
-                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
-                  <CustomPalettesSection
-                    cardStyle={sidebarCardStyle}
-                    cardShadow={sidebarCardShadow}
-                    cardShadowCollapsed={sidebarCardShadowCollapsed}
-                    collapseStyle={collapseStyle}
-                    palette={palette}
-                    usedColorIds={usedColorIds}
-                  />
-                </div>
-                <div style={{ padding: "12px 0" }}>
-                  <UsedColorsSection
-                    cardStyle={sidebarCardStyle}
-                    cardShadow={sidebarCardShadow}
-                    cardShadowCollapsed={sidebarCardShadowCollapsed}
-                    usedColorsOpen={usedColorsOpen}
-                    setUsedColorsOpen={setUsedColorsOpen}
-                    collapseStyle={collapseStyle}
-                    usedColors={usedColors}
-                    usedColorIds={usedColorIds}
-                    palette={palette}
-                    hasAnyPaintedCells={hasAnyPaintedCells}
-                    remapMode={remapMode}
-                    mergeMode={mergeMode}
-                    deleteMode={deleteMode}
-                    toggleRemapMode={toggleRemapMode}
-                    toggleMergeMode={toggleMergeMode}
-                    toggleDeleteMode={toggleDeleteMode}
-                    filterMode={filterMode}
-                    filterSelecting={filterSelecting}
-                    startFilterSelection={startFilterSelection}
-                    clearFilterSelection={clearFilterSelection}
-                    deleteSelectedIds={deleteSelectedIds}
-                    mergeSelectedIds={mergeSelectedIds}
-                    mergeTargetId={mergeTargetId}
-                    mergePreviewEnabled={mergePreviewEnabled}
-                    deletePreviewEnabled={deletePreviewEnabled}
-                    remapSourceId={remapSourceId}
-                    remapTargetId={remapTargetId}
-                    remapPreviewEnabled={remapPreviewEnabled}
-                    identifyColorId={identifyColorId}
-                    showSymbols={showSymbols}
-                    symbolMap={symbolMap}
-                    setIdentifyColorId={setIdentifyColorId}
-                    setActiveColorId={setActiveColorId}
-                    setDeleteSelectedIds={setDeleteSelectedIds}
-                    setMergeSelectedIds={setMergeSelectedIds}
-                    setMergeTargetId={setMergeTargetId}
-                    setMergePreviewEnabled={setMergePreviewEnabled}
-                    setDeletePreviewEnabled={setDeletePreviewEnabled}
-                    setRemapPreviewEnabled={setRemapPreviewEnabled}
-                    beginRemap={beginRemap}
-                    setRemapPreviewTarget={setRemapPreviewTarget}
-                    clearRemapSource={clearRemapSource}
-                    clearRemapTarget={clearRemapTarget}
-                    confirmRemap={confirmRemap}
-                    confirmMerge={confirmMerge}
-                    confirmDeleteColors={confirmDeleteColors}
-                    cancelRemap={cancelRemap}
-                    cancelMerge={cancelMerge}
-                    cancelDelete={cancelDelete}
-                    setRemapMode={setRemapMode}
-                    setMergeMode={setMergeMode}
-                    setDeleteMode={setDeleteMode}
-                  />
-                </div>
-              </div>
             ) : activeMenuId === "background" ? (
               <div style={{ display: "grid", gap: 0 }}>
-                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-divider)" }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-border)" }}>
                 <TraceImageCard
                   cardStyle={sidebarCardStyle}
                   cardShadow={sidebarCardShadow}
@@ -2792,13 +2806,17 @@ export default function PatternEditor() {
                   traceFileName={traceFileName}
                   traceFileSize={traceFileSize}
                   traceImage={traceImage}
-                  traceLocked={traceLocked}
+                  traceOpacity={traceOpacity}
+                  traceEditMode={traceEditMode}
+                  traceVisible={traceVisible}
                   onTraceFileSelected={handleTraceFileSelected}
                   onClearTrace={confirmClearTraceImage}
-                  onSetTraceLockedState={handleSetTraceLockedState}
+                  onTraceOpacityChange={setTraceOpacity}
+                  onToggleTraceEdit={handleToggleTraceLock}
+                  onToggleTraceVisible={() => setTraceVisible((visible) => !visible)}
                 />
                 </div>
-                <div style={{ padding: "12px 0" }}>
+                <div style={{ padding: "18px 0 12px" }}>
                   <ImageToPatternCard
                     cardStyle={sidebarCardStyle}
                     cardShadow={sidebarCardShadow}
@@ -2815,6 +2833,204 @@ export default function PatternEditor() {
                   />
                 </div>
               </div>
+            ) : activeMenuId === "colors" ? (
+              colorsNewPage === "manage" ? (
+                <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 12, minHeight: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      padding: "12px 0 0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setColorsNewPage("overview")}
+                      onMouseEnter={(event) => {
+                        event.currentTarget.style.background = "rgba(15, 23, 42, 0.12)";
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.style.background = "rgba(15, 23, 42, 0.07)";
+                      }}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--foreground)",
+                        cursor: "pointer",
+                        borderRadius: 8,
+                        width: 28,
+                        height: 28,
+                        padding: 0,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        flexShrink: 0,
+                      }}
+                      aria-label="Back to Design Colors"
+                    >
+                      ←
+                    </button>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#000",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      Manage Colors
+                    </div>
+                  </div>
+                  {detailedColorActionsPanel}
+                </div>
+              ) : (
+              <div style={{ display: "grid", gap: 0 }}>
+                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--ui-border)" }}>
+                  <div className="app-card" style={sidebarCardStyle}>
+                    <button
+                      type="button"
+                      onClick={() => setColorsNewActionsOpen((open) => !open)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        marginBottom: colorsNewActionsOpen ? 10 : 0,
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: 15,
+                      }}
+                    >
+                      <span>My Colors</span>
+                      <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{colorsNewActionsOpen ? "▾" : "▸"}</span>
+                    </button>
+                    <div
+                      style={{
+                        ...collapseStyle(colorsNewActionsOpen, 1400),
+                        display: "grid",
+                        minHeight: 0,
+                      }}
+                    >
+                      <UsedColorsSection
+                        cardStyle={sidebarCardStyle}
+                        cardShadow={sidebarCardShadow}
+                        cardShadowCollapsed={sidebarCardShadowCollapsed}
+                        embedded
+                        hideActionToolbar
+                        hideScopeTabs
+                        listMaxHeight={276}
+                        headerActionLabel="Manage"
+                        onHeaderActionClick={() => {
+                          setColorsNewPage("manage");
+                        }}
+                        usedColorsOpen={usedColorsOpen}
+                        setUsedColorsOpen={setUsedColorsOpen}
+                        collapseStyle={collapseStyle}
+                        usedColors={usedColors}
+                        usedColorIds={usedColorIds}
+                        palette={palette}
+                        hasAnyPaintedCells={hasAnyPaintedCells}
+                        remapMode={remapMode}
+                        mergeMode={mergeMode}
+                        deleteMode={deleteMode}
+                        toggleRemapMode={toggleRemapMode}
+                        toggleMergeMode={toggleMergeMode}
+                        toggleDeleteMode={toggleDeleteMode}
+                        filterMode={filterMode}
+                        filterSelecting={filterSelecting}
+                        hasActiveSelection={activeFilterRect !== null}
+                        startFilterSelection={startFilterSelection}
+                        clearFilterSelection={clearFilterSelection}
+                        deleteSelectedIds={deleteSelectedIds}
+                        mergeSelectedIds={mergeSelectedIds}
+                        mergeTargetId={mergeTargetId}
+                        mergePreviewEnabled={mergePreviewEnabled}
+                        deletePreviewEnabled={deletePreviewEnabled}
+                        remapSourceId={remapSourceId}
+                        remapTargetId={remapTargetId}
+                        remapPreviewEnabled={remapPreviewEnabled}
+                        identifyColorId={identifyColorId}
+                        showSymbols={showSymbols}
+                        symbolMap={symbolMap}
+                        actionTargetEyedropperMode={actionTargetEyedropperMode}
+                        actionTargetPickEvent={actionTargetPickEvent}
+                        setIdentifyColorId={setIdentifyColorId}
+                        setActiveColorId={setActiveColorId}
+                        setDeleteSelectedIds={setDeleteSelectedIds}
+                        setMergeSelectedIds={setMergeSelectedIds}
+                        setMergeTargetId={setMergeTargetId}
+                        setMergePreviewEnabled={setMergePreviewEnabled}
+                        setDeletePreviewEnabled={setDeletePreviewEnabled}
+                        setRemapPreviewEnabled={setRemapPreviewEnabled}
+                        beginRemap={beginRemap}
+                        setRemapPreviewTarget={setRemapPreviewTarget}
+                        clearRemapSource={clearRemapSource}
+                        clearRemapTarget={clearRemapTarget}
+                        confirmRemap={confirmRemap}
+                        replaceColor={replaceColor}
+                        confirmMerge={confirmMerge}
+                        confirmDeleteColors={confirmDeleteColors}
+                        cancelRemap={cancelRemap}
+                        cancelMerge={cancelMerge}
+                        cancelDelete={cancelDelete}
+                        setRemapMode={setRemapMode}
+                        setMergeMode={setMergeMode}
+                        setDeleteMode={setDeleteMode}
+                        startActionTargetEyedropper={(mode: "replace" | "merge") => {
+                          setCustomPaletteEyedropperTargetId(null);
+                          setActionTargetEyedropperMode(mode);
+                          setPanMode(false);
+                        }}
+                        cancelActionTargetEyedropper={() => {
+                          setActionTargetEyedropperMode(null);
+                          setPanMode(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: "18px 0 12px" }}>
+                  <div className="app-card" style={sidebarCardStyle}>
+                    <button
+                      type="button"
+                      onClick={() => setColorsNewPalettesOpen((open) => !open)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        marginBottom: colorsNewPalettesOpen ? 10 : 0,
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: 15,
+                      }}
+                    >
+                      <span>Custom Palettes</span>
+                      <span style={{ opacity: 0.7, width: 14, textAlign: "center" }}>{colorsNewPalettesOpen ? "▾" : "▸"}</span>
+                    </button>
+                    <div
+                      style={{
+                        ...collapseStyle(colorsNewPalettesOpen, 1400),
+                        display: "grid",
+                        minHeight: 0,
+                      }}
+                    >
+                      {customPalettesPanel}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              )
             ) : activeMenuId === "text" ? (
               <div style={{ padding: "12px 0" }}>
                 <TextToolCard
@@ -2911,7 +3127,14 @@ export default function PatternEditor() {
               showRuler={showRuler}
               gridBackground="#ffffff"
               tool={tool}
+              canvasTool={customPaletteEyedropperTargetId || actionTargetEyedropperMode ? "eyedropper" : tool}
               onToolChange={(nextTool: "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror") => {
+                if (customPaletteEyedropperTargetId) {
+                  setCustomPaletteEyedropperTargetId(null);
+                }
+                if (actionTargetEyedropperMode) {
+                  setActionTargetEyedropperMode(null);
+                }
                 if (nextTool === "mirror" && tool !== "mirror") {
                   mirrorPrevToolRef.current = tool;
                 }
@@ -2922,8 +3145,36 @@ export default function PatternEditor() {
               onBrushSizeChange={(value: number) => setBrushSize(value)}
               lassoPoints={lassoPoints}
               lassoClosed={lassoClosed}
-              onPickColor={setActiveColorId}
+              onPickColor={(colorId: number) => {
+                if (customPaletteEyedropperTargetId) {
+                  setCustomPalettePickEvent({
+                    paletteId: customPaletteEyedropperTargetId,
+                    colorId,
+                    nonce: Date.now(),
+                  });
+                  return;
+                }
+                if (actionTargetEyedropperMode) {
+                  setActionTargetPickEvent({
+                    mode: actionTargetEyedropperMode,
+                    colorId,
+                    nonce: Date.now(),
+                  });
+                  return;
+                }
+                setActiveColorId(colorId);
+              }}
               onPickColorComplete={() => {
+                if (customPaletteEyedropperTargetId) {
+                  setCustomPaletteEyedropperTargetId(null);
+                  setPanMode(false);
+                  return;
+                }
+                if (actionTargetEyedropperMode) {
+                  setActionTargetEyedropperMode(null);
+                  setPanMode(false);
+                  return;
+                }
                 setTool("paint");
                 setPanMode(false);
               }}
@@ -2941,6 +3192,7 @@ export default function PatternEditor() {
               traceImage={traceImage}
               traceImageUrl={traceImageUrl}
               traceOpacity={traceOpacity}
+              traceVisible={traceVisible}
               traceScale={renderedTraceScale}
               traceOffsetX={renderedTraceOffsetX}
               traceOffsetY={renderedTraceOffsetY}
@@ -2975,7 +3227,6 @@ export default function PatternEditor() {
               onCancelTextPlacement={cancelTextPlacement}
               traceAdjustMode={traceImage ? traceEditMode || tracePostUpload : false}
               traceLocked={traceLocked}
-              onToggleTraceLock={handleToggleTraceLock}
               onTraceTransformStart={beginTraceTransform}
               onTraceTransformEnd={endTraceTransform}
               onTraceOffsetChange={(x: React.SetStateAction<number>, y: React.SetStateAction<number>) => {
@@ -3050,6 +3301,7 @@ export default function PatternEditor() {
               darkMode={darkMode}
               onDarkModeChange={setDarkMode}
               setTraceOpacity={setTraceOpacity}
+              onToggleTraceVisible={() => setTraceVisible((visible) => !visible)}
               tracePostUpload={tracePostUpload}
               traceEditMode={traceEditMode}
               onTraceCancel={handleTraceCancel}

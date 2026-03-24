@@ -24,6 +24,7 @@ export function CanvasWithExportRef(props: any) {
     showGridlines,
     showRuler,
     tool,
+    canvasTool,
     brushSize,
     onBrushSizeChange,
     onToolChange,
@@ -54,7 +55,6 @@ export function CanvasWithExportRef(props: any) {
     onCancelTextPlacement,
     traceAdjustMode,
     traceLocked,
-    onToggleTraceLock,
     onTraceTransformStart,
     onTraceTransformEnd,
     onTraceScaleChange,
@@ -113,6 +113,7 @@ export function CanvasWithExportRef(props: any) {
     darkMode,
     onDarkModeChange,
   } = props;
+  const effectiveCanvasTool = canvasTool ?? tool;
 
   const activeColor = paletteById.get(activeColorId);
   const canvasCardRef = useRef<HTMLDivElement | null>(null);
@@ -151,14 +152,40 @@ export function CanvasWithExportRef(props: any) {
   const prevFilterRectRef = useRef<typeof filterRect | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const toolbarContentRef = useRef<HTMLDivElement | null>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const settingsPopoverRef = useRef<HTMLDivElement | null>(null);
   const brushButtonRef = useRef<HTMLButtonElement | null>(null);
   const eraserButtonRef = useRef<HTMLButtonElement | null>(null);
   const opacityButtonRef = useRef<HTMLButtonElement | null>(null);
   const colorButtonRef = useRef<HTMLButtonElement | null>(null);
   const colorMenuRef = useRef<HTMLDivElement | null>(null);
   const sizePopoverRafRef = useRef<number | null>(null);
+  const effectiveTraceOpacity = props.traceVisible ? traceOpacity : 0;
   const opacityPopoverRafRef = useRef<number | null>(null);
   const hasTraceImage = Boolean(traceImage || traceImageUrl);
+
+  useEffect(() => {
+    if (!hasTraceImage) {
+      setImageOpacityOpen(false);
+    }
+  }, [hasTraceImage]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (settingsButtonRef.current?.contains(target)) return;
+      if (settingsPopoverRef.current?.contains(target)) return;
+      setSettingsOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [settingsOpen]);
   const mobileToolbarBottomOffset = `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) + 8px)`;
   const usedColorSet = useMemo(
     () => new Set((usedColors ?? []).map((entry: { color: Color }) => entry.color.id)),
@@ -1374,6 +1401,38 @@ export function CanvasWithExportRef(props: any) {
                     Image
                   </span>
                   <button
+                    type="button"
+                    onClick={props.onToggleTraceVisible}
+                    aria-pressed={props.traceVisible}
+                    aria-label={props.traceVisible ? "Hide background image" : "Show background image"}
+                    className="toolbar-button"
+                    style={{
+                      padding: "4px 6px",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 2,
+                      minWidth: 44,
+                    }}
+                  >
+                    <span className="toolbar-icon" aria-hidden="true">
+                      <img
+                        src={assetPath(props.traceVisible ? "/icons/eye.svg" : "/icons/eye_off.svg")}
+                        alt=""
+                        aria-hidden="true"
+                        width={18}
+                        height={18}
+                        style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                      />
+                    </span>
+                    <span className="toolbar-label" style={{ fontSize: 10, lineHeight: 1 }}>
+                      {props.traceVisible ? "Visible" : "Hidden"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
                     ref={opacityButtonRef}
                     onClick={() => setImageOpacityOpen((open) => !open)}
                     aria-pressed={imageOpacityOpen}
@@ -1403,36 +1462,6 @@ export function CanvasWithExportRef(props: any) {
                   </span>
                   <span className="toolbar-label" style={{ fontSize: 10, lineHeight: 1 }}>
                     Opacity
-                  </span>
-                </button>
-                <button
-                  onClick={onToggleTraceLock}
-                  aria-label="Reposition"
-                    data-active={traceEditMode ? "true" : undefined}
-                    className="toolbar-button"
-                    style={{
-                      padding: "4px 6px",
-                      borderRadius: 10,
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 2,
-                      minWidth: 44,
-                    }}
-                  >
-                  <span className="toolbar-icon" aria-hidden="true">
-                    <img
-                      src={assetPath("/icons/transform.svg")}
-                      alt=""
-                      aria-hidden="true"
-                      width={18}
-                      height={18}
-                      style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                    />
-                  </span>
-                  <span className="toolbar-label" style={{ fontSize: 10, lineHeight: 1 }}>
-                    Move
                   </span>
                 </button>
               </div>
@@ -1961,7 +1990,14 @@ export function CanvasWithExportRef(props: any) {
               backdropFilter: "blur(6px)",
             }}
           >
-            <div style={{ display: "grid", gap: 6 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto minmax(0, 1fr) auto",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
               <span style={{ fontSize: 10, opacity: 0.7 }}>Opacity</span>
               <input
                 type="range"
@@ -1969,8 +2005,50 @@ export function CanvasWithExportRef(props: any) {
                 max={100}
                 value={Math.round((Number.isFinite(traceOpacity) ? traceOpacity : 0) * 100)}
                 onChange={(e) => setTraceOpacity(parseInt(e.target.value, 10) / 100)}
-                style={{ width: 140 }}
+                style={{ width: 140, cursor: "pointer" }}
               />
+              <span
+                style={{
+                  width: 44,
+                  minWidth: 0,
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1fr) auto",
+                  alignItems: "center",
+                  gap: 2,
+                  padding: "3px 5px",
+                  borderRadius: 8,
+                  border: "1px solid var(--ui-border-subtle)",
+                  background: "var(--card-bg)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={String(Math.round((Number.isFinite(traceOpacity) ? traceOpacity : 0) * 100))}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/[^\d]/g, "");
+                    if (!digits) return;
+                    const next = Number(digits);
+                    if (!Number.isFinite(next)) return;
+                    setTraceOpacity(Math.max(0, Math.min(100, Math.round(next))) / 100);
+                  }}
+                  aria-label="Opacity percentage"
+                  style={{
+                    minWidth: 0,
+                    width: "100%",
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    color: "inherit",
+                    fontSize: 10,
+                    fontWeight: 400,
+                    textAlign: "left",
+                    outline: "none",
+                  }}
+                />
+                <span style={{ fontSize: 10, opacity: 0.72 }}>%</span>
+              </span>
             </div>
           </div>
         )}
@@ -2117,7 +2195,21 @@ export function CanvasWithExportRef(props: any) {
           >
             +
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span
+            style={{
+              width: 44,
+              minWidth: 0,
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) auto",
+              alignItems: "center",
+              gap: 2,
+              padding: "3px 5px",
+              borderRadius: 8,
+              border: "1px solid var(--ui-border-subtle)",
+              background: "var(--card-bg)",
+              color: "var(--foreground)",
+            }}
+          >
             <input
               type="text"
               inputMode="numeric"
@@ -2134,19 +2226,20 @@ export function CanvasWithExportRef(props: any) {
                 }
               }}
               style={{
-                width: 44,
-                height: 22,
-                padding: "0 6px",
-                borderRadius: 8,
-                border: "1px solid var(--panel-border)",
-                fontSize: 12,
-                lineHeight: "20px",
-                background: "var(--card-bg)",
-                color: "var(--foreground)",
+                minWidth: 0,
+                width: "100%",
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                color: "inherit",
+                fontSize: 10,
+                fontWeight: 400,
+                textAlign: "left",
+                outline: "none",
               }}
             />
-            <span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
-          </div>
+            <span style={{ fontSize: 10, opacity: 0.72 }}>%</span>
+          </span>
           </div>
           <button
             onClick={() => setZoomCollapsed((value) => !value)}
@@ -2169,6 +2262,7 @@ export function CanvasWithExportRef(props: any) {
           </div>
           {!isCompact && <div className="settings-floating" style={{ display: "flex" }}>
             <button
+              ref={settingsButtonRef}
               onClick={() => setSettingsOpen((open) => !open)}
               aria-pressed={settingsOpen}
               aria-label="Canvas settings"
@@ -2215,6 +2309,7 @@ export function CanvasWithExportRef(props: any) {
         </div>
         {uiReady && !isCompact && settingsOpen && (
           <div
+            ref={settingsPopoverRef}
             style={{
               position: "fixed",
               right: 16,
@@ -2253,7 +2348,7 @@ export function CanvasWithExportRef(props: any) {
             containerHeight={effectiveContainerHeight}
             showGridlines={showGridlines}
             showRuler={showRuler}
-            tool={tool}
+            tool={effectiveCanvasTool}
             brushSize={brushSize}
             lassoPoints={lassoPoints}
             lassoClosed={lassoClosed}
@@ -2273,7 +2368,7 @@ export function CanvasWithExportRef(props: any) {
             panMode={panMode}
             showSymbols={showSymbols}
             traceImage={traceImage}
-            traceOpacity={traceOpacity}
+            traceOpacity={effectiveTraceOpacity}
             traceScale={traceScale}
             traceOffsetX={traceOffsetX}
             traceOffsetY={traceOffsetY}

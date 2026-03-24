@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { SignInButton } from "@clerk/nextjs";
 import type { Color } from "../../../lib/grid";
 import { assetPath } from "../../../lib/assetPath";
@@ -23,7 +23,6 @@ type WipCardProps = {
   onOpenVersionHistory: () => void;
   draftInputRef: React.RefObject<HTMLInputElement | null>;
   onDraftFileSelected: (file: File) => void;
-  lastAutosaveAt: Date | null;
   usedColors: UsedColorEntry[];
   grid: Uint16Array;
   paletteById: Map<number, Color>;
@@ -48,7 +47,6 @@ export function WipCard({
   onOpenVersionHistory,
   draftInputRef,
   onDraftFileSelected,
-  lastAutosaveAt,
   usedColors,
   grid,
   paletteById,
@@ -56,20 +54,6 @@ export function WipCard({
   gridW,
   gridH,
 }: WipCardProps) {
-  const [autosaveMenuOpen, setAutosaveMenuOpen] = useState(false);
-  const autosaveMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!autosaveMenuOpen) return;
-    const handleClick = (event: MouseEvent) => {
-      if (!autosaveMenuRef.current) return;
-      if (autosaveMenuRef.current.contains(event.target as Node)) return;
-      setAutosaveMenuOpen(false);
-    };
-    window.addEventListener("mousedown", handleClick);
-    return () => window.removeEventListener("mousedown", handleClick);
-  }, [autosaveMenuOpen]);
-
   return (
     <div
       className="app-card"
@@ -93,7 +77,8 @@ export function WipCard({
           background: "transparent",
           padding: 0,
           cursor: "pointer",
-          fontWeight: 600,
+          fontWeight: 700,
+          fontSize: 15,
         }}
         type="button"
       >
@@ -200,94 +185,6 @@ export function WipCard({
             }}
             style={{ display: "none" }}
           />
-          {isSignedIn && (
-            <div
-              style={{
-                fontSize: 11,
-                opacity: 1,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                justifyContent: "center",
-                position: "relative",
-              }}
-            >
-              <img
-                src={assetPath("/icons/cloud_done.svg")}
-                alt=""
-                aria-hidden="true"
-                width={14}
-                height={14}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
-              <span>
-                Autosaved{" "}
-                {lastAutosaveAt
-                  ? `at ${lastAutosaveAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-                  : "enabled"}
-              </span>
-              <div ref={autosaveMenuRef} style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  aria-label="Version history"
-                  onClick={() => setAutosaveMenuOpen((open) => !open)}
-                  className="autosave-ellipsis"
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    border: "1px solid var(--ui-border-subtle)",
-                    background: "var(--ui-surface-soft)",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    lineHeight: 1,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: 28,
-                    minHeight: 20,
-                  }}
-                >
-                  ⋯
-                </button>
-                {autosaveMenuOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: 0,
-                      bottom: "100%",
-                      marginBottom: 6,
-                      background: "#ffffff",
-                      border: "1px solid var(--ui-border-subtle)",
-                      borderRadius: 10,
-                      padding: 8,
-                      boxShadow: "0 8px 18px var(--ui-border)",
-                      zIndex: 5,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAutosaveMenuOpen(false);
-                        onOpenVersionHistory();
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid var(--ui-border-subtle)",
-                        background: "#ffffff",
-                        color: "var(--foreground)",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Version History
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

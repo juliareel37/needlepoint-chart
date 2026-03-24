@@ -2,6 +2,46 @@
 
 import React from "react";
 
+const VALUE_INPUT_STYLE: React.CSSProperties = {
+  width: 46,
+  minWidth: 0,
+  padding: "4px 6px",
+  borderRadius: 8,
+  border: "1px solid var(--ui-border-subtle)",
+  background: "var(--card-bg)",
+  color: "var(--foreground)",
+  fontSize: 12,
+  fontWeight: 400,
+  textAlign: "left",
+};
+
+const PERCENT_INPUT_WRAPPER_STYLE: React.CSSProperties = {
+  width: 46,
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 2,
+  padding: "4px 6px",
+  borderRadius: 8,
+  border: "1px solid var(--ui-border-subtle)",
+  background: "var(--card-bg)",
+  color: "var(--foreground)",
+};
+
+const PERCENT_INPUT_STYLE: React.CSSProperties = {
+  minWidth: 0,
+  width: "100%",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  fontSize: 12,
+  fontWeight: 400,
+  textAlign: "left",
+  outline: "none",
+};
+
 type ImageToPatternCardProps = {
   cardStyle: React.CSSProperties;
   cardShadow: string;
@@ -32,6 +72,7 @@ export function ImageToPatternCard({
   onConvert,
 }: ImageToPatternCardProps) {
   const convertEnabled = Boolean(traceImage);
+  const smoothingPercent = Math.round(convertSmoothing * 100);
 
   return (
     <div
@@ -48,10 +89,10 @@ export function ImageToPatternCard({
           border: "none",
           background: "transparent",
           padding: 0,
-          marginBottom: imageToPatternOpen ? 12 : 0,
+          marginBottom: imageToPatternOpen ? 14 : 0,
           cursor: "pointer",
-          fontWeight: 600,
-          fontSize: 14,
+          fontWeight: 700,
+          fontSize: 15,
           textAlign: "left",
         }}
         type="button"
@@ -62,38 +103,69 @@ export function ImageToPatternCard({
       <div
         style={{
           display: "grid",
-          gap: 12,
+          gap: 16,
           width: "100%",
           ...collapseStyle(imageToPatternOpen, 500),
         }}
       >
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, opacity: 0.7 }}>Max colors</span>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>{convertMaxColors}</span>
+            <input
+              type="range"
+              min={2}
+              max={32}
+              value={convertMaxColors}
+              onChange={(e) => setConvertMaxColors(parseInt(e.target.value, 10))}
+              disabled={!traceImage}
+            />
+            <input
+              type="number"
+              min={2}
+              max={32}
+              step={1}
+              value={convertMaxColors}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (!Number.isFinite(next)) return;
+                setConvertMaxColors(Math.max(2, Math.min(32, Math.round(next))));
+              }}
+              disabled={!traceImage}
+              aria-label="Max colors value"
+              style={VALUE_INPUT_STYLE}
+            />
           </div>
-          <input
-            type="range"
-            min={2}
-            max={32}
-            value={convertMaxColors}
-            onChange={(e) => setConvertMaxColors(parseInt(e.target.value, 10))}
-            disabled={!traceImage}
-          />
         </div>
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, opacity: 0.7 }}>Smoothing</span>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>{Math.round(convertSmoothing * 100)}%</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={smoothingPercent}
+              onChange={(e) => setConvertSmoothing(parseInt(e.target.value, 10) / 100)}
+              disabled={!traceImage}
+            />
+            <span style={PERCENT_INPUT_WRAPPER_STYLE}>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={String(smoothingPercent)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^\d]/g, "");
+                  if (!digits) return;
+                  const next = Number(digits);
+                  if (!Number.isFinite(next)) return;
+                  setConvertSmoothing(Math.max(0, Math.min(100, Math.round(next))) / 100);
+                }}
+                disabled={!traceImage}
+                aria-label="Smoothing percentage"
+                style={PERCENT_INPUT_STYLE}
+              />
+              <span style={{ fontSize: 12, opacity: 0.72 }}>%</span>
+            </span>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(convertSmoothing * 100)}
-            onChange={(e) => setConvertSmoothing(parseInt(e.target.value, 10) / 100)}
-            disabled={!traceImage}
-          />
         </div>
         <button
           onClick={onConvert}
@@ -103,8 +175,10 @@ export function ImageToPatternCard({
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
-            padding: "4px 8px",
-            marginTop: 6,
+            padding: "8px 10px",
+            height: 34,
+            minHeight: 34,
+            boxSizing: "border-box",
             borderRadius: 8,
             border: "1px solid var(--ui-border-subtle)",
             background: "var(--accent)",
@@ -114,6 +188,7 @@ export function ImageToPatternCard({
             width: "100%",
             fontWeight: 600,
             fontSize: 12,
+            lineHeight: 1,
           }}
         >
           Convert
