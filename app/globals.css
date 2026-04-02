@@ -326,14 +326,6 @@ button:hover:not(:disabled):not([data-active="true"]) {
   background: var(--toggle-track-on) !important;
   border-color: var(--ui-border-strong) !important;
 }
-.zoom-floating .zoom-caret:hover:not(:disabled) {
-  filter: none;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-.zoom-floating .zoom-caret {
-  background: transparent !important;
-}
 button:disabled {
   cursor: default;
 }
@@ -359,47 +351,28 @@ button:disabled {
 .pattern-sidebar-inner {
   background: var(--sidebar-bg);
 }
-:root[data-theme="dark"] .pattern-sidebar,
-:root[data-theme="dark"] .pattern-sidebar * {
-  scrollbar-color: rgba(245, 247, 251, 0.28) var(--sidebar-bg);
+:root,
+:root * {
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
 }
-:root[data-theme="dark"] .pattern-sidebar::-webkit-scrollbar,
-:root[data-theme="dark"] .pattern-sidebar *::-webkit-scrollbar {
+:root::-webkit-scrollbar,
+:root *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
-:root[data-theme="dark"] .pattern-sidebar::-webkit-scrollbar-track,
-:root[data-theme="dark"] .pattern-sidebar *::-webkit-scrollbar-track {
-  background: var(--sidebar-bg);
+:root::-webkit-scrollbar-track,
+:root *::-webkit-scrollbar-track {
+  background: transparent;
 }
-:root[data-theme="dark"] .pattern-sidebar::-webkit-scrollbar-thumb,
-:root[data-theme="dark"] .pattern-sidebar *::-webkit-scrollbar-thumb {
-  background: rgba(245, 247, 251, 0.22);
+:root::-webkit-scrollbar-thumb,
+:root *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 22%, transparent);
   border-radius: 999px;
-  border: 2px solid var(--sidebar-bg);
+  border: none;
 }
-:root[data-theme="dark"] .pattern-sidebar::-webkit-scrollbar-thumb:hover,
-:root[data-theme="dark"] .pattern-sidebar *::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 247, 251, 0.34);
-}
-:root[data-theme="dark"] .toolbar-palette-scroll {
-  scrollbar-color: rgba(245, 247, 251, 0.28) var(--ui-surface-soft);
-}
-:root[data-theme="dark"] .toolbar-palette-scroll::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-:root[data-theme="dark"] .toolbar-palette-scroll::-webkit-scrollbar-track {
-  background: var(--ui-surface-soft);
-  border-radius: 999px;
-}
-:root[data-theme="dark"] .toolbar-palette-scroll::-webkit-scrollbar-thumb {
-  background: rgba(245, 247, 251, 0.22);
-  border-radius: 999px;
-  border: 2px solid var(--ui-surface-soft);
-}
-:root[data-theme="dark"] .toolbar-palette-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 247, 251, 0.34);
+:root::-webkit-scrollbar-thumb:hover,
+:root *::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 34%, transparent);
 }
 .canvas-toolbar button,
 .used-colors-toolbar button,
@@ -578,11 +551,31 @@ button:disabled {
   background: var(--card-bg);
   box-shadow: 0 2px 6px var(--ui-border-subtle);
 }
+.file-menu-trigger {
+  transition: padding 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+.file-menu-trigger[aria-expanded="true"] {
+  --file-trigger-py-current: var(--file-trigger-py-hover);
+  background: var(--ui-hover-soft) !important;
+  box-shadow: 0 1px 3px var(--ui-border-subtle);
+}
 @media (hover: hover) and (pointer: fine) {
   .pattern-menu-button:hover:not(:disabled):not([aria-pressed="true"]) {
     background: var(--ui-hover-soft) !important;
   }
   :root[data-theme="dark"] .pattern-menu-button:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: rgba(245, 247, 251, 0.2) !important;
+  }
+  .file-menu-trigger:hover:not(:disabled),
+  .file-menu-trigger[aria-expanded="true"] {
+    --file-trigger-py-current: var(--file-trigger-py-hover);
+  }
+  .file-menu-trigger:hover:not(:disabled) {
+    background: var(--ui-hover-soft) !important;
+    box-shadow: 0 1px 3px var(--ui-border-subtle);
+  }
+  :root[data-theme="dark"] .file-menu-trigger:hover:not(:disabled),
+  :root[data-theme="dark"] .file-menu-trigger[aria-expanded="true"] {
     background: rgba(245, 247, 251, 0.2) !important;
   }
 }
@@ -635,6 +628,38 @@ button:disabled {
 .menu-item:focus-visible {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
+}
+.gridline-menu-trigger {
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+.gridline-menu-trigger:hover,
+.gridline-menu-trigger:focus-visible {
+  background: var(--ui-hover-soft) !important;
+}
+.gridline-menu-trigger:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.zoom-action-button {
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+.zoom-action-button:hover:not(:disabled),
+.zoom-action-button:focus-visible {
+  background: var(--accent-wash) !important;
+  box-shadow: 0 1px 3px var(--ui-border-subtle);
+}
+.zoom-action-button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.zoom-toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--ui-divider);
+  opacity: 0.9;
+}
+.zoom-readout {
+  font-variant-numeric: tabular-nums;
 }
 input[type="range"] {
   -webkit-appearance: none;

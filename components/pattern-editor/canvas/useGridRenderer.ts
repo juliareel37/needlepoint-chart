@@ -65,6 +65,8 @@ type UseGridRendererArgs = {
   zoom: number;
   showGridlines: boolean;
   showRuler: boolean;
+  showMajorGridlines?: boolean;
+  gridMajorInterval?: number;
   activeRulerLines?: RulerLine[];
   gridBackground?: string;
 };
@@ -111,6 +113,8 @@ export function useGridRenderer({
   zoom,
   showGridlines,
   showRuler,
+  showMajorGridlines = true,
+  gridMajorInterval = 5,
   activeRulerLines,
   gridBackground,
 }: UseGridRendererArgs) {
@@ -273,8 +277,9 @@ export function useGridRenderer({
       const maxY = Math.max(0, canvasH - 0.5);
 
       // Vertical lines
+      const majorInterval = Math.max(2, Math.round(gridMajorInterval));
       for (let x = 0; x <= width; x++) {
-        const isMajor = x % 5 === 0;
+        const isMajor = showMajorGridlines && x % majorInterval === 0;
         const px = Math.min(maxX, Math.round(x * cellSize) + 0.5);
         ctx.strokeStyle = isMajor ? majorGridlineStroke : gridlineStroke;
         ctx.lineWidth = isMajor ? 1.6 : 1;
@@ -285,7 +290,7 @@ export function useGridRenderer({
       }
       // Horizontal lines
       for (let y = 0; y <= height; y++) {
-        const isMajor = y % 5 === 0;
+        const isMajor = showMajorGridlines && y % majorInterval === 0;
         const py = Math.min(maxY, Math.round(y * cellSize) + 0.5);
         ctx.strokeStyle = isMajor ? majorGridlineStroke : gridlineStroke;
         ctx.lineWidth = isMajor ? 1.6 : 1;
@@ -449,6 +454,8 @@ export function useGridRenderer({
     cellSize,
     showGridlines,
     showRuler,
+    showMajorGridlines,
+    gridMajorInterval,
     activeRulerLines,
     canvasW,
     canvasH,

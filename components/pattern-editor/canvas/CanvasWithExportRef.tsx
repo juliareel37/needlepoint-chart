@@ -102,6 +102,10 @@ export function CanvasWithExportRef(props: any) {
     onToolbarCollapsedChange,
     setShowGridlines,
     setShowRuler,
+    showMajorGridlines = true,
+    setShowMajorGridlines,
+    gridMajorInterval = 5,
+    setGridMajorInterval,
     setThreadView,
     setTraceOpacity,
     tracePostUpload,
@@ -111,7 +115,6 @@ export function CanvasWithExportRef(props: any) {
     gridBackground,
     isCompact,
     darkMode,
-    onDarkModeChange,
   } = props;
   const effectiveCanvasTool = canvasTool ?? tool;
 
@@ -130,12 +133,12 @@ export function CanvasWithExportRef(props: any) {
   const prevPanModeRef = useRef(panMode);
   const [uiReady, setUiReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const [gridlineOptionsOpen, setGridlineOptionsOpen] = useState(false);
   const [toolbarHeight, setToolbarHeight] = useState(0);
   const [imageOpacityOpen, setImageOpacityOpen] = useState(false);
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
-  const [zoomCollapsed, setZoomCollapsed] = useState(false);
   const [expandedToolbarHeight, setExpandedToolbarHeight] = useState<number | null>(null);
-  const [expandedZoomHeight, setExpandedZoomHeight] = useState<number | null>(null);
   const [sizePopoverLeft, setSizePopoverLeft] = useState<number | null>(null);
   const [sizePopoverTop, setSizePopoverTop] = useState<number | null>(null);
   const [sizePopoverBottom, setSizePopoverBottom] = useState<number | null>(null);
@@ -154,6 +157,10 @@ export function CanvasWithExportRef(props: any) {
   const toolbarContentRef = useRef<HTMLDivElement | null>(null);
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsPopoverRef = useRef<HTMLDivElement | null>(null);
+  const gridlineOptionsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const gridlineOptionsPopoverRef = useRef<HTMLDivElement | null>(null);
+  const zoomMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const zoomMenuPopoverRef = useRef<HTMLDivElement | null>(null);
   const brushButtonRef = useRef<HTMLButtonElement | null>(null);
   const eraserButtonRef = useRef<HTMLButtonElement | null>(null);
   const opacityButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -163,6 +170,8 @@ export function CanvasWithExportRef(props: any) {
   const effectiveTraceOpacity = props.traceVisible ? traceOpacity : 0;
   const opacityPopoverRafRef = useRef<number | null>(null);
   const hasTraceImage = Boolean(traceImage || traceImageUrl);
+  const [zoomMenuPosition, setZoomMenuPosition] = useState<{ left: number; bottom: number } | null>(null);
+  const [gridlineOptionsPosition, setGridlineOptionsPosition] = useState<{ left: number; top: number } | null>(null);
 
   useEffect(() => {
     if (!hasTraceImage) {
@@ -178,6 +187,8 @@ export function CanvasWithExportRef(props: any) {
       if (!target) return;
       if (settingsButtonRef.current?.contains(target)) return;
       if (settingsPopoverRef.current?.contains(target)) return;
+      if (gridlineOptionsButtonRef.current?.contains(target)) return;
+      if (gridlineOptionsPopoverRef.current?.contains(target)) return;
       setSettingsOpen(false);
     };
 
@@ -186,6 +197,89 @@ export function CanvasWithExportRef(props: any) {
       document.removeEventListener("mousedown", handleClick);
     };
   }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    setZoomMenuOpen(false);
+    setGridlineOptionsOpen(false);
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!gridlineOptionsOpen) return;
+
+    const updatePosition = () => {
+      const button = gridlineOptionsButtonRef.current;
+      const panel = settingsPopoverRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const panelRect = panel?.getBoundingClientRect();
+      const estimatedWidth = panelRect ? Math.round(panelRect.width) : 172;
+      const estimatedHeight = 132;
+      const left = panelRect
+        ? Math.max(16, Math.min(panelRect.left, window.innerWidth - estimatedWidth - 16))
+        : Math.max(16, Math.min(rect.left, window.innerWidth - estimatedWidth - 16));
+      const top = Math.max(16, rect.top - estimatedHeight - 10);
+      setGridlineOptionsPosition({
+        left,
+        top,
+      });
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (gridlineOptionsButtonRef.current?.contains(target)) return;
+      if (gridlineOptionsPopoverRef.current?.contains(target)) return;
+      setGridlineOptionsOpen(false);
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [gridlineOptionsOpen]);
+
+  useEffect(() => {
+    if (!zoomMenuOpen) return;
+
+    const updatePosition = () => {
+      const button = zoomMenuButtonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setZoomMenuPosition({
+        left: Math.max(16, rect.left),
+        bottom: Math.max(16, window.innerHeight - rect.top + 8),
+      });
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (zoomMenuButtonRef.current?.contains(target)) return;
+      if (zoomMenuPopoverRef.current?.contains(target)) return;
+      setZoomMenuOpen(false);
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [zoomMenuOpen]);
+
+  useEffect(() => {
+    if (!zoomMenuOpen) return;
+    setSettingsOpen(false);
+  }, [zoomMenuOpen]);
   const mobileToolbarBottomOffset = `calc(${bottomMenuBarHeight}px + env(safe-area-inset-bottom, 0px) + 8px)`;
   const usedColorSet = useMemo(
     () => new Set((usedColors ?? []).map((entry: { color: Color }) => entry.color.id)),
@@ -217,8 +311,11 @@ export function CanvasWithExportRef(props: any) {
   const fitTargetZoom = Math.min(safeMaxZoom, Math.max(safeMinZoom, safeBaseFitZoom));
   const zoomDisplay = safeZoom / safeBaseFitZoom;
   const zoomPercent = Math.round(zoomDisplay * 100);
-  const [zoomInput, setZoomInput] = useState(String(zoomPercent));
   const zoomStepPercent = zoomDisplay < 1 ? 10 : zoomDisplay < 2 ? 20 : zoomDisplay < 4 ? 35 : 50;
+  const zoomPresetPercents = [50, 75, 100, 125, 150, 200, 300, 400];
+  const minZoomPercent = Math.round((safeMinZoom / safeBaseFitZoom) * 100);
+  const maxZoomPercent = Math.round((safeMaxZoom / safeBaseFitZoom) * 100);
+  const symbolsLowZoom = showSymbols === true && cellSize < 10;
   const paletteEntries = useMemo(() => {
     return sortPaletteByHsv(Array.from(paletteById.values()));
   }, [paletteById]);
@@ -298,16 +395,11 @@ export function CanvasWithExportRef(props: any) {
         aria-hidden="true"
         width={12}
         height={12}
-        style={{ display: "block", filter: "var(--icon-on-bg-filter)", opacity: 0.85 }}
+        style={{ display: "block", marginLeft: 2, filter: "var(--icon-on-bg-filter)", opacity: 0.85 }}
       />
       <span>{text}</span>
     </>
   );
-
-  useEffect(() => {
-    if (fitPending) return;
-    setZoomInput(String(zoomPercent));
-  }, [zoomPercent, fitPending]);
 
   useEffect(() => {
     if (restoredViewToken === undefined) return;
@@ -507,24 +599,6 @@ export function CanvasWithExportRef(props: any) {
     onZoomChange,
   ]);
 
-  function commitZoomInput(value: string) {
-    if (value.trim() === "") {
-      setZoomInput(String(zoomPercent));
-      return;
-    }
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-      setZoomInput(String(zoomPercent));
-      return;
-    }
-    const minValue = Math.round((safeMinZoom / safeBaseFitZoom) * 100);
-    const maxValue = Math.round((safeMaxZoom / safeBaseFitZoom) * 100);
-    const clamped = Math.min(maxValue, Math.max(minValue, parsed));
-    userZoomedRef.current = true;
-    onZoomChange((clamped / 100) * safeBaseFitZoom);
-    setZoomInput(String(Math.round(clamped)));
-  }
-
   function fitToBounds() {
     userZoomedRef.current = true;
     onZoomChange(fitTargetZoom);
@@ -588,24 +662,6 @@ export function CanvasWithExportRef(props: any) {
       setToolbarCollapsed(false);
     }
   }, [isNarrow, toolbarCollapsed]);
-
-  const zoomRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!zoomRef.current) return;
-    const node = zoomRef.current;
-    const notify = () => {
-      const height = Math.round(node.getBoundingClientRect().height);
-      if (!zoomCollapsed) {
-        setExpandedZoomHeight(height);
-      }
-    };
-    notify();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => notify());
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [zoomCollapsed]);
 
   useEffect(() => {
     if (!canvasCardRef.current) return;
@@ -2052,6 +2108,31 @@ export function CanvasWithExportRef(props: any) {
             </div>
           </div>
         )}
+        {uiReady && symbolsLowZoom ? (
+          <div
+            aria-live="polite"
+            style={{
+              position: "fixed",
+              right: 16,
+              bottom: 64,
+              zIndex: 59,
+              maxWidth: 188,
+              padding: "6px 10px",
+              borderRadius: 12,
+              border: "1px solid var(--ui-border-subtle)",
+              background: "color-mix(in srgb, var(--card-bg) 96%, transparent)",
+              color: "var(--foreground)",
+              fontSize: 11,
+              lineHeight: 1.3,
+              opacity: 0.78,
+              pointerEvents: "none",
+              whiteSpace: "normal",
+              overflowWrap: "anywhere",
+            }}
+          >
+            Zoom in to view symbols.
+          </div>
+        ) : null}
         <div
           className="zoom-shell"
           style={{
@@ -2062,278 +2143,474 @@ export function CanvasWithExportRef(props: any) {
             bottom: 16,
             zIndex: 60,
             display: "flex",
-            alignItems: "stretch",
-            gap: 8,
           }}
         >
           <div
             className="zoom-floating"
-            ref={zoomRef}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: zoomCollapsed ? 0 : 8,
-              padding: zoomCollapsed ? "6px 4px" : "6px 8px",
-              borderRadius: 12,
-              background: "var(--canvas-toolbar-bg)",
-              backdropFilter: "blur(6px)",
-              boxShadow: "0 8px 18px var(--ui-border)",
-              minWidth: 0,
-              minHeight: zoomCollapsed ? expandedZoomHeight ?? undefined : undefined,
-              transition:
-                "background 160ms ease, box-shadow 160ms ease, padding 160ms ease, border-radius 160ms ease",
-            }}
-          >
-          <div
-            className="zoom-toolbar-content"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transformOrigin: "right center",
-              transform: zoomCollapsed ? "scaleX(0)" : "scaleX(1)",
-              opacity: zoomCollapsed ? 0 : 1,
-              maxWidth: zoomCollapsed ? 0 : "100%",
-              maxHeight: zoomCollapsed ? 0 : 999,
-              overflow: "hidden",
-              transition: "transform 160ms ease, opacity 160ms ease",
-              pointerEvents: zoomCollapsed ? "none" : "auto",
-            }}
-          >
-          <button
-            onClick={() => {
-              if (!lastEditCell) return;
-              focusOnCell(lastEditCell);
-            }}
-            disabled={!lastEditCell}
-            aria-label="Jump to last edit"
-            title="Jump to last edit"
-            style={{
-              padding: "4px 6px",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--muted-bg)",
-              color: "var(--foreground)",
-              cursor: lastEditCell ? "pointer" : "not-allowed",
-              opacity: lastEditCell ? 1 : 0.5,
-              fontSize: 12,
-            }}
-          >
-            <img
-              src={assetPath("/icons/jump_to_element.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
-          </button>
-          <button
-            onClick={() => {
-              fitToBounds();
-            }}
-            aria-label="Fit"
-            title="Fit"
-            style={{
-              padding: "4px 6px",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--muted-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            <img
-              src={assetPath("/icons/fit_width.svg")}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-            />
-          </button>
-          <button
-            onClick={() => {
-              const minPercent = Math.round((safeMinZoom / safeBaseFitZoom) * 100);
-              const next = Math.max(minPercent, zoomPercent - zoomStepPercent);
-              setUserZoom((next / 100) * safeBaseFitZoom);
-            }}
-            style={{
-              padding: "4px 6px",
-              borderRadius: 8,
-              border: "none",
-              background: "transparent",
-              color: "var(--foreground)",
-              cursor: "pointer",
-            }}
-          >
-            -
-          </button>
-          <input
-            type="range"
-            min={Math.round((safeMinZoom / safeBaseFitZoom) * 100)}
-            max={Math.round((safeMaxZoom / safeBaseFitZoom) * 100)}
-            value={Math.round((safeZoom / safeBaseFitZoom) * 100)}
-            onChange={(e) => setUserZoom((parseInt(e.target.value, 10) / 100) * safeBaseFitZoom)}
-            style={{ width: 120 }}
-          />
-          <button
-            onClick={() => {
-              const maxPercent = Math.round((safeMaxZoom / safeBaseFitZoom) * 100);
-              const next = Math.min(maxPercent, zoomPercent + zoomStepPercent);
-              setUserZoom((next / 100) * safeBaseFitZoom);
-            }}
-            style={{
-              padding: "4px 6px",
-              borderRadius: 8,
-              border: "none",
-              background: "transparent",
-              color: "var(--foreground)",
-              cursor: "pointer",
-            }}
-          >
-            +
-          </button>
-          <span
-            style={{
-              width: 44,
-              minWidth: 0,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) auto",
-              alignItems: "center",
-              gap: 2,
-              padding: "3px 5px",
-              borderRadius: 8,
+              gap: 6,
+              padding: "8px 10px",
+              borderRadius: 16,
               border: "1px solid var(--ui-border-subtle)",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
+              background: "color-mix(in srgb, var(--card-bg) 94%, transparent)",
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 10px 24px color-mix(in srgb, var(--foreground) 10%, transparent)",
+              minWidth: 0,
+              transition: "background 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
             }}
           >
-            <input
-              type="text"
-              inputMode="numeric"
-              value={zoomInput}
-              onChange={(e) => {
-                const next = e.target.value.replace(/[^\d]/g, "");
-                setZoomInput(next);
-              }}
-              onBlur={(e) => commitZoomInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  commitZoomInput((e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
+            <div
               style={{
-                minWidth: 0,
-                width: "100%",
-                padding: 0,
-                border: "none",
-                background: "transparent",
-                color: "inherit",
-                fontSize: 10,
-                fontWeight: 400,
-                textAlign: "left",
-                outline: "none",
-              }}
-            />
-            <span style={{ fontSize: 10, opacity: 0.72 }}>%</span>
-          </span>
-          </div>
-          <button
-            onClick={() => setZoomCollapsed((value) => !value)}
-            aria-pressed={zoomCollapsed}
-            aria-label={zoomCollapsed ? "Expand zoom toolbar" : "Collapse zoom toolbar"}
-            className="zoom-caret"
-            style={{
-              padding: "4px 6px",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--muted-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {zoomCollapsed ? "▴" : "◂"}
-          </button>
-          </div>
-          {!isCompact && <div className="settings-floating" style={{ display: "flex" }}>
-            <button
-              ref={settingsButtonRef}
-              onClick={() => setSettingsOpen((open) => !open)}
-              aria-pressed={settingsOpen}
-              aria-label="Canvas settings"
-              title="Canvas settings"
-              className="zoom-settings-toggle"
-              style={{
-                padding: "6px 10px",
-                borderRadius: 10,
-                border: "none",
-                background: "var(--canvas-toolbar-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 600,
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
-                backdropFilter: "blur(6px)",
-                boxShadow: "0 8px 18px var(--ui-border)",
-                height: "100%",
+                gap: 3,
+                padding: "2px",
+                borderRadius: 12,
+                background: "transparent",
               }}
             >
-              <span
-                aria-hidden="true"
+              <button
+                className="zoom-action-button"
+                onClick={() => {
+                  userZoomedRef.current = true;
+                  const minPercent = Math.round((safeMinZoom / safeBaseFitZoom) * 100);
+                  const next = Math.max(minPercent, zoomPercent - zoomStepPercent);
+                  setUserZoom((next / 100) * safeBaseFitZoom);
+                }}
+                aria-label="Zoom out"
+                title="Zoom out"
                 style={{
-                  fontSize: 12,
-                  lineHeight: 1,
+                  width: 28,
+                  height: 30,
+                  borderRadius: 10,
+                  border: "none",
+                  background: "transparent",
                   color: "var(--foreground)",
-                  opacity: 0.7,
+                  cursor: "pointer",
+                  fontSize: 16,
+                  lineHeight: 1,
                 }}
               >
-                {settingsOpen ? "▴" : "◂"}
-              </span>
-              <img
-                src={assetPath("/icons/settings.svg")}
-                alt=""
-                aria-hidden="true"
-                width={18}
-                height={18}
-                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-              />
-            </button>
-          </div>}
+                -
+              </button>
+              <button
+                ref={zoomMenuButtonRef}
+                className="zoom-action-button"
+                onClick={() => setZoomMenuOpen((open) => !open)}
+                aria-expanded={zoomMenuOpen}
+                aria-haspopup="menu"
+                aria-label={`Zoom ${zoomPercent}%`}
+                title="Choose zoom level"
+                style={{
+                  minWidth: 50,
+                  height: 30,
+                  padding: "0 8px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: zoomMenuOpen ? "var(--accent-wash)" : "transparent",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 0.01,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                <span>{zoomPercent}%</span>
+              </button>
+              <button
+                className="zoom-action-button"
+                onClick={() => {
+                  userZoomedRef.current = true;
+                  const maxPercent = Math.round((safeMaxZoom / safeBaseFitZoom) * 100);
+                  const next = Math.min(maxPercent, zoomPercent + zoomStepPercent);
+                  setUserZoom((next / 100) * safeBaseFitZoom);
+                }}
+                aria-label="Zoom in"
+                title="Zoom in"
+                style={{
+                  width: 28,
+                  height: 30,
+                  borderRadius: 10,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 16,
+                  lineHeight: 1,
+                }}
+              >
+                +
+              </button>
+            </div>
+            {!isCompact && (
+              <>
+                <div aria-hidden="true" className="zoom-toolbar-divider" />
+                <button
+                  ref={settingsButtonRef}
+                  onClick={() => setSettingsOpen((open) => !open)}
+                  aria-pressed={settingsOpen}
+                  aria-label="View options"
+                  title="View"
+                  className="zoom-action-button zoom-settings-toggle"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 10,
+                    border: "none",
+                    background: settingsOpen ? "var(--accent-wash)" : "transparent",
+                    color: "var(--foreground)",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                    padding: 0,
+                  }}
+                >
+                  <img
+                    src={assetPath("/icons/settings.svg")}
+                    alt=""
+                    aria-hidden="true"
+                    width={16}
+                    height={16}
+                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+                  />
+                </button>
+              </>
+            )}
+          </div>
         </div>
+        {uiReady && zoomMenuOpen && zoomMenuPosition && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                ref={zoomMenuPopoverRef}
+                role="menu"
+                aria-label="Zoom presets"
+                style={{
+                  position: "fixed",
+                  left: zoomMenuPosition.left,
+                  bottom: zoomMenuPosition.bottom,
+                  zIndex: 61,
+                  minWidth: 102,
+                  borderRadius: 14,
+                  border: "1px solid var(--ui-border-subtle)",
+                  background: "color-mix(in srgb, var(--card-bg) 96%, transparent)",
+                  boxShadow: "0 12px 28px color-mix(in srgb, var(--foreground) 12%, transparent)",
+                  backdropFilter: "blur(10px)",
+                  padding: 8,
+                  display: "grid",
+                  gap: 4,
+                }}
+              >
+                {zoomPresetPercents.map((preset) => {
+                  const disabled = preset < minZoomPercent || preset > maxZoomPercent;
+                  const selected = Math.abs(zoomPercent - preset) <= 1;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      disabled={disabled}
+                      className="menu-item"
+                      onClick={() => {
+                        userZoomedRef.current = true;
+                        setZoomMenuOpen(false);
+                        setUserZoom((preset / 100) * safeBaseFitZoom);
+                      }}
+                      style={{
+                        padding: "7px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: selected ? "var(--accent-wash)" : "transparent",
+                        textAlign: "left",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        fontSize: 12,
+                        fontWeight: selected ? 700 : 600,
+                        opacity: disabled ? 0.45 : 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      <span>{preset}%</span>
+                      <span aria-hidden="true" style={{ opacity: selected ? 0.9 : 0 }}>
+                        ✓
+                      </span>
+                    </button>
+                  );
+                })}
+                <div
+                  aria-hidden="true"
+                  style={{ height: 1, margin: "2px 4px", background: "var(--ui-divider)" }}
+                />
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={Math.abs(zoomPercent - 100) <= 1 && Math.abs(safeZoom - fitTargetZoom) < 0.002}
+                  className="menu-item"
+                  onClick={() => {
+                    setZoomMenuOpen(false);
+                    fitToBounds();
+                  }}
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: "transparent",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  Fit to grid
+                </button>
+              </div>,
+              document.body,
+            )
+          : null}
         {uiReady && !isCompact && settingsOpen && (
           <div
             ref={settingsPopoverRef}
+            aria-label="View options"
             style={{
               position: "fixed",
               right: 16,
-              bottom: 72,
+              bottom: 68,
               zIndex: 60,
-              background: "var(--surface-elevated)",
-              borderRadius: 12,
+              background: "color-mix(in srgb, var(--card-bg) 96%, transparent)",
+              border: "1px solid var(--ui-border-subtle)",
+              borderRadius: 14,
               padding: "10px 12px",
-              boxShadow: "0 8px 18px var(--ui-border)",
-              backdropFilter: "blur(6px)",
+              boxShadow: "0 12px 28px color-mix(in srgb, var(--foreground) 12%, transparent)",
+              backdropFilter: "blur(10px)",
               display: "grid",
               gap: 10,
-              minWidth: 104,
+              width: 188,
+              minWidth: 188,
+              maxWidth: "calc(100vw - 32px)",
+              boxSizing: "border-box",
             }}
           >
             <div style={{ display: "grid", gap: 8 }}>
-              <Toggle label={toggleLabel("/icons/grid3.svg", "Gridlines")} checked={showGridlines} onChange={setShowGridlines} />
-              <Toggle label={toggleLabel("/icons/sqfoot.svg", "Ruler")} checked={showRuler} onChange={setShowRuler} />
-              <Toggle label={toggleLabel("/icons/thread.svg", "Thread view")} checked={threadView} onChange={setThreadView} />
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.04,
+                  textTransform: "uppercase",
+                  opacity: 0.55,
+                  padding: "0 2px",
+                }}
+              >
+                Canvas aids
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0,
+                  minWidth: 0,
+                }}
+              >
+                <button
+                  ref={gridlineOptionsButtonRef}
+                  type="button"
+                  onClick={() => {
+                    setGridlineOptionsOpen((open) => !open);
+                  }}
+                  aria-expanded={gridlineOptionsOpen}
+                  aria-label="Gridline options"
+                  className="gridline-menu-trigger"
+                  style={{
+                    flex: "1 1 auto",
+                    minWidth: 0,
+                    padding: "6px 12px",
+                    margin: "0 -8px",
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--foreground)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontWeight: 400,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    gap: 6,
+                    borderRadius: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 400,
+                      opacity: 0.8,
+                      textAlign: "left",
+                      width: "100%",
+                      marginLeft: -4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      gap: 6,
+                    }}
+                  >
+                    {toggleLabel("/icons/grid3.svg", "Gridlines")}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      marginLeft: "auto",
+                      opacity: 0.5,
+                      fontSize: 13,
+                      lineHeight: 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ▸
+                  </span>
+                </button>
+              </div>
+              <Toggle label={toggleLabel("/icons/ruler.svg", "Ruler")} checked={showRuler} onChange={setShowRuler} />
+              <div
+                aria-hidden="true"
+                style={{ height: 1, margin: "2px 0", background: "var(--ui-divider)" }}
+              />
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.04,
+                  textTransform: "uppercase",
+                  opacity: 0.55,
+                  padding: "0 2px",
+                }}
+              >
+                Color key
+              </div>
               <Toggle label={toggleLabel("/icons/glyphs.svg", "Symbols")} checked={showSymbols} onChange={setShowSymbols} />
-              <Toggle label={toggleLabel("/icons/moon.svg", "Dark mode")} checked={darkMode} onChange={onDarkModeChange} />
+              {symbolsLowZoom ? (
+                <div
+                  style={{
+                    marginTop: 2,
+                    paddingLeft: 2,
+                    maxWidth: "100%",
+                    fontSize: 10,
+                    lineHeight: 1.35,
+                    opacity: 0.62,
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  Note: Not visible at low zoom.
+                </div>
+              ) : null}
+              <div
+                aria-hidden="true"
+                style={{ height: 1, margin: "2px 0", background: "var(--ui-divider)" }}
+              />
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.04,
+                  textTransform: "uppercase",
+                  opacity: 0.55,
+                  padding: "0 2px",
+                }}
+              >
+                Render mode
+              </div>
+              <Toggle label={toggleLabel("/icons/thread.svg", "Thread view")} checked={threadView} onChange={setThreadView} />
             </div>
           </div>
         )}
+        {uiReady && !isCompact && settingsOpen && gridlineOptionsOpen && gridlineOptionsPosition && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                ref={gridlineOptionsPopoverRef}
+                aria-label="Gridline options"
+                style={{
+                  position: "fixed",
+                  left: gridlineOptionsPosition.left,
+                  top: gridlineOptionsPosition.top,
+                  zIndex: 62,
+                  background: "color-mix(in srgb, var(--card-bg) 96%, transparent)",
+                  border: "1px solid var(--ui-border-subtle)",
+                  borderRadius: 14,
+                  padding: "10px 12px",
+                  boxShadow: "0 12px 28px color-mix(in srgb, var(--foreground) 12%, transparent)",
+                  backdropFilter: "blur(10px)",
+                  display: "grid",
+                  gap: 10,
+                  width: 188,
+                  minWidth: 188,
+                  maxWidth: "calc(100vw - 32px)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 0.04,
+                    textTransform: "uppercase",
+                    opacity: 0.55,
+                    padding: "0 2px",
+                  }}
+                >
+                  Gridlines
+                </div>
+                <Toggle label="Show gridlines" checked={showGridlines} onChange={setShowGridlines} />
+                <Toggle label="Major lines" checked={showMajorGridlines} onChange={setShowMajorGridlines} />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    opacity: showGridlines && showMajorGridlines ? 1 : 0.45,
+                  }}
+                >
+                  <span style={{ fontSize: 12, opacity: 0.8 }}>Every</span>
+                  <select
+                    value={String(gridMajorInterval)}
+                    disabled={!showGridlines || !showMajorGridlines}
+                    onChange={(event) => {
+                      const next = Number(event.target.value);
+                      if (!Number.isFinite(next)) return;
+                      setGridMajorInterval?.(next);
+                    }}
+                    style={{
+                      width: 68,
+                      minWidth: 68,
+                      padding: "6px 24px 6px 8px",
+                      borderRadius: 10,
+                      border: "1px solid var(--ui-border-subtle)",
+                      background: "var(--card-bg)",
+                      color: "var(--foreground)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      lineHeight: 1.2,
+                      cursor: showGridlines && showMajorGridlines ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {[5, 10, 15, 20, 25, 50].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>,
+              document.body,
+            )
+          : null}
         <div style={{ opacity: uiReady ? 1 : 0, pointerEvents: uiReady ? "auto" : "none" }}>
           <GridCanvas
             width={width}
@@ -2348,6 +2625,8 @@ export function CanvasWithExportRef(props: any) {
             containerHeight={effectiveContainerHeight}
             showGridlines={showGridlines}
             showRuler={showRuler}
+            showMajorGridlines={showMajorGridlines}
+            gridMajorInterval={gridMajorInterval}
             tool={effectiveCanvasTool}
             brushSize={brushSize}
             lassoPoints={lassoPoints}

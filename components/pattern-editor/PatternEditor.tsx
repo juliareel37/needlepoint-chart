@@ -53,6 +53,22 @@ function debugTraceTransform(event: string, details?: Record<string, unknown>) {
   });
 }
 
+function FileMenuItemLabel({ icon, label }: { icon: string; label: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      <img
+        src={assetPath(icon)}
+        alt=""
+        aria-hidden="true"
+        width={14}
+        height={14}
+        style={{ display: "block", flexShrink: 0, filter: "var(--icon-on-bg-filter)" }}
+      />
+      <span style={{ minWidth: 0 }}>{label}</span>
+    </span>
+  );
+}
+
 export default function PatternEditor() {
   const router = useRouter();
   const clerk = useClerk();
@@ -240,6 +256,8 @@ export default function PatternEditor() {
   const maxZoom = isNarrow ? 12 : 8;
   const [showGridlines, setShowGridlines] = useState(true);
   const [showRuler, setShowRuler] = useState(true);
+  const [showMajorGridlines, setShowMajorGridlines] = useState(true);
+  const [gridMajorInterval, setGridMajorInterval] = useState(5);
   const [hasEditedSinceLoad, setHasEditedSinceLoad] = useState(false);
   const prevSignedInRef = useRef(isSignedIn);
   const [fitAfterResize, setFitAfterResize] = useState<{ w: number; h: number } | null>(null);
@@ -1755,13 +1773,17 @@ export default function PatternEditor() {
           createPortal(
             <div ref={fileMenuRef} style={{ position: "relative" }}>
               <button
+                className="file-menu-trigger"
                 type="button"
                 onClick={() => setFileMenuOpen((open) => !open)}
                 aria-expanded={fileMenuOpen}
                 aria-haspopup="menu"
                 aria-label={isCompact ? "More options" : "File"}
                 style={{
-                  padding: isCompact ? "6px 12px" : "8px 14px",
+                  ["--file-trigger-px" as "--file-trigger-px"]: isCompact ? "12px" : "14px",
+                  ["--file-trigger-py" as "--file-trigger-py"]: isCompact ? "6px" : "8px",
+                  ["--file-trigger-py-hover" as "--file-trigger-py-hover"]: isCompact ? "8px" : "10px",
+                  padding: "var(--file-trigger-py-current, var(--file-trigger-py)) var(--file-trigger-px)",
                   borderRadius: 8,
                   border: "none",
                   background: "var(--card-bg)",
@@ -1797,7 +1819,7 @@ export default function PatternEditor() {
                       top: "calc(100% + 6px)",
                       left: isCompact ? "auto" : 0,
                       right: isCompact ? 0 : "auto",
-                      minWidth: 160,
+                      minWidth: 220,
                       background: "var(--card-bg)",
                       border: "1px solid var(--ui-border-subtle)",
                       borderRadius: 10,
@@ -1899,6 +1921,129 @@ export default function PatternEditor() {
                       />
                     </>
                   )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      if (typeof window !== "undefined") {
+                        const nextUrl = new URL(window.location.href);
+                        nextUrl.searchParams.set("newWip", "1");
+                        window.open(nextUrl.toString(), "_blank", "noopener,noreferrer");
+                      } else {
+                        startNewWip();
+                      }
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <FileMenuItemLabel icon="/icons/draft_add.svg" label="Create new WIP" />
+                  </button>
+                  {/*
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      if (!isCompact) {
+                        setFileMenuOpen(false);
+                      }
+                      requestRename();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <FileMenuItemLabel icon="/icons/file.svg" label="Rename" />
+                  </button>
+                  */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      loadWip();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <FileMenuItemLabel icon="/icons/unarchive.svg" label="Load past WIP" />
+                  </button>
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      height: 1,
+                      margin: "2px 6px",
+                      background: "var(--ui-divider)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={darkMode}
+                    className="menu-item"
+                    onClick={() => setDarkMode((value) => !value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <img
+                        src={assetPath("/icons/moon.svg")}
+                        alt=""
+                        aria-hidden="true"
+                        width={14}
+                        height={14}
+                        style={{ display: "block", flexShrink: 0, filter: "var(--icon-on-bg-filter)" }}
+                      />
+                      <span style={{ minWidth: 0 }}>Theme</span>
+                    </span>
+                    <span style={{ opacity: 0.75 }}>{darkMode ? "Dark" : "Light"}</span>
+                  </button>
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      height: 1,
+                      margin: "2px 6px",
+                      background: "var(--ui-divider)",
+                    }}
+                  />
                   {isSignedIn && (
                     <button
                       type="button"
@@ -1919,68 +2064,43 @@ export default function PatternEditor() {
                         fontWeight: 600,
                       }}
                     >
-                      Saved{" "}
-                      {lastAutosaveAt
-                        ? `at ${lastAutosaveAt.toLocaleTimeString([], {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}`
-                        : ""}
-                    </button>
-                  )}
-                  {isCompact && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="menu-item"
-                      onClick={() => {
-                        setFileMenuOpen(false);
-                        openVersionHistory();
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "transparent",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      View version history
-                    </button>
-                  )}
-                  {isCompact && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="menu-item"
-                      disabled={!authLoaded}
-                      onClick={() => {
-                        setFileMenuOpen(false);
-                        if (isSignedIn) {
-                          void clerk.signOut();
-                          return;
+                      <FileMenuItemLabel
+                        icon="/icons/save.svg"
+                        label={
+                          `Saved${
+                            lastAutosaveAt
+                              ? ` at ${lastAutosaveAt.toLocaleTimeString([], {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })}`
+                              : ""
+                          }`
                         }
-                        router.push("/sign-in");
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "transparent",
-                        textAlign: "left",
-                        cursor: authLoaded ? "pointer" : "not-allowed",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        opacity: authLoaded ? 1 : 0.6,
-                      }}
-                    >
-                      {isSignedIn ? "Sign out" : "Sign in"}
+                      />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      openVersionHistory();
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "transparent",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <FileMenuItemLabel icon="/icons/backup.svg" label="Version history" />
+                  </button>
                   {isCompact && (
                     <>
                       <div
@@ -2155,40 +2275,6 @@ export default function PatternEditor() {
                             </span>
                             <span style={{ opacity: 0.75 }}>{showSymbols ? "On" : "Off"}</span>
                           </button>
-                          <button
-                            type="button"
-                            role="menuitemcheckbox"
-                            aria-checked={darkMode}
-                            className="menu-item"
-                            onClick={() => setDarkMode((value) => !value)}
-                            style={{
-                              padding: "6px 10px 6px 18px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: "transparent",
-                              textAlign: "left",
-                              cursor: "pointer",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 8,
-                            }}
-                          >
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              <img
-                                src={assetPath("/icons/moon.svg")}
-                                alt=""
-                                aria-hidden="true"
-                                width={12}
-                                height={12}
-                                style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                              />
-                              Dark mode
-                            </span>
-                            <span style={{ opacity: 0.75 }}>{darkMode ? "On" : "Off"}</span>
-                          </button>
                         </>
                       )}
                       <div
@@ -2199,102 +2285,38 @@ export default function PatternEditor() {
                           background: "var(--ui-divider)",
                         }}
                       />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="menu-item"
+                        disabled={!authLoaded}
+                        onClick={() => {
+                          setFileMenuOpen(false);
+                          if (isSignedIn) {
+                            void clerk.signOut();
+                            return;
+                          }
+                          router.push("/sign-in");
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "none",
+                          background: "transparent",
+                          textAlign: "left",
+                          cursor: authLoaded ? "pointer" : "not-allowed",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          opacity: authLoaded ? 1 : 0.6,
+                        }}
+                      >
+                        <FileMenuItemLabel
+                          icon={isSignedIn ? "/icons/unlock.svg" : "/icons/lock.svg"}
+                          label={isSignedIn ? "Sign out" : "Sign in"}
+                        />
+                      </button>
                     </>
                   )}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="menu-item"
-                    onClick={() => {
-                      setFileMenuOpen(false);
-                      if (typeof window !== "undefined") {
-                        const nextUrl = new URL(window.location.href);
-                        nextUrl.searchParams.set("newWip", "1");
-                        window.open(nextUrl.toString(), "_blank", "noopener,noreferrer");
-                      } else {
-                        startNewWip();
-                      }
-                    }}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    New WIP
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="menu-item"
-                    onClick={() => {
-                      setFileMenuOpen(false);
-                      loadWip();
-                    }}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Load WIP
-                  </button>
-                  {!isCompact && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="menu-item"
-                      onClick={() => {
-                        setFileMenuOpen(false);
-                        openVersionHistory();
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "transparent",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      View version history
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="menu-item"
-                    onClick={() => {
-                      if (!isCompact) {
-                        setFileMenuOpen(false);
-                      }
-                      requestRename();
-                    }}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Rename
-                  </button>
                   </div>
                 </>
               )}
@@ -3125,6 +3147,8 @@ export default function PatternEditor() {
               containerHeight={containerHeight}
               showGridlines={showGridlines}
               showRuler={showRuler}
+              showMajorGridlines={showMajorGridlines}
+              gridMajorInterval={gridMajorInterval}
               gridBackground="#ffffff"
               tool={tool}
               canvasTool={customPaletteEyedropperTargetId || actionTargetEyedropperMode ? "eyedropper" : tool}
@@ -3297,6 +3321,8 @@ export default function PatternEditor() {
               }}
               setShowGridlines={setShowGridlines}
               setShowRuler={setShowRuler}
+              setShowMajorGridlines={setShowMajorGridlines}
+              setGridMajorInterval={setGridMajorInterval}
               setThreadView={setThreadView}
               darkMode={darkMode}
               onDarkModeChange={setDarkMode}

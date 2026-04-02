@@ -60,6 +60,8 @@ type Props = {
   panMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
+  showMajorGridlines?: boolean;
+  gridMajorInterval?: number;
   tool: "none" | "paint" | "eraser" | "fill" | "eyedropper" | "lasso" | "mirror";
   brushSize: number;
   lassoPoints: { x: number; y: number }[];
@@ -130,6 +132,8 @@ export default function GridCanvas(props: Props) {
     panMode,
     showGridlines,
     showRuler,
+    showMajorGridlines = true,
+    gridMajorInterval = 5,
     tool,
     brushSize,
     lassoPoints,
@@ -634,6 +638,8 @@ export default function GridCanvas(props: Props) {
     zoom,
     showGridlines,
     showRuler,
+    showMajorGridlines,
+    gridMajorInterval,
     activeRulerLines,
     gridBackground,
   });
