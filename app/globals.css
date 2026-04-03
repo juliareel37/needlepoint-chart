@@ -7,8 +7,8 @@
   :root, :host {
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    --default-font-family: var(--font-ui);
-    --default-mono-font-family: var(--font-code);
+    --default-font-family: var(--font-primary);
+    --default-mono-font-family: var(--font-secondary);
   }
 }
 @layer base {
@@ -218,29 +218,72 @@
   }
 }
 :root {
-  --background: #f2dff7;
-  --foreground: #171717;
-  --card-bg: #ffffff;
-  --muted-bg: #e6e6e6;
-  --accent: #d08de3;
-  --accent-soft: #e1b6ed;
-  --accent-strong: #bf64d9;
-  --accent-wash: #f2dff7;
-  --surface-floating: rgba(255, 255, 255, 0.92);
-  --surface-elevated: rgba(255, 255, 255, 0.96);
+  /* Canonical semantic tokens */
+  --neutral-0: #ffffff;
+  --neutral-100: #f5f5f4;
+  --neutral-300: #d6d3d1;
+  --neutral-500: #78716c;
+  --neutral-700: #44403c;
+  --neutral-900: #1c1917;
+  /* Consolidated aliases */
+  --neutral-50: var(--neutral-100);
+  --neutral-200: var(--neutral-300);
+  --neutral-400: var(--neutral-500);
+  --neutral-600: var(--neutral-700);
+  --neutral-800: var(--neutral-900);
+  --surface-app: #f8f3fb;
+  --surface-card: var(--neutral-0);
+  --surface-brand-subtle: #e9d5f2;
+  --surface-neutral-subtle: var(--neutral-100);
+  --surface-neutral-raised: var(--neutral-50);
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-700);
+  --brand-primary: #c97edf;
+  --brand-primary-soft: #e1b6ed;
+  --brand-primary-strong: #a748c5;
+  --brand-primary-deep: #8b35ab;
+  --control-secondary-bg: #f1f3f6;
+  --status-success-soft: #e5f6ea;
+  --status-success-base: #4ea56b;
+  --status-success-strong: #2f7a49;
+  --status-warning-soft: #fff9d8;
+  --status-warning-base: #f4cd4d;
+  --status-warning-strong: #d6a61f;
+  --status-destructive-soft: #fbe2e0;
+  --status-destructive-base: #db6f67;
+  --status-destructive-strong: #bf4f48;
+  --status-destructive-deep: #9f3f39;
+
+  /* Legacy aliases (compatibility) */
+  --background: var(--surface-app);
+  --foreground: var(--text-primary);
+  --font-primary: ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --text-muted: var(--text-secondary);
+  --card-bg: var(--surface-card);
+  --muted-bg: var(--ui-surface-soft);
+  --accent: var(--brand-primary);
+  --accent-soft: var(--brand-primary-soft);
+  --accent-strong: var(--brand-primary-strong);
+  --accent-deep: var(--brand-primary-deep);
+  --accent-wash: var(--surface-brand-subtle);
+  --button-secondary-bg: var(--control-secondary-bg);
+  --surface-floating: var(--surface-neutral-raised);
+  --surface-elevated: var(--surface-neutral-raised);
   --canvas-surround-bg: #e2e2e2;
   --sidebar-bg: var(--card-bg);
   --canvas-toolbar-bg: var(--surface-floating);
   --icon-on-bg-filter: invert(0);
   --icon-on-fg-filter: invert(1);
   --panel-border: #d08de3;
-  --ui-border-subtle: rgba(15, 23, 42, 0.12);
-  --ui-border: rgba(15, 23, 42, 0.18);
-  --ui-border-strong: rgba(15, 23, 42, 0.2);
-  --ui-divider: rgba(15, 23, 42, 0.12);
-  --ui-surface-faint: rgba(15, 23, 42, 0.03);
-  --ui-surface-soft: rgba(15, 23, 42, 0.04);
-  --ui-hover-soft: rgba(15, 23, 42, 0.08);
+  --ui-border-subtle: var(--neutral-200);
+  --ui-border: var(--neutral-300);
+  --ui-border-strong: var(--neutral-400);
+  --ui-divider: var(--ui-border-subtle);
+  --ui-surface-faint: var(--surface-neutral-subtle);
+  --ui-surface-soft: var(--surface-neutral-subtle);
+  --ui-hover-grey-subtle: var(--neutral-100);
+  --ui-hover-soft: var(--neutral-200);
   --ui-tooltip-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
   --ui-shadow-sm: 0 1px 4px rgba(15, 23, 42, 0.12);
   --ui-shadow-md: 0 2px 6px rgba(15, 23, 42, 0.12);
@@ -254,29 +297,72 @@
   --slider-thumb-border: var(--accent);
 }
 :root[data-theme="dark"] {
-  --background: #0b0d10;
-  --foreground: rgba(255, 255, 255, 0.86);
-  --card-bg: #171b21;
-  --muted-bg: #252b34;
-  --accent: #a77bd8;
-  --accent-soft: #3f3354;
-  --accent-strong: #d2a7ff;
-  --accent-wash: #5c4172;
-  --surface-floating: rgba(23, 27, 33, 0.92);
-  --surface-elevated: rgba(23, 27, 33, 0.96);
+  /* Canonical semantic tokens */
+  --neutral-0: #ffffff;
+  --neutral-100: #f5f5f4;
+  --neutral-300: #d6d3d1;
+  --neutral-500: #78716c;
+  --neutral-700: #44403c;
+  --neutral-900: #1c1917;
+  /* Consolidated aliases */
+  --neutral-50: var(--neutral-100);
+  --neutral-200: var(--neutral-300);
+  --neutral-400: var(--neutral-500);
+  --neutral-600: var(--neutral-700);
+  --neutral-800: var(--neutral-900);
+  --surface-app: #141117;
+  --surface-card: var(--neutral-800);
+  --surface-brand-subtle: #4d3762;
+  --surface-neutral-subtle: var(--neutral-600);
+  --surface-neutral-raised: var(--neutral-600);
+  --text-primary: var(--neutral-0);
+  --text-secondary: var(--neutral-200);
+  --brand-primary: #9d6fd2;
+  --brand-primary-soft: #3f3354;
+  --brand-primary-strong: #b988e8;
+  --brand-primary-deep: #7b4ab3;
+  --control-secondary-bg: #f1f3f6;
+  --status-success-soft: #2b4735;
+  --status-success-base: #63ba84;
+  --status-success-strong: #8dd6aa;
+  --status-warning-soft: #5a4b12;
+  --status-warning-base: #f0c861;
+  --status-warning-strong: #ffd98f;
+  --status-destructive-soft: #5b302c;
+  --status-destructive-base: #d37b72;
+  --status-destructive-strong: #e8a199;
+  --status-destructive-deep: #b9655d;
+
+  /* Legacy aliases (compatibility) */
+  --background: var(--surface-app);
+  --foreground: var(--text-primary);
+  --font-primary: ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --text-muted: var(--text-secondary);
+  --card-bg: var(--surface-card);
+  --muted-bg: var(--ui-surface-soft);
+  --accent: var(--brand-primary);
+  --accent-soft: var(--brand-primary-soft);
+  --accent-strong: var(--brand-primary-strong);
+  --accent-deep: var(--brand-primary-deep);
+  --accent-wash: var(--surface-brand-subtle);
+  --button-secondary-bg: var(--control-secondary-bg);
+  --surface-floating: var(--surface-neutral-raised);
+  --surface-elevated: var(--surface-neutral-raised);
   --canvas-surround-bg: #181818;
   --sidebar-bg: #252b34;
   --canvas-toolbar-bg: #252b34;
   --icon-on-bg-filter: invert(1);
   --icon-on-fg-filter: invert(0);
   --panel-border: #414a58;
-  --ui-border-subtle: rgba(245, 247, 251, 0.16);
-  --ui-border: rgba(245, 247, 251, 0.24);
-  --ui-border-strong: rgba(245, 247, 251, 0.32);
-  --ui-divider: rgba(245, 247, 251, 0.18);
-  --ui-surface-faint: rgba(245, 247, 251, 0.04);
-  --ui-surface-soft: rgba(245, 247, 251, 0.08);
-  --ui-hover-soft: rgba(245, 247, 251, 0.12);
+  --ui-border-subtle: var(--neutral-500);
+  --ui-border: var(--neutral-400);
+  --ui-border-strong: var(--neutral-300);
+  --ui-divider: var(--ui-border-subtle);
+  --ui-surface-faint: var(--surface-neutral-subtle);
+  --ui-surface-soft: var(--surface-neutral-subtle);
+  --ui-hover-grey-subtle: var(--neutral-600);
+  --ui-hover-soft: var(--neutral-500);
   --ui-tooltip-shadow: none;
   --ui-shadow-sm: none;
   --ui-shadow-md: none;
@@ -294,9 +380,11 @@
 }
 html,
 body {
+  --font-primary: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-ui), ui-sans-serif, system-ui;
+  font-family: var(--font-primary);
   min-height: 100%;
   margin: 0;
   height: 100%;
