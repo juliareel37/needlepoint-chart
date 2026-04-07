@@ -53,17 +53,19 @@ function debugTraceTransform(event: string, details?: Record<string, unknown>) {
   });
 }
 
-function FileMenuItemLabel({ icon, label }: { icon: string; label: string }) {
+function FileMenuItemLabel({ icon, label }: { icon?: string; label: string }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-      <img
-        src={assetPath(icon)}
-        alt=""
-        aria-hidden="true"
-        width={14}
-        height={14}
-        style={{ display: "block", flexShrink: 0, filter: "var(--icon-on-bg-filter)" }}
-      />
+      {icon ? (
+        <img
+          src={assetPath(icon)}
+          alt=""
+          aria-hidden="true"
+          width={14}
+          height={14}
+          style={{ display: "block", flexShrink: 0, filter: "var(--icon-on-bg-filter)" }}
+        />
+      ) : null}
       <span style={{ minWidth: 0 }}>{label}</span>
     </span>
   );
@@ -2310,10 +2312,7 @@ export default function PatternEditor() {
                           opacity: authLoaded ? 1 : 0.6,
                         }}
                       >
-                        <FileMenuItemLabel
-                          icon={isSignedIn ? "/icons/unlock.svg" : "/icons/lock.svg"}
-                          label={isSignedIn ? "Sign out" : "Sign in"}
-                        />
+                        <FileMenuItemLabel label={isSignedIn ? "Sign out" : "Sign in"} />
                       </button>
                     </>
                   )}

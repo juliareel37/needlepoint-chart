@@ -937,19 +937,8 @@ function UsedColorsSectionComponent({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 4,
                 }}
               >
-                <span className="toolbar-icon" aria-hidden="true" style={{ width: 16, height: 16, display: "grid", placeItems: "center" }}>
-                  <img
-                    src={assetPath("/icons/selection.svg")}
-                    alt=""
-                    aria-hidden="true"
-                    width={12}
-                    height={12}
-                    style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
-                  />
-                </span>
                 <span className="toolbar-label" style={{ fontSize: 11, lineHeight: 1.1 }}>
                   Selection
                 </span>

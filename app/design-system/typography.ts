@@ -1,84 +1,87 @@
 import type { CSSProperties } from "react";
 
-export type DesignTypeToken =
-  | "text2xs"
-  | "textXs"
-  | "textSm"
-  | "textMd"
-  | "textLg"
-  | "textXl";
+export type DesignTypeToken = "h1" | "h2" | "h3" | "h4" | "h5" | "p1" | "p2" | "s";
 
 type TypographySpec = {
   label: string;
   size: number;
   lineHeight: number;
-  weight: 400 | 500 | 700;
+  weight: 400 | 700;
   usage: string;
   sample: string;
 };
 
-export const typographyOrder: DesignTypeToken[] = [
-  "text2xs",
-  "textXs",
-  "textSm",
-  "textMd",
-  "textLg",
-  "textXl",
-];
+export const typographyOrder: DesignTypeToken[] = ["h1", "h2", "h3", "h4", "h5", "p1", "p2", "s"];
 
 export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
-  text2xs: {
-    label: "text-2xs",
+  h1: {
+    label: "h1",
+    size: 28,
+    lineHeight: 36,
+    weight: 700,
+    usage: "hero titles, page titles",
+    sample: "Header One",
+  },
+  h2: {
+    label: "h2",
+    size: 22,
+    lineHeight: 30,
+    weight: 700,
+    usage: "section titles, major dialogs",
+    sample: "Header Two",
+  },
+  h3: {
+    label: "h3",
+    size: 18,
+    lineHeight: 24,
+    weight: 700,
+    usage: "subsection titles",
+    sample: "Header Three",
+  },
+  h4: {
+    label: "h4",
+    size: 15,
+    lineHeight: 20,
+    weight: 700,
+    usage: "minor headings, card titles",
+    sample: "Header Four",
+  },
+  h5: {
+    label: "h5",
+    size: 13,
+    lineHeight: 18,
+    weight: 700,
+    usage: "compact emphasis headings, alert titles",
+    sample: "Header Five",
+  },
+  p1: {
+    label: "p1",
+    size: 14,
+    lineHeight: 20,
+    weight: 400,
+    usage: "primary body copy",
+    sample: "Primary body copy",
+  },
+  p2: {
+    label: "p2",
+    size: 12,
+    lineHeight: 18,
+    weight: 400,
+    usage: "secondary UI/body text",
+    sample: "Secondary body copy",
+  },
+  s: {
+    label: "s",
     size: 10,
     lineHeight: 14,
     weight: 400,
-    usage: "micro labels, rulers",
-    sample: "Micro label",
-  },
-  textXs: {
-    label: "text-xs",
-    size: 11,
-    lineHeight: 16,
-    weight: 400,
-    usage: "dense controls",
-    sample: "Dense control text",
-  },
-  textSm: {
-    label: "text-sm",
-    size: 12,
-    lineHeight: 16,
-    weight: 400,
-    usage: "default UI text",
-    sample: "Default UI text",
-  },
-  textMd: {
-    label: "text-md",
-    size: 13,
-    lineHeight: 18,
-    weight: 500,
-    usage: "slightly emphasized",
-    sample: "Slightly emphasized",
-  },
-  textLg: {
-    label: "text-lg",
-    size: 16,
-    lineHeight: 24,
-    weight: 500,
-    usage: "dialogs, headers",
-    sample: "Dialog and header text",
-  },
-  textXl: {
-    label: "text-xl",
-    size: 20,
-    lineHeight: 28,
-    weight: 700,
-    usage: "major modal titles",
-    sample: "Major modal title",
+    usage: "supporting labels, dense UI",
+    sample: "Support text",
   },
 };
 
 export const typographyStyles = Object.fromEntries(
-  typographyOrder.map((token) => {
+  (Object.keys(typographySpecs) as DesignTypeToken[]).map((token) => {
     const spec = typographySpecs[token];
     return [
       token,
