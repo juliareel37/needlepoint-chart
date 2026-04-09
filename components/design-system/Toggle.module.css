@@ -1,0 +1,49 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+}
+
+.label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  color: var(--text-primary);
+}
+
+.toggle {
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px;
+  border: none;
+  border-radius: 999px;
+  background: var(--neutral-300);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.toggle[data-checked="true"] {
+  justify-content: flex-end;
+  background: var(--brand-primary);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--brand-primary-strong);
+  outline-offset: 2px;
+}
+
+.knob {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--toggle-knob);
+  transition: background-color 150ms ease;
+}

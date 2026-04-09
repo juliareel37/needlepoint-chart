@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
+import { SaveSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
@@ -34,8 +35,8 @@ function hashDraft(draft: DraftPayload) {
 
 type SaveSourceInput = "manual" | "autosave";
 
-function toPrismaSaveSource(value: SaveSourceInput | undefined) {
-  return value === "autosave" ? "AUTOSAVE" : "MANUAL";
+function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
+  return value === "autosave" ? SaveSource.AUTOSAVE : SaveSource.MANUAL;
 }
 
 function isUnknownPrismaArgumentError(error: unknown, argumentName: string) {

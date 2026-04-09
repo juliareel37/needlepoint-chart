@@ -1,0 +1,53 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--text-secondary);
+}
+
+.hint {
+  color: var(--text-secondary);
+}
+
+.control {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border-subtle);
+  background: var(--surface-card);
+  box-shadow: var(--ui-shadow-sm);
+  color: var(--foreground);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.control::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.72;
+}
+
+.control:hover {
+  border-color: var(--brand-primary);
+}
+
+.control:focus {
+  outline: none;
+}
+
+.control:focus-visible,
+.control:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--surface-brand-subtle);
+}
+
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,821 @@
+/* eslint-disable @next/next/no-img-element */
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  typographyOrder,
+  typographySpecs,
+  typographyStyles,
+  type DesignTypeToken,
+} from "@/app/design-system/typography";
+import {
+  Button,
+  Checkbox,
+  Field,
+  FieldInput,
+  MenuChevronIcon,
+  MenuItem,
+  MenuSurface,
+  MenuTrailingCheck,
+  MenuTrigger,
+  Slider,
+  Toggle,
+  Toolbar,
+  ToolbarAnchor,
+  ToolbarButton,
+  ToolbarDivider,
+  ToolbarGroup,
+  ToolbarIcon,
+  ToolbarLabel,
+  ToolbarMeta,
+  ToolbarPopover,
+  ToolbarSubtoolGroup,
+  ToolbarSwatch,
+  VerticalTabGroup,
+} from "@/components/design-system";
+import styles from "./editor-v2-design-system.module.css";
+
+const railItems = [
+  { id: "document", label: "Document", icon: "/icons/file.svg" },
+  { id: "color", label: "Color", icon: "/icons/grid_view.svg" },
+  { id: "trace", label: "Trace", icon: "/icons/photo.svg" },
+];
+
+const savedDesigns = [
+  { id: "sunset_12x18", label: "Sunset Study (12x18)" },
+  { id: "flora_24x24", label: "Flora Tiles (24x24)" },
+  { id: "portrait_32x40", label: "Portrait Draft (32x40)" },
+  { id: "bird_18x18", label: "Bird Sampler (18x18)" },
+  { id: "alpha_10x10", label: "Alphabet Block (10x10)" },
+  { id: "garden_28x20", label: "Garden Border (28x20)" },
+];
+
+const paletteGroups = [
+  {
+    title: "Neutrals",
+    tokens: [
+      { name: "neutral-0", cssVar: "--neutral-0" },
+      { name: "neutral-100", cssVar: "--neutral-100" },
+      { name: "neutral-200", cssVar: "--neutral-200" },
+      { name: "neutral-300", cssVar: "--neutral-300" },
+      { name: "neutral-500", cssVar: "--neutral-500" },
+      { name: "neutral-700", cssVar: "--neutral-700" },
+      { name: "neutral-900", cssVar: "--neutral-900" },
+    ],
+  },
+  {
+    title: "Brand",
+    tokens: [
+      { name: "surface-app", cssVar: "--surface-app" },
+      { name: "surface-card", cssVar: "--surface-card" },
+      { name: "brand-primary", cssVar: "--brand-primary" },
+      { name: "brand-primary-strong", cssVar: "--brand-primary-strong" },
+      { name: "brand-primary-deep", cssVar: "--brand-primary-deep" },
+      { name: "surface-brand-subtle", cssVar: "--surface-brand-subtle" },
+    ],
+  },
+  {
+    title: "UI",
+    tokens: [
+      { name: "ui-border-subtle", cssVar: "--ui-border-subtle" },
+      { name: "ui-divider", cssVar: "--ui-divider" },
+      { name: "text-primary", cssVar: "--text-primary" },
+      { name: "text-secondary", cssVar: "--text-secondary" },
+    ],
+  },
+];
+
+export function EditorV2DesignSystemPage() {
+  return (
+    <main className={styles.page}>
+      <div className={styles.stack}>
+        <header className={styles.hero}>
+          <div className={styles.heroTopRow}>
+            <Link href="/editor-v2" className={styles.tempLink}>
+              Back to editor
+            </Link>
+          </div>
+          <h1 className={styles.heroTitle} style={typographyStyles.h2}>
+            Editor V2 Design System
+          </h1>
+          <p className={styles.heroBody} style={typographyStyles.p2}>
+            A focused reference for editor-specific chrome and interaction patterns.
+            Use this page for shell, panel, rail, and toolbar decisions that would
+            otherwise clutter the global design system page.
+          </p>
+        </header>
+
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Palette
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              Editor-facing color tokens used for surfaces, states, and chrome.
+            </p>
+          </div>
+          <PaletteDemo />
+        </section>
+
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Typography
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              The working type scale for editor surfaces and dense UI.
+            </p>
+          </div>
+          <TypographyDemo />
+        </section>
+
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Controls
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              Buttons and controls as they should be used in editor chrome and side panels.
+            </p>
+          </div>
+          <ControlsDemo />
+        </section>
+
+        <div className={styles.grid}>
+          <section className={styles.sectionCard}>
+            <div>
+              <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+                Rail Navigation
+              </h2>
+              <p className={styles.sectionBody} style={typographyStyles.p2}>
+                Persistent editor rail using the shared vertical tab item treatment.
+              </p>
+            </div>
+            <RailDemo />
+          </section>
+
+          <section className={styles.sectionCard}>
+            <div>
+              <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+                Side Panel
+              </h2>
+              <p className={styles.sectionBody} style={typographyStyles.p2}>
+                Panel header, primary actions, and saved-design single-select pattern.
+              </p>
+            </div>
+            <SidePanelDemo />
+          </section>
+        </div>
+
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Toolbars
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              Editor main toolbar and zoom toolbar as they should appear within the stage.
+            </p>
+          </div>
+          <ToolbarDemoBlock />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function PaletteDemo() {
+  return (
+    <div className={styles.paletteGrid}>
+      {paletteGroups.map((group) => (
+        <div key={group.title} className={styles.tokenGroup}>
+          <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+            {group.title}
+          </h3>
+          <div className={styles.tokenStack}>
+            {group.tokens.map((token) => (
+              <div key={token.cssVar} className={styles.tokenRow}>
+                <span
+                  className={styles.tokenSwatch}
+                  style={{ background: `var(${token.cssVar})` }}
+                />
+                <div className={styles.tokenMeta}>
+                  <span style={typographyStyles.p2}>{token.name}</span>
+                  <span className={styles.muted} style={typographyStyles.s}>
+                    {token.cssVar}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TypographyDemo() {
+  return (
+    <div className={styles.typeStack}>
+      {typographyOrder.map((token) => {
+        const spec = typographySpecs[token];
+        return (
+          <div key={token} className={styles.typeRow}>
+            <div className={styles.typeMeta}>
+              <span style={typographyStyles.h5}>{token}</span>
+              <span className={styles.muted} style={typographyStyles.s}>
+                {spec.size}/{spec.lineHeight} {spec.weight}
+              </span>
+            </div>
+            <div className={styles.typeSample}>
+              <span style={typographyStyles[token as DesignTypeToken]}>
+                {spec.sample}
+              </span>
+              <span className={styles.muted} style={typographyStyles.s}>
+                {spec.usage}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ControlsDemo() {
+  const [checked, setChecked] = useState(true);
+  const [traceVisible, setTraceVisible] = useState(true);
+  const [opacity, setOpacity] = useState(68);
+  const [gridSpacing, setGridSpacing] = useState(32);
+  const [zoom, setZoom] = useState(56);
+  const [traceScale, setTraceScale] = useState(125);
+
+  return (
+    <div className={styles.controlsGrid}>
+      <div className={styles.controlSection}>
+        <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+          Buttons
+        </h3>
+        <div className={styles.controlStack}>
+          <div className={styles.actionRow}>
+            <Button type="button" variant="primary">
+              Primary
+            </Button>
+            <Button type="button" variant="secondary">
+              Secondary
+            </Button>
+            <Button type="button" variant="tertiary">
+              Tertiary
+            </Button>
+            <Button type="button" variant="ghostV2">
+              Ghost v2
+            </Button>
+          </div>
+          <div className={styles.actionRow}>
+            <Button type="button" variant="primary" size="sm">
+              Small
+            </Button>
+            <Button type="button" variant="ghostV2" size="md" active>
+              Active ghost v2
+            </Button>
+            <Button type="button" variant="secondary" size="lg">
+              Large
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.controlSection}>
+        <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+          Checkboxes
+        </h3>
+        <div className={styles.controlStack}>
+          <label className={styles.checkboxRow}>
+            <Checkbox
+              checked={checked}
+              onChange={(event) => setChecked(event.target.checked)}
+            />
+            <span style={typographyStyles.p2}>Show grid lines</span>
+          </label>
+          <label className={styles.checkboxRow}>
+            <Checkbox checked={false} onChange={() => undefined} />
+            <span style={typographyStyles.p2}>Include symbols</span>
+          </label>
+        </div>
+      </div>
+
+      <div className={styles.controlSection}>
+        <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+          Toggles
+        </h3>
+        <div className={styles.controlStack}>
+          <Toggle
+            aria-label="Show trace"
+            checked={traceVisible}
+            label="Show trace"
+            onChange={setTraceVisible}
+          />
+        </div>
+      </div>
+
+      <div className={styles.controlSection}>
+        <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+          Sliders
+        </h3>
+        <SliderLibraryDemo
+          gridSpacing={gridSpacing}
+          opacity={opacity}
+          setGridSpacing={setGridSpacing}
+          setOpacity={setOpacity}
+          setTraceScale={setTraceScale}
+          setZoom={setZoom}
+          traceScale={traceScale}
+          zoom={zoom}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SliderLibraryDemo({
+  gridSpacing,
+  opacity,
+  setGridSpacing,
+  setOpacity,
+  setTraceScale,
+  setZoom,
+  traceScale,
+  zoom,
+}: {
+  gridSpacing: number;
+  opacity: number;
+  setGridSpacing: (value: number) => void;
+  setOpacity: (value: number) => void;
+  setTraceScale: (value: number) => void;
+  setZoom: (value: number) => void;
+  traceScale: number;
+  zoom: number;
+}) {
+  return (
+    <div className={styles.sliderLibrary}>
+      <div className={styles.sliderExample}>
+        <Field label="Detached label + persistent readout">
+          <div className={styles.sliderControlRow}>
+            <Slider
+              className={styles.sliderFullWidth}
+              min="0"
+              max="100"
+              step="1"
+              value={opacity}
+              onChange={(event) => setOpacity(Number(event.target.value))}
+            />
+            <span className={styles.sliderValueReadout} style={typographyStyles.p2}>
+              {opacity}%
+            </span>
+          </div>
+        </Field>
+      </div>
+
+      <div className={styles.sliderExample}>
+        <div className={styles.sliderInlineRow}>
+          <span className={styles.sliderInlineLabel} style={typographyStyles.p2}>
+            Inline label
+          </span>
+          <Slider
+            className={styles.sliderFullWidth}
+            min="25"
+            max="200"
+            step="1"
+            value={zoom}
+            onChange={(event) => setZoom(Number(event.target.value))}
+          />
+          <span className={styles.sliderValueReadout} style={typographyStyles.p2}>
+            {zoom}%
+          </span>
+        </div>
+      </div>
+
+      <div className={styles.sliderExample}>
+        <Field label="Drag tooltip">
+          <SliderWithTooltip
+            ariaLabel="Grid spacing"
+            max={64}
+            min={8}
+            onChange={setGridSpacing}
+            step={1}
+            suffix="px"
+            value={gridSpacing}
+          />
+        </Field>
+      </div>
+
+      <div className={styles.sliderExample}>
+        <Field label="Linked editable input">
+          <div className={styles.sliderInputRow}>
+            <Slider
+              className={styles.sliderFullWidth}
+              min="50"
+              max="200"
+              step="5"
+              value={traceScale}
+              onChange={(event) => setTraceScale(Number(event.target.value))}
+            />
+            <FieldInput
+              type="text"
+              inputMode="numeric"
+              aria-label="Trace scale value"
+              className={styles.sliderValueInput}
+              value={traceScale}
+              onChange={(event) => {
+                const digitsOnly = event.target.value.replace(/\D/g, "");
+                if (digitsOnly === "") {
+                  setTraceScale(50);
+                  return;
+                }
+
+                const nextValue = Number(digitsOnly);
+                if (Number.isFinite(nextValue)) {
+                  setTraceScale(Math.max(50, Math.min(200, nextValue)));
+                }
+              }}
+            />
+          </div>
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+function SliderWithTooltip({
+  ariaLabel,
+  max,
+  min,
+  onChange,
+  step,
+  suffix = "",
+  value,
+}: {
+  ariaLabel: string;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  step: number;
+  suffix?: string;
+  value: number;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const percent = ((value - min) / (max - min)) * 100;
+  const tooltipLabel = `${value}${suffix}`;
+
+  useEffect(() => {
+    if (!showTooltip) {
+      return;
+    }
+
+    function handlePointerUp() {
+      setShowTooltip(false);
+    }
+
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [showTooltip]);
+
+  return (
+    <div className={styles.sliderTooltipWrap}>
+      <div
+        className={[
+          styles.sliderTooltip,
+          showTooltip ? styles.sliderTooltipVisible : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        aria-hidden="true"
+        style={{ left: `${percent}%` }}
+      >
+        {tooltipLabel}
+      </div>
+      <Slider
+        className={styles.sliderFullWidth}
+        min={String(min)}
+        max={String(max)}
+        step={String(step)}
+        value={value}
+        aria-label={ariaLabel}
+        onPointerDown={() => setShowTooltip(true)}
+        onBlur={() => setShowTooltip(false)}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </div>
+  );
+}
+
+function RailDemo() {
+  const [activeId, setActiveId] = useState("document");
+
+  return (
+    <div className={styles.railShell}>
+      <VerticalTabGroup
+        activeId={activeId}
+        ariaLabel="Editor sidebar navigation"
+        className={styles.railTabs}
+        items={railItems}
+        onChange={setActiveId}
+      />
+    </div>
+  );
+}
+
+function SidePanelDemo() {
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState("");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (!target || !rootRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  const selectedDesign = useMemo(
+    () => savedDesigns.find((item) => item.id === selectedId) ?? null,
+    [selectedId],
+  );
+
+  return (
+    <div className={styles.panelShell}>
+      <div className={styles.panelHeader}>
+        <h3 className={styles.panelTitle} style={typographyStyles.h4}>
+          Document
+        </h3>
+        <Button
+          type="button"
+          variant="ghostV2"
+          size="sm"
+          aria-label="Hide panel"
+          title="Hide panel"
+        >
+          <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="16" height="16" />
+        </Button>
+      </div>
+
+      <div className={styles.panelContent}>
+        <div className={styles.panelSection}>
+          <h4 className={styles.cardTitle} style={typographyStyles.h3}>
+            New Design
+          </h4>
+        </div>
+
+        <div className={styles.panelSection}>
+          <div className={styles.actionRow}>
+            <Button type="button" variant="secondary">
+              New design
+            </Button>
+            <Button type="button" variant="primary">
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className={styles.panelSection}>
+          <div ref={rootRef} className={styles.demoAnchor}>
+            <MenuTrigger
+              type="button"
+              variant="selection"
+              open={open}
+              aria-expanded={open}
+              aria-haspopup="menu"
+              aria-label="Saved designs"
+              onClick={() => setOpen((value) => !value)}
+              style={{ width: "100%", minWidth: 240, maxWidth: "100%" }}
+            >
+              <span>{selectedDesign ? selectedDesign.label : "Load saved design"}</span>
+              <MenuChevronIcon open={open} />
+            </MenuTrigger>
+
+            {open ? (
+              <MenuSurface
+                role="menu"
+                aria-label="Saved designs"
+                className={styles.menuSurface}
+              >
+                {savedDesigns.map((item) => {
+                  const active = item.id === selectedId;
+                  return (
+                    <MenuItem
+                      key={item.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      active={active}
+                      layout="trailing"
+                      trailing={<MenuTrailingCheck active={active} />}
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setOpen(false);
+                      }}
+                    >
+                      {item.label}
+                    </MenuItem>
+                  );
+                })}
+              </MenuSurface>
+            ) : null}
+          </div>
+
+          <Button type="button" variant="primary">
+            Load
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolbarDemoBlock() {
+  const [drawOpen, setDrawOpen] = useState(true);
+  const [imageOpen, setImageOpen] = useState(false);
+  const [selectOpen, setSelectOpen] = useState(false);
+  const [drawTool, setDrawTool] = useState<"paint" | "erase" | "none">("paint");
+
+  const drawActive = drawOpen || drawTool !== "none";
+
+  return (
+    <div className={styles.toolbarStage}>
+      <div className={styles.toolbarTop}>
+        <Toolbar>
+          <ToolbarGroup>
+            <ToolbarButton type="button" swatch aria-label="Active color">
+              <ToolbarSwatch color="#c97edf" />
+            </ToolbarButton>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarButton type="button" aria-label="Undo">
+              <ToolbarIcon icon="/icons/lucide/undo.svg" />
+            </ToolbarButton>
+            <ToolbarButton type="button" aria-label="Redo">
+              <ToolbarIcon icon="/icons/lucide/redo.svg" />
+            </ToolbarButton>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarAnchor>
+              <ToolbarButton
+                type="button"
+                active={drawActive}
+                onClick={() => {
+                  setDrawOpen((value) => !value);
+                  setImageOpen(false);
+                  setSelectOpen(false);
+                }}
+              >
+                <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
+                <ToolbarLabel>Draw</ToolbarLabel>
+              </ToolbarButton>
+
+              {drawOpen ? (
+                <ToolbarPopover role="dialog" aria-label="Draw tools">
+                  <ToolbarSubtoolGroup>
+                    <ToolbarButton type="button" disabled>
+                      <ToolbarIcon icon="/icons/lucide/ruler.svg" />
+                      <ToolbarLabel>Size</ToolbarLabel>
+                    </ToolbarButton>
+
+                    <ToolbarDivider />
+
+                    <ToolbarButton
+                      type="button"
+                      active={drawTool === "paint"}
+                      aria-label="Brush"
+                      title="Brush"
+                      onClick={() => {
+                        setDrawTool("paint");
+                        setDrawOpen(false);
+                      }}
+                    >
+                      <ToolbarIcon icon="/icons/lucide/brush_thin.svg" />
+                    </ToolbarButton>
+
+                    <ToolbarButton
+                      type="button"
+                      active={drawTool === "erase"}
+                      aria-label="Erase"
+                      title="Erase"
+                      onClick={() => {
+                        setDrawTool("erase");
+                        setDrawOpen(false);
+                      }}
+                    >
+                      <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                    </ToolbarButton>
+                  </ToolbarSubtoolGroup>
+                </ToolbarPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarAnchor>
+              <ToolbarButton
+                type="button"
+                active={selectOpen}
+                onClick={() => {
+                  setSelectOpen((value) => !value);
+                  setDrawOpen(false);
+                  setImageOpen(false);
+                }}
+              >
+                <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+                <ToolbarLabel>Select</ToolbarLabel>
+              </ToolbarButton>
+
+              {selectOpen ? (
+                <ToolbarPopover role="dialog" aria-label="Selection tools">
+                  <ToolbarSubtoolGroup>
+                    <ToolbarButton type="button">
+                      <ToolbarLabel>Fill</ToolbarLabel>
+                    </ToolbarButton>
+                    <ToolbarButton type="button" primary>
+                      <ToolbarLabel>Done</ToolbarLabel>
+                    </ToolbarButton>
+                  </ToolbarSubtoolGroup>
+                </ToolbarPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarAnchor>
+              <ToolbarButton
+                type="button"
+                active={imageOpen}
+                onClick={() => {
+                  setImageOpen((value) => !value);
+                  setDrawOpen(false);
+                  setSelectOpen(false);
+                }}
+              >
+                <ToolbarIcon icon="/icons/lucide/image.svg" />
+                <ToolbarLabel>Image</ToolbarLabel>
+              </ToolbarButton>
+
+              {imageOpen ? (
+                <ToolbarPopover role="dialog" aria-label="Image tools" subtoolbar>
+                  <ToolbarSubtoolGroup>
+                    <ToolbarButton type="button">
+                      <ToolbarIcon icon="/icons/lucide/eye.svg" />
+                      <ToolbarLabel>Visible</ToolbarLabel>
+                    </ToolbarButton>
+                    <ToolbarButton type="button">
+                      <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                      <ToolbarLabel>Crop</ToolbarLabel>
+                    </ToolbarButton>
+                  </ToolbarSubtoolGroup>
+                </ToolbarPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarButton type="button">
+              <ToolbarIcon icon="/icons/lucide/trash.svg" />
+              <ToolbarLabel>Clear</ToolbarLabel>
+            </ToolbarButton>
+          </ToolbarGroup>
+        </Toolbar>
+      </div>
+
+      <div className={styles.toolbarBottomRight}>
+        <Toolbar>
+          <ToolbarGroup>
+            <ToolbarButton type="button">
+              <ToolbarLabel style={typographyStyles.h2}>-</ToolbarLabel>
+            </ToolbarButton>
+            <ToolbarMeta style={typographyStyles.p2}>
+              <strong>100%</strong>
+            </ToolbarMeta>
+            <ToolbarButton type="button">
+              <ToolbarLabel style={typographyStyles.h2}>+</ToolbarLabel>
+            </ToolbarButton>
+          </ToolbarGroup>
+        </Toolbar>
+      </div>
+    </div>
+  );
+}

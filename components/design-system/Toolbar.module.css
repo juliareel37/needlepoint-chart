@@ -1,0 +1,236 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 16px;
+  border: 1px solid var(--ui-border-subtle);
+  background: var(--neutral-0);
+  box-shadow: var(--ui-shadow-md);
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.groupActions {
+  gap: 12px;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.anchor {
+  position: relative;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--ui-border-subtle);
+  flex: 0 0 auto;
+}
+
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--neutral-900);
+  font-size: inherit;
+  line-height: inherit;
+  text-align: center;
+  cursor: pointer;
+  filter: none;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.buttonPrimary {
+  border-color: transparent;
+  background: var(--brand-primary);
+  color: var(--neutral-0);
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background: var(--brand-primary-strong);
+  color: var(--neutral-0);
+}
+
+.buttonWide {
+  padding-inline: 16px;
+}
+
+.buttonSwatch {
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.buttonSwatch:hover:not(:disabled),
+.buttonSwatch[data-active="true"] {
+  background: transparent !important;
+  color: inherit;
+  box-shadow: none !important;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+  filter: none !important;
+}
+
+.button[data-active="true"] {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+  filter: none !important;
+}
+
+.button[data-inert-active="true"] {
+  cursor: default;
+}
+
+.button[data-inert-active="true"]:hover:not(:disabled) {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--brand-primary-strong);
+  outline-offset: 1px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.glyph {
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  display: block;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--ui-shadow-md);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.popover .button:not(.buttonPrimary):hover:not(:disabled) {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+  box-shadow: none !important;
+}
+
+.popover .button[data-inert-active="true"]:hover:not(:disabled) {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+  box-shadow: none !important;
+}
+
+.popover .button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 8px;
+  border-radius: 12px;
+  font-size: inherit;
+  line-height: inherit;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+.popover .button[data-active="true"] {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+  box-shadow: none !important;
+}
+
+.popover .buttonPrimary:hover:not(:disabled) {
+  background: var(--brand-primary-strong);
+  color: var(--neutral-0);
+  box-shadow: none !important;
+}
+
+.popover .divider {
+  margin-inline: 4px;
+}
+
+.popoverSubtoolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-inline: 10px;
+}
+
+.subtoolGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -1793,7 +1794,7 @@ export default function PatternEditor() {
                   fontWeight: 600,
                   cursor: "pointer",
                   lineHeight: 1,
-                }}
+                } as CSSProperties}
               >
                 {isCompact ? "⋯" : "File"}
               </button>

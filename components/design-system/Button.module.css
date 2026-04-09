@@ -1,0 +1,124 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  filter: none;
+  transform: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--brand-primary-strong);
+  outline-offset: 1px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button[data-inert-active="true"] {
+  cursor: default;
+}
+
+.button[data-inert-active="true"]:hover:not(:disabled) {
+  background: inherit;
+  color: inherit;
+  box-shadow: none;
+  filter: none !important;
+}
+
+.sm {
+  min-height: 24px;
+}
+
+.md {
+  min-height: 32px;
+}
+
+.lg {
+  min-height: 40px;
+}
+
+.primary {
+  border: none;
+  background: var(--brand-primary);
+  color: var(--neutral-0);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--brand-primary-strong);
+}
+
+.primary[data-active="true"] {
+  background: var(--brand-primary-deep);
+}
+
+.secondary {
+  border: 1px solid var(--brand-primary-strong);
+  background: transparent;
+  color: var(--brand-primary-strong);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--surface-app);
+}
+
+.secondary[data-active="true"] {
+  background: var(--brand-primary-deep);
+  color: var(--neutral-0);
+  border-color: var(--brand-primary-deep);
+}
+
+.tertiary {
+  border: 1px solid var(--neutral-500);
+  background: transparent;
+  color: var(--neutral-700);
+}
+
+.tertiary:hover:not(:disabled) {
+  background: var(--neutral-100);
+  border-color: var(--neutral-700);
+}
+
+.tertiary[data-active="true"] {
+  border-color: transparent;
+  background: var(--neutral-200);
+}
+
+.ghost {
+  border: none;
+  background: transparent;
+  color: var(--neutral-900);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--neutral-100);
+}
+
+.ghost[data-active="true"] {
+  background: var(--neutral-200);
+}
+
+.ghostV2 {
+  border: none;
+  background: transparent;
+  color: var(--neutral-900);
+}
+
+.ghostV2:hover:not(:disabled) {
+  background: var(--neutral-100);
+}
+
+.ghostV2[data-inert-active="true"]:hover:not(:disabled) {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+}
+
+.ghostV2[data-active="true"] {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+}

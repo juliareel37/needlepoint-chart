@@ -9,6 +9,10 @@ const primaryTools = [
   { id: "pan", label: "Pan", icon: "icons/lucide/pan.svg" },
 ] as const;
 
+const utilityTools = [
+  { id: "pick", label: "Pick color", icon: "icons/lucide/dropper.svg" },
+] as const;
+
 const paintSubtools = [
   { id: "brush", label: "Brush", icon: "icons/lucide/brush_thin.svg" },
   { id: "erase", label: "Erase", icon: "icons/lucide/eraser.svg" },
@@ -140,7 +144,11 @@ function ImagePositionToolbar({
 }
 
 export function ToolbarDemo() {
-  const [activeTool, setActiveTool] = useState<(typeof primaryTools)[number]["id"] | (typeof paintSubtools)[number]["id"]>("brush");
+  const [activeTool, setActiveTool] = useState<
+    | (typeof primaryTools)[number]["id"]
+    | (typeof utilityTools)[number]["id"]
+    | (typeof paintSubtools)[number]["id"]
+  >("brush");
   const [imageVisible, setImageVisible] = useState(true);
   const [imageToolsOpen, setImageToolsOpen] = useState(false);
   const [imageRepositionMode, setImageRepositionMode] = useState(false);
@@ -181,16 +189,19 @@ export function ToolbarDemo() {
       <span className="ds-toolbar-divider" aria-hidden="true" />
 
       <div className="ds-toolbar-group">
-        <button
-          type="button"
-          className="ds-toolbar-button"
-          data-active={activeTool === "pick" ? "true" : undefined}
-          aria-pressed={activeTool === "pick"}
-          aria-label="Pick color"
-          onClick={() => setActiveTool("pick")}
-        >
-          <ToolbarGlyph icon="icons/lucide/dropper.svg" />
-        </button>
+        {utilityTools.map((tool) => (
+          <button
+            key={tool.id}
+            type="button"
+            className="ds-toolbar-button"
+            data-active={activeTool === tool.id ? "true" : undefined}
+            aria-pressed={activeTool === tool.id}
+            aria-label={tool.label}
+            onClick={() => setActiveTool(tool.id)}
+          >
+            <ToolbarGlyph icon={tool.icon} />
+          </button>
+        ))}
 
         {primaryTools.map((tool) => {
           const selected = tool.id === activeTool;
