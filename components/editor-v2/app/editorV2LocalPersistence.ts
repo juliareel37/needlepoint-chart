@@ -3,6 +3,10 @@
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 
 const STORAGE_KEY = "editor-v2:saved-documents";
+const EMPTY_SAVED_DOCUMENTS: SavedEditorV2DocumentRecord[] = [];
+const savedDocumentsListeners = new Set<() => void>();
+let cachedRawSavedDocuments: string | null | undefined;
+let cachedSavedDocuments: SavedEditorV2DocumentRecord[] = [];
 
 export interface SavedEditorV2DocumentRecord {
   storageId: string;
@@ -18,40 +22,99 @@ export function listSavedEditorV2Documents(): SavedEditorV2DocumentRecord[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
 
+    if (raw === cachedRawSavedDocuments) {
+      return cachedSavedDocuments;
+    }
+
+    cachedRawSavedDocuments = raw;
+
     if (!raw) {
-      return [];
+      cachedSavedDocuments = [];
+      return cachedSavedDocuments;
     }
 
     const parsed = JSON.parse(raw) as unknown;
 
     if (!Array.isArray(parsed)) {
-      return [];
+      cachedSavedDocuments = [];
+      return cachedSavedDocuments;
     }
 
-    return parsed
+    cachedSavedDocuments = parsed
       .filter(isSavedEditorV2DocumentRecord)
       .sort((left, right) => right.savedAt.localeCompare(left.savedAt));
+    return cachedSavedDocuments;
   } catch {
-    return [];
+    cachedSavedDocuments = [];
+    return cachedSavedDocuments;
   }
+}
+
+export function getServerSavedEditorV2DocumentsSnapshot(): SavedEditorV2DocumentRecord[] {
+  return EMPTY_SAVED_DOCUMENTS;
+}
+
+export function subscribeToSavedEditorV2Documents(listener: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) {
+      listener();
+    }
+  };
+
+  savedDocumentsListeners.add(listener);
+  window.addEventListener("storage", handleStorage);
+
+  return () => {
+    savedDocumentsListeners.delete(listener);
+    window.removeEventListener("storage", handleStorage);
+  };
 }
 
 export function saveEditorV2Document(
   document: EditorDocumentState,
+  storageId?: string,
 ): SavedEditorV2DocumentRecord {
   const savedAt = new Date().toISOString();
-  const storageId = createStorageId();
+  const nextStorageId = storageId ?? createStorageId();
   const record: SavedEditorV2DocumentRecord = {
-    storageId,
+    storageId: nextStorageId,
     savedAt,
     document,
   };
   const existing = listSavedEditorV2Documents();
-  const nextRecords = [record, ...existing];
+  const existingWithoutCurrent = existing.filter(
+    (existingRecord) => existingRecord.storageId !== nextStorageId,
+  );
+  const nextRecords = [record, ...existingWithoutCurrent];
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRecords));
+  if (tryWriteSavedDocuments(nextRecords)) {
+    return record;
+  }
 
-  return record;
+  for (let keepCount = existingWithoutCurrent.length - 1; keepCount >= 0; keepCount -= 1) {
+    const trimmedRecords = [record, ...existingWithoutCurrent.slice(0, keepCount)];
+
+    if (tryWriteSavedDocuments(trimmedRecords)) {
+      return record;
+    }
+  }
+
+  const compactRecord: SavedEditorV2DocumentRecord = {
+    ...record,
+    document: createStorageSafeDocument(document),
+  };
+
+  if (tryWriteSavedDocuments([compactRecord])) {
+    return compactRecord;
+  }
+
+  throw new Error(
+    "Unable to save this design locally because browser storage is full.",
+  );
 }
 
 function createStorageId(): string {
@@ -73,4 +136,47 @@ function isSavedEditorV2DocumentRecord(
     !!candidate.document &&
     typeof candidate.document === "object"
   );
+}
+
+function tryWriteSavedDocuments(records: SavedEditorV2DocumentRecord[]): boolean {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    cachedRawSavedDocuments = undefined;
+    for (const listener of savedDocumentsListeners) {
+      listener();
+    }
+    return true;
+  } catch (error) {
+    if (isQuotaExceededError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "QuotaExceededError";
+}
+
+function createStorageSafeDocument(
+  document: EditorDocumentState,
+): EditorDocumentState {
+  const trace = document.trace;
+
+  if (!trace) {
+    return document;
+  }
+
+  if (
+    trace.assetUrl.startsWith("data:") ||
+    trace.assetUrl.startsWith("blob:")
+  ) {
+    return {
+      ...document,
+      trace: null,
+    };
+  }
+
+  return document;
 }

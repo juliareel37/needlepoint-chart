@@ -6,12 +6,14 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
     return command.kind === "tool.setActive";
   },
   handle(state, command) {
+    const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
+
     return {
       nextSession: {
         ...state.session,
         activeTool: {
           ...state.session.activeTool,
-          tool: command.payload.tool,
+          tool: nextTool,
           brushSize:
             command.payload.brushSize ?? state.session.activeTool.brushSize,
           colorId:

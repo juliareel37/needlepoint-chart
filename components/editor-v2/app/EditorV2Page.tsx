@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { EditorV2Providers } from "./EditorV2Providers";
@@ -10,22 +10,24 @@ import {
 } from "./EditorV2SetupScreen";
 import { EditorV2Workspace } from "./EditorV2Workspace";
 import {
+  getServerSavedEditorV2DocumentsSnapshot,
   listSavedEditorV2Documents,
   saveEditorV2Document,
-  type SavedEditorV2DocumentRecord,
+  subscribeToSavedEditorV2Documents,
 } from "./editorV2LocalPersistence";
 
 export function EditorV2Page() {
   const [draftWidth, setDraftWidth] = useState("8");
   const [draftHeight, setDraftHeight] = useState("8");
-  const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
+  const savedDocuments = useSyncExternalStore(
+    subscribeToSavedEditorV2Documents,
+    listSavedEditorV2Documents,
+    getServerSavedEditorV2DocumentsSnapshot,
+  );
   const [designConfig, setDesignConfig] = useState<EditorV2DesignConfig | null>(
     null,
   );
-
-  useEffect(() => {
-    setSavedDocuments(listSavedEditorV2Documents());
-  }, []);
+  const [currentStorageId, setCurrentStorageId] = useState("");
 
   const initialState = useMemo(() => {
     if (!designConfig) {
@@ -44,10 +46,16 @@ export function EditorV2Page() {
       <EditorV2SetupScreen
         draftHeight={draftHeight}
         draftWidth={draftWidth}
-        onCreateDesign={setDesignConfig}
+        onCreateDesign={(config) => {
+          setCurrentStorageId("");
+          setDesignConfig(config);
+        }}
         onDraftHeightChange={setDraftHeight}
         onDraftWidthChange={setDraftWidth}
-        onLoadSavedDesign={setDesignConfig}
+        onLoadSavedDesign={(config) => {
+          setCurrentStorageId(config.storageId);
+          setDesignConfig(config);
+        }}
         savedDocuments={savedDocuments}
       />
     );
@@ -59,19 +67,26 @@ export function EditorV2Page() {
       initialState={initialState}
     >
       <EditorV2Workspace
+        currentStorageId={currentStorageId}
         savedDocuments={savedDocuments}
-        onSaveDocument={(document) => {
-          saveEditorV2Document(document);
-          setSavedDocuments(listSavedEditorV2Documents());
+        onSaveDocument={(document, storageId) => {
+          const savedRecord = saveEditorV2Document(document, storageId);
+          setCurrentStorageId(savedRecord.storageId);
+          return savedRecord;
         }}
-        onLoadDocument={(record) =>
+        onLoadDocument={(record) => {
+          setCurrentStorageId(record.storageId);
           setDesignConfig({
             kind: "loaded",
             document: record.document,
+            storageId: record.storageId,
             instanceKey: `loaded_${record.storageId}_${Date.now()}`,
           })
-        }
-        onStartOver={() => setDesignConfig(null)}
+        }}
+        onStartOver={() => {
+          setCurrentStorageId("");
+          setDesignConfig(null);
+        }}
       />
     </EditorV2Providers>
   );

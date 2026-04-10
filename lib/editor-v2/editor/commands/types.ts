@@ -4,9 +4,8 @@ import type {
   GridPoint,
   PanelUiState,
   SelectionPoint,
-  TraceDocument,
-  ViewportState,
 } from "../store/state";
+import type { TraceUpdateChanges } from "../store/patches";
 
 export type EditorCommandSource =
   | "canvas"
@@ -72,7 +71,7 @@ export type EraseCellsCommand = BaseEditorCommand<
   { cells: GridPoint[] }
 >;
 
-export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", {}>;
+export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", object>;
 
 export type StartSelectionCommand = BaseEditorCommand<
   "selection.start",
@@ -89,24 +88,19 @@ export type CommitSelectionCommand = BaseEditorCommand<
   { point: SelectionPoint | null }
 >;
 
-export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", {}>;
+export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>;
 
 export type AttachTraceCommand = BaseEditorCommand<
   "trace.attach",
   { assetUrl: string }
 >;
 
-export type RemoveTraceCommand = BaseEditorCommand<"trace.remove", {}>;
+export type RemoveTraceCommand = BaseEditorCommand<"trace.remove", object>;
 
 export type UpdateTraceCommand = BaseEditorCommand<
   "trace.update",
   {
-    changes: Partial<
-      Pick<
-        TraceDocument,
-        "visible" | "blendMode" | "opacity" | "offsetX" | "offsetY" | "scale"
-      >
-    >;
+    changes: TraceUpdateChanges;
   }
 >;
 
@@ -150,8 +144,8 @@ export type SetRulerVisibleCommand = BaseEditorCommand<
   { visible: boolean }
 >;
 
-export type UndoCommand = BaseEditorCommand<"history.undo", {}>;
-export type RedoCommand = BaseEditorCommand<"history.redo", {}>;
+export type UndoCommand = BaseEditorCommand<"history.undo", object>;
+export type RedoCommand = BaseEditorCommand<"history.redo", object>;
 
 export type EditorCommand =
   | SetProjectTitleCommand

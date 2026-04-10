@@ -3,7 +3,7 @@
 import {
   createContext,
   useContext,
-  useRef,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -22,16 +22,14 @@ export function EditorStoreProvider({
   children: ReactNode;
   initialState: EditorStoreState;
 }) {
-  const storeRef = useRef<EditorStore | null>(null);
-
-  if (!storeRef.current) {
-    storeRef.current = createEditorStore({
+  const [store] = useState(() =>
+    createEditorStore({
       initialState,
-    });
-  }
+    }),
+  );
 
   return (
-    <EditorStoreContext.Provider value={storeRef.current}>
+    <EditorStoreContext.Provider value={store}>
       {children}
     </EditorStoreContext.Provider>
   );

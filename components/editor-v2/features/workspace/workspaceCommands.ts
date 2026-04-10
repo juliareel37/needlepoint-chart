@@ -3,12 +3,12 @@ import type {
   EditorCommandSource,
   HistoryPolicy,
 } from "@/lib/editor-v2/editor/commands";
+import type { TraceUpdateChanges } from "@/lib/editor-v2/editor/store/patches";
 import type {
   ActiveTool,
   EditorSidebarSection,
   GridPoint,
   SelectionPoint,
-  TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 
 export function createUndoCommand(): EditorCommand {
@@ -19,8 +19,29 @@ export function createRedoCommand(): EditorCommand {
   return createCommand("history.redo", {}, "toolbar", { mode: "skip" });
 }
 
+export function createSetProjectTitleCommand(title: string): EditorCommand {
+  return createCommand(
+    "project.setTitle",
+    { title },
+    "toolbar",
+    { mode: "push", label: "Rename Project" },
+  );
+}
+
 export function createSetToolCommand(tool: ActiveTool): EditorCommand {
   return createCommand("tool.setActive", { tool }, "toolbar", { mode: "skip" });
+}
+
+export function createSetBrushSizeCommand(
+  brushSize: number,
+  tool: ActiveTool,
+): EditorCommand {
+  return createCommand(
+    "tool.setActive",
+    { tool, brushSize },
+    "toolbar",
+    { mode: "skip" },
+  );
 }
 
 export function createSetActiveColorCommand(colorId: string): EditorCommand {
@@ -50,12 +71,15 @@ export function createPaintCellCommand(
 export function createPaintCellsCommand(
   colorId: string,
   cells: GridPoint[],
+  transactionKey?: string,
 ): EditorCommand {
   return createCommand(
     "grid.paint",
     { colorId, cells },
-    "toolbar",
-    { mode: "push", label: "Paint Selection" },
+    transactionKey ? "canvas" : "toolbar",
+    transactionKey
+      ? { mode: "merge", label: "Paint", transactionKey }
+      : { mode: "push", label: "Paint Selection" },
   );
 }
 
@@ -73,12 +97,17 @@ export function createEraseCellCommand(
   );
 }
 
-export function createEraseCellsCommand(cells: GridPoint[]): EditorCommand {
+export function createEraseCellsCommand(
+  cells: GridPoint[],
+  transactionKey?: string,
+): EditorCommand {
   return createCommand(
     "grid.erase",
     { cells },
-    "toolbar",
-    { mode: "push", label: "Erase Selection" },
+    transactionKey ? "canvas" : "toolbar",
+    transactionKey
+      ? { mode: "merge", label: "Erase", transactionKey }
+      : { mode: "push", label: "Erase Selection" },
   );
 }
 
@@ -147,18 +176,21 @@ export function createRemoveTraceCommand(): EditorCommand {
 }
 
 export function createUpdateTraceCommand(
-  changes: Partial<
-    Pick<
-      TraceDocument,
-      "visible" | "blendMode" | "opacity" | "offsetX" | "offsetY" | "scale"
-    >
-  >,
+  changes: TraceUpdateChanges,
+  options?: {
+    history?: HistoryPolicy;
+    source?: EditorCommandSource;
+    transactionKey?: string;
+  },
 ): EditorCommand {
   return createCommand(
     "trace.update",
     { changes },
-    "toolbar",
-    { mode: "push", label: "Update Trace" },
+    options?.source ?? "toolbar",
+    options?.history ??
+      (options?.transactionKey
+        ? { mode: "merge", label: "Update Trace", transactionKey: options.transactionKey }
+        : { mode: "push", label: "Update Trace" }),
   );
 }
 

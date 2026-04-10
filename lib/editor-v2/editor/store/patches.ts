@@ -10,6 +10,7 @@ export type DocumentPatch =
   | ResizeGridPatch
   | ReplaceColorPatch
   | UpsertTracePatch
+  | UpdateTracePatch
   | RemoveTracePatch
   | UpdateProjectMetadataPatch
   | UpsertTextEntityPatch
@@ -36,6 +37,24 @@ export interface ReplaceColorPatch {
 export interface UpsertTracePatch {
   type: "trace.upsert";
   trace: TraceDocument;
+}
+
+export type TraceUpdateChanges = Partial<
+  Pick<
+    TraceDocument,
+    | "visible"
+    | "blendMode"
+    | "opacity"
+    | "offsetX"
+    | "offsetY"
+    | "scale"
+    | "locked"
+  >
+>;
+
+export interface UpdateTracePatch {
+  type: "trace.update";
+  changes: TraceUpdateChanges;
 }
 
 export interface RemoveTracePatch {
@@ -75,9 +94,27 @@ function coalesceDocumentPatchesWithStrategy(
 ): DocumentPatch[] {
   const coalesced: DocumentPatch[] = [];
   let pendingGridPatch: ReplaceGridCellsPatch | null = null;
+  let pendingTracePatch: UpdateTracePatch | null = null;
+
+  const flushPendingPatches = () => {
+    if (pendingGridPatch) {
+      coalesced.push(pendingGridPatch);
+      pendingGridPatch = null;
+    }
+
+    if (pendingTracePatch) {
+      coalesced.push(pendingTracePatch);
+      pendingTracePatch = null;
+    }
+  };
 
   for (const patch of patches) {
     if (patch.type === "grid.replaceCells") {
+      if (pendingTracePatch) {
+        coalesced.push(pendingTracePatch);
+        pendingTracePatch = null;
+      }
+
       pendingGridPatch = pendingGridPatch
         ? mergeReplaceGridCellsPatches(pendingGridPatch, patch, strategy)
         : patch;
@@ -89,12 +126,22 @@ function coalesceDocumentPatchesWithStrategy(
       pendingGridPatch = null;
     }
 
+    if (patch.type === "trace.update") {
+      pendingTracePatch = pendingTracePatch
+        ? mergeUpdateTracePatches(pendingTracePatch, patch, strategy)
+        : patch;
+      continue;
+    }
+
+    if (pendingTracePatch) {
+      coalesced.push(pendingTracePatch);
+      pendingTracePatch = null;
+    }
+
     coalesced.push(patch);
   }
 
-  if (pendingGridPatch) {
-    coalesced.push(pendingGridPatch);
-  }
+  flushPendingPatches();
 
   return coalesced;
 }
@@ -124,5 +171,26 @@ function mergeReplaceGridCellsPatches(
       index,
       value,
     })),
+  };
+}
+
+function mergeUpdateTracePatches(
+  previous: UpdateTracePatch,
+  next: UpdateTracePatch,
+  strategy: "first-wins" | "last-wins",
+): UpdateTracePatch {
+  const changes: TraceUpdateChanges = { ...previous.changes };
+
+  for (const key of Object.keys(next.changes) as Array<keyof TraceUpdateChanges>) {
+    if (strategy === "first-wins" && key in changes) {
+      continue;
+    }
+
+    changes[key] = next.changes[key] as never;
+  }
+
+  return {
+    type: "trace.update",
+    changes,
   };
 }

@@ -50,7 +50,7 @@ export function createNewDesignState(
       ...state.session,
       activeTool: {
         ...state.session.activeTool,
-        tool: "none",
+        tool: "pan",
         colorId: "navy",
       },
     },

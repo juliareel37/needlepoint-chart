@@ -3,9 +3,22 @@ import {
   coalesceDocumentPatches,
   coalesceInverseDocumentPatches,
   type DocumentPatch,
+  type TraceUpdateChanges,
 } from "../store/patches";
-import type { EditorStoreState, HistoryEntry, HistoryState } from "../store/state";
+import type {
+  EditorStoreState,
+  HistoryEntry,
+  HistoryState,
+  TraceDocument,
+} from "../store/state";
 import type { EditorCommandExecution } from "../commands/handlers/types";
+
+const TRANSIENT_TRACE_FIELDS = [
+  "visible",
+  "blendMode",
+  "opacity",
+  "locked",
+] as const;
 
 export interface HistoryEngine {
   record(
@@ -53,6 +66,11 @@ export function createHistoryEngine(): HistoryEngine {
         return null;
       }
 
+      const patches = preserveTransientTraceState(
+        entry.inversePatches,
+        state.document.trace,
+      );
+
       return {
         nextSession: {
           ...state.session,
@@ -68,7 +86,7 @@ export function createHistoryEngine(): HistoryEngine {
           },
         },
         nextUi: state.ui,
-        patches: entry.inversePatches,
+        patches,
         inversePatches: [],
         effects: [],
         event: {
@@ -85,6 +103,11 @@ export function createHistoryEngine(): HistoryEngine {
         return null;
       }
 
+      const patches = preserveTransientTraceState(
+        entry.forwardPatches,
+        state.document.trace,
+      );
+
       return {
         nextSession: {
           ...state.session,
@@ -100,7 +123,7 @@ export function createHistoryEngine(): HistoryEngine {
           },
         },
         nextUi: state.ui,
-        patches: entry.forwardPatches,
+        patches,
         inversePatches: [],
         effects: [],
         event: {
@@ -110,6 +133,58 @@ export function createHistoryEngine(): HistoryEngine {
         },
       };
     },
+  };
+}
+
+function preserveTransientTraceState(
+  patches: DocumentPatch[],
+  currentTrace: TraceDocument | null,
+): DocumentPatch[] {
+  return patches.map((patch) => {
+    if (patch.type === "trace.upsert") {
+      return {
+        ...patch,
+        trace: {
+          ...patch.trace,
+          ...getPreservedTraceFields(currentTrace, patch.trace),
+        },
+      };
+    }
+
+    if (patch.type === "trace.update") {
+      const changes: TraceUpdateChanges = { ...patch.changes };
+
+      for (const field of TRANSIENT_TRACE_FIELDS) {
+        if (!(field in changes)) {
+          continue;
+        }
+
+        if (currentTrace) {
+          changes[field] = currentTrace[field] as never;
+        } else {
+          delete changes[field];
+        }
+      }
+
+      return {
+        ...patch,
+        changes,
+      };
+    }
+
+    return patch;
+  });
+}
+
+function getPreservedTraceFields(
+  currentTrace: TraceDocument | null,
+  fallbackTrace: TraceDocument,
+): Pick<TraceDocument, (typeof TRANSIENT_TRACE_FIELDS)[number]> {
+  return {
+    visible: currentTrace?.visible ?? true,
+    blendMode: currentTrace?.blendMode ?? fallbackTrace.blendMode,
+    opacity: currentTrace?.opacity ?? fallbackTrace.opacity,
+    locked: currentTrace?.locked ?? true,
   };
 }
 

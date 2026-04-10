@@ -52,6 +52,30 @@
   gap: 16px;
 }
 
+.feedbackGrid,
+.notificationGrid {
+  display: grid;
+  gap: 24px;
+}
+
+.feedbackGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.feedbackSection,
+.feedbackSectionHeader {
+  display: flex;
+  flex-direction: column;
+}
+
+.feedbackSection {
+  gap: 16px;
+}
+
+.feedbackSectionHeader {
+  gap: 4px;
+}
+
 .tokenGroup,
 .controlSection {
   display: flex;
@@ -65,6 +89,35 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.buttonMatrix {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.buttonMatrixHeaderCell {
+  color: var(--text-secondary);
+}
+
+.buttonMatrixLabel {
+  color: var(--text-secondary);
+}
+
+.buttonStateCell {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.buttonDemoHover {
+  pointer-events: none;
+}
+
+.buttonStaticState {
+  pointer-events: none;
 }
 
 .tokenRow,
@@ -88,6 +141,35 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.tokenTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tokenSourceBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.tokenSourceBadgeLiteral {
+  background: var(--surface-neutral-subtle);
+  border-color: var(--ui-border-subtle);
+  color: var(--text-secondary);
+}
+
+.tokenSourceBadgeAlias {
+  background: var(--surface-app);
+  border-color: var(--surface-brand-subtle);
+  color: var(--brand-primary-deep);
 }
 
 .typeMeta {
@@ -201,6 +283,213 @@
 
 .sliderTooltipVisible {
   opacity: 1;
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.modalDemo {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.modalStage {
+  position: relative;
+  min-height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface-card);
+  box-shadow: inset 0 0 0 1px var(--ui-border-subtle);
+}
+
+.modalScrim {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--surface-neutral-subtle);
+}
+
+.modalCard {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  width: min(100%, 360px);
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--surface-card);
+  box-shadow: var(--ui-shadow-lg);
+}
+
+.modalAlertBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--status-destructive-soft);
+}
+
+.modalAlertIcon {
+  width: 20px;
+  height: 20px;
+  background: var(--status-destructive-strong);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 12px;
+  padding-right: 24px;
+}
+
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.modalDescription {
+  color: var(--text-secondary);
+}
+
+.modalActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.modalActions > * {
+  min-width: 0;
+}
+
+.notificationGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.notificationStack {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.notificationStackFixed,
+.notificationStackCompact {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.notificationStackFixed {
+  max-width: 500px;
+}
+
+.notificationStackCompact {
+  max-width: 420px;
+}
+
+.notificationLabel {
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.notificationCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.notificationCardCompact {
+  align-items: center;
+}
+
+.notificationIconBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: inherit;
+}
+
+.notificationIcon {
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.notificationSymbol {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.notificationContent {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notificationTitle,
+.notificationDescription {
+  color: var(--text-secondary);
+}
+
+.notificationControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+.notificationClose {
+  align-self: center;
+  justify-self: end;
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.notificationCloseGhost {
+  color: var(--neutral-900);
 }
 
 .heroTitle,
@@ -336,7 +625,10 @@
   }
 
   .paletteGrid,
-  .controlsGrid {
+  .controlsGrid,
+  .feedbackGrid,
+  .notificationGrid,
+  .modalGrid {
     grid-template-columns: 1fr;
   }
 

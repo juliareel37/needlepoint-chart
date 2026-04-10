@@ -17,6 +17,11 @@ export function GridRulerOverlay({
   const fontSize = Math.max(8, Math.round(typographySpecs.s.size * rulerScale));
   const lineHeight = Math.max(10, Math.round(typographySpecs.s.lineHeight * rulerScale));
   const labelInset = Math.max(6, Math.round(fontSize * 0.75));
+  const renderedCellSize = metrics.cellSize * viewport.zoom;
+  const showSubdivisionTicks = axisStep > 1 && renderedCellSize < 8 && renderedCellSize >= 3;
+  const tickLength = Math.max(4, Math.round(fontSize * 0.45));
+  const tickThickness = 1;
+  const tickColor = "rgba(120, 113, 108, 0.45)";
 
   const columns = [];
   for (let x = axisStep; x <= metrics.width; x += axisStep) {
@@ -118,6 +123,94 @@ export function GridRulerOverlay({
           {row.label}
         </span>
       ))}
+
+      {showSubdivisionTicks
+        ? Array.from({ length: metrics.width - 1 }, (_, index) => index + 1)
+            .filter((value) => value % axisStep !== 0)
+            .map((value) => {
+              const position = viewport.offsetX + value * metrics.cellSize * viewport.zoom;
+              return (
+                <span
+                  key={`subdivision-top-${value}`}
+                  style={{
+                    position: "absolute",
+                    left: `${position}px`,
+                    top: `${viewport.offsetY}px`,
+                    width: `${tickThickness}px`,
+                    height: `${tickLength}px`,
+                    transform: "translateX(-50%) translateY(-100%)",
+                    background: tickColor,
+                  }}
+                />
+              );
+            })
+        : null}
+
+      {showSubdivisionTicks
+        ? Array.from({ length: metrics.width - 1 }, (_, index) => index + 1)
+            .filter((value) => value % axisStep !== 0)
+            .map((value) => {
+              const position = viewport.offsetX + value * metrics.cellSize * viewport.zoom;
+              return (
+                <span
+                  key={`subdivision-bottom-${value}`}
+                  style={{
+                    position: "absolute",
+                    left: `${position}px`,
+                    top: `${viewport.offsetY + metrics.surfaceHeight * viewport.zoom}px`,
+                    width: `${tickThickness}px`,
+                    height: `${tickLength}px`,
+                    transform: "translateX(-50%)",
+                    background: tickColor,
+                  }}
+                />
+              );
+            })
+        : null}
+
+      {showSubdivisionTicks
+        ? Array.from({ length: metrics.height - 1 }, (_, index) => index + 1)
+            .filter((value) => value % axisStep !== 0)
+            .map((value) => {
+              const position = viewport.offsetY + value * metrics.cellSize * viewport.zoom;
+              return (
+                <span
+                  key={`subdivision-left-${value}`}
+                  style={{
+                    position: "absolute",
+                    left: `${viewport.offsetX}px`,
+                    top: `${position}px`,
+                    width: `${tickLength}px`,
+                    height: `${tickThickness}px`,
+                    transform: "translateX(-100%) translateY(-50%)",
+                    background: tickColor,
+                  }}
+                />
+              );
+            })
+        : null}
+
+      {showSubdivisionTicks
+        ? Array.from({ length: metrics.height - 1 }, (_, index) => index + 1)
+            .filter((value) => value % axisStep !== 0)
+            .map((value) => {
+              const position = viewport.offsetY + value * metrics.cellSize * viewport.zoom;
+              return (
+                <span
+                  key={`subdivision-right-${value}`}
+                  style={{
+                    position: "absolute",
+                    left: `${viewport.offsetX + metrics.surfaceWidth * viewport.zoom}px`,
+                    top: `${position}px`,
+                    width: `${tickLength}px`,
+                    height: `${tickThickness}px`,
+                    transform: "translateY(-50%)",
+                    background: tickColor,
+                  }}
+                />
+              );
+            })
+        : null}
     </div>
   );
 }

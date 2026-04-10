@@ -91,6 +91,7 @@ export function EditorSidebar({
 
         {activeSection === "document" ? (
           <DocumentPanelPage
+            dispatch={dispatch}
             document={document}
             documentTitle={documentTitle}
             onLoadSelected={onLoadSelected}

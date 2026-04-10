@@ -17,6 +17,7 @@ interface GridCanvasStageProps {
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
   displayHost: HTMLElement | null;
+  displayOpacity?: number;
   frameOrigin: { x: number; y: number };
   getGridPointFromClient: (clientX: number, clientY: number) => GridPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
@@ -34,6 +35,7 @@ export function GridCanvasStage({
   cells,
   colorsById,
   displayHost,
+  displayOpacity = 1,
   frameOrigin,
   getGridPointFromClient,
   getSelectionPointFromClient,
@@ -285,6 +287,7 @@ export function GridCanvasStage({
                 position: "absolute",
                 inset: 0,
                 zIndex: 1,
+                opacity: displayOpacity,
                 pointerEvents: "none",
                 imageRendering: "pixelated",
               }}
@@ -414,14 +417,16 @@ function drawGridOverlay(
     zoom,
   } = options;
 
-  const majorLineColor = "rgba(65, 78, 96, 0.9)";
-  const minorLineColor = "rgba(126, 150, 178, 0.34)";
-  const highlightMajorColor = "rgba(255, 252, 245, 0.2)";
-  const highlightMinorColor = "rgba(248, 250, 252, 0.05)";
+  // Minor lines represent the physical mesh, so keep them neutral and quiet.
+  // Major lines are app-level helpers, so give them a subtle brand tint.
+  const majorLineColor = "rgba(179, 109, 200, 0.52)";
+  const minorLineColor = "rgba(120, 113, 108, 0.3)";
+  const highlightMajorColor = "rgba(252, 247, 255, 0.24)";
+  const highlightMinorColor = "rgba(255, 255, 255, 0.08)";
   const renderedCellSize = cellSize * zoom;
-  const shouldShowMinorLines = gridOverlayStep > 1 && renderedCellSize >= 10;
-  const minorLineWidth = 1;
-  const majorLineWidth = gridOverlayStep > 1 && renderedCellSize >= 18 ? 2 : 1;
+  const shouldShowMinorLines = gridOverlayStep > 1 && renderedCellSize >= 6;
+  const minorLineWidth = 1.25;
+  const majorLineWidth = gridOverlayStep > 1 && renderedCellSize >= 18 ? 2.5 : 1.5;
   const left = Math.round(drawX);
   const top = Math.round(drawY);
   const right = Math.round(drawX + drawWidth);

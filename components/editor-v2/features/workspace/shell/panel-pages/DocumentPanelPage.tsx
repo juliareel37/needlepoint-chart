@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Field,
+  FieldInput,
   MenuSurface,
   MenuItem,
   MenuTrailingCheck,
@@ -12,11 +13,13 @@ import {
   panelMutedTextStyle,
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
-import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
+import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2LocalPersistence";
+import { createSetProjectTitleCommand } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
 
 interface DocumentPanelPageProps {
+  dispatch: EditorStore["dispatch"];
   document: EditorDocumentState;
   documentTitle: string;
   onLoadSelected: () => void;
@@ -29,6 +32,7 @@ interface DocumentPanelPageProps {
 }
 
 export function DocumentPanelPage({
+  dispatch,
   document,
   documentTitle,
   onLoadSelected,
@@ -39,16 +43,95 @@ export function DocumentPanelPage({
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(documentTitle);
+  const commitOnBlurRef = useRef(true);
+
+  function cancelRename() {
+    setDraftTitle(documentTitle);
+    setIsRenaming(false);
+  }
+
+  function commitRename() {
+    const nextTitle = draftTitle.trim();
+    if (!nextTitle || nextTitle === documentTitle) {
+      cancelRename();
+      return;
+    }
+
+    dispatch(createSetProjectTitleCommand(nextTitle));
+    setIsRenaming(false);
+  }
+
+  function startRename() {
+    commitOnBlurRef.current = true;
+    setDraftTitle(documentTitle);
+    setIsRenaming(true);
+  }
+
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        <div className={styles.sidebarTitleBlock}>
-          <h1 className={styles.sidebarDocumentTitle} style={typographyStyles.h3}>
-            {documentTitle}
-          </h1>
-        </div>
-
         <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarTitleBlock}>
+            {isRenaming ? (
+              <div>
+                <FieldInput
+                  autoFocus
+                  value={draftTitle}
+                  style={{ padding: "8px 12px" }}
+                  onChange={(event) => setDraftTitle(event.target.value)}
+                  onBlur={() => {
+                    if (!commitOnBlurRef.current) {
+                      commitOnBlurRef.current = true;
+                      return;
+                    }
+
+                    commitRename();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitOnBlurRef.current = false;
+                      commitRename();
+                    }
+
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      commitOnBlurRef.current = false;
+                      cancelRename();
+                    }
+                  }}
+                  aria-label="Design name"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.editableTitleTrigger}
+                aria-label="Rename design"
+                title="Rename design"
+                onClick={startRename}
+              >
+                <div
+                  className={styles.sidebarDocumentTitle}
+                  style={{
+                    ...typographyStyles.h5,
+                  }}
+                >
+                  {documentTitle}
+                </div>
+                <span className={styles.titleHoverIcon} aria-hidden="true">
+                  <img
+                    src="/icons/lucide/pencil.svg"
+                    alt=""
+                    aria-hidden="true"
+                    style={{ width: 12, height: 12, display: "block" }}
+                  />
+                </span>
+              </button>
+            )}
+          </div>
           <div className={styles.panelRow}>
             <Button type="button" variant="secondary" onClick={onStartOver}>
               New design
@@ -69,6 +152,9 @@ export function DocumentPanelPage({
         </div>
 
         <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSubsectionHeader}>
+            <h3 style={typographyStyles.h5}>Saved designs</h3>
+          </div>
           <SavedDesignSingleSelect
             savedDocuments={savedDocuments}
             selectedStorageId={selectedStorageId}
@@ -120,7 +206,7 @@ function SavedDesignSingleSelect({
   );
 
   return (
-    <Field label="Saved designs">
+    <Field label="Choose a design">
       <div ref={rootRef} style={{ position: "relative", width: "fit-content", maxWidth: "100%" }}>
         <MenuTrigger
           type="button"

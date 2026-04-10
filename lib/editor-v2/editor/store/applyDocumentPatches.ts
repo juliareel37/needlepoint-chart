@@ -49,6 +49,18 @@ function applyDocumentPatch(
         ...document,
         trace: patch.trace,
       };
+    case "trace.update":
+      if (!document.trace) {
+        return document;
+      }
+
+      return {
+        ...document,
+        trace: {
+          ...document.trace,
+          ...patch.changes,
+        },
+      };
     case "trace.remove":
       return {
         ...document,

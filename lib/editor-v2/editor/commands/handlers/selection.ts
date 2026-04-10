@@ -95,7 +95,7 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
           state.session.activeTool.tool === "lasso"
             ? {
                 ...state.session.activeTool,
-                tool: "none",
+                tool: "pan",
               }
             : state.session.activeTool,
         selection: {

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { VerticalTabGroup } from "@/components/design-system";
 import type { EditorSidebarSection } from "@/lib/editor-v2/editor/store";
 import styles from "./EditorV2Shell.module.css";
@@ -25,10 +24,6 @@ export function EditorRail({
   return (
     <aside className={styles.rail} aria-label="Editor sections">
       <div className={styles.railSurface}>
-        <Link href="/editor-v2/design-system" className={styles.tempDsLink}>
-          V2 DS
-        </Link>
-
         <nav className={styles.railNav}>
           <VerticalTabGroup
             activeId={panelCollapsed ? "" : activeSection}

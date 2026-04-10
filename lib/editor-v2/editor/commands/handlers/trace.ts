@@ -1,4 +1,8 @@
-import type { RemoveTracePatch, UpsertTracePatch } from "../../store/patches";
+import type {
+  RemoveTracePatch,
+  TraceUpdateChanges,
+  UpsertTracePatch,
+} from "../../store/patches";
 import type { TraceDocument } from "../../store/state";
 import type { EditorCommandHandler } from "./types";
 import type {
@@ -60,16 +64,19 @@ export const updateTraceCommandHandler: EditorCommandHandler<UpdateTraceCommand>
       };
     }
 
-    const nextTrace: TraceDocument = {
-      ...currentTrace,
-      ...command.payload.changes,
-    };
-
     return {
       nextSession: buildNextSession(state.session),
       nextUi: state.ui,
-      patches: [{ type: "trace.upsert", trace: nextTrace }],
-      inversePatches: [{ type: "trace.upsert", trace: currentTrace }],
+      patches: [{ type: "trace.update", changes: command.payload.changes }],
+      inversePatches: [
+        {
+          type: "trace.update",
+          changes: buildInverseTraceUpdateChanges(
+            currentTrace,
+            command.payload.changes,
+          ),
+        },
+      ],
       effects: [],
       event: {
         type: "command",
@@ -124,6 +131,19 @@ function buildInverseTracePatches(
   }
 
   return [{ type: "trace.upsert", trace: currentTrace }];
+}
+
+function buildInverseTraceUpdateChanges(
+  currentTrace: TraceDocument,
+  changes: TraceUpdateChanges,
+): TraceUpdateChanges {
+  const inverseChanges: TraceUpdateChanges = {};
+
+  for (const key of Object.keys(changes) as Array<keyof TraceUpdateChanges>) {
+    inverseChanges[key] = currentTrace[key] as never;
+  }
+
+  return inverseChanges;
 }
 
 function buildNextSession<TSession extends { persistence: { dirty: boolean } }>(

@@ -47,9 +47,9 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 44px;
+  min-width: 36px;
   min-height: 32px;
-  padding: 6px 8px;
+  padding: 6px;
   border: none;
   border-radius: 12px;
   background: transparent;
@@ -68,7 +68,7 @@
   color: var(--neutral-0);
 }
 
-.buttonPrimary:hover:not(:disabled) {
+.buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
   background: var(--brand-primary-strong);
   color: var(--neutral-0);
 }
@@ -94,7 +94,7 @@
   box-shadow: none !important;
 }
 
-.button:hover:not(:disabled) {
+.button:hover:not(:disabled):not([data-active="true"]) {
   background: var(--neutral-100);
   color: var(--neutral-900);
   filter: none !important;
@@ -111,6 +111,13 @@
 }
 
 .button[data-inert-active="true"]:hover:not(:disabled) {
+  background: var(--surface-app);
+  color: var(--brand-primary-deep);
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.button[data-active="true"]:hover:not(:disabled) {
   background: var(--surface-app);
   color: var(--brand-primary-deep);
   box-shadow: none !important;
@@ -181,7 +188,7 @@
   white-space: nowrap;
 }
 
-.popover .button:not(.buttonPrimary):hover:not(:disabled) {
+.popover .button:not(.buttonPrimary):hover:not(:disabled):not([data-active="true"]) {
   background: var(--neutral-100);
   color: var(--neutral-900);
   box-shadow: none !important;
@@ -210,7 +217,7 @@
   box-shadow: none !important;
 }
 
-.popover .buttonPrimary:hover:not(:disabled) {
+.popover .buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
   background: var(--brand-primary-strong);
   color: var(--neutral-0);
   box-shadow: none !important;

@@ -34,6 +34,7 @@ import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
 const DEFAULT_CELL_SIZE = 28;
+const FIT_ZOOM_PADDING_FACTOR = 0.92;
 
 export function EditorV2Shell({
   onSaveDocument,
@@ -58,6 +59,7 @@ export function EditorV2Shell({
   const document = state.document;
   const title = state.document.project.title;
   const activeTool = state.session.activeTool.tool;
+  const brushSize = state.session.activeTool.brushSize;
   const colorsById = state.document.palette.colorsById;
   const usedColors = getUsedColors(state);
   const selectionBounds = getSelectionBounds(state);
@@ -101,7 +103,7 @@ export function EditorV2Shell({
     return Math.min(
       availableWidth / Math.max(gridMetrics.surfaceWidth, 1),
       availableHeight / Math.max(gridMetrics.surfaceHeight, 1),
-    );
+    ) * FIT_ZOOM_PADDING_FACTOR;
   }, [
     canvasWorldSize.height,
     canvasWorldSize.width,
@@ -279,6 +281,7 @@ export function EditorV2Shell({
             <FloatingToolbar
               activeColor={activeColor}
               activeTool={activeTool}
+              brushSize={brushSize}
               canRedo={canRedo}
               canUndo={canUndo}
               dispatch={dispatch}
@@ -303,6 +306,7 @@ export function EditorV2Shell({
             <GridWorldSurface
               activeColorId={activeColorId}
               activeTool={activeTool}
+              brushSize={brushSize}
               colorsById={colorsById}
               dispatch={dispatch}
               showGridlines={showGridlines}

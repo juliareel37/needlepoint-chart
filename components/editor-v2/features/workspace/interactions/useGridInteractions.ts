@@ -14,6 +14,7 @@ import { useSelectionDrag } from "./useSelectionDrag";
 interface UseGridInteractionsOptions {
   activeColorId: string | null;
   activeTool: ActiveTool;
+  brushSize: number;
   dispatch: EditorStore["dispatch"];
   getClampedSelectionPointFromClient: (
     clientX: number,
@@ -26,6 +27,7 @@ interface UseGridInteractionsOptions {
 export function useGridInteractions({
   activeColorId,
   activeTool,
+  brushSize,
   dispatch,
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
@@ -34,6 +36,7 @@ export function useGridInteractions({
   const paintStroke = usePaintStroke({
     activeColorId,
     activeTool,
+    brushSize,
     dispatch,
   });
   const selectionDrag = useSelectionDrag({

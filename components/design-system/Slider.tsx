@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes } from "react";
 import styles from "./Slider.module.css";
 
 type SliderProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type">;
@@ -10,6 +10,7 @@ export function Slider({
   max = 100,
   min = 0,
   style,
+  title,
   value = 0,
   ...props
 }: SliderProps) {
@@ -27,6 +28,7 @@ export function Slider({
     <div
       className={[styles.wrap, className].filter(Boolean).join(" ")}
       style={style}
+      title={title}
     >
       <div className={styles.slider} aria-hidden="true">
         <div className={styles.track}>
@@ -47,6 +49,7 @@ export function Slider({
         max={max}
         value={value}
         className={styles.input}
+        title={title}
       />
     </div>
   );

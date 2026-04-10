@@ -46,28 +46,6 @@
   align-items: center;
 }
 
-.tempDsLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 10px;
-  line-height: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
-.tempDsLink:hover {
-  background: var(--neutral-100);
-  color: var(--text-primary);
-}
-
 .railTabs {
   width: 100%;
 }
@@ -173,6 +151,50 @@
   margin: 0;
 }
 
+.editableTitleTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  padding: 6px 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: text;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.editableTitleTrigger:hover,
+.editableTitleTrigger:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.titleHoverIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.editableTitleTrigger:hover .titleHoverIcon,
+.editableTitleTrigger:focus-visible .titleHoverIcon {
+  opacity: 0.65;
+}
+
 .sidebarSubsection {
   display: flex;
   flex-direction: column;
@@ -260,7 +282,7 @@
 
 .stageToolbarTop {
   position: absolute;
-  top: 24px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
@@ -277,7 +299,7 @@
 .stageToolbarBottomRight {
   position: absolute;
   right: 24px;
-  bottom: 24px;
+  bottom: 12px;
   z-index: 20;
   display: flex;
   justify-content: flex-end;
@@ -432,55 +454,23 @@
   display: inline-grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 4px;
+  gap: 2px;
+  box-sizing: border-box;
   width: 100%;
-  padding: 4px;
-  border-radius: 14px;
-  background: var(--surface-card);
+  padding: 2px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
   border: 1px solid var(--ui-border-subtle);
 }
 
 .traceSegmentedItem {
-  min-height: 32px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text-secondary);
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
-}
-
-.traceSegmentedItem:hover {
-  background: color-mix(in srgb, var(--surface-app) 72%, transparent);
-  color: var(--text-primary);
-}
-
-.traceSegmentedItem[data-active="true"] {
-  background: var(--surface-app);
-  color: var(--brand-primary-deep);
-  box-shadow: var(--ui-shadow-sm);
-}
-
-.traceSegmentedItem[data-inert-active="true"] {
-  cursor: default;
-}
-
-.traceSegmentedItem[data-inert-active="true"]:hover {
-  background: var(--surface-app);
-  color: var(--brand-primary-deep);
-}
-
-.traceSegmentedItem:focus-visible {
-  outline: 2px solid var(--brand-primary-strong);
-  outline-offset: 2px;
-}
-
-.traceSegmentedItem:disabled {
-  cursor: not-allowed;
 }
 
 .traceSliderRow {
@@ -490,8 +480,59 @@
   gap: 12px;
 }
 
+.traceInlineFieldRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 180px);
+  align-items: center;
+  gap: 20px;
+}
+
+.traceInlineFieldLabel {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .traceSliderControl {
   min-width: 0;
+}
+
+.traceSliderTooltipWrap {
+  position: relative;
+}
+
+.traceSliderTooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--brand-primary);
+  color: var(--neutral-0);
+  box-shadow: var(--ui-tooltip-shadow);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.traceSliderTooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 5px);
+  width: 8px;
+  height: 8px;
+  background: var(--brand-primary);
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+}
+
+.traceSliderTooltipVisible {
+  opacity: 1;
 }
 
 .traceSliderFullWidth {
@@ -548,7 +589,7 @@
 
   .stageToolbarTop {
     position: absolute;
-    top: 16px;
+    top: 10px;
     left: 16px;
     right: 16px;
     width: auto;
@@ -559,7 +600,7 @@
     position: absolute;
     left: 16px;
     right: 16px;
-    bottom: 16px;
+    bottom: 10px;
     max-width: none;
   }
 

@@ -4,7 +4,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import styles from "./Panel.module.css";
 
-export interface PanelProps extends HTMLAttributes<HTMLElement> {
+export interface PanelProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   title?: ReactNode;
   description?: ReactNode;
   children: ReactNode;

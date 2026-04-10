@@ -9,6 +9,7 @@ type ButtonVariant =
   | "primary"
   | "secondary"
   | "tertiary"
+  | "destructive"
   | "ghost"
   | "ghostV2";
 type ButtonSize = "sm" | "md" | "lg";

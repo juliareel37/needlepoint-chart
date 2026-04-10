@@ -1,6 +1,5 @@
 "use client";
 
-import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
@@ -11,20 +10,19 @@ import type {
 import {
   createGridWorldMetrics,
   clientToWorldPoint,
-  getTraceTransform,
   getViewportTransform,
 } from "@/lib/editor-v2/editor/viewport";
-import {
-  createPanViewportCommand,
-  createSetViewportZoomCommand,
-} from "../workspaceCommands";
 import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./GridRulerOverlay";
+import { SelectionOverlay } from "./SelectionOverlay";
+import { TraceImageLayer } from "./TraceImageLayer";
+import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
   activeTool: ActiveTool;
+  brushSize: number;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
   showGridlines: boolean;
@@ -36,6 +34,7 @@ interface GridWorldSurfaceProps {
 export function GridWorldSurface({
   activeColorId,
   activeTool,
+  brushSize,
   colorsById,
   dispatch,
   showGridlines,
@@ -50,14 +49,6 @@ export function GridWorldSurface({
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
-  const lassoPoints = selection.lassoPoints
-    .map((point) => `${point.x * metrics.cellSize},${point.y * metrics.cellSize}`)
-    .join(" ");
-  const shouldDimCanvas = activeTool === "lasso";
-  const hasCommittedLassoSelection =
-    selection.mode === "lasso" &&
-    !selection.preview &&
-    selection.lassoPoints.length >= 3;
   const traceBlendMode = trace?.blendMode ?? "image";
   const traceImageOpacity =
     trace && trace.visible && traceBlendMode === "crossfade"
@@ -68,17 +59,14 @@ export function GridWorldSurface({
       ? 1 - trace.opacity
       : 1;
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const displayLayerRef = useRef<HTMLDivElement | null>(null);
-  const [spacePressed, setSpacePressed] = useState(false);
-  const [isPanDragging, setIsPanDragging] = useState(false);
+  const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const isSpacePressedRef = useRef(false);
-  const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
     x: (stageSize.width - metrics.surfaceWidth) / 2,
     y: (stageSize.height - metrics.surfaceHeight) / 2,
   };
+  const tracePositioningEnabled = Boolean(trace && trace.visible && !trace.locked);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -109,6 +97,23 @@ export function GridWorldSurface({
       };
     },
     [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth, viewport],
+  );
+  const getWorldPointFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const worldElement = worldRef.current;
+
+      if (!worldElement) {
+        return null;
+      }
+
+      const rect = worldElement.getBoundingClientRect();
+      return clientToWorldPoint(
+        { x: clientX, y: clientY },
+        { left: rect.left, top: rect.top },
+        viewport,
+      );
+    },
+    [viewport],
   );
   const getClampedSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -152,54 +157,23 @@ export function GridWorldSurface({
   const { handlePointerDown, handlePointerEnter } = useGridInteractions({
     activeColorId,
     activeTool,
+    brushSize,
     dispatch,
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
     state,
   });
-  const handleWheel = useCallback(
-    (event: WheelEvent) => {
-      event.preventDefault();
-
-      if (event.ctrlKey || event.metaKey) {
-        const isTrackpadPinch = event.ctrlKey && !event.metaKey;
-        const zoomSensitivity = isTrackpadPinch ? 0.006 : 0.0009;
-        const zoomFactor = Math.exp(-event.deltaY * zoomSensitivity);
-        dispatch(
-          createSetViewportZoomCommand(
-            viewport.zoom * zoomFactor,
-            zoomAnchor ?? undefined,
-          ),
-        );
-        return;
-      }
-
-      dispatch(createPanViewportCommand(-event.deltaX, -event.deltaY));
-    },
-    [dispatch, viewport.zoom],
-  );
-
-  useEffect(() => {
-    const stageElement = stageRef.current;
-
-    if (!stageElement) {
-      return;
-    }
-
-    const handleGestureEvent = (event: Event) => {
-      event.preventDefault();
-    };
-
-    stageElement.addEventListener("wheel", handleWheel, { passive: false });
-    stageElement.addEventListener("gesturestart", handleGestureEvent);
-    stageElement.addEventListener("gesturechange", handleGestureEvent);
-
-    return () => {
-      stageElement.removeEventListener("wheel", handleWheel);
-      stageElement.removeEventListener("gesturestart", handleGestureEvent);
-      stageElement.removeEventListener("gesturechange", handleGestureEvent);
-    };
-  }, [handleWheel]);
+  const {
+    cursor,
+    handleStageAuxClick,
+    handleStageMouseDownCapture,
+  } = useStagePanInteractions({
+    activeTool,
+    dispatch,
+    stageRef,
+    viewportZoom: viewport.zoom,
+    zoomAnchor,
+  });
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -230,113 +204,7 @@ export function GridWorldSurface({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== "Space") {
-        return;
-      }
 
-      const target = event.target;
-
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) {
-        return;
-      }
-
-      isSpacePressedRef.current = true;
-      setSpacePressed(true);
-    };
-
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.code !== "Space") {
-        return;
-      }
-
-      isSpacePressedRef.current = false;
-      setSpacePressed(false);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleWindowMouseMove = (event: MouseEvent) => {
-      const dragState = panDragRef.current;
-
-      if (!dragState) {
-        return;
-      }
-
-      const deltaX = event.clientX - dragState.lastX;
-      const deltaY = event.clientY - dragState.lastY;
-
-      panDragRef.current = {
-        lastX: event.clientX,
-        lastY: event.clientY,
-      };
-
-      if (deltaX === 0 && deltaY === 0) {
-        return;
-      }
-
-      dispatch(createPanViewportCommand(deltaX, deltaY));
-    };
-
-    const handleWindowMouseUp = () => {
-      panDragRef.current = null;
-      setIsPanDragging(false);
-    };
-
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
-    };
-  }, [dispatch]);
-
-  const handleStageMouseDownCapture = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      const isMiddleMouseButton = event.button === 1;
-      const isSpaceDrag = event.button === 0 && isSpacePressedRef.current;
-
-      if (!isMiddleMouseButton && !isSpaceDrag) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      panDragRef.current = {
-        lastX: event.clientX,
-        lastY: event.clientY,
-      };
-      setIsPanDragging(true);
-    },
-    [],
-  );
-
-  const handleStageAuxClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.button !== 1) {
-        return;
-      }
-
-      event.preventDefault();
-    },
-    [],
-  );
 
   return (
     <div
@@ -348,11 +216,11 @@ export function GridWorldSurface({
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        cursor: isPanDragging ? "grabbing" : spacePressed ? "grab" : "default",
+        cursor,
       }}
     >
       <div
-        ref={displayLayerRef}
+        ref={setDisplayHost}
         aria-hidden="true"
         style={{
           position: "absolute",
@@ -408,23 +276,14 @@ export function GridWorldSurface({
           />
 
           {trace && trace.visible ? (
-            <img
-              src={trace.assetUrl}
-              alt="Trace reference"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: `${metrics.surfaceWidth}px`,
-                height: `${metrics.surfaceHeight}px`,
-                objectFit: "cover",
-                opacity: traceImageOpacity,
-                pointerEvents: "none",
-                transform: getTraceTransform(trace),
-                transformOrigin: "top left",
-                willChange: "opacity, transform",
-                backfaceVisibility: "hidden",
-              }}
+            <TraceImageLayer
+              dispatch={dispatch}
+              getWorldPointFromClient={getWorldPointFromClient}
+              imageOpacity={traceImageOpacity}
+              metrics={metrics}
+              positioningEnabled={tracePositioningEnabled}
+              trace={trace}
+              zoom={viewport.zoom}
             />
           ) : null}
 
@@ -434,13 +293,13 @@ export function GridWorldSurface({
               zIndex: 1,
               width: `${metrics.surfaceWidth}px`,
               height: `${metrics.surfaceHeight}px`,
-              opacity: gridOpacity,
             }}
           >
             <GridCanvasStage
               cells={grid.cells}
               colorsById={colorsById}
-              displayHost={displayLayerRef.current}
+              displayHost={displayHost}
+              displayOpacity={gridOpacity}
               frameOrigin={frameOrigin}
               getGridPointFromClient={getGridPointFromClient}
               getSelectionPointFromClient={getSelectionPointFromClient}
@@ -455,76 +314,11 @@ export function GridWorldSurface({
             />
           </div>
 
-          {shouldDimCanvas ? (
-            hasCommittedLassoSelection ? (
-              <svg
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  zIndex: 2,
-                  pointerEvents: "none",
-                  overflow: "visible",
-                }}
-                width={metrics.surfaceWidth}
-                height={metrics.surfaceHeight}
-                viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
-              >
-                <path
-                  fill="rgba(15, 23, 42, 0.24)"
-                  fillRule="evenodd"
-                  d={`M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z M ${lassoPoints} Z`}
-                />
-              </svg>
-            ) : (
-              <div
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  zIndex: 2,
-                  pointerEvents: "none",
-                  backgroundColor: "rgba(15, 23, 42, 0.24)",
-                }}
-              />
-            )
-          ) : null}
-
-          {selection.mode === "lasso" && selection.lassoPoints.length > 0 ? (
-            <svg
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 4,
-                pointerEvents: "none",
-                overflow: "visible",
-              }}
-              width={metrics.surfaceWidth}
-              height={metrics.surfaceHeight}
-              viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
-            >
-              {selection.preview ? (
-                <polyline
-                  fill="none"
-                  stroke="#2563eb"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  points={lassoPoints}
-                />
-              ) : (
-                <polygon
-                  fill="rgba(37, 99, 235, 0.08)"
-                  stroke="#2563eb"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  points={lassoPoints}
-                />
-              )}
-            </svg>
-          ) : null}
+          <SelectionOverlay
+            activeTool={activeTool}
+            metrics={metrics}
+            selection={selection}
+          />
         </div>
       </div>
     </div>

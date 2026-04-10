@@ -1,14 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { assetPath } from "@/lib/assetPath";
 import { typographyStyles } from "@/app/design-system/typography";
-import {
-  Button,
-  Field,
-  Slider,
-  Toggle,
-} from "@/components/design-system";
+import { Button, Field, Slider, Toggle } from "@/components/design-system";
 import type {
   EditorStore,
   TraceBlendMode,
@@ -28,6 +24,128 @@ interface TraceControlsProps {
 
 export function TraceControls({ trace, dispatch }: TraceControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const positioningPreviewRef = useRef<{
+    assetUrl: string;
+    blendMode: TraceBlendMode;
+    opacity: number;
+    visible: boolean;
+    userOverrode: boolean;
+  } | null>(null);
+  const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
+  const positioningEnabled = trace ? !trace.locked : false;
+
+  const handleTraceFileSelect = async (file: File) => {
+    if (!dispatch) return;
+
+    const assetUrl = await readFileAsDataUrl(file);
+    dispatch(createAttachTraceCommand(assetUrl));
+  };
+
+  useEffect(() => {
+    if (!opacityTooltipVisible) {
+      return;
+    }
+
+    function handlePointerUp() {
+      setOpacityTooltipVisible(false);
+    }
+
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [opacityTooltipVisible]);
+
+  useEffect(() => {
+    if (!dispatch) {
+      return;
+    }
+
+    if (!trace) {
+      positioningPreviewRef.current = null;
+      return;
+    }
+
+    if (positioningEnabled) {
+      if (positioningPreviewRef.current?.assetUrl !== trace.assetUrl) {
+        positioningPreviewRef.current = {
+          assetUrl: trace.assetUrl,
+          blendMode: trace.blendMode,
+          opacity: trace.opacity,
+          visible: trace.visible,
+          userOverrode: false,
+        };
+      }
+
+      const previewSnapshot = positioningPreviewRef.current;
+      const isAutoPreviewState =
+        trace.visible &&
+        trace.blendMode === "crossfade" &&
+        Math.abs(trace.opacity - 0.95) <= 0.0001;
+
+      if (previewSnapshot && !isAutoPreviewState) {
+        const differsFromOriginal =
+          trace.visible !== previewSnapshot.visible ||
+          trace.blendMode !== previewSnapshot.blendMode ||
+          Math.abs(trace.opacity - previewSnapshot.opacity) > 0.0001;
+
+        if (differsFromOriginal) {
+          previewSnapshot.userOverrode = true;
+        }
+      }
+
+      if (!previewSnapshot?.userOverrode && !isAutoPreviewState) {
+        dispatch(
+          createUpdateTraceCommand(
+            {
+              visible: true,
+              blendMode: "crossfade",
+              opacity: 0.95,
+            },
+            {
+              history: { mode: "skip" },
+              source: "system",
+            },
+          ),
+        );
+      }
+
+      return;
+    }
+
+    const previewSnapshot = positioningPreviewRef.current;
+
+    if (!previewSnapshot || previewSnapshot.assetUrl !== trace.assetUrl) {
+      positioningPreviewRef.current = null;
+      return;
+    }
+
+    positioningPreviewRef.current = null;
+
+    if (previewSnapshot.userOverrode) {
+      return;
+    }
+
+    if (
+      trace.visible === previewSnapshot.visible &&
+      trace.blendMode === previewSnapshot.blendMode &&
+      Math.abs(trace.opacity - previewSnapshot.opacity) <= 0.0001
+    ) {
+      return;
+    }
+
+    dispatch(
+      createUpdateTraceCommand(
+        {
+          visible: previewSnapshot.visible,
+          blendMode: previewSnapshot.blendMode,
+          opacity: previewSnapshot.opacity,
+        },
+        {
+          history: { mode: "skip" },
+          source: "system",
+        },
+      ),
+    );
+  }, [dispatch, positioningEnabled, trace]);
 
   if (!dispatch) {
     return trace ? (
@@ -43,13 +161,56 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
 
   return (
     <div className={styles.panelStack}>
-      <Button
-        type="button"
-        variant={trace ? "secondary" : "primary"}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {trace ? "Replace trace" : "Add trace"}
-      </Button>
+      {!trace ? (
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const file = event.dataTransfer.files?.[0];
+            if (!file) return;
+            handleTraceFileSelect(file);
+          }}
+          style={{
+            display: "grid",
+            placeItems: "center",
+            gap: 6,
+            padding: "14px 12px",
+            borderRadius: 12,
+            border: "none",
+            background: "transparent",
+            textAlign: "center",
+          }}
+        >
+          <img
+            src={assetPath("/icons/upload.svg")}
+            alt=""
+            aria-hidden="true"
+            width={18}
+            height={18}
+            style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+          />
+          <span style={typographyStyles.p2}>Choose a file or drag &amp; drop.</span>
+          <span style={{ ...typographyStyles.p2, opacity: 0.75 }}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
+          <Button
+            type="button"
+            variant="ghostV2"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Browse file
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Replace trace
+        </Button>
+      )}
 
       <input
         ref={fileInputRef}
@@ -57,13 +218,9 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
         accept="image/*"
         onChange={async (event) => {
           const file = event.target.files?.[0];
-
-          if (!file) {
-            return;
+          if (file) {
+            handleTraceFileSelect(file);
           }
-
-          const assetUrl = await readFileAsDataUrl(file);
-          dispatch(createAttachTraceCommand(assetUrl));
           event.target.value = "";
         }}
         style={{ display: "none" }}
@@ -101,75 +258,38 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
             title="Positioning"
             tone="neutral"
           >
-            <Field label="Offset X">
-              <SliderReadoutRow value={`${trace.offsetX}px`}>
-                <Slider
-                  className={styles.traceSliderFullWidth}
-                  min="-240"
-                  max="240"
-                  step="8"
-                  value={trace.offsetX}
-                  onChange={(event) =>
-                    dispatch(
-                      createUpdateTraceCommand({
-                        offsetX: Number(event.target.value),
-                      }),
-                    )
-                  }
-                />
-              </SliderReadoutRow>
-            </Field>
-
-            <Field label="Offset Y">
-              <SliderReadoutRow value={`${trace.offsetY}px`}>
-                <Slider
-                  className={styles.traceSliderFullWidth}
-                  min="-240"
-                  max="240"
-                  step="8"
-                  value={trace.offsetY}
-                  onChange={(event) =>
-                    dispatch(
-                      createUpdateTraceCommand({
-                        offsetY: Number(event.target.value),
-                      }),
-                    )
-                  }
-                />
-              </SliderReadoutRow>
-            </Field>
-
-            <Field label="Scale">
-              <SliderReadoutRow value={`${trace.scale.toFixed(2)}x`}>
-                <Slider
-                  className={styles.traceSliderFullWidth}
-                  min="0.5"
-                  max="2"
-                  step="0.05"
-                  value={trace.scale}
-                  onChange={(event) =>
-                    dispatch(
-                      createUpdateTraceCommand({
-                        scale: Number(event.target.value),
-                      }),
-                    )
-                  }
-                />
-              </SliderReadoutRow>
-            </Field>
+            <Button
+              type="button"
+              variant={positioningEnabled ? "primary" : "secondary"}
+              disabled={!trace}
+              onClick={() => {
+                if (!trace || !dispatch) return;
+                dispatch(
+                  createUpdateTraceCommand(
+                    { locked: positioningEnabled },
+                    { history: { mode: "skip" } },
+                  ),
+                );
+              }}
+            >
+              {positioningEnabled ? "Reposition: On" : "Enable Reposition"}
+            </Button>
           </TraceSection>
 
           <TraceSection
-            title="Opacity"
-            tone="brand"
+            title="Visibility"
+            tone="neutral"
           >
             <Toggle
-              aria-label="Show trace"
+              aria-label="Show image"
               checked={trace.visible}
-              label="Show trace"
+              label="Show image"
               onChange={(next) =>
                 dispatch(
-                  createUpdateTraceCommand({ visible: next }),
+                  createUpdateTraceCommand(
+                    { visible: next },
+                    { history: { mode: "skip" } },
+                  ),
                 )
               }
             />
@@ -178,60 +298,104 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
               className={styles.traceOpacityControls}
               data-disabled={trace.visible ? "false" : "true"}
             >
-              <Field label="Opacity blending">
-                <div
-                  className={styles.traceSegmentedControl}
-                  role="radiogroup"
-                  aria-label="Opacity blending mode"
-                  aria-disabled={!trace.visible}
-                >
-                  <BlendModeButton
-                    active={(trace.blendMode ?? "image") === "image"}
-                    disabled={!trace.visible}
-                    label="Image only"
-                    mode="image"
-                    onSelect={(mode) =>
-                      dispatch(
-                        createUpdateTraceCommand({
-                          blendMode: mode,
-                        }),
-                      )
-                    }
-                  />
-                  <BlendModeButton
-                    active={trace.blendMode === "crossfade"}
-                    disabled={!trace.visible}
-                    label="Crossfade"
-                    mode="crossfade"
-                    onSelect={(mode) =>
-                      dispatch(
-                        createUpdateTraceCommand({
-                          blendMode: mode,
-                        }),
-                      )
-                    }
-                  />
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Blending
+                  </span>
+                  <div
+                    className={styles.traceSegmentedControl}
+                    role="radiogroup"
+                    aria-label="Opacity blending mode"
+                    aria-disabled={!trace.visible}
+                  >
+                    <BlendModeButton
+                      active={trace.blendMode === "crossfade"}
+                      disabled={!trace.visible}
+                      label="Crossfade"
+                      mode="crossfade"
+                      onSelect={(mode) =>
+                        dispatch(
+                          createUpdateTraceCommand(
+                            {
+                              blendMode: mode,
+                            },
+                            { history: { mode: "skip" } },
+                          ),
+                        )
+                      }
+                    />
+                    <BlendModeButton
+                      active={(trace.blendMode ?? "image") === "image"}
+                      disabled={!trace.visible}
+                      label="Image only"
+                      mode="image"
+                      onSelect={(mode) =>
+                        dispatch(
+                          createUpdateTraceCommand(
+                            {
+                              blendMode: mode,
+                            },
+                            { history: { mode: "skip" } },
+                          ),
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               </Field>
 
-              <Field label="Image opacity">
-                <SliderReadoutRow value={`${Math.round(trace.opacity * 100)}%`}>
-                  <Slider
-                    className={styles.traceSliderFullWidth}
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={trace.opacity}
-                    disabled={!trace.visible}
-                    onChange={(event) =>
-                      dispatch(
-                        createUpdateTraceCommand({
-                          opacity: Number(event.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </SliderReadoutRow>
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Opacity
+                  </span>
+                  <div className={styles.traceSliderControl}>
+                    <div className={styles.traceSliderTooltipWrap}>
+                      <div
+                        className={[
+                          styles.traceSliderTooltip,
+                          opacityTooltipVisible && trace.visible
+                            ? styles.traceSliderTooltipVisible
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden="true"
+                        style={{ left: `${trace.opacity * 100}%` }}
+                      >
+                        {Math.round(trace.opacity * 100)}%
+                      </div>
+                      <Slider
+                        className={styles.traceSliderFullWidth}
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={trace.opacity}
+                        disabled={!trace.visible}
+                        aria-label="Image opacity"
+                        onPointerDown={() => setOpacityTooltipVisible(true)}
+                        onBlur={() => setOpacityTooltipVisible(false)}
+                        onChange={(event) =>
+                          dispatch(
+                            createUpdateTraceCommand(
+                              {
+                                opacity: Number(event.target.value),
+                              },
+                              { history: { mode: "skip" } },
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
               </Field>
             </div>
           </TraceSection>
@@ -280,12 +444,15 @@ function BlendModeButton({
   const isInertActive = active && !disabled;
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="md"
       className={styles.traceSegmentedItem}
-      data-active={active ? "true" : "false"}
-      data-inert-active={isInertActive ? "true" : "false"}
+      style={{ padding: "4px 8px" }}
       disabled={disabled}
+      active={active}
+      inertWhenActive={isInertActive}
       aria-pressed={active}
       onClick={() => {
         if (!disabled && !isInertActive) {
@@ -294,7 +461,7 @@ function BlendModeButton({
       }}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -330,22 +497,5 @@ function TraceSection({
       </div>
       <div className={styles.traceSectionBody}>{children}</div>
     </section>
-  );
-}
-
-function SliderReadoutRow({
-  children,
-  value,
-}: {
-  children: ReactNode;
-  value: string;
-}) {
-  return (
-    <div className={styles.traceSliderRow}>
-      <div className={styles.traceSliderControl}>{children}</div>
-      <span className={styles.traceSliderValue} style={typographyStyles.p2}>
-        {value}
-      </span>
-    </div>
   );
 }

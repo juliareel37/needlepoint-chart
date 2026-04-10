@@ -228,17 +228,18 @@
   --neutral-400: var(--neutral-500);
   --neutral-600: var(--neutral-700);
   --neutral-800: var(--neutral-900);
-  --surface-app: #f8f3fb;
+  --surface-app: #fcf7ff;
   --surface-card: var(--neutral-0);
-  --surface-brand-subtle: #e9d5f2;
+  --surface-brand-soft: #f9eefd;
+  --surface-brand-subtle: #e9c4f5;
   --surface-neutral-subtle: var(--neutral-100);
   --surface-neutral-raised: var(--neutral-50);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
-  --brand-primary: #c97edf;
-  --brand-primary-soft: #e1b6ed;
-  --brand-primary-strong: #a748c5;
-  --brand-primary-deep: #7f2f9d;
+  --brand-primary: #d08de3;
+  --brand-primary-medium: #b36dc8;
+  --brand-primary-strong: #954cad;
+  --brand-primary-deep: #732a8d;
   --control-secondary-bg: #f1f3f6;
   --status-success-soft: #e5f6ea;
   --status-success-base: #4ea56b;
@@ -260,7 +261,7 @@
   --card-bg: var(--surface-card);
   --muted-bg: var(--ui-surface-soft);
   --accent: var(--brand-primary);
-  --accent-soft: var(--brand-primary-soft);
+  --accent-soft: var(--surface-brand-subtle);
   --accent-strong: var(--brand-primary-strong);
   --accent-deep: var(--brand-primary-deep);
   --accent-wash: var(--surface-brand-subtle);
@@ -309,13 +310,14 @@
   --neutral-800: var(--neutral-900);
   --surface-app: #141117;
   --surface-card: var(--neutral-800);
+  --surface-brand-soft: #2f243d;
   --surface-brand-subtle: #4d3762;
   --surface-neutral-subtle: var(--neutral-600);
   --surface-neutral-raised: var(--neutral-600);
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
   --brand-primary: #9d6fd2;
-  --brand-primary-soft: #3f3354;
+  --brand-primary-medium: #b36dc8;
   --brand-primary-strong: #b988e8;
   --brand-primary-deep: #7241aa;
   --control-secondary-bg: #f1f3f6;
@@ -339,7 +341,7 @@
   --card-bg: var(--surface-card);
   --muted-bg: var(--ui-surface-soft);
   --accent: var(--brand-primary);
-  --accent-soft: var(--brand-primary-soft);
+  --accent-soft: var(--surface-brand-subtle);
   --accent-strong: var(--brand-primary-strong);
   --accent-deep: var(--brand-primary-deep);
   --accent-wash: var(--surface-brand-subtle);
@@ -390,14 +392,7 @@ body {
 }
 button {
   font-weight: 600;
-  transition: background-color 150ms ease, color 150ms ease, filter 150ms ease, opacity 150ms ease;
-}
-button:hover:not(:disabled):not([data-active="true"]) {
-  filter: brightness(0.94);
-  transform: none;
-}
-:root[data-theme="dark"] button:hover:not(:disabled):not([data-active="true"]) {
-  filter: brightness(1.08);
+  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle:hover:not(:disabled) {
   filter: none !important;

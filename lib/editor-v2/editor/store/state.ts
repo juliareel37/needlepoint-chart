@@ -314,7 +314,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
     },
     session: {
       activeTool: {
-        tool: "none",
+        tool: "pan",
         brushSize: 1,
         colorId: null,
       },

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Slider,
   Toolbar,
   ToolbarAnchor,
   ToolbarButton,
@@ -29,6 +30,7 @@ import {
   createSetActiveSidebarSectionCommand,
   createSetSidebarCollapsedCommand,
   createSetToolCommand,
+  createSetBrushSizeCommand,
   createUndoCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
@@ -37,6 +39,7 @@ import styles from "./EditorV2Shell.module.css";
 interface FloatingToolbarProps {
   activeColor: PaletteColor | null;
   activeTool: "paint" | "erase" | "lasso" | string;
+  brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
   dispatch: EditorStore["dispatch"];
@@ -49,6 +52,7 @@ interface FloatingToolbarProps {
 export function FloatingToolbar({
   activeColor,
   activeTool,
+  brushSize,
   canRedo,
   canUndo,
   dispatch,
@@ -60,17 +64,60 @@ export function FloatingToolbar({
   const [drawOpen, setDrawOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
+  const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
+  const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
+
+  const normalizedBrushSize = Number.isFinite(brushSize)
+    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
+    : 1;
+  const brushFootprintSize = normalizedBrushSize;
+  const brushFootprintLabel = `${brushFootprintSize}x${brushFootprintSize}`;
+  const brushSizeTooltipPercent =
+    ((normalizedBrushSize - 1) / 9) * 100;
+  const normalizedImageOpacity = trace
+    ? Math.min(Math.max(trace.opacity, 0), 1)
+    : 0;
+  const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
 
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const canPaintSelection = Boolean(selectionCommitted && selectionBounds && activeColor);
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
-  const drawToolActive = activeTool === "paint" || activeTool === "erase";
-  const drawTriggerActive = drawOpen || drawToolActive;
+
+  useEffect(() => {
+    if (!brushSizeTooltipVisible) {
+      return;
+    }
+
+    function handlePointerUp() {
+      setBrushSizeTooltipVisible(false);
+    }
+
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [brushSizeTooltipVisible]);
+
+  useEffect(() => {
+    if (!imageOpacityTooltipVisible) {
+      return;
+    }
+
+    function handlePointerUp() {
+      setImageOpacityTooltipVisible(false);
+    }
+
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [imageOpacityTooltipVisible]);
 
   function openSidebarSection(section: "color" | "trace") {
     exitSelectionFlow();
     dispatch(createSetActiveSidebarSectionCommand(section));
     dispatch(createSetSidebarCollapsedCommand(false));
+  }
+
+  function closeImageMenu(): void {
+    setImageOpen(false);
+    setImageOpacityTooltipVisible(false);
   }
 
   function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
@@ -96,7 +143,7 @@ export function FloatingToolbar({
       dispatch(createClearSelectionCommand());
     }
 
-    dispatch(createSetToolCommand("none"));
+    dispatch(createSetToolCommand("pan"));
   }
 
   return (
@@ -116,77 +163,147 @@ export function FloatingToolbar({
       <ToolbarDivider />
 
       <ToolbarGroup>
+        <ToolbarButton
+          type="button"
+          active={activeTool === "pan"}
+          inertWhenActive
+          aria-pressed={activeTool === "pan"}
+          aria-label="Pan"
+          title="Pan"
+          onClick={() => {
+            exitSelectionFlow();
+            setDrawOpen(false);
+            closeImageMenu();
+            dispatch(createSetToolCommand("pan"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/pan.svg" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          active={activeTool === "paint"}
+          aria-pressed={activeTool === "paint"}
+          aria-label="Brush"
+          title="Brush"
+          onClick={() => {
+            exitSelectionFlow();
+            closeImageMenu();
+            dispatch(createSetToolCommand(activeTool === "paint" ? "pan" : "paint"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/brush_thin.svg" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          active={activeTool === "erase"}
+          aria-pressed={activeTool === "erase"}
+          aria-label="Erase"
+          title="Erase"
+          onClick={() => {
+            exitSelectionFlow();
+            closeImageMenu();
+            dispatch(createSetToolCommand(activeTool === "erase" ? "pan" : "erase"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+        </ToolbarButton>
+
         <ToolbarAnchor>
           <ToolbarButton
             type="button"
-            active={drawTriggerActive}
-            aria-pressed={drawTriggerActive}
+            active={drawOpen}
+            aria-pressed={drawOpen}
+            aria-label="Brush size"
+            title="Brush size"
             onClick={() => {
               exitSelectionFlow();
               setDrawOpen((current) => !current);
-              setImageOpen(false);
+              closeImageMenu();
             }}
           >
-            <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
-            <ToolbarLabel>Draw</ToolbarLabel>
+            <ToolbarIcon icon="/icons/other/stroke-width.svg" />
           </ToolbarButton>
 
           {drawOpen ? (
-            <ToolbarPopover role="dialog" aria-label="Draw tools">
+            <ToolbarPopover role="dialog" aria-label="Draw size">
               <ToolbarSubtoolGroup>
-                <ToolbarButton type="button" disabled>
-                  <ToolbarIcon icon="/icons/lucide/ruler.svg" />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 15,
+                    alignItems: "center",
+                    flexWrap: "nowrap",
+                    padding: "6px 8px",
+                  }}
+                >
                   <ToolbarLabel>Size</ToolbarLabel>
-                </ToolbarButton>
-
-                <ToolbarDivider />
-
-                <ToolbarButton
-                  type="button"
-                  active={activeTool === "paint"}
-                  inertWhenActive
-                  aria-pressed={activeTool === "paint"}
-                  aria-label="Brush"
-                  title="Brush"
-                  onClick={() => {
-                    dispatch(createSetToolCommand("paint"));
-                    setDrawOpen(false);
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/lucide/brush_thin.svg" />
-                </ToolbarButton>
-
-                <ToolbarButton
-                  type="button"
-                  active={activeTool === "erase"}
-                  inertWhenActive
-                  aria-pressed={activeTool === "erase"}
-                  aria-label="Erase"
-                  title="Erase"
-                  onClick={() => {
-                    dispatch(createSetToolCommand("erase"));
-                    setDrawOpen(false);
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-                </ToolbarButton>
-
-                <ToolbarButton type="button" disabled>
-                  <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
-                  <ToolbarLabel>Fill</ToolbarLabel>
-                </ToolbarButton>
-
-                <ToolbarButton type="button" disabled>
-                  <ToolbarIcon icon="/icons/lucide/flip-horizontal.svg" />
-                  <ToolbarLabel>Mirror</ToolbarLabel>
-                </ToolbarButton>
+                  <div
+                    className={styles.traceSliderTooltipWrap}
+                    style={{ width: 80, flexShrink: 0 }}
+                  >
+                    <div
+                      className={[
+                        styles.traceSliderTooltip,
+                        brushSizeTooltipVisible
+                          ? styles.traceSliderTooltipVisible
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      aria-hidden="true"
+                      style={{ left: `${brushSizeTooltipPercent}%` }}
+                    >
+                      {brushFootprintLabel}
+                    </div>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={normalizedBrushSize}
+                      aria-label="Brush size"
+                      aria-valuetext={`${brushFootprintLabel} paint area`}
+                      onPointerDown={() => setBrushSizeTooltipVisible(true)}
+                      onBlur={() => setBrushSizeTooltipVisible(false)}
+                      onChange={(e) => {
+                        const newSize = Number(e.currentTarget.value);
+                        dispatch(
+                          createSetBrushSizeCommand(
+                            newSize,
+                            activeTool === "paint" || activeTool === "erase"
+                              ? activeTool
+                              : "pan",
+                          ),
+                        );
+                      }}
+                      style={{ width: "100%", maxWidth: "none" }}
+                    />
+                  </div>
+                </div>
               </ToolbarSubtoolGroup>
             </ToolbarPopover>
           ) : null}
         </ToolbarAnchor>
-      </ToolbarGroup>
 
-      <ToolbarDivider />
+        <ToolbarDivider />
+
+        {/*
+        <ToolbarButton type="button" disabled>
+          <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
+          <ToolbarLabel>Fill</ToolbarLabel>
+        </ToolbarButton>
+        */}
+
+        <ToolbarButton
+          type="button"
+          disabled
+          aria-label="Mirror"
+          title="Mirror"
+        >
+          <ToolbarIcon icon="/icons/lucide/reflect.svg" />
+        </ToolbarButton>
+      </ToolbarGroup>
 
       <ToolbarGroup>
         <ToolbarAnchor>
@@ -194,16 +311,18 @@ export function FloatingToolbar({
             type="button"
             active={activeTool === "lasso"}
             aria-pressed={activeTool === "lasso"}
+            aria-label="Select"
+            title="Select"
             onClick={() => {
               setDrawOpen(false);
-              setImageOpen(false);
+              closeImageMenu();
 
                 if (activeTool === "lasso") {
                   if (selectOpen) {
                     if (selectionBounds) {
                       dispatch(createClearSelectionCommand());
                     } else {
-                      dispatch(createSetToolCommand("none"));
+                      dispatch(createSetToolCommand("pan"));
                     }
                     setSelectOpen(false);
                     return;
@@ -218,7 +337,6 @@ export function FloatingToolbar({
             }}
           >
             <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
-            <ToolbarLabel>Select</ToolbarLabel>
           </ToolbarButton>
 
           {activeTool === "lasso" && selectOpen ? (
@@ -271,7 +389,7 @@ export function FloatingToolbar({
                     if (selectionCommitted && selectionBounds) {
                       dispatch(createClearSelectionCommand());
                     } else {
-                      dispatch(createSetToolCommand("none"));
+                      dispatch(createSetToolCommand("pan"));
                     }
                     setSelectOpen(false);
                   }}
@@ -292,14 +410,19 @@ export function FloatingToolbar({
             type="button"
             active={imageOpen}
             aria-pressed={imageOpen}
+            aria-label="Image"
+            title="Image"
             onClick={() => {
               exitSelectionFlow();
-              setImageOpen((current) => !current);
+              if (imageOpen) {
+                closeImageMenu();
+              } else {
+                setImageOpen(true);
+              }
               setDrawOpen(false);
             }}
           >
             <ToolbarIcon icon="/icons/lucide/image.svg" />
-            <ToolbarLabel>Image</ToolbarLabel>
           </ToolbarButton>
 
           {imageOpen ? (
@@ -308,57 +431,130 @@ export function FloatingToolbar({
               role="dialog"
               aria-label="Image tools"
             >
-              <ToolbarButton
-                type="button"
-                disabled={!trace}
-                onClick={() => {
-                  if (!trace) return;
+              {trace ? (
+                <>
+                  <ToolbarButton
+                    type="button"
+                    onClick={() => {
+                      dispatch(
+                        createUpdateTraceCommand(
+                          { visible: !trace.visible },
+                          { history: { mode: "skip" } },
+                        ),
+                      );
+                    }}
+                  >
+                    <ToolbarIcon
+                      icon={trace.visible ? "/icons/eye.svg" : "/icons/eye_off.svg"}
+                    />
+                    <ToolbarLabel>
+                      {trace.visible ? "Visible" : "Hidden"}
+                    </ToolbarLabel>
+                  </ToolbarButton>
 
-                  dispatch(
-                    createUpdateTraceCommand({ visible: !trace.visible }),
-                  );
-                }}
-              >
-                <ToolbarIcon
-                  icon={
-                    trace?.visible ? "/icons/eye.svg" : "/icons/eye_off.svg"
-                  }
-                />
-                <ToolbarLabel>
-                  {trace ? (trace.visible ? "Visible" : "Hidden") : "No trace"}
-                </ToolbarLabel>
-              </ToolbarButton>
+                  <ToolbarDivider />
 
-              <ToolbarDivider />
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        color: trace.visible ? "inherit" : "var(--text-secondary)",
+                        opacity: trace.visible ? 1 : 0.45,
+                      }}
+                    >
+                      <ToolbarIcon icon="/icons/lucide/blend.svg" />
+                      <ToolbarLabel>Opacity</ToolbarLabel>
+                    </span>
+                    <div
+                      className={styles.traceSliderTooltipWrap}
+                      style={{ width: 80, flexShrink: 0 }}
+                    >
+                      <div
+                        className={[
+                          styles.traceSliderTooltip,
+                          imageOpacityTooltipVisible && trace.visible
+                            ? styles.traceSliderTooltipVisible
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden="true"
+                        style={{ left: `${normalizedImageOpacity * 100}%` }}
+                      >
+                        {imageOpacityLabel}
+                      </div>
+                      <Slider
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={normalizedImageOpacity}
+                        disabled={!trace.visible}
+                        aria-label="Image opacity"
+                        aria-valuetext={`${imageOpacityLabel} image opacity`}
+                        onPointerDown={() => setImageOpacityTooltipVisible(true)}
+                        onBlur={() => setImageOpacityTooltipVisible(false)}
+                        onChange={(event) =>
+                          dispatch(
+                            createUpdateTraceCommand(
+                              {
+                                opacity: Number(event.currentTarget.value),
+                              },
+                              { history: { mode: "skip" } },
+                            ),
+                          )
+                        }
+                        style={{ width: "100%", maxWidth: "none" }}
+                      />
+                    </div>
+                  </div>
 
-              <ToolbarButton
-                type="button"
-                disabled={!trace}
-                onClick={() => {
-                  openSidebarSection("trace");
-                  setImageOpen(false);
-                }}
-              >
-                <ToolbarIcon icon="/icons/lucide/blend.svg" />
-                <ToolbarLabel>Opacity</ToolbarLabel>
-              </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    active={!trace.locked}
+                    aria-pressed={!trace.locked}
+                    onClick={() => {
+                      dispatch(
+                        createUpdateTraceCommand(
+                          { locked: !trace.locked },
+                          { history: { mode: "skip" } },
+                        ),
+                      );
+                    }}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+                    <ToolbarLabel>Reposition</ToolbarLabel>
+                  </ToolbarButton>
 
-              <ToolbarButton
-                type="button"
-                disabled={!trace}
-                onClick={() => {
-                  openSidebarSection("trace");
-                  setImageOpen(false);
-                }}
-              >
-                <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
-                <ToolbarLabel>Reposition</ToolbarLabel>
-              </ToolbarButton>
-
-              <ToolbarButton type="button" disabled>
-                <ToolbarIcon icon="/icons/lucide/crop.svg" />
-                <ToolbarLabel>Crop</ToolbarLabel>
-              </ToolbarButton>
+                  {/*
+                  <ToolbarButton type="button" disabled>
+                    <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                    <ToolbarLabel>Crop</ToolbarLabel>
+                  </ToolbarButton>
+                  */}
+                </>
+              ) : (
+                <ToolbarButton
+                  type="button"
+                  primary
+                  onClick={() => {
+                    openSidebarSection("trace");
+                    closeImageMenu();
+                  }}
+                >
+                  <ToolbarIcon icon="/icons/lucide/image.svg" />
+                  <ToolbarLabel>Add image</ToolbarLabel>
+                </ToolbarButton>
+              )}
             </ToolbarPopover>
           ) : null}
         </ToolbarAnchor>

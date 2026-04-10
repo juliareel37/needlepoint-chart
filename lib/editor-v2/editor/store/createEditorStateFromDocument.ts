@@ -29,7 +29,7 @@ export function createEditorStateFromDocument(
       ...state.session,
       activeTool: {
         ...state.session.activeTool,
-        tool: "none",
+        tool: "pan",
         colorId: defaultColorId,
       },
     },

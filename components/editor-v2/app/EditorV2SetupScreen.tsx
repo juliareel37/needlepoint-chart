@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import {
   EDITOR_V2_MAX_GRID_SIZE,
   EDITOR_V2_MIN_GRID_SIZE,
@@ -19,6 +18,7 @@ export interface EditorV2DesignConfigNew {
 export interface EditorV2DesignConfigLoaded {
   kind: "loaded";
   document: EditorDocumentState;
+  storageId: string;
   instanceKey: string;
 }
 
@@ -48,12 +48,6 @@ export function EditorV2SetupScreen({
   return (
     <main style={pageStyle}>
       <section style={setupCardStyle}>
-        <div style={topRowStyle}>
-          <Link href="/editor-v2/design-system" style={tempLinkStyle}>
-            V2 DS
-          </Link>
-        </div>
-
         <p style={eyebrowStyle}>editor-v2 setup</p>
         <h1 style={titleStyle}>Create a new design</h1>
         <p style={bodyStyle}>
@@ -116,6 +110,7 @@ export function EditorV2SetupScreen({
                   onLoadSavedDesign({
                     kind: "loaded",
                     document: record.document,
+                    storageId: record.storageId,
                     instanceKey: `loaded_${record.storageId}_${Date.now()}`,
                   })
                 }
@@ -168,11 +163,6 @@ const setupCardStyle = {
   borderRadius: "16px",
   background: "#ffffff",
   border: "1px solid #e2e8f0",
-} satisfies CSSProperties;
-
-const topRowStyle = {
-  display: "flex",
-  justifyContent: "flex-end",
 } satisfies CSSProperties;
 
 const eyebrowStyle = {
@@ -250,20 +240,4 @@ const savedItemButtonStyle = {
   background: "#f8fafc",
   color: "#0f172a",
   cursor: "pointer",
-} satisfies CSSProperties;
-
-const tempLinkStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: "28px",
-  padding: "6px 10px",
-  borderRadius: "12px",
-  color: "#475569",
-  textDecoration: "none",
-  fontSize: "10px",
-  lineHeight: "14px",
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  background: "transparent",
 } satisfies CSSProperties;

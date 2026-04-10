@@ -1,36 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
-import { useEditorStoreSelector } from "./editorStoreContext";
 import type { SavedEditorV2DocumentRecord } from "./editorV2LocalPersistence";
 import { EditorV2Shell } from "../features/workspace/shell/EditorV2Shell";
 
 export function EditorV2Workspace({
+  currentStorageId,
   savedDocuments,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
 }: {
+  currentStorageId: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
-  onSaveDocument: (document: EditorDocumentState) => void;
+  onSaveDocument: (
+    document: EditorDocumentState,
+    storageId?: string,
+  ) => SavedEditorV2DocumentRecord;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => void;
   onStartOver: () => void;
 }) {
-  const document = useEditorStoreSelector((state) => state.document);
-  const [selectedStorageId, setSelectedStorageId] = useState<string>("");
+  const [selectedStorageId, setSelectedStorageId] = useState<string>(currentStorageId);
   const [saveMessage, setSaveMessage] = useState<string>("");
+
+  useEffect(() => {
+    setSelectedStorageId(currentStorageId);
+  }, [currentStorageId]);
 
   return (
     <div>
       <EditorV2Shell
         onSaveDocument={(nextDocument) => {
-          onSaveDocument(nextDocument);
-          setSaveMessage(`Saved at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
+          try {
+            const savedRecord = onSaveDocument(
+              nextDocument,
+              currentStorageId || undefined,
+            );
+            setSelectedStorageId(savedRecord.storageId);
+            setSaveMessage(
+              `Saved at ${new Date().toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}`,
+            );
+          } catch {
+            setSaveMessage("Couldn't save locally. Browser storage is full.");
+          }
         }}
         onLoadDocument={(record) => {
           onLoadDocument(record);
-          setSelectedStorageId("");
+          setSelectedStorageId(record.storageId);
           setSaveMessage("");
         }}
         onStartOver={onStartOver}

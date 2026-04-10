@@ -1,8 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { assetPath } from "@/lib/assetPath";
 import {
   typographyOrder,
   typographySpecs,
@@ -55,36 +56,112 @@ const paletteGroups = [
   {
     title: "Neutrals",
     tokens: [
-      { name: "neutral-0", cssVar: "--neutral-0" },
-      { name: "neutral-100", cssVar: "--neutral-100" },
-      { name: "neutral-200", cssVar: "--neutral-200" },
-      { name: "neutral-300", cssVar: "--neutral-300" },
-      { name: "neutral-500", cssVar: "--neutral-500" },
-      { name: "neutral-700", cssVar: "--neutral-700" },
-      { name: "neutral-900", cssVar: "--neutral-900" },
+      { name: "neutral-0", cssVar: "--neutral-0", sourceType: "literal" },
+      { name: "neutral-100", cssVar: "--neutral-100", sourceType: "literal" },
+      { name: "neutral-200", cssVar: "--neutral-200", sourceType: "literal" },
+      { name: "neutral-300", cssVar: "--neutral-300", sourceType: "literal" },
+      { name: "neutral-500", cssVar: "--neutral-500", sourceType: "literal" },
+      { name: "neutral-700", cssVar: "--neutral-700", sourceType: "literal" },
+      { name: "neutral-900", cssVar: "--neutral-900", sourceType: "literal" },
     ],
   },
   {
     title: "Brand",
     tokens: [
-      { name: "surface-app", cssVar: "--surface-app" },
-      { name: "surface-card", cssVar: "--surface-card" },
-      { name: "brand-primary", cssVar: "--brand-primary" },
-      { name: "brand-primary-strong", cssVar: "--brand-primary-strong" },
-      { name: "brand-primary-deep", cssVar: "--brand-primary-deep" },
-      { name: "surface-brand-subtle", cssVar: "--surface-brand-subtle" },
+      { name: "brand-fill-50", cssVar: "--surface-app", sourceType: "literal" },
+      { name: "brand-fill-100", cssVar: "--surface-brand-soft", sourceType: "literal" },
+      { name: "brand-fill-300", cssVar: "--surface-brand-subtle", sourceType: "literal" },
+      { name: "brand-500", cssVar: "--brand-primary", sourceType: "literal" },
+      { name: "brand-600", cssVar: "--brand-primary-medium", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--brand-primary-strong", sourceType: "literal" },
+      { name: "brand-900", cssVar: "--brand-primary-deep", sourceType: "literal" },
     ],
   },
   {
     title: "UI",
     tokens: [
-      { name: "ui-border-subtle", cssVar: "--ui-border-subtle" },
-      { name: "ui-divider", cssVar: "--ui-divider" },
-      { name: "text-primary", cssVar: "--text-primary" },
-      { name: "text-secondary", cssVar: "--text-secondary" },
+      { name: "ui-surface-app", cssVar: "--surface-app", sourceType: "alias", aliasOf: "--surface-app" },
+      { name: "surface-card", cssVar: "--surface-card", sourceType: "alias", aliasOf: "--neutral-0 / --neutral-800" },
+      { name: "ui-border-subtle", cssVar: "--ui-border-subtle", sourceType: "alias", aliasOf: "--neutral-200 / --neutral-500" },
+      { name: "ui-divider", cssVar: "--ui-divider", sourceType: "alias", aliasOf: "--ui-border-subtle" },
+      { name: "text-primary", cssVar: "--text-primary", sourceType: "alias", aliasOf: "--neutral-900 / --neutral-0" },
+      { name: "text-secondary", cssVar: "--text-secondary", sourceType: "alias", aliasOf: "--neutral-700 / --neutral-200" },
     ],
   },
 ];
+
+type NotificationTone = "info" | "success" | "warning" | "destructive";
+
+const notificationToneStyles: Record<
+  NotificationTone,
+  { bg: string; border: string; icon: string; badge: string; badgeFg: string }
+> = {
+  info: {
+    bg: "var(--surface-app)",
+    border: "var(--surface-brand-subtle)",
+    icon: "var(--brand-primary-deep)",
+    badge: "var(--surface-brand-subtle)",
+    badgeFg: "var(--brand-primary-deep)",
+  },
+  success: {
+    bg: "var(--status-success-soft)",
+    border: "var(--status-success-base)",
+    icon: "var(--status-success-strong)",
+    badge: "var(--status-success-base)",
+    badgeFg: "var(--neutral-0)",
+  },
+  warning: {
+    bg: "var(--status-warning-soft)",
+    border: "var(--status-warning-base)",
+    icon: "var(--status-warning-strong)",
+    badge: "var(--status-warning-base)",
+    badgeFg: "var(--neutral-900)",
+  },
+  destructive: {
+    bg: "var(--status-destructive-soft)",
+    border: "var(--status-destructive-base)",
+    icon: "var(--status-destructive-strong)",
+    badge: "var(--status-destructive-base)",
+    badgeFg: "var(--neutral-0)",
+  },
+};
+
+const buttonVariants: Array<{
+  variant: "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2";
+  label: string;
+}> = [
+  { variant: "primary", label: "Primary" },
+  { variant: "secondary", label: "Secondary" },
+  { variant: "tertiary", label: "Tertiary" },
+  { variant: "destructive", label: "Destructive" },
+  { variant: "ghost", label: "Ghost" },
+  { variant: "ghostV2", label: "Ghost v2" },
+];
+
+const buttonHoverStyles: Record<
+  "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2",
+  CSSProperties
+> = {
+  primary: {
+    background: "var(--brand-primary-strong)",
+  },
+  secondary: {
+    background: "var(--surface-app)",
+  },
+  tertiary: {
+    background: "var(--neutral-100)",
+    borderColor: "var(--neutral-700)",
+  },
+  destructive: {
+    background: "var(--status-destructive-strong)",
+  },
+  ghost: {
+    background: "var(--neutral-100)",
+  },
+  ghostV2: {
+    background: "var(--neutral-100)",
+  },
+};
 
 export function EditorV2DesignSystemPage() {
   return (
@@ -142,6 +219,19 @@ export function EditorV2DesignSystemPage() {
           <ControlsDemo />
         </section>
 
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Feedback & Overlays
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              The legacy modal, passive alert, toast, and single-action alert patterns,
+              now documented in the v2 surface library.
+            </p>
+          </div>
+          <FeedbackAndOverlaysDemo />
+        </section>
+
         <div className={styles.grid}>
           <section className={styles.sectionCard}>
             <div>
@@ -184,6 +274,282 @@ export function EditorV2DesignSystemPage() {
   );
 }
 
+function FeedbackAndOverlaysDemo() {
+  return (
+    <div className={styles.feedbackGrid}>
+      <div className={styles.feedbackSection}>
+        <div className={styles.feedbackSectionHeader}>
+          <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+            Modal
+          </h3>
+          <p className={styles.muted} style={typographyStyles.p2}>
+            Standard confirmation and destructive confirmation overlays.
+          </p>
+        </div>
+        <div className={styles.modalGrid}>
+          <ModalDemoCard />
+          <ModalDemoCard variant="destructive" />
+        </div>
+      </div>
+
+      <div className={styles.feedbackSection}>
+        <div className={styles.feedbackSectionHeader}>
+          <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+            Notifications and toasts
+          </h3>
+          <p className={styles.muted} style={typographyStyles.p2}>
+            Passive alerts, compact status toasts, and single-action alert rows.
+          </p>
+        </div>
+        <NotificationLibrary />
+      </div>
+    </div>
+  );
+}
+
+function ModalDemoCard({ variant = "default" }: { variant?: "default" | "destructive" }) {
+  const [open, setOpen] = useState(true);
+  const destructive = variant === "destructive";
+
+  const title = destructive ? "Delete chart?" : "Save changes?";
+  const description = destructive
+    ? "This will permanently remove the current chart and its stitch data. This action cannot be undone."
+    : "Your chart edits are ready to save. You can keep working, save a draft, or close without saving.";
+  const primaryLabel = destructive ? "Yes, delete" : "Save";
+  const secondaryLabel = destructive ? "No, keep it" : "Cancel";
+
+  return (
+    <div className={styles.modalDemo}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        {destructive ? "Open destructive modal" : "Open modal"}
+      </Button>
+
+      <div className={styles.modalStage} aria-hidden={open ? undefined : "true"}>
+        {open ? (
+          <div className={styles.modalScrim}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`${variant}-modal-title`}
+              aria-describedby={`${variant}-modal-description`}
+              className={styles.modalCard}
+            >
+              {destructive ? (
+                <div className={styles.modalAlertBadge} aria-hidden="true">
+                  <span
+                    className={styles.modalAlertIcon}
+                    style={{
+                      WebkitMaskImage: `url(${assetPath("icons/alert.svg")})`,
+                      maskImage: `url(${assetPath("icons/alert.svg")})`,
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              <div className={styles.modalHeader}>
+                <div id={`${variant}-modal-title`} style={typographyStyles.h4}>
+                  {title}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghostV2"
+                  size="sm"
+                  className={styles.modalClose}
+                  aria-label="Close modal"
+                  onClick={() => setOpen(false)}
+                >
+                  <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="12" height="12" />
+                </Button>
+              </div>
+
+              <div
+                id={`${variant}-modal-description`}
+                className={styles.modalDescription}
+                style={typographyStyles.p2}
+              >
+                {description}
+              </div>
+
+              <div className={styles.modalActions}>
+                <Button type="button" variant="tertiary" onClick={() => setOpen(false)}>
+                  {secondaryLabel}
+                </Button>
+                <Button type="button" variant={destructive ? "destructive" : "primary"}>
+                  {primaryLabel}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function NotificationLibrary() {
+  return (
+    <div className={styles.notificationGrid}>
+      <div className={styles.notificationStack}>
+        <div className={styles.notificationLabel} style={typographyStyles.s}>
+          Passive alerts
+        </div>
+        <div className={styles.notificationStackFixed}>
+          {[
+            {
+              tone: "info" as const,
+              title: "Chart autosaved",
+              description: "Your latest edits were saved to this pattern a moment ago.",
+              symbol: "i",
+            },
+            {
+              tone: "success" as const,
+              title: "Export complete",
+              description: "Your PDF pattern is ready and has been added to downloads.",
+              symbol: "✓",
+            },
+            {
+              tone: "warning" as const,
+              title: "Thread colors changed",
+              description: "One or more floss colors were substituted to match your palette.",
+              icon: "icons/alert.svg",
+            },
+            {
+              tone: "destructive" as const,
+              title: "Save failed",
+              description: "We couldn’t save your latest edits. Check your connection and try again.",
+              icon: "icons/alert.svg",
+            },
+          ].map((item) => (
+            <NotificationCard key={`passive-${item.tone}`} item={item} />
+          ))}
+        </div>
+
+        <div className={styles.notificationStackCompact}>
+          {[
+            { tone: "info" as const, title: "Autosave on", symbol: "i" },
+            { tone: "success" as const, title: "Export ready", symbol: "✓" },
+            { tone: "warning" as const, title: "Palette changed", icon: "icons/alert.svg" },
+            { tone: "destructive" as const, title: "Save failed", icon: "icons/alert.svg" },
+          ].map((item) => (
+            <NotificationCard key={`compact-${item.tone}`} item={item} compact />
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.notificationStack}>
+        <div className={styles.notificationLabel} style={typographyStyles.s}>
+          Single-action alerts
+        </div>
+        <div className={styles.notificationStackCompact}>
+          {[
+            { tone: "info" as const, title: "Sign in to keep your chart", action: "Sign in", symbol: "i" },
+            { tone: "success" as const, title: "Pattern shared", action: "View access", symbol: "✓" },
+            { tone: "warning" as const, title: "Low contrast detected", action: "Review colors", icon: "icons/alert.svg" },
+            { tone: "destructive" as const, title: "Unsaved work will be lost", action: "Review changes", icon: "icons/alert.svg" },
+          ].map((item) => (
+            <NotificationCard key={`action-${item.tone}`} item={item} compact action={item.action} neutralSurface />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationCard({
+  action,
+  compact = false,
+  item,
+  neutralSurface = false,
+}: {
+  action?: string;
+  compact?: boolean;
+  item:
+    | { tone: NotificationTone; title: string; description: string; symbol: string }
+    | { tone: NotificationTone; title: string; description: string; icon: string }
+    | { tone: NotificationTone; title: string; symbol: string }
+    | { tone: NotificationTone; title: string; icon: string };
+  neutralSurface?: boolean;
+}) {
+  const tone = notificationToneStyles[item.tone];
+
+  return (
+    <div
+      className={[styles.notificationCard, compact ? styles.notificationCardCompact : null]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        background: neutralSurface ? "var(--surface-card)" : tone.bg,
+        borderColor: neutralSurface ? "var(--ui-border-subtle)" : tone.border,
+      }}
+    >
+      <div style={{ color: tone.icon }}>
+        <span
+          className={styles.notificationIconBadge}
+          aria-hidden="true"
+          style={{ background: tone.badge, color: tone.badgeFg }}
+        >
+          {"symbol" in item ? (
+            <span className={styles.notificationSymbol}>{item.symbol}</span>
+          ) : (
+            <span
+              className={styles.notificationIcon}
+              style={{
+                WebkitMaskImage: `url(${assetPath(item.icon)})`,
+                maskImage: `url(${assetPath(item.icon)})`,
+              }}
+            />
+          )}
+        </span>
+      </div>
+
+      <div className={styles.notificationContent}>
+        <div className={styles.notificationTitle} style={typographyStyles.h5}>
+          {item.title}
+        </div>
+        {"description" in item ? (
+          <div className={styles.notificationDescription} style={typographyStyles.p2}>
+            {item.description}
+          </div>
+        ) : null}
+      </div>
+
+      {action ? (
+        <div className={styles.notificationControls}>
+          <Button type="button" variant="tertiary" size="md">
+            {action}
+          </Button>
+          <IconDismissButton label={`Dismiss ${item.title}`} />
+        </div>
+      ) : (
+        <IconDismissButton
+          className={!neutralSurface ? styles.notificationCloseGhost : undefined}
+          label={`Dismiss ${item.title}`}
+        />
+      )}
+    </div>
+  );
+}
+
+function IconDismissButton({
+  className,
+  label,
+}: {
+  className?: string;
+  label: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghostV2"
+      size="sm"
+      aria-label={label}
+      className={[styles.notificationClose, className].filter(Boolean).join(" ")}
+    >
+      <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="12" height="12" />
+    </Button>
+  );
+}
+
 function PaletteDemo() {
   return (
     <div className={styles.paletteGrid}>
@@ -200,10 +566,28 @@ function PaletteDemo() {
                   style={{ background: `var(${token.cssVar})` }}
                 />
                 <div className={styles.tokenMeta}>
-                  <span style={typographyStyles.p2}>{token.name}</span>
+                  <div className={styles.tokenTitleRow}>
+                    <span style={typographyStyles.p2}>{token.name}</span>
+                    <span
+                      className={[
+                        styles.tokenSourceBadge,
+                        token.sourceType === "alias"
+                          ? styles.tokenSourceBadgeAlias
+                          : styles.tokenSourceBadgeLiteral,
+                      ].join(" ")}
+                      style={typographyStyles.s}
+                    >
+                      {token.sourceType === "alias" ? "Alias" : "Literal"}
+                    </span>
+                  </div>
                   <span className={styles.muted} style={typographyStyles.s}>
                     {token.cssVar}
                   </span>
+                  {"aliasOf" in token && token.aliasOf ? (
+                    <span className={styles.muted} style={typographyStyles.s}>
+                      resolves to {token.aliasOf}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -256,33 +640,7 @@ function ControlsDemo() {
         <h3 className={styles.cardTitle} style={typographyStyles.h5}>
           Buttons
         </h3>
-        <div className={styles.controlStack}>
-          <div className={styles.actionRow}>
-            <Button type="button" variant="primary">
-              Primary
-            </Button>
-            <Button type="button" variant="secondary">
-              Secondary
-            </Button>
-            <Button type="button" variant="tertiary">
-              Tertiary
-            </Button>
-            <Button type="button" variant="ghostV2">
-              Ghost v2
-            </Button>
-          </div>
-          <div className={styles.actionRow}>
-            <Button type="button" variant="primary" size="sm">
-              Small
-            </Button>
-            <Button type="button" variant="ghostV2" size="md" active>
-              Active ghost v2
-            </Button>
-            <Button type="button" variant="secondary" size="lg">
-              Large
-            </Button>
-          </div>
-        </div>
+        <ButtonStateMatrix />
       </div>
 
       <div className={styles.controlSection}>
@@ -334,6 +692,92 @@ function ControlsDemo() {
         />
       </div>
     </div>
+  );
+}
+
+function ButtonStateMatrix() {
+  const [selectedVariants, setSelectedVariants] = useState<
+    Partial<Record<(typeof buttonVariants)[number]["variant"], boolean>>
+  >({});
+
+  return (
+    <div className={styles.buttonMatrix}>
+      <div className={styles.buttonMatrixHeaderCell} />
+      <div className={styles.buttonMatrixHeaderCell} style={typographyStyles.s}>
+        Default
+      </div>
+      <div className={styles.buttonMatrixHeaderCell} style={typographyStyles.s}>
+        Hover
+      </div>
+      <div className={styles.buttonMatrixHeaderCell} style={typographyStyles.s}>
+        Active
+      </div>
+
+      {buttonVariants.map(({ label, variant }) => (
+        <ButtonStateRow
+          key={variant}
+          active={selectedVariants[variant] === true}
+          label={label}
+          onToggle={() =>
+            setSelectedVariants((current) => ({
+              ...current,
+              [variant]: !current[variant],
+            }))
+          }
+          variant={variant}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ButtonStateRow({
+  active,
+  label,
+  onToggle,
+  variant,
+}: {
+  active: boolean;
+  label: string;
+  onToggle: () => void;
+  variant: "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2";
+}) {
+  return (
+    <>
+      <div className={styles.buttonMatrixLabel} style={typographyStyles.p2}>
+        {label}
+      </div>
+      <div className={styles.buttonStateCell}>
+        <Button type="button" variant={variant} active={active} onClick={onToggle}>
+          {label}
+        </Button>
+      </div>
+      <div className={styles.buttonStateCell}>
+        <Button
+          type="button"
+          variant={variant}
+          className={[styles.buttonDemoHover, styles.buttonStaticState].join(" ")}
+          style={buttonHoverStyles[variant]}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {label}
+        </Button>
+      </div>
+      <div className={styles.buttonStateCell}>
+        <Button
+          type="button"
+          variant={variant}
+          active
+          inertWhenActive
+          className={styles.buttonStaticState}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {label}
+        </Button>
+      </div>
+    </>
   );
 }
 
