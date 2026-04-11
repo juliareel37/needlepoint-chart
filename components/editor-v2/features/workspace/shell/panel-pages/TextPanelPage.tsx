@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button, Field, SingleSelectDropdown } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
-import { TEXT_FONT_OPTIONS } from "@/components/pattern-editor/utils/textFontOptions";
+import { TEXT_FONT_OPTIONS } from "@/lib/editor-v2/editor/text/textFontOptions";
 import type {
   EditorStore,
   PaletteColor,

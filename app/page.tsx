@@ -1,5 +1,5 @@
-import PatternEditor from "../components/pattern-editor/PatternEditor";
+import { EditorV2Page } from "../components/editor-v2/app/EditorV2Page";
 
 export default function Page() {
-  return <PatternEditor />;
+  return <EditorV2Page />;
 }

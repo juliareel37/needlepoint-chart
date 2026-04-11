@@ -1,7 +1,13 @@
 "use client";
 
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import type { ActiveTool, EditorStore } from "@/lib/editor-v2/editor/store";
 import {
   createPanViewportCommand,
@@ -64,13 +70,17 @@ export function useStagePanInteractions({
     [dispatch, panningDisabled, viewportZoom, zoomAnchor],
   );
 
+  const stopPanDragging = useEffectEvent(() => {
+    panDragRef.current = null;
+    setIsPanDragging(false);
+  });
+
   useEffect(() => {
     if (!panningDisabled) {
       return;
     }
 
-    panDragRef.current = null;
-    setIsPanDragging(false);
+    stopPanDragging();
   }, [panningDisabled]);
 
   useEffect(() => {
@@ -158,8 +168,11 @@ export function useStagePanInteractions({
     };
 
     const handleWindowMouseUp = () => {
-      panDragRef.current = null;
-      setIsPanDragging(false);
+      if (!panDragRef.current) {
+        return;
+      }
+
+      stopPanDragging();
     };
 
     window.addEventListener("mousemove", handleWindowMouseMove);
