@@ -20,6 +20,14 @@ import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 
+interface LoadedTraceAsset {
+  assetUrl: string;
+  height: number;
+  image: HTMLImageElement | null;
+  ready: boolean;
+  width: number;
+}
+
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
   activeTool: ActiveTool;
@@ -66,6 +74,7 @@ export function GridWorldSurface({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
     x: (stageSize.width - metrics.surfaceWidth) / 2,
@@ -214,6 +223,44 @@ export function GridWorldSurface({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!trace?.assetUrl) {
+      setLoadedTraceAsset(null);
+      return;
+    }
+
+    let cancelled = false;
+    const assetUrl = trace.assetUrl;
+    const image = new Image();
+    image.decoding = "async";
+
+    const commitLoadedState = (ready: boolean) => {
+      if (cancelled) {
+        return;
+      }
+
+      setLoadedTraceAsset({
+        assetUrl,
+        height: ready ? image.naturalHeight : 0,
+        image: ready ? image : null,
+        ready,
+        width: ready ? image.naturalWidth : 0,
+      });
+    };
+
+    image.onload = () => commitLoadedState(true);
+    image.onerror = () => commitLoadedState(false);
+    image.src = assetUrl;
+
+    if (image.complete) {
+      commitLoadedState(image.naturalWidth > 0 && image.naturalHeight > 0);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trace?.assetUrl]);
+
 
 
   return (
@@ -275,6 +322,8 @@ export function GridWorldSurface({
         >
           {showTraceOverlay && trace ? (
             <TraceImageLayer
+              assetHeight={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.height : null}
+              assetWidth={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.width : null}
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
@@ -298,6 +347,11 @@ export function GridWorldSurface({
               cells={grid.cells}
               colorsById={colorsById}
               displayHost={displayHost}
+              displayTraceAsset={
+                trace && loadedTraceAsset?.assetUrl === trace.assetUrl
+                  ? loadedTraceAsset
+                  : null
+              }
               paintOpacity={gridOpacity}
               displayTrace={showDisplayTrace ? trace : null}
               frameOrigin={frameOrigin}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type {
   GridPoint,
@@ -15,10 +15,19 @@ import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 
 const MAX_CANVAS_BACKING_DIMENSION = 16384;
 
+interface LoadedTraceAsset {
+  assetUrl: string;
+  height: number;
+  image: HTMLImageElement | null;
+  ready: boolean;
+  width: number;
+}
+
 interface GridCanvasStageProps {
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
   displayHost: HTMLElement | null;
+  displayTraceAsset: LoadedTraceAsset | null;
   paintOpacity?: number;
   displayTrace?: TraceDocument | null;
   frameOrigin: { x: number; y: number };
@@ -38,6 +47,7 @@ export function GridCanvasStage({
   cells,
   colorsById,
   displayHost,
+  displayTraceAsset,
   paintOpacity = 1,
   displayTrace = null,
   frameOrigin,
@@ -67,14 +77,6 @@ export function GridCanvasStage({
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
   const initializedRef = useRef(false);
-  const [displayTraceRevision, setDisplayTraceRevision] = useState(0);
-  const displayTraceImageRef = useRef<{
-    assetUrl: string;
-    image: HTMLImageElement;
-    ready: boolean;
-    width: number;
-    height: number;
-  } | null>(null);
 
   useEffect(() => {
     let canvas = sourceCanvasRef.current;
@@ -130,47 +132,6 @@ export function GridCanvasStage({
       initializedRef.current = false;
     }
   }, [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth]);
-
-  useEffect(() => {
-    if (!displayTrace?.assetUrl) {
-      displayTraceImageRef.current = null;
-      return;
-    }
-
-    const image = new Image();
-    image.decoding = "async";
-
-    const nextState = {
-      assetUrl: displayTrace.assetUrl,
-      image,
-      ready: false,
-      width: 0,
-      height: 0,
-    };
-    displayTraceImageRef.current = nextState;
-
-    image.onload = () => {
-      if (displayTraceImageRef.current?.assetUrl !== displayTrace.assetUrl) {
-        return;
-      }
-
-      nextState.ready = true;
-      nextState.width = image.naturalWidth;
-      nextState.height = image.naturalHeight;
-      setDisplayTraceRevision((current) => current + 1);
-    };
-
-    image.onerror = () => {
-      if (displayTraceImageRef.current?.assetUrl !== displayTrace.assetUrl) {
-        return;
-      }
-
-      nextState.ready = false;
-      setDisplayTraceRevision((current) => current + 1);
-    };
-
-    image.src = displayTrace.assetUrl;
-  }, [displayTrace?.assetUrl]);
 
   useEffect(() => {
     const canvas = sourceCanvasRef.current;
@@ -287,17 +248,22 @@ export function GridCanvasStage({
 
     context.fillStyle = "#ffffff";
     context.fillRect(drawX, drawY, drawWidth, drawHeight);
+    context.save();
+    context.beginPath();
+    context.rect(drawX, drawY, drawWidth, drawHeight);
+    context.clip();
 
-    const loadedDisplayTrace = displayTraceImageRef.current;
     if (
       displayTrace &&
-      loadedDisplayTrace?.ready &&
-      loadedDisplayTrace.width > 0 &&
-      loadedDisplayTrace.height > 0
+      displayTraceAsset?.assetUrl === displayTrace.assetUrl &&
+      displayTraceAsset.ready &&
+      displayTraceAsset.image &&
+      displayTraceAsset.width > 0 &&
+      displayTraceAsset.height > 0
     ) {
       const baseRect = getContainedRect(
-        loadedDisplayTrace.width,
-        loadedDisplayTrace.height,
+        displayTraceAsset.width,
+        displayTraceAsset.height,
         metrics.surfaceWidth,
         metrics.surfaceHeight,
       );
@@ -310,7 +276,7 @@ export function GridCanvasStage({
       context.save();
       context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
       context.drawImage(
-        loadedDisplayTrace.image,
+        displayTraceAsset.image,
         drawX + bounds.left * viewport.zoom,
         drawY + bounds.top * viewport.zoom,
         bounds.width * viewport.zoom,
@@ -347,6 +313,8 @@ export function GridCanvasStage({
         zoom: viewport.zoom,
       });
     }
+
+    context.restore();
   }, [
     cells,
     frameOrigin.x,
@@ -360,12 +328,12 @@ export function GridCanvasStage({
     showGridlines,
     stageSize.height,
     stageSize.width,
-    displayTrace?.assetUrl,
     displayTrace?.offsetX,
     displayTrace?.offsetY,
     displayTrace?.opacity,
     displayTrace?.scale,
-    displayTraceRevision,
+    displayTrace?.assetUrl,
+    displayTraceAsset,
     paintOpacity,
     viewport.offsetX,
     viewport.offsetY,

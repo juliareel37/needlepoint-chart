@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
@@ -12,6 +12,8 @@ import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./PositioningBoxOverlay";
 
 interface TraceImageLayerProps {
+  assetHeight: number | null;
+  assetWidth: number | null;
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
@@ -23,6 +25,8 @@ interface TraceImageLayerProps {
 }
 
 export function TraceImageLayer({
+  assetHeight,
+  assetWidth,
   dispatch,
   getWorldPointFromClient,
   imageOpacity,
@@ -32,24 +36,17 @@ export function TraceImageLayer({
   zIndex = 3,
   zoom,
 }: TraceImageLayerProps) {
-  const [traceAssetSize, setTraceAssetSize] = useState<{
-    assetUrl: string;
-    width: number;
-    height: number;
-  } | null>(null);
-  const activeTraceAssetSize =
-    traceAssetSize?.assetUrl === trace.assetUrl ? traceAssetSize : null;
   const traceBaseRect = useMemo(
     () =>
-      activeTraceAssetSize
+      assetWidth && assetHeight
         ? getContainedRect(
-            activeTraceAssetSize.width,
-            activeTraceAssetSize.height,
+            assetWidth,
+            assetHeight,
             metrics.surfaceWidth,
             metrics.surfaceHeight,
           )
         : null,
-    [activeTraceAssetSize, metrics.surfaceHeight, metrics.surfaceWidth],
+    [assetHeight, assetWidth, metrics.surfaceHeight, metrics.surfaceWidth],
   );
   const traceTransform = useMemo(
     () => ({
@@ -92,23 +89,13 @@ export function TraceImageLayer({
         alt="Trace reference"
         draggable={false}
         onDragStart={(event) => event.preventDefault()}
-        onLoad={(event) => {
-          const { naturalWidth, naturalHeight } = event.currentTarget;
-
-          if (naturalWidth > 0 && naturalHeight > 0) {
-            setTraceAssetSize({
-              assetUrl: trace.assetUrl,
-              width: naturalWidth,
-              height: naturalHeight,
-            });
-          }
-        }}
         style={{
           position: "absolute",
           top: `${traceBaseRect?.top ?? 0}px`,
           left: `${traceBaseRect?.left ?? 0}px`,
           width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
           height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
+          objectFit: "contain",
           opacity: imageOpacity,
           pointerEvents: "none",
           transform: getPositioningTransformCss(traceTransform),
