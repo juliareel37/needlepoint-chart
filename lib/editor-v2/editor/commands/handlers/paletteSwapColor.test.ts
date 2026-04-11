@@ -103,6 +103,9 @@ function createSwapTestState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      mirrorInteraction: {
+        session: null,
+      },
       history: {
         past: [],
         future: [],

@@ -27,6 +27,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -76,6 +77,8 @@ export function EditorV2Shell({
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
+  const mirrorSession = state.session.mirrorInteraction.session;
+  const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
   const textPlacement = state.session.textInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
@@ -301,6 +304,11 @@ export function EditorV2Shell({
               <TraceRepositionToolbar
                 dispatch={dispatch}
                 trace={trace}
+              />
+            ) : mirrorActive ? (
+              <MirrorSessionToolbar
+                dispatch={dispatch}
+                session={mirrorSession}
               />
             ) : (
               <FloatingToolbar

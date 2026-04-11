@@ -313,9 +313,16 @@ export function FloatingToolbar({
 
         <ToolbarButton
           type="button"
-          disabled
+          active={activeTool === "mirror"}
+          aria-pressed={activeTool === "mirror"}
           aria-label="Mirror"
           title="Mirror"
+          onClick={() => {
+            exitSelectionFlow();
+            setDrawOpen(false);
+            closeImageMenu();
+            dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
+          }}
         >
           <ToolbarIcon icon="/icons/lucide/reflect.svg" />
         </ToolbarButton>

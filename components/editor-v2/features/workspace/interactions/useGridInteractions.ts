@@ -13,6 +13,7 @@ import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
 import { createSetToolCommand, createSetToolWithColorCommand } from "../workspaceCommands";
 import { sampleTraceRgbAtWorldPoint } from "../trace/traceSampler";
 import { useClearSelectionOnEscape } from "./useClearSelectionOnEscape";
+import { useMirrorDrag } from "./useMirrorDrag";
 import { usePaintStroke } from "./usePaintStroke";
 import { useSelectionDrag } from "./useSelectionDrag";
 
@@ -54,11 +55,19 @@ export function useGridInteractions({
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
   });
+  const mirrorDrag = useMirrorDrag({
+    activeTool,
+    dispatch,
+    getClampedSelectionPointFromClient,
+    state,
+  });
 
   useClearSelectionOnEscape({
     clearLocalSelection: selectionDrag.clearDragSelection,
     dispatch,
-    hasSelection: Boolean(state.session.selection.rect),
+    hasSelection:
+      Boolean(state.session.selection.rect) ||
+      Boolean(state.session.mirrorInteraction.session),
   });
 
   return {
@@ -73,6 +82,10 @@ export function useGridInteractions({
     }
 
     if (paintStroke.handlePointerDown(point)) {
+      return;
+    }
+
+    if (mirrorDrag.handlePointerDown(point)) {
       return;
     }
 

@@ -2,6 +2,7 @@ import type {
   ActiveTool,
   EditorSidebarSection,
   GridPoint,
+  MirrorDirection,
   PanelUiState,
   SelectionPoint,
 } from "../store/state";
@@ -34,6 +35,9 @@ export type EditorCommandKind =
   | "mirror.update"
   | "mirror.commit"
   | "mirror.apply"
+  | "mirror.reset"
+  | "mirror.cancel"
+  | "mirror.done"
   | "text.beginPlacement"
   | "text.previewPlacement"
   | "text.cancelPlacement"
@@ -124,7 +128,22 @@ export type CommitMirrorCommand = BaseEditorCommand<
 
 export type ApplyMirrorCommand = BaseEditorCommand<
   "mirror.apply",
-  { axis: "horizontal" | "vertical" }
+  { direction: MirrorDirection }
+>;
+
+export type ResetMirrorCommand = BaseEditorCommand<
+  "mirror.reset",
+  object
+>;
+
+export type CancelMirrorCommand = BaseEditorCommand<
+  "mirror.cancel",
+  object
+>;
+
+export type DoneMirrorCommand = BaseEditorCommand<
+  "mirror.done",
+  object
 >;
 
 export type BeginTextPlacementCommand = BaseEditorCommand<
@@ -245,6 +264,9 @@ export type EditorCommand =
   | UpdateMirrorCommand
   | CommitMirrorCommand
   | ApplyMirrorCommand
+  | ResetMirrorCommand
+  | CancelMirrorCommand
+  | DoneMirrorCommand
   | BeginTextPlacementCommand
   | PreviewTextPlacementCommand
   | CancelTextPlacementCommand

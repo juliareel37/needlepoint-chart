@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
-import { createClearSelectionCommand } from "../workspaceCommands";
+import {
+  createCancelMirrorCommand,
+  createClearSelectionCommand,
+} from "../workspaceCommands";
 
 interface UseClearSelectionOnEscapeOptions {
   clearLocalSelection: () => void;
@@ -22,6 +25,7 @@ export function useClearSelectionOnEscape({
       }
 
       dispatch(createClearSelectionCommand("hotkey"));
+      dispatch(createCancelMirrorCommand("hotkey"));
       clearLocalSelection();
     }
 

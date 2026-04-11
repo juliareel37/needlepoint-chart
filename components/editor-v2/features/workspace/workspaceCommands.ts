@@ -181,6 +181,71 @@ export function createClearSelectionCommand(
   return createCommand("selection.clear", {}, source, { mode: "skip" });
 }
 
+export function createStartMirrorSelectionCommand(point: GridPoint): EditorCommand {
+  return createCommand(
+    "mirror.start",
+    { point },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createUpdateMirrorSelectionCommand(point: GridPoint): EditorCommand {
+  return createCommand(
+    "mirror.update",
+    { point },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitMirrorSelectionCommand(): EditorCommand {
+  return createCommand(
+    "mirror.commit",
+    {},
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createApplyMirrorCommand(direction: "left" | "right" | "top" | "bottom"): EditorCommand {
+  return createCommand(
+    "mirror.apply",
+    { direction },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createResetMirrorSelectionCommand(): EditorCommand {
+  return createCommand(
+    "mirror.reset",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelMirrorCommand(
+  source: EditorCommandSource = "toolbar",
+): EditorCommand {
+  return createCommand(
+    "mirror.cancel",
+    {},
+    source,
+    { mode: "skip" },
+  );
+}
+
+export function createDoneMirrorCommand(): EditorCommand {
+  return createCommand(
+    "mirror.done",
+    {},
+    "toolbar",
+    { mode: "push", label: "Mirror" },
+  );
+}
+
 export function createBeginTextPlacementCommand(payload: {
   text: string;
   intrinsicWidth: number;

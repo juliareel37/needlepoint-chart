@@ -56,6 +56,7 @@ export function GridWorldSurface({
   const textPlacement = state.session.textInteraction.placement;
   const viewport = state.session.viewport;
   const selection = state.session.selection;
+  const mirrorInteraction = state.session.mirrorInteraction;
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
@@ -371,6 +372,7 @@ export function GridWorldSurface({
           <SelectionOverlay
             activeTool={activeTool}
             metrics={metrics}
+            mirrorInteraction={mirrorInteraction}
             selection={selection}
           />
 

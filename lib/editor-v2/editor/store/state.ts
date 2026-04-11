@@ -99,6 +99,7 @@ export interface EditorSessionState {
   eyedropperReturnTool: ActiveTool | null;
   viewport: ViewportState;
   selection: SelectionState;
+  mirrorInteraction: MirrorInteractionState;
   history: HistoryState;
   persistence: PersistenceSessionState;
   traceInteraction: TraceInteractionState;
@@ -136,6 +137,20 @@ export interface SelectionState {
   lassoPoints: SelectionPoint[];
   mirrorAxis: "horizontal" | "vertical" | null;
   preview: SelectionPreviewState | null;
+}
+
+export type MirrorDirection = "left" | "right" | "top" | "bottom";
+
+export interface MirrorInteractionState {
+  session: MirrorSessionState | null;
+}
+
+export interface MirrorSessionState {
+  sourceRect: GridRect | null;
+  dragAnchor: GridPoint | null;
+  appliedDirection: MirrorDirection | null;
+  forwardPatches: DocumentPatch[];
+  inversePatches: DocumentPatch[];
 }
 
 export interface GridPoint {
@@ -353,6 +368,9 @@ export function createInitialEditorStoreState(): EditorStoreState {
         lassoPoints: [],
         mirrorAxis: null,
         preview: null,
+      },
+      mirrorInteraction: {
+        session: null,
       },
       history: {
         past: [],

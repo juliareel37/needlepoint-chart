@@ -4,7 +4,10 @@ import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
 import {
   applyMirrorCommandHandler,
+  cancelMirrorCommandHandler,
   commitMirrorCommandHandler,
+  doneMirrorCommandHandler,
+  resetMirrorCommandHandler,
   startMirrorCommandHandler,
   updateMirrorCommandHandler,
 } from "./handlers/mirror";
@@ -56,6 +59,9 @@ export const commandHandlers: EditorCommandHandler[] = [
   updateMirrorCommandHandler,
   commitMirrorCommandHandler,
   applyMirrorCommandHandler,
+  resetMirrorCommandHandler,
+  cancelMirrorCommandHandler,
+  doneMirrorCommandHandler,
   paletteSwapColorCommandHandler,
   beginTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,
