@@ -16,7 +16,6 @@ import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
 import type {
   EditorDocumentState,
-  EditorSidebarSection,
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
 import {
@@ -28,6 +27,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
 import styles from "./EditorV2Shell.module.css";
@@ -75,6 +75,8 @@ export function EditorV2Shell({
   const showRuler = state.ui.preferences.showRuler;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
+  const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
+  const textPlacement = state.session.textInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
@@ -218,6 +220,20 @@ export function EditorV2Shell({
     fitToGrid,
   ]);
 
+  useEffect(() => {
+    if (!traceRepositionActive) {
+      return;
+    }
+
+    if (activeSidebarSection !== "trace") {
+      dispatch(createSetActiveSidebarSectionCommand("trace"));
+    }
+
+    if (sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(false));
+    }
+  }, [activeSidebarSection, dispatch, sidebarCollapsed, traceRepositionActive]);
+
   return (
     <main className={styles.shell}>
       <EditorRail
@@ -247,6 +263,7 @@ export function EditorV2Shell({
               colorsById={colorsById}
               documentTitle={title}
               palette={palette}
+              gridMetrics={gridMetrics}
               showRuler={showRuler}
               saveMessage={saveMessage}
               savedDocuments={savedDocuments}
@@ -263,6 +280,8 @@ export function EditorV2Shell({
               onSaveDocument={onSaveDocument}
               onStartOver={onStartOver}
               trace={trace}
+              traceRepositionActive={traceRepositionActive}
+              textPlacement={textPlacement}
               usedColors={usedColors}
               document={document}
               dispatch={dispatch}
@@ -278,18 +297,25 @@ export function EditorV2Shell({
                 : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
             }}
           >
-            <FloatingToolbar
-              activeColor={activeColor}
-              activeTool={activeTool}
-              brushSize={brushSize}
-              canRedo={canRedo}
-              canUndo={canUndo}
-              dispatch={dispatch}
-              hasPaintedCells={hasPaintedCells}
-              selectionBounds={selectionBounds}
-              selectionCommitted={selectionCommitted}
-              trace={trace}
-            />
+            {traceRepositionActive && trace ? (
+              <TraceRepositionToolbar
+                dispatch={dispatch}
+                trace={trace}
+              />
+            ) : (
+              <FloatingToolbar
+                activeColor={activeColor}
+                activeTool={activeTool}
+                brushSize={brushSize}
+                canRedo={canRedo}
+                canUndo={canUndo}
+                dispatch={dispatch}
+                hasPaintedCells={hasPaintedCells}
+                selectionBounds={selectionBounds}
+                selectionCommitted={selectionCommitted}
+                trace={trace}
+              />
+            )}
           </div>
 
           <div className={styles.stageToolbarBottomRight}>

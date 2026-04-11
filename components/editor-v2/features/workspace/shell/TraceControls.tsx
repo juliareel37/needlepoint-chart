@@ -12,6 +12,9 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import {
   createAttachTraceCommand,
+  createBeginTraceRepositionCommand,
+  createCancelTraceRepositionCommand,
+  createCommitTraceRepositionCommand,
   createRemoveTraceCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
@@ -20,10 +23,16 @@ import styles from "./EditorV2Shell.module.css";
 interface TraceControlsProps {
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
+  repositionActive?: boolean;
 }
 
-export function TraceControls({ trace, dispatch }: TraceControlsProps) {
+export function TraceControls({
+  trace,
+  dispatch,
+  repositionActive = false,
+}: TraceControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const traceUploadSequenceRef = useRef(0);
   const positioningPreviewRef = useRef<{
     assetUrl: string;
     blendMode: TraceBlendMode;
@@ -32,13 +41,34 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
     userOverrode: boolean;
   } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
-  const positioningEnabled = trace ? !trace.locked : false;
+  const [traceUploadStatus, setTraceUploadStatus] = useState<
+    "idle" | "uploading" | "error"
+  >("idle");
+  const positioningEnabled = Boolean(trace && repositionActive);
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
 
-    const assetUrl = await readFileAsDataUrl(file);
-    dispatch(createAttachTraceCommand(assetUrl));
+    const sequence = traceUploadSequenceRef.current + 1;
+    traceUploadSequenceRef.current = sequence;
+    setTraceUploadStatus("uploading");
+
+    try {
+      const assetUrl = await uploadTraceFile(file);
+
+      if (sequence !== traceUploadSequenceRef.current) {
+        return;
+      }
+
+      dispatch(createAttachTraceCommand(assetUrl));
+      setTraceUploadStatus("idle");
+    } catch {
+      if (sequence !== traceUploadSequenceRef.current) {
+        return;
+      }
+
+      setTraceUploadStatus("error");
+    }
   };
 
   useEffect(() => {
@@ -192,25 +222,34 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
             style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
           />
           <span style={typographyStyles.p2}>Choose a file or drag &amp; drop.</span>
-          <span style={{ ...typographyStyles.p2, opacity: 0.75 }}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
+          <span style={{ ...typographyStyles.p2, opacity: 0.75 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
           <Button
             type="button"
-            variant="ghostV2"
-            size="sm"
+            variant="primary"
+            size="md"
+            disabled={traceUploadStatus === "uploading"}
             onClick={() => fileInputRef.current?.click()}
           >
-            Browse file
+            {traceUploadStatus === "uploading" ? "Uploading..." : "Browse file"}
           </Button>
         </div>
       ) : (
         <Button
           type="button"
           variant="secondary"
+          disabled={traceUploadStatus === "uploading"}
           onClick={() => fileInputRef.current?.click()}
         >
-          Replace trace
+          {traceUploadStatus === "uploading" ? "Uploading..." : "Replace trace"}
         </Button>
       )}
+
+      {traceUploadStatus === "error" ? (
+        <p className={styles.emptyMessage} style={typographyStyles.p2}>
+          Couldn&apos;t upload the trace image. Try signing in again or choose a
+          smaller PNG, JPG, WEBP, or GIF.
+        </p>
+      ) : null}
 
       <input
         ref={fileInputRef}
@@ -258,22 +297,33 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
             title="Positioning"
             tone="neutral"
           >
-            <Button
-              type="button"
-              variant={positioningEnabled ? "primary" : "secondary"}
-              disabled={!trace}
-              onClick={() => {
-                if (!trace || !dispatch) return;
-                dispatch(
-                  createUpdateTraceCommand(
-                    { locked: positioningEnabled },
-                    { history: { mode: "skip" } },
-                  ),
-                );
-              }}
-            >
-              {positioningEnabled ? "Reposition: On" : "Enable Reposition"}
-            </Button>
+            {positioningEnabled ? (
+              <div className={styles.panelRow}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => dispatch(createCancelTraceRepositionCommand())}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => dispatch(createCommitTraceRepositionCommand())}
+                >
+                  Done
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!trace}
+                onClick={() => dispatch(createBeginTraceRepositionCommand())}
+              >
+                Reposition
+              </Button>
+            )}
           </TraceSection>
 
           <TraceSection
@@ -409,23 +459,18 @@ export function TraceControls({ trace, dispatch }: TraceControlsProps) {
   );
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+async function uploadTraceFile(file: File): Promise<string> {
+  const { upload } = await import("@vercel/blob/client");
+  const uploaded = await upload(
+    `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`,
+    file,
+    {
+      access: "public",
+      handleUploadUrl: "/api/upload-trace",
+    },
+  );
 
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-
-      reject(new Error("Failed to read trace image"));
-    };
-
-    reader.onerror = () =>
-      reject(reader.error ?? new Error("Failed to read trace image"));
-    reader.readAsDataURL(file);
-  });
+  return uploaded.url;
 }
 
 function BlendModeButton({

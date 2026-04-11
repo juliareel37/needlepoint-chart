@@ -7,6 +7,11 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
   },
   handle(state, command) {
     const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
+    const currentTool = state.session.activeTool.tool;
+    const eyedropperReturnTool =
+      nextTool === "eyedropper"
+        ? state.session.eyedropperReturnTool ?? (currentTool === "eyedropper" ? "pan" : currentTool)
+        : null;
 
     return {
       nextSession: {
@@ -21,6 +26,7 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
               ? state.session.activeTool.colorId
               : command.payload.colorId,
         },
+        eyedropperReturnTool,
       },
       nextUi: state.ui,
       patches: [],

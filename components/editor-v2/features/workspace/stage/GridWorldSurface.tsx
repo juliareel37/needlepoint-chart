@@ -15,6 +15,7 @@ import {
 import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./GridRulerOverlay";
 import { SelectionOverlay } from "./SelectionOverlay";
+import { TextPlacementLayer } from "./TextPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
@@ -44,12 +45,16 @@ export function GridWorldSurface({
 }: GridWorldSurfaceProps) {
   const grid = state.document.grid;
   const trace = state.document.trace;
+  const textPlacement = state.session.textInteraction.placement;
   const viewport = state.session.viewport;
   const selection = state.session.selection;
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
   const traceBlendMode = trace?.blendMode ?? "image";
+  const tracePositioningEnabled = Boolean(trace && trace.visible && !trace.locked);
+  const showTraceOverlay = Boolean(trace && trace.visible && tracePositioningEnabled);
+  const showDisplayTrace = Boolean(trace && trace.visible && !tracePositioningEnabled);
   const traceImageOpacity =
     trace && trace.visible && traceBlendMode === "crossfade"
       ? trace.opacity
@@ -66,7 +71,9 @@ export function GridWorldSurface({
     x: (stageSize.width - metrics.surfaceWidth) / 2,
     y: (stageSize.height - metrics.surfaceHeight) / 2,
   };
-  const tracePositioningEnabled = Boolean(trace && trace.visible && !trace.locked);
+  const textPlacementActive = Boolean(textPlacement);
+  const textPreviewColor =
+    (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -161,7 +168,9 @@ export function GridWorldSurface({
     dispatch,
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
+    metrics,
     state,
+    trace,
   });
   const {
     cursor,
@@ -170,6 +179,7 @@ export function GridWorldSurface({
   } = useStagePanInteractions({
     activeTool,
     dispatch,
+    panningDisabled: tracePositioningEnabled || textPlacementActive,
     stageRef,
     viewportZoom: viewport.zoom,
     zoomAnchor,
@@ -260,22 +270,10 @@ export function GridWorldSurface({
             height: `${metrics.surfaceHeight}px`,
             transform: getViewportTransform(viewport),
             transformOrigin: "top left",
+            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.14)",
           }}
         >
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: `${metrics.surfaceWidth}px`,
-              height: `${metrics.surfaceHeight}px`,
-              background: "#ffffff",
-              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.14)",
-            }}
-          />
-
-          {trace && trace.visible ? (
+          {showTraceOverlay && trace ? (
             <TraceImageLayer
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
@@ -283,6 +281,7 @@ export function GridWorldSurface({
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
               trace={trace}
+              zIndex={3}
               zoom={viewport.zoom}
             />
           ) : null}
@@ -290,7 +289,7 @@ export function GridWorldSurface({
           <div
             style={{
               position: "relative",
-              zIndex: 1,
+              zIndex: 2,
               width: `${metrics.surfaceWidth}px`,
               height: `${metrics.surfaceHeight}px`,
             }}
@@ -299,7 +298,8 @@ export function GridWorldSurface({
               cells={grid.cells}
               colorsById={colorsById}
               displayHost={displayHost}
-              displayOpacity={gridOpacity}
+              paintOpacity={gridOpacity}
+              displayTrace={showDisplayTrace ? trace : null}
               frameOrigin={frameOrigin}
               getGridPointFromClient={getGridPointFromClient}
               getSelectionPointFromClient={getSelectionPointFromClient}
@@ -319,6 +319,17 @@ export function GridWorldSurface({
             metrics={metrics}
             selection={selection}
           />
+
+          {textPlacement ? (
+            <TextPlacementLayer
+              dispatch={dispatch}
+              getWorldPointFromClient={getWorldPointFromClient}
+              metrics={metrics}
+              placement={textPlacement}
+              previewColor={textPreviewColor}
+              zoom={viewport.zoom}
+            />
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { assetPath } from "@/lib/assetPath";
 import {
@@ -15,11 +15,7 @@ import {
   Checkbox,
   Field,
   FieldInput,
-  MenuChevronIcon,
-  MenuItem,
-  MenuSurface,
-  MenuTrailingCheck,
-  MenuTrigger,
+  SingleSelectDropdown,
   Slider,
   Toggle,
   Toolbar,
@@ -127,30 +123,29 @@ const notificationToneStyles: Record<
 };
 
 const buttonVariants: Array<{
-  variant: "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2";
   label: string;
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
-  { variant: "tertiary", label: "Tertiary" },
+  { variant: "tertiaryold", label: "tertiaryold" },
   { variant: "destructive", label: "Destructive" },
   { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 
 const buttonHoverStyles: Record<
-  "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2",
+  "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2",
   CSSProperties
 > = {
   primary: {
     background: "var(--brand-primary-strong)",
   },
   secondary: {
-    background: "var(--surface-app)",
+    background: "var(--neutral-200)",
   },
-  tertiary: {
+  tertiaryold: {
     background: "var(--neutral-100)",
-    borderColor: "var(--neutral-700)",
   },
   destructive: {
     background: "var(--status-destructive-strong)",
@@ -159,7 +154,7 @@ const buttonHoverStyles: Record<
     background: "var(--neutral-100)",
   },
   ghostV2: {
-    background: "var(--neutral-100)",
+    background: "var(--neutral-200)",
   },
 };
 
@@ -371,7 +366,7 @@ function ModalDemoCard({ variant = "default" }: { variant?: "default" | "destruc
               </div>
 
               <div className={styles.modalActions}>
-                <Button type="button" variant="tertiary" onClick={() => setOpen(false)}>
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                   {secondaryLabel}
                 </Button>
                 <Button type="button" variant={destructive ? "destructive" : "primary"}>
@@ -515,7 +510,7 @@ function NotificationCard({
 
       {action ? (
         <div className={styles.notificationControls}>
-          <Button type="button" variant="tertiary" size="md">
+          <Button type="button" variant="secondary" size="md">
             {action}
           </Button>
           <IconDismissButton label={`Dismiss ${item.title}`} />
@@ -740,7 +735,7 @@ function ButtonStateRow({
   active: boolean;
   label: string;
   onToggle: () => void;
-  variant: "primary" | "secondary" | "tertiary" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2";
 }) {
   return (
     <>
@@ -970,26 +965,7 @@ function RailDemo() {
 }
 
 function SidePanelDemo() {
-  const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function onPointerDown(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (!target || !rootRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
-  const selectedDesign = useMemo(
-    () => savedDesigns.find((item) => item.id === selectedId) ?? null,
-    [selectedId],
-  );
 
   return (
     <div className={styles.panelShell}>
@@ -1027,50 +1003,16 @@ function SidePanelDemo() {
         </div>
 
         <div className={styles.panelSection}>
-          <div ref={rootRef} className={styles.demoAnchor}>
-            <MenuTrigger
-              type="button"
-              variant="selection"
-              open={open}
-              aria-expanded={open}
-              aria-haspopup="menu"
-              aria-label="Saved designs"
-              onClick={() => setOpen((value) => !value)}
-              style={{ width: "100%", minWidth: 240, maxWidth: "100%" }}
-            >
-              <span>{selectedDesign ? selectedDesign.label : "Load saved design"}</span>
-              <MenuChevronIcon open={open} />
-            </MenuTrigger>
-
-            {open ? (
-              <MenuSurface
-                role="menu"
-                aria-label="Saved designs"
-                className={styles.menuSurface}
-              >
-                {savedDesigns.map((item) => {
-                  const active = item.id === selectedId;
-                  return (
-                    <MenuItem
-                      key={item.id}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={active}
-                      active={active}
-                      layout="trailing"
-                      trailing={<MenuTrailingCheck active={active} />}
-                      onClick={() => {
-                        setSelectedId(item.id);
-                        setOpen(false);
-                      }}
-                    >
-                      {item.label}
-                    </MenuItem>
-                  );
-                })}
-              </MenuSurface>
-            ) : null}
-          </div>
+          <SingleSelectDropdown
+            ariaLabel="Saved designs"
+            getItemLabel={(item) => item.label}
+            getItemValue={(item) => item.id}
+            items={savedDesigns}
+            onValueChange={setSelectedId}
+            placeholder="Load saved design"
+            value={selectedId}
+            wrapperClassName={styles.demoAnchor}
+          />
 
           <Button type="button" variant="primary">
             Load

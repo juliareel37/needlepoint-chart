@@ -3,6 +3,7 @@ import {
   type EditorDocumentState,
   type EditorStoreState,
 } from "./state";
+import { addDmcColorLibraryToPalette } from "../color-library";
 
 export function createEditorStateFromDocument(
   document: EditorDocumentState,
@@ -10,6 +11,7 @@ export function createEditorStateFromDocument(
   const state = createInitialEditorStoreState();
   const normalizedDocument: EditorDocumentState = {
     ...document,
+    palette: addDmcColorLibraryToPalette(document.palette),
     trace: document.trace
       ? {
           ...document.trace,
@@ -32,6 +34,7 @@ export function createEditorStateFromDocument(
         tool: "pan",
         colorId: defaultColorId,
       },
+      eyedropperReturnTool: null,
     },
   };
 }

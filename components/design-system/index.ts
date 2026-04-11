@@ -4,6 +4,7 @@ export * from "./Field";
 export * from "./Menu";
 export * from "./Panel";
 export * from "./Slider";
+export * from "./SingleSelectDropdown";
 export * from "./Toggle";
 export * from "./Toolbar";
 export * from "./VerticalTabGroup";

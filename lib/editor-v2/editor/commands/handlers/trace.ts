@@ -3,10 +3,18 @@ import type {
   TraceUpdateChanges,
   UpsertTracePatch,
 } from "../../store/patches";
-import type { TraceDocument } from "../../store/state";
-import type { EditorCommandHandler } from "./types";
+import type {
+  EditorStoreState,
+  TraceDocument,
+  TraceRepositionSnapshot,
+} from "../../store/state";
+import type { EditorCommandExecution, EditorCommandHandler } from "./types";
 import type {
   AttachTraceCommand,
+  BeginTraceRepositionCommand,
+  CancelTraceRepositionCommand,
+  CommitTraceRepositionCommand,
+  PreviewTraceRepositionCommand,
   RemoveTraceCommand,
   UpdateTraceCommand,
 } from "../types";
@@ -29,7 +37,14 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
     };
 
     return {
-      nextSession: buildNextSession(state.session),
+      nextSession: buildNextSession({
+        ...clearTraceRepositionSession(state.session),
+        traceInteraction: {
+          ...state.session.traceInteraction,
+          placementMode: "move",
+          repositionSnapshot: buildTraceRepositionSnapshot(nextTrace),
+        },
+      }),
       nextUi: state.ui,
       patches: [{ type: "trace.upsert", trace: nextTrace }],
       inversePatches: buildInverseTracePatches(state.document.trace),
@@ -87,6 +102,129 @@ export const updateTraceCommandHandler: EditorCommandHandler<UpdateTraceCommand>
   },
 };
 
+export const beginTraceRepositionCommandHandler: EditorCommandHandler<BeginTraceRepositionCommand> = {
+  canHandle(command): command is BeginTraceRepositionCommand {
+    return command.kind === "trace.beginReposition";
+  },
+  handle(state, command) {
+    const currentTrace = state.document.trace;
+
+    if (!currentTrace) {
+      return buildTraceSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        traceInteraction: {
+          ...state.session.traceInteraction,
+          placementMode: "move",
+          repositionSnapshot: buildTraceRepositionSnapshot(currentTrace),
+        },
+      },
+      nextUi: state.ui,
+      patches: [{ type: "trace.update", changes: { locked: false } }],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const previewTraceRepositionCommandHandler: EditorCommandHandler<PreviewTraceRepositionCommand> = {
+  canHandle(command): command is PreviewTraceRepositionCommand {
+    return command.kind === "trace.previewReposition";
+  },
+  handle(state, command) {
+    if (!state.document.trace || !state.session.traceInteraction.repositionSnapshot) {
+      return buildTraceSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: state.session,
+      nextUi: state.ui,
+      patches: [
+        {
+          type: "trace.update",
+          changes: {
+            offsetX: command.payload.offsetX,
+            offsetY: command.payload.offsetY,
+            scale: command.payload.scale,
+          },
+        },
+      ],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const cancelTraceRepositionCommandHandler: EditorCommandHandler<CancelTraceRepositionCommand> = {
+  canHandle(command): command is CancelTraceRepositionCommand {
+    return command.kind === "trace.cancelReposition";
+  },
+  handle(state, command) {
+    const snapshot = state.session.traceInteraction.repositionSnapshot;
+
+    if (!state.document.trace || !snapshot) {
+      return buildTraceSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: clearTraceRepositionSession(state.session),
+      nextUi: state.ui,
+      patches: [{ type: "trace.update", changes: snapshot }],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const commitTraceRepositionCommandHandler: EditorCommandHandler<CommitTraceRepositionCommand> = {
+  canHandle(command): command is CommitTraceRepositionCommand {
+    return command.kind === "trace.commitReposition";
+  },
+  handle(state, command) {
+    const currentTrace = state.document.trace;
+    const snapshot = state.session.traceInteraction.repositionSnapshot;
+
+    if (!currentTrace || !snapshot) {
+      return buildTraceSessionNoop(state, command.id);
+    }
+
+    const committedChanges: TraceUpdateChanges = {
+      offsetX: currentTrace.offsetX,
+      offsetY: currentTrace.offsetY,
+      scale: currentTrace.scale,
+      locked: true,
+    };
+
+    return {
+      nextSession: buildNextSession(clearTraceRepositionSession(state.session)),
+      nextUi: state.ui,
+      patches: [{ type: "trace.update", changes: committedChanges }],
+      inversePatches: [{ type: "trace.update", changes: snapshot }],
+      effects: [],
+      event: {
+        type: "command",
+        commandId: command.id,
+        label: "Reposition Trace",
+      },
+    };
+  },
+};
+
 export const removeTraceCommandHandler: EditorCommandHandler<RemoveTraceCommand> = {
   canHandle(command): command is RemoveTraceCommand {
     return command.kind === "trace.remove";
@@ -109,7 +247,7 @@ export const removeTraceCommandHandler: EditorCommandHandler<RemoveTraceCommand>
     }
 
     return {
-      nextSession: buildNextSession(state.session),
+      nextSession: buildNextSession(clearTraceRepositionSession(state.session)),
       nextUi: state.ui,
       patches: [{ type: "trace.remove" }],
       inversePatches: [{ type: "trace.upsert", trace: currentTrace }],
@@ -144,6 +282,50 @@ function buildInverseTraceUpdateChanges(
   }
 
   return inverseChanges;
+}
+
+function buildTraceRepositionSnapshot(
+  trace: TraceDocument,
+): TraceRepositionSnapshot {
+  return {
+    offsetX: trace.offsetX,
+    offsetY: trace.offsetY,
+    scale: trace.scale,
+    locked: true,
+  };
+}
+
+function clearTraceRepositionSession<TSession extends {
+  traceInteraction: {
+    placementMode: "idle" | "move" | "scale" | "rotate";
+    repositionSnapshot: TraceRepositionSnapshot | null;
+  };
+}>(session: TSession): TSession {
+  return {
+    ...session,
+    traceInteraction: {
+      ...session.traceInteraction,
+      placementMode: "idle",
+      repositionSnapshot: null,
+    },
+  };
+}
+
+function buildTraceSessionNoop(
+  state: EditorStoreState,
+  commandId: string,
+): EditorCommandExecution {
+  return {
+    nextSession: state.session,
+    nextUi: state.ui,
+    patches: [],
+    inversePatches: [],
+    effects: [],
+    event: {
+      type: "session",
+      commandId,
+    },
+  };
 }
 
 function buildNextSession<TSession extends { persistence: { dirty: boolean } }>(

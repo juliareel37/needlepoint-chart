@@ -11,6 +11,7 @@ import {
 interface UseStagePanInteractionsOptions {
   activeTool: ActiveTool;
   dispatch: EditorStore["dispatch"];
+  panningDisabled?: boolean;
   stageRef: RefObject<HTMLDivElement | null>;
   viewportZoom: number;
   zoomAnchor: { x: number; y: number } | null;
@@ -19,6 +20,7 @@ interface UseStagePanInteractionsOptions {
 export function useStagePanInteractions({
   activeTool,
   dispatch,
+  panningDisabled = false,
   stageRef,
   viewportZoom,
   zoomAnchor,
@@ -27,10 +29,12 @@ export function useStagePanInteractions({
   const [isPanDragging, setIsPanDragging] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
-  const panToolActive = activeTool === "pan";
+  const panToolActive = activeTool === "pan" && !panningDisabled;
   const cursor = isPanDragging
     ? "grabbing"
-    : spacePressed || panToolActive
+    : activeTool === "eyedropper"
+      ? "crosshair"
+    : (spacePressed && !panningDisabled) || panToolActive
       ? "grab"
       : "default";
 
@@ -51,10 +55,23 @@ export function useStagePanInteractions({
         return;
       }
 
+      if (panningDisabled) {
+        return;
+      }
+
       dispatch(createPanViewportCommand(-event.deltaX, -event.deltaY));
     },
-    [dispatch, viewportZoom, zoomAnchor],
+    [dispatch, panningDisabled, viewportZoom, zoomAnchor],
   );
+
+  useEffect(() => {
+    if (!panningDisabled) {
+      return;
+    }
+
+    panDragRef.current = null;
+    setIsPanDragging(false);
+  }, [panningDisabled]);
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -155,8 +172,8 @@ export function useStagePanInteractions({
   }, [dispatch]);
 
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
-    const isMiddleMouseButton = event.button === 1;
-    const isSpaceDrag = event.button === 0 && isSpacePressedRef.current;
+    const isMiddleMouseButton = event.button === 1 && !panningDisabled;
+    const isSpaceDrag = event.button === 0 && isSpacePressedRef.current && !panningDisabled;
     const isPanToolDrag = event.button === 0 && panToolActive;
 
     if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {

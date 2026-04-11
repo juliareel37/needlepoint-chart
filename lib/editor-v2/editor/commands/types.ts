@@ -25,13 +25,25 @@ export type EditorCommandKind =
   | "grid.paint"
   | "grid.erase"
   | "grid.clear"
+  | "palette.swapColor"
   | "selection.start"
   | "selection.update"
   | "selection.commit"
   | "selection.clear"
+  | "mirror.start"
+  | "mirror.update"
+  | "mirror.commit"
+  | "mirror.apply"
+  | "text.beginPlacement"
+  | "text.previewPlacement"
+  | "text.cancelPlacement"
   | "trace.attach"
   | "trace.remove"
   | "trace.update"
+  | "trace.beginReposition"
+  | "trace.previewReposition"
+  | "trace.cancelReposition"
+  | "trace.commitReposition"
   | "viewport.setZoom"
   | "viewport.pan"
   | "tool.setActive"
@@ -73,6 +85,11 @@ export type EraseCellsCommand = BaseEditorCommand<
 
 export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", object>;
 
+export type SwapPaletteColorCommand = BaseEditorCommand<
+  "palette.swapColor",
+  { fromColorId: string; toColorId: string }
+>;
+
 export type StartSelectionCommand = BaseEditorCommand<
   "selection.start",
   { point: SelectionPoint }
@@ -89,6 +106,73 @@ export type CommitSelectionCommand = BaseEditorCommand<
 >;
 
 export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>;
+
+export type StartMirrorCommand = BaseEditorCommand<
+  "mirror.start",
+  { point: GridPoint }
+>;
+
+export type UpdateMirrorCommand = BaseEditorCommand<
+  "mirror.update",
+  { point: GridPoint }
+>;
+
+export type CommitMirrorCommand = BaseEditorCommand<
+  "mirror.commit",
+  object
+>;
+
+export type ApplyMirrorCommand = BaseEditorCommand<
+  "mirror.apply",
+  { axis: "horizontal" | "vertical" }
+>;
+
+export type BeginTextPlacementCommand = BaseEditorCommand<
+  "text.beginPlacement",
+  {
+    text: string;
+    intrinsicWidth: number;
+    intrinsicHeight: number;
+    baseFontSize: number;
+    fontFamily: string;
+    fontStyle: "normal" | "italic";
+    fontWeight: number;
+    underline: boolean;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
+  }
+>;
+
+export type PreviewTextPlacementCommand = BaseEditorCommand<
+  "text.previewPlacement",
+  { offsetX: number; offsetY: number; scale: number }
+>;
+
+export type CancelTextPlacementCommand = BaseEditorCommand<
+  "text.cancelPlacement",
+  object
+>;
+
+export type BeginTraceRepositionCommand = BaseEditorCommand<
+  "trace.beginReposition",
+  object
+>;
+
+export type PreviewTraceRepositionCommand = BaseEditorCommand<
+  "trace.previewReposition",
+  { offsetX: number; offsetY: number; scale: number }
+>;
+
+export type CancelTraceRepositionCommand = BaseEditorCommand<
+  "trace.cancelReposition",
+  object
+>;
+
+export type CommitTraceRepositionCommand = BaseEditorCommand<
+  "trace.commitReposition",
+  object
+>;
 
 export type AttachTraceCommand = BaseEditorCommand<
   "trace.attach",
@@ -152,10 +236,22 @@ export type EditorCommand =
   | PaintCellsCommand
   | EraseCellsCommand
   | ClearCanvasCommand
+  | SwapPaletteColorCommand
   | StartSelectionCommand
   | UpdateSelectionCommand
   | CommitSelectionCommand
   | ClearSelectionCommand
+  | StartMirrorCommand
+  | UpdateMirrorCommand
+  | CommitMirrorCommand
+  | ApplyMirrorCommand
+  | BeginTextPlacementCommand
+  | PreviewTextPlacementCommand
+  | CancelTextPlacementCommand
+  | BeginTraceRepositionCommand
+  | PreviewTraceRepositionCommand
+  | CancelTraceRepositionCommand
+  | CommitTraceRepositionCommand
   | AttachTraceCommand
   | RemoveTraceCommand
   | UpdateTraceCommand

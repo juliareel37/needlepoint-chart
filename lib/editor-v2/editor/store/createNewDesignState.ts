@@ -2,6 +2,10 @@ import {
   createInitialEditorStoreState,
   type EditorStoreState,
 } from "./state";
+import {
+  addDmcColorLibraryToPalette,
+  DEFAULT_DMC_COLOR_ID,
+} from "../color-library";
 
 const DEFAULT_TITLE = "New Design";
 
@@ -26,24 +30,7 @@ export function createNewDesignState(
         cells: new Array(width * height).fill(null),
       },
       palette: {
-        ...state.document.palette,
-        colorsById: {
-          navy: {
-            id: "navy",
-            brand: "custom",
-            code: "navy",
-            name: "Navy",
-            hex: "#1d3557",
-          },
-          coral: {
-            id: "coral",
-            brand: "custom",
-            code: "coral",
-            name: "Coral",
-            hex: "#e76f51",
-          },
-        },
-        extractedPaletteIds: ["navy", "coral"],
+        ...addDmcColorLibraryToPalette(state.document.palette),
       },
     },
     session: {
@@ -51,8 +38,9 @@ export function createNewDesignState(
       activeTool: {
         ...state.session.activeTool,
         tool: "pan",
-        colorId: "navy",
+        colorId: DEFAULT_DMC_COLOR_ID,
       },
+      eyedropperReturnTool: null,
     },
   };
 }

@@ -30,6 +30,7 @@ export function UsedColorsSummary({
                 className={styles.usedColorSwatch}
                 style={{
                   backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
+                  justifyContent: "left",
                 }}
               />
               <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>

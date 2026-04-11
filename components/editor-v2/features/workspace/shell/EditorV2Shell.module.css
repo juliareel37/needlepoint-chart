@@ -338,17 +338,25 @@
 
 .colorRow {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  /* gap: 10px; */
+  /* flex-wrap: wrap; */
+  gap: 6px;
+  height: 250px;
+  overflow: scroll;
+  /* background-color: var(--neutral-50); */
+  border-radius: 20px;
+  padding: 8px;
+  flex-direction: column;
 }
 
 .colorButton {
   justify-content: flex-start;
+  padding: 20px 8px !important;
 }
 
 .swatch {
-  width: 14px;
-  height: 14px;
+  width: 25px;
+  height: 25px;
   border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.12);
 }

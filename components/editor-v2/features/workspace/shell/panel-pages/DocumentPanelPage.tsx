@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Button,
-  Field,
   FieldInput,
-  MenuSurface,
-  MenuItem,
-  MenuTrailingCheck,
-  MenuTrigger,
-  MenuChevronIcon,
+  SingleSelectDropdown,
   panelMutedTextStyle,
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
@@ -184,93 +179,18 @@ function SavedDesignSingleSelect({
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function onPointerDown(event: PointerEvent) {
-      const target = event.target as Node | null;
-      if (!target || !rootRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
-  const selectedRecord = useMemo(
-    () =>
-      savedDocuments.find((record) => record.storageId === selectedStorageId) ?? null,
-    [savedDocuments, selectedStorageId],
-  );
-
   return (
-    <Field label="Choose a design">
-      <div ref={rootRef} style={{ position: "relative", width: "fit-content", maxWidth: "100%" }}>
-        <MenuTrigger
-          type="button"
-          variant="selection"
-          open={open}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          aria-label="Saved designs"
-          onClick={() => setOpen((value) => !value)}
-          style={{ width: "100%", minWidth: 240, maxWidth: "100%" }}
-        >
-          <span>
-            {selectedRecord
-              ? formatSavedDesignLabel(selectedRecord)
-              : "Load saved design"}
-          </span>
-          <MenuChevronIcon open={open} />
-        </MenuTrigger>
-
-        {open ? (
-          <MenuSurface
-            role="menu"
-            aria-label="Saved designs"
-            style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              zIndex: 10,
-              width: "max-content",
-              maxWidth: "min(320px, 100%)",
-              maxHeight: 280,
-              overflowY: "auto",
-            }}
-          >
-            {savedDocuments.length ? (
-              savedDocuments.map((record) => {
-                const active = record.storageId === selectedStorageId;
-                return (
-                  <MenuItem
-                    key={record.storageId}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={active}
-                    active={active}
-                    layout="trailing"
-                    trailing={<MenuTrailingCheck active={active} />}
-                    onClick={() => {
-                      setSelectedStorageId(record.storageId);
-                      setOpen(false);
-                    }}
-                  >
-                    {formatSavedDesignLabel(record)}
-                  </MenuItem>
-                );
-              })
-            ) : (
-              <MenuItem type="button" disabled>
-                No saved designs
-              </MenuItem>
-            )}
-          </MenuSurface>
-        ) : null}
-      </div>
-    </Field>
+    <SingleSelectDropdown
+      ariaLabel="Saved designs"
+      emptyLabel="No saved designs"
+      getItemLabel={formatSavedDesignLabel}
+      getItemValue={(record) => record.storageId}
+      items={savedDocuments}
+      label="Choose a design"
+      onValueChange={setSelectedStorageId}
+      placeholder="Load saved design"
+      value={selectedStorageId}
+    />
   );
 }
 

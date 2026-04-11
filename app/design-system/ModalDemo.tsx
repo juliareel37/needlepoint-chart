@@ -69,7 +69,7 @@ export function ModalDemo({ variant = "default" }: ModalDemoProps) {
                 {description}
               </div>
               <div className="ds-modal-actions">
-                <button type="button" className="ds-btn ds-btn-tertiary ds-btn-md" onClick={() => setOpen(false)}>
+                <button type="button" className="ds-btn ds-btn-tertiaryold ds-btn-md" onClick={() => setOpen(false)}>
                   {secondaryLabel}
                 </button>
                 <button type="button" className={`ds-btn ${destructive ? "ds-btn-destructive" : "ds-btn-primary"} ds-btn-md`}>

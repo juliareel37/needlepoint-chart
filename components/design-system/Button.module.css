@@ -8,6 +8,8 @@
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
   filter: none;
   transform: none;
+  font-weight:550;
+  /* box-shadow: 0 1px 4px var(--ui-border-subtle); */
 }
 
 .button:focus-visible {
@@ -44,7 +46,7 @@
 }
 
 .primary {
-  border: none;
+  /* border: none; */
   background: var(--brand-primary);
   color: var(--neutral-0);
 }
@@ -62,46 +64,44 @@
 }
 
 .secondary {
-  border: 1px solid var(--brand-primary-strong);
-  background: var(--neutral-0);
-  color: var(--brand-primary-deep);
-}
-
-.secondary:hover:not(:disabled) {
-  background: var(--surface-app);
-}
-
-.secondary[data-active="true"] {
-  background: var(--surface-brand-soft);
-  color: var(--brand-primary-deep);
-  border-color: var(--brand-primary-strong);
-}
-
-.secondary[data-active="true"]:hover:not(:disabled) {
-  background: var(--surface-brand-soft);
-  color: var(--brand-primary-deep);
-  border-color: var(--brand-primary-strong);
-}
-
-.tertiary {
-  border: 1px solid var(--neutral-500);
-  background: transparent;
+  /* border: 1px solid var(--neutral-200); */
+  background: var(--neutral-200);
+  /* color: var(--brand-primary-deep); */
   color: var(--neutral-700);
 }
 
-.tertiary:hover:not(:disabled) {
+.secondary:hover:not(:disabled) {
+  background: var(--neutral-300);
+}
+
+.secondary[data-active="true"] {
+  color: var(--neutral-0);
+  background: var(--brand-primary-strong);
+}
+
+.secondary[data-active="true"]:hover:not(:disabled) {
+  color: var(--neutral-0);
+  background: var(--brand-primary-strong);
+}
+
+.tertiaryold {
+  /* border: 1px solid var(--neutral-200); */
+  background-color: orange;
+
+  /* var(--neutral-50); */
+  color: var(--neutral-700);
+}
+
+.tertiaryold:hover:not(:disabled) {
   background: var(--neutral-100);
-  border-color: var(--neutral-700);
 }
 
-.tertiary[data-active="true"] {
-  border-color: var(--neutral-700);
-  background: var(--neutral-200);
+.tertiaryold[data-active="true"] {
+  background: var(--neutral-300);
 }
 
-.tertiary[data-active="true"]:hover:not(:disabled) {
-  border-color: var(--neutral-700);
-  background: var(--neutral-200);
+.tertiaryold[data-active="true"]:hover:not(:disabled) {
+  background: var(--neutral-300);
 }
 
 .destructive {
@@ -147,15 +147,34 @@
 }
 
 .ghostV2:hover:not(:disabled) {
-  background: var(--neutral-100);
+  background: var(--neutral-200);
 }
 
 .ghostV2[data-active="true"] {
-  background: var(--surface-app);
-  color: var(--brand-primary-deep);
+  background: var(--surface-brand-soft);
+  color: var(--brand-primary-strong);
 }
 
 .ghostV2[data-active="true"]:hover:not(:disabled) {
-  background: var(--surface-app);
-  color: var(--brand-primary-deep);
+  background: var(--surface-brand-soft);
+  color: var(--brand-primary-strong);
+}
+
+.glyph {
+  background: currentColor center / contain no-repeat;
+  width: 16px;
+  height:16px;
+  mask-position: center;
+  mask-size:contain;
+  mask-repeat:no-repeat
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border-radius: 4px;
+  color: inherit;
 }

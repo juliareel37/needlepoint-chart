@@ -6,17 +6,23 @@ import styles from "../EditorV2Shell.module.css";
 
 interface TracePanelPageProps {
   dispatch: EditorStore["dispatch"];
+  repositionActive: boolean;
   trace: TraceDocument | null;
 }
 
 export function TracePanelPage({
   dispatch,
+  repositionActive,
   trace,
 }: TracePanelPageProps) {
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        <TraceControls trace={trace} dispatch={dispatch} />
+        <TraceControls
+          dispatch={dispatch}
+          repositionActive={repositionActive}
+          trace={trace}
+        />
       </div>
     </section>
   );

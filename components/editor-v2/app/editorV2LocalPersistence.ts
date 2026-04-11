@@ -95,20 +95,12 @@ export function saveEditorV2Document(
     return record;
   }
 
-  for (let keepCount = existingWithoutCurrent.length - 1; keepCount >= 0; keepCount -= 1) {
-    const trimmedRecords = [record, ...existingWithoutCurrent.slice(0, keepCount)];
-
-    if (tryWriteSavedDocuments(trimmedRecords)) {
-      return record;
-    }
-  }
-
   const compactRecord: SavedEditorV2DocumentRecord = {
     ...record,
     document: createStorageSafeDocument(document),
   };
 
-  if (tryWriteSavedDocuments([compactRecord])) {
+  if (tryWriteSavedDocuments([compactRecord, ...existingWithoutCurrent])) {
     return compactRecord;
   }
 

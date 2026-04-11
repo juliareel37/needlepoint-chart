@@ -5,8 +5,13 @@ import type {
   EditorStore,
   EditorStoreState,
   GridPoint,
+  TraceDocument,
   SelectionPoint,
 } from "@/lib/editor-v2/editor/store";
+import { findClosestPaletteColorId } from "@/lib/editor-v2/editor/color-utils";
+import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
+import { createSetToolCommand, createSetToolWithColorCommand } from "../workspaceCommands";
+import { sampleTraceRgbAtWorldPoint } from "../trace/traceSampler";
 import { useClearSelectionOnEscape } from "./useClearSelectionOnEscape";
 import { usePaintStroke } from "./usePaintStroke";
 import { useSelectionDrag } from "./useSelectionDrag";
@@ -21,7 +26,9 @@ interface UseGridInteractionsOptions {
     clientY: number,
   ) => SelectionPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
+  metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
   state: EditorStoreState;
+  trace: TraceDocument | null;
 }
 
 export function useGridInteractions({
@@ -31,7 +38,9 @@ export function useGridInteractions({
   dispatch,
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
+  metrics,
   state,
+  trace,
 }: UseGridInteractionsOptions) {
   const paintStroke = usePaintStroke({
     activeColorId,
@@ -58,6 +67,11 @@ export function useGridInteractions({
   };
 
   function handlePointerDown(point: GridPoint, selectionPoint: SelectionPoint): void {
+    if (activeTool === "eyedropper") {
+      handleEyedropperPointerDown(point);
+      return;
+    }
+
     if (paintStroke.handlePointerDown(point)) {
       return;
     }
@@ -67,5 +81,35 @@ export function useGridInteractions({
 
   function handlePointerEnter(point: GridPoint): void {
     paintStroke.handlePointerEnter(point);
+  }
+
+  function handleEyedropperPointerDown(point: GridPoint): void {
+    const returnTool = state.session.eyedropperReturnTool ?? "pan";
+    // const returnTool = "draw";
+
+    const paintedColorId = getCell(state, point.x, point.y);
+
+    if (paintedColorId) {
+      dispatch(createSetToolWithColorCommand(returnTool, paintedColorId));
+      return;
+    }
+
+    if (trace) {
+      const worldPoint = {
+        x: (point.x + 0.5) * metrics.cellSize,
+        y: (point.y + 0.5) * metrics.cellSize,
+      };
+      const sampled = sampleTraceRgbAtWorldPoint(trace, metrics, worldPoint);
+      if (sampled) {
+        const nearest = findClosestPaletteColorId(state.document.palette.colorsById, sampled);
+        if (nearest) {
+          dispatch(createSetToolWithColorCommand(returnTool, nearest));
+          return;
+        }
+      }
+    }
+
+    // Miss: do not change active color, but always return to the previous tool.
+    dispatch(createSetToolCommand(returnTool));
   }
 }

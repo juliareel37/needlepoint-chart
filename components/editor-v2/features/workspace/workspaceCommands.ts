@@ -32,6 +32,18 @@ export function createSetToolCommand(tool: ActiveTool): EditorCommand {
   return createCommand("tool.setActive", { tool }, "toolbar", { mode: "skip" });
 }
 
+export function createSetToolWithColorCommand(
+  tool: ActiveTool,
+  colorId: string | null,
+): EditorCommand {
+  return createCommand(
+    "tool.setActive",
+    { tool, colorId },
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createSetBrushSizeCommand(
   brushSize: number,
   tool: ActiveTool,
@@ -120,6 +132,18 @@ export function createClearCanvasCommand(): EditorCommand {
   );
 }
 
+export function createSwapPaletteColorCommand(
+  fromColorId: string,
+  toColorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.swapColor",
+    { fromColorId, toColorId },
+    "toolbar",
+    { mode: "push", label: "Swap Color" },
+  );
+}
+
 export function createSelectionStartCommand(point: SelectionPoint): EditorCommand {
   return createCommand(
     "selection.start",
@@ -155,6 +179,89 @@ export function createClearSelectionCommand(
   source: EditorCommandSource = "toolbar",
 ): EditorCommand {
   return createCommand("selection.clear", {}, source, { mode: "skip" });
+}
+
+export function createBeginTextPlacementCommand(payload: {
+  text: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  baseFontSize: number;
+  fontFamily: string;
+  fontStyle: "normal" | "italic";
+  fontWeight: number;
+  underline: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
+}): EditorCommand {
+  return createCommand(
+    "text.beginPlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createPreviewTextPlacementCommand(payload: {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}): EditorCommand {
+  return createCommand(
+    "text.previewPlacement",
+    payload,
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelTextPlacementCommand(): EditorCommand {
+  return createCommand(
+    "text.cancelPlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createBeginTraceRepositionCommand(): EditorCommand {
+  return createCommand(
+    "trace.beginReposition",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelTraceRepositionCommand(): EditorCommand {
+  return createCommand(
+    "trace.cancelReposition",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitTraceRepositionCommand(): EditorCommand {
+  return createCommand(
+    "trace.commitReposition",
+    {},
+    "toolbar",
+    { mode: "push", label: "Reposition Trace" },
+  );
+}
+
+export function createPreviewTraceRepositionCommand(payload: {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}): EditorCommand {
+  return createCommand(
+    "trace.previewReposition",
+    payload,
+    "canvas",
+    { mode: "skip" },
+  );
 }
 
 export function createAttachTraceCommand(assetUrl: string): EditorCommand {

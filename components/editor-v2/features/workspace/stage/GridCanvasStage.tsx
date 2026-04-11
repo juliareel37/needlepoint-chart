@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   GridPoint,
   GridCellValue,
   PaletteColor,
   SelectionPoint,
+  TraceDocument,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
+import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 
 const MAX_CANVAS_BACKING_DIMENSION = 16384;
@@ -17,7 +19,8 @@ interface GridCanvasStageProps {
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
   displayHost: HTMLElement | null;
-  displayOpacity?: number;
+  paintOpacity?: number;
+  displayTrace?: TraceDocument | null;
   frameOrigin: { x: number; y: number };
   getGridPointFromClient: (clientX: number, clientY: number) => GridPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
@@ -35,7 +38,8 @@ export function GridCanvasStage({
   cells,
   colorsById,
   displayHost,
-  displayOpacity = 1,
+  paintOpacity = 1,
+  displayTrace = null,
   frameOrigin,
   getGridPointFromClient,
   getSelectionPointFromClient,
@@ -63,6 +67,14 @@ export function GridCanvasStage({
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
   const initializedRef = useRef(false);
+  const [displayTraceRevision, setDisplayTraceRevision] = useState(0);
+  const displayTraceImageRef = useRef<{
+    assetUrl: string;
+    image: HTMLImageElement;
+    ready: boolean;
+    width: number;
+    height: number;
+  } | null>(null);
 
   useEffect(() => {
     let canvas = sourceCanvasRef.current;
@@ -84,7 +96,6 @@ export function GridCanvasStage({
 
     const width = metrics.surfaceWidth;
     const height = metrics.surfaceHeight;
-    const cellSize = metrics.cellSize;
     const devicePixelRatio = window.devicePixelRatio || 1;
     const maxRenderableScale = Math.min(
       MAX_CANVAS_BACKING_DIMENSION / Math.max(width, 1),
@@ -119,6 +130,47 @@ export function GridCanvasStage({
       initializedRef.current = false;
     }
   }, [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth]);
+
+  useEffect(() => {
+    if (!displayTrace?.assetUrl) {
+      displayTraceImageRef.current = null;
+      return;
+    }
+
+    const image = new Image();
+    image.decoding = "async";
+
+    const nextState = {
+      assetUrl: displayTrace.assetUrl,
+      image,
+      ready: false,
+      width: 0,
+      height: 0,
+    };
+    displayTraceImageRef.current = nextState;
+
+    image.onload = () => {
+      if (displayTraceImageRef.current?.assetUrl !== displayTrace.assetUrl) {
+        return;
+      }
+
+      nextState.ready = true;
+      nextState.width = image.naturalWidth;
+      nextState.height = image.naturalHeight;
+      setDisplayTraceRevision((current) => current + 1);
+    };
+
+    image.onerror = () => {
+      if (displayTraceImageRef.current?.assetUrl !== displayTrace.assetUrl) {
+        return;
+      }
+
+      nextState.ready = false;
+      setDisplayTraceRevision((current) => current + 1);
+    };
+
+    image.src = displayTrace.assetUrl;
+  }, [displayTrace?.assetUrl]);
 
   useEffect(() => {
     const canvas = sourceCanvasRef.current;
@@ -233,6 +285,42 @@ export function GridCanvasStage({
     const drawWidth = metrics.surfaceWidth * viewport.zoom;
     const drawHeight = metrics.surfaceHeight * viewport.zoom;
 
+    context.fillStyle = "#ffffff";
+    context.fillRect(drawX, drawY, drawWidth, drawHeight);
+
+    const loadedDisplayTrace = displayTraceImageRef.current;
+    if (
+      displayTrace &&
+      loadedDisplayTrace?.ready &&
+      loadedDisplayTrace.width > 0 &&
+      loadedDisplayTrace.height > 0
+    ) {
+      const baseRect = getContainedRect(
+        loadedDisplayTrace.width,
+        loadedDisplayTrace.height,
+        metrics.surfaceWidth,
+        metrics.surfaceHeight,
+      );
+      const bounds = getPositionedBounds(baseRect, {
+        offsetX: displayTrace.offsetX,
+        offsetY: displayTrace.offsetY,
+        scale: displayTrace.scale,
+      });
+
+      context.save();
+      context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
+      context.drawImage(
+        loadedDisplayTrace.image,
+        drawX + bounds.left * viewport.zoom,
+        drawY + bounds.top * viewport.zoom,
+        bounds.width * viewport.zoom,
+        bounds.height * viewport.zoom,
+      );
+      context.restore();
+    }
+
+    context.save();
+    context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
     context.drawImage(
       sourceCanvas,
       0,
@@ -244,6 +332,7 @@ export function GridCanvasStage({
       drawWidth,
       drawHeight,
     );
+    context.restore();
 
     if (showGridlines) {
       drawGridOverlay(context, {
@@ -271,6 +360,13 @@ export function GridCanvasStage({
     showGridlines,
     stageSize.height,
     stageSize.width,
+    displayTrace?.assetUrl,
+    displayTrace?.offsetX,
+    displayTrace?.offsetY,
+    displayTrace?.opacity,
+    displayTrace?.scale,
+    displayTraceRevision,
+    paintOpacity,
     viewport.offsetX,
     viewport.offsetY,
     viewport.zoom,
@@ -286,8 +382,7 @@ export function GridCanvasStage({
               style={{
                 position: "absolute",
                 inset: 0,
-                zIndex: 1,
-                opacity: displayOpacity,
+                zIndex: 0,
                 pointerEvents: "none",
                 imageRendering: "pixelated",
               }}

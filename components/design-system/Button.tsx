@@ -1,14 +1,15 @@
 "use client";
 
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { space } from "@/app/design-system/spacing";
 import { typographySpecs } from "@/app/design-system/typography";
 import styles from "./Button.module.css";
+import { assetPath } from "@/lib/assetPath";
 
 type ButtonVariant =
   | "primary"
   | "secondary"
-  | "tertiary"
+  | "tertiaryold"
   | "destructive"
   | "ghost"
   | "ghostV2";
@@ -19,13 +20,13 @@ const sizeStyles: Record<ButtonSize, CSSProperties> = {
     padding: `${space[8]} ${space[12]}`,
     fontSize: typographySpecs.s.size,
     lineHeight: `${typographySpecs.s.lineHeight}px`,
-    fontWeight: typographySpecs.s.weight,
+    // fontWeight: typographySpecs.s.weight,
   },
   md: {
     padding: `${space[8]} ${space[16]}`,
     fontSize: typographySpecs.p2.size,
     lineHeight: `${typographySpecs.p2.lineHeight}px`,
-    fontWeight: typographySpecs.p2.weight,
+    // fontWeight: typographySpecs.p2.weight,
   },
   lg: {
     padding: `${space[12]} ${space[20]}`,
@@ -83,5 +84,27 @@ export function Button({
     >
       {children}
     </button>
+  );
+}
+
+export function ButtonIcon({
+  icon,
+  className,
+  ...props
+}: HTMLAttributes<HTMLSpanElement> & { icon: string }) {
+  return (
+    <span
+      {...props}
+      aria-hidden={props["aria-hidden"] ?? "true"}
+      className={[styles.icon, className].filter(Boolean).join(" ")}
+    >
+      <span
+        className={styles.glyph}
+        style={{
+          WebkitMaskImage: `url(${assetPath(icon)})`,
+          maskImage: `url(${assetPath(icon)})`,
+        }}
+      />
+    </span>
   );
 }

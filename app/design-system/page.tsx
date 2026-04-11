@@ -60,7 +60,7 @@ const controlBase: CSSProperties = {
 const buttonVariants = [
   { label: "Primary", className: "ds-btn-primary" },
   { label: "Secondary", className: "ds-btn-secondary" },
-  { label: "Tertiary", className: "ds-btn-tertiary" },
+  { label: "tertiaryold", className: "ds-btn-tertiaryold" },
   { label: "Destructive", className: "ds-btn-destructive" },
   { label: "Ghost", className: "ds-btn-ghost", breakBefore: true },
 ];
@@ -563,20 +563,20 @@ export default async function DesignSystemPage({ searchParams }: DesignSystemPag
           color: var(--neutral-0);
           border-color: var(--brand-primary-deep);
         }
-        .ds-btn-tertiary {
+        .ds-btn-tertiaryold {
           border: 1px solid var(--neutral-500);
           background: transparent;
           color: var(--neutral-700);
         }
-        .ds-btn-tertiary:hover {
+        .ds-btn-tertiaryold:hover {
           background: var(--neutral-100);
           border-color: var(--neutral-700);
         }
-        .ds-btn-tertiary[data-hover="true"] {
+        .ds-btn-tertiaryold[data-hover="true"] {
           background: var(--neutral-100);
           border-color: var(--neutral-700);
         }
-        .ds-btn-tertiary[data-active="true"] {
+        .ds-btn-tertiaryold[data-active="true"] {
           border-color: transparent;
           background: var(--neutral-200);
         }
@@ -2288,7 +2288,7 @@ export default async function DesignSystemPage({ searchParams }: DesignSystemPag
             <span className="ds-s ds-text-muted">Preview</span>
             <Link
               href="/design-system?preview=light"
-              className="ds-btn ds-btn-tertiary ds-btn-sm"
+              className="ds-btn ds-btn-tertiaryold ds-btn-sm"
               data-active={previewTheme === "light" ? "true" : undefined}
               style={{ textDecoration: "none" }}
             >
@@ -2296,7 +2296,7 @@ export default async function DesignSystemPage({ searchParams }: DesignSystemPag
             </Link>
             <Link
               href="/design-system?preview=dark"
-              className="ds-btn ds-btn-tertiary ds-btn-sm"
+              className="ds-btn ds-btn-tertiaryold ds-btn-sm"
               data-active={previewTheme === "dark" ? "true" : undefined}
               style={{ textDecoration: "none" }}
             >
@@ -2304,7 +2304,7 @@ export default async function DesignSystemPage({ searchParams }: DesignSystemPag
             </Link>
             <Link
               href="/design-audit"
-              className="ds-btn ds-btn-tertiary ds-btn-sm"
+              className="ds-btn ds-btn-tertiaryold ds-btn-sm"
               style={{ textDecoration: "none" }}
             >
               /design-audit
@@ -2957,7 +2957,7 @@ export default async function DesignSystemPage({ searchParams }: DesignSystemPag
                           <div className="ds-h5 ds-notification-title">{item.title}</div>
                         </div>
                         <div className="ds-notification-controls">
-                          <button type="button" className="ds-btn ds-btn-tertiary ds-btn-md ds-notification-action">
+                          <button type="button" className="ds-btn ds-btn-tertiaryold ds-btn-md ds-notification-action">
                             {item.action}
                           </button>
                           <button type="button" className="ds-btn ds-btn-ghost ds-btn-sm ds-notification-close" aria-label={`Dismiss ${item.title}`}>

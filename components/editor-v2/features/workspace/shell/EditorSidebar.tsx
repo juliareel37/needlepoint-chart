@@ -7,11 +7,14 @@ import type {
   EditorStore,
   EditorDocumentState,
   PaletteColor,
+  TextPlacementSession,
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
+import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
 import { ColorPanelPage } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
+import { TextPanelPage } from "./panel-pages/TextPanelPage";
 import { TracePanelPage } from "./panel-pages/TracePanelPage";
 import styles from "./EditorV2Shell.module.css";
 
@@ -33,9 +36,12 @@ interface EditorSidebarProps {
   showGridlines: boolean;
   showRuler: boolean;
   trace: TraceDocument | null;
+  traceRepositionActive: boolean;
   usedColors: Array<{ colorId: string; count: number }>;
   document: EditorDocumentState;
+  gridMetrics: GridWorldMetrics;
   dispatch: EditorStore["dispatch"];
+  textPlacement: TextPlacementSession | null;
 }
 
 export function EditorSidebar({
@@ -56,9 +62,12 @@ export function EditorSidebar({
   showGridlines,
   showRuler,
   trace,
+  traceRepositionActive,
   usedColors,
   document,
+  gridMetrics,
   dispatch,
+  textPlacement,
 }: EditorSidebarProps) {
   return (
     <aside className={styles.sidebar}>
@@ -69,7 +78,9 @@ export function EditorSidebar({
               ? "Document"
               : activeSection === "color"
                 ? "Color"
-                : "Trace"}
+                : activeSection === "trace"
+                  ? "Trace"
+                  : "Text"}
           </h2>
           <Button
             type="button"
@@ -118,7 +129,21 @@ export function EditorSidebar({
         ) : null}
 
         {activeSection === "trace" ? (
-          <TracePanelPage dispatch={dispatch} trace={trace} />
+          <TracePanelPage
+            dispatch={dispatch}
+            repositionActive={traceRepositionActive}
+            trace={trace}
+          />
+        ) : null}
+
+        {activeSection === "text" ? (
+          <TextPanelPage
+            activeColorId={activeColorId}
+            dispatch={dispatch}
+            gridMetrics={gridMetrics}
+            palette={palette}
+            placement={textPlacement}
+          />
         ) : null}
       </div>
     </aside>

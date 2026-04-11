@@ -14,6 +14,7 @@ const railItems: Array<{ id: EditorSidebarSection; label: string; icon: string }
   { id: "document", label: "Document", icon: "/icons/lucide/file.svg" },
   { id: "color", label: "Color", icon: "/icons/lucide/palette.svg" },
   { id: "trace", label: "Trace", icon: "/icons/lucide/image.svg" },
+  { id: "text", label: "Text", icon: "/icons/lucide/type-outline.svg" },
 ];
 
 export function EditorRail({

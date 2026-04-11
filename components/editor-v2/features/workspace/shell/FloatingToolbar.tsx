@@ -22,6 +22,7 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createBeginTraceRepositionCommand,
   createClearSelectionCommand,
   createClearCanvasCommand,
   createEraseCellsCommand,
@@ -208,6 +209,21 @@ export function FloatingToolbar({
           }}
         >
           <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          active={activeTool === "eyedropper"}
+          aria-pressed={activeTool === "eyedropper"}
+          aria-label="Eyedropper"
+          title="Eyedropper"
+          onClick={() => {
+            exitSelectionFlow();
+            closeImageMenu();
+            dispatch(createSetToolCommand("eyedropper"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/dropper.svg" />
         </ToolbarButton>
 
         <ToolbarAnchor>
@@ -520,14 +536,13 @@ export function FloatingToolbar({
 
                   <ToolbarButton
                     type="button"
-                    active={!trace.locked}
-                    aria-pressed={!trace.locked}
+                    aria-label="Reposition trace"
+                    title="Reposition trace"
                     onClick={() => {
+                      openSidebarSection("trace");
+                      closeImageMenu();
                       dispatch(
-                        createUpdateTraceCommand(
-                          { locked: !trace.locked },
-                          { history: { mode: "skip" } },
-                        ),
+                        createBeginTraceRepositionCommand(),
                       );
                     }}
                   >

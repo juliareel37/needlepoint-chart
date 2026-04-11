@@ -96,6 +96,7 @@ export interface DocumentMetadata {
 
 export interface EditorSessionState {
   activeTool: ActiveToolState;
+  eyedropperReturnTool: ActiveTool | null;
   viewport: ViewportState;
   selection: SelectionState;
   history: HistoryState;
@@ -110,6 +111,7 @@ export type ActiveTool =
   | "paint"
   | "erase"
   | "fill"
+  | "eyedropper"
   | "pan"
   | "lasso"
   | "mirror"
@@ -199,8 +201,14 @@ export interface VersionPreviewState {
 export interface TraceInteractionState {
   uploadStatus: "idle" | "uploading" | "uploaded" | "error";
   placementMode: "idle" | "move" | "scale" | "rotate";
+  repositionSnapshot: TraceRepositionSnapshot | null;
   runtimeImageRefId: string | null;
 }
+
+export type TraceRepositionSnapshot = Pick<
+  TraceDocument,
+  "offsetX" | "offsetY" | "scale" | "locked"
+>;
 
 export interface TextInteractionState {
   draftText: string;
@@ -210,6 +218,21 @@ export interface TextInteractionState {
   draftFontStyle: "normal" | "italic";
   draftFontWeight: number;
   previewPosition: GridPoint | null;
+  placement: TextPlacementSession | null;
+}
+
+export interface TextPlacementSession {
+  text: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  baseFontSize: number;
+  fontFamily: string;
+  fontStyle: "normal" | "italic";
+  fontWeight: number;
+  underline: boolean;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
 }
 
 export interface InFlightCommandState {
@@ -227,7 +250,7 @@ export interface EditorUiState {
   preferences: UiPreferenceState;
 }
 
-export type EditorSidebarSection = "document" | "color" | "trace";
+export type EditorSidebarSection = "document" | "color" | "trace" | "text";
 
 export interface ShellUiState {
   sidebarCollapsed: boolean;
@@ -318,6 +341,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         brushSize: 1,
         colorId: null,
       },
+      eyedropperReturnTool: null,
       viewport: {
         zoom: 1,
         offsetX: 0,
@@ -349,16 +373,18 @@ export function createInitialEditorStoreState(): EditorStoreState {
       traceInteraction: {
         uploadStatus: "idle",
         placementMode: "idle",
+        repositionSnapshot: null,
         runtimeImageRefId: null,
       },
       textInteraction: {
         draftText: "",
         draftColorId: null,
-        draftFontFamily: "",
-        draftFontSize: 16,
+        draftFontFamily: "Arial",
+        draftFontSize: 6,
         draftFontStyle: "normal",
         draftFontWeight: 400,
         previewPosition: null,
+        placement: null,
       },
       inFlightCommand: null,
     },
