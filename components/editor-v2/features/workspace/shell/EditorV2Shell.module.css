@@ -339,19 +339,19 @@
 .colorRow {
   display: flex;
   /* gap: 10px; */
-  /* flex-wrap: wrap; */
-  gap: 6px;
+  flex-wrap: wrap;
+  /* gap: 6px; */
   height: 250px;
   overflow: scroll;
   /* background-color: var(--neutral-50); */
-  border-radius: 20px;
-  padding: 8px;
-  flex-direction: column;
+  /* border-radius: 20px; */
+  /* padding: 8px; */
+  /* flex-direction: column; */
 }
 
 .colorButton {
   justify-content: flex-start;
-  padding: 20px 8px !important;
+  padding: 8px !important;
 }
 
 .swatch {
@@ -374,11 +374,15 @@
 
 .usedColorsList {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  /* flex-wrap: wrap; */
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
+  height: 250px;
+  overflow: scroll;
+  padding:8px;
 }
 
 .usedColorsItem {
@@ -393,8 +397,8 @@
 }
 
 .usedColorSwatch {
-  width: 10px;
-  height: 10px;
+  width: 25px;
+  height: 25px;
   border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   flex: 0 0 auto;

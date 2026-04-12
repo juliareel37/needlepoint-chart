@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   Button,
-  CheckboxField,
   Field,
   FieldSelect,
 } from "@/components/design-system";
@@ -14,8 +13,6 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import {
   createSetActiveColorCommand,
-  createSetGridlinesVisibleCommand,
-  createSetRulerVisibleCommand,
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
 import { UsedColorsSummary } from "../UsedColorsSummary";
@@ -78,7 +75,7 @@ export function ColorPanelPage({
                     className={styles.swatch}
                     style={{ backgroundColor: color.hex }}
                   />
-                  <span style={typographyStyles.p2}>{color.name}</span>
+                  {/* <span style={typographyStyles.p2}>{color.name}</span> */}
                 </Button>
               );
             })}
@@ -145,25 +142,6 @@ export function ColorPanelPage({
           >
             Swap color
           </Button>
-        </div>
-
-        <div className={styles.sidebarSubsection}>
-          <CheckboxField
-            checked={showGridlines}
-            onChange={(event) =>
-              dispatch(createSetGridlinesVisibleCommand(event.target.checked))
-            }
-          >
-            Show grid lines
-          </CheckboxField>
-          <CheckboxField
-            checked={showRuler}
-            onChange={(event) =>
-              dispatch(createSetRulerVisibleCommand(event.target.checked))
-            }
-          >
-            Show ruler
-          </CheckboxField>
         </div>
       </div>
     </section>
