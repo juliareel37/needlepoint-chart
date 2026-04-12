@@ -4,7 +4,11 @@ import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import styles from "./Menu.module.css";
 
-type MenuTriggerVariant = "default" | "selection" | "ghost" | "upward";
+export type MenuTriggerVariant =
+  | "default"
+  | "selection"
+  | "ghost"
+  | "upward";
 type MenuItemLayout = "leading" | "trailing";
 
 export interface MenuTriggerProps
@@ -195,7 +199,15 @@ export function MenuCaretIcon() {
   );
 }
 
-export function MenuChevronIcon({ open }: { open: boolean }) {
+export function MenuChevronIcon({
+  open,
+  direction = "down",
+}: {
+  open: boolean;
+  direction?: "down" | "up";
+}) {
+  const pointsDown = direction === "down" ? !open : open;
+
   return (
     <svg
       viewBox="0 0 16 16"
@@ -205,7 +217,7 @@ export function MenuChevronIcon({ open }: { open: boolean }) {
       className={styles.chevronIcon}
     >
       <path
-        d={open ? "M3.5 10 8 5.5 12.5 10" : "M3.5 6 8 10.5 12.5 6"}
+        d={pointsDown ? "M3.5 6 8 10.5 12.5 6" : "M3.5 10 8 5.5 12.5 10"}
         fill="none"
         stroke="currentColor"
         strokeWidth="1.25"

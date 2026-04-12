@@ -14,7 +14,10 @@ import {
   MenuSurface,
   MenuTrailingCheck,
   MenuTrigger,
+  type MenuTriggerVariant,
 } from "./Menu";
+
+type SingleSelectDropdownMenuPlacement = "bottom-start" | "top-start";
 
 export interface SingleSelectDropdownProps<TItem> {
   ariaLabel: string;
@@ -24,12 +27,22 @@ export interface SingleSelectDropdownProps<TItem> {
   getItemValue: (item: TItem) => string;
   items: TItem[];
   label?: ReactNode;
+  menuClassName?: string;
   menuMaxHeight?: number;
   menuMaxWidth?: string | number;
+  menuOffset?: number;
+  menuOverlapTrigger?: boolean;
+  menuPlacement?: SingleSelectDropdownMenuPlacement;
+  menuStyle?: CSSProperties;
   menuWidth?: string | number;
   minWidth?: string | number;
   onValueChange: (value: string, item: TItem) => void;
   placeholder: ReactNode;
+  showChevron?: boolean;
+  triggerLabel?: ReactNode;
+  triggerClassName?: string;
+  triggerStyle?: CSSProperties;
+  triggerVariant?: MenuTriggerVariant;
   value: string;
   wrapperClassName?: string;
   wrapperStyle?: CSSProperties;
@@ -43,12 +56,22 @@ export function SingleSelectDropdown<TItem>({
   getItemValue,
   items,
   label,
-  menuMaxHeight = 280,
+  menuClassName,
+  menuMaxHeight = 300,
   menuMaxWidth = "min(320px, 100%)",
+  menuOffset = 4,
+  menuOverlapTrigger = false,
+  menuPlacement = "bottom-start",
+  menuStyle,
   menuWidth = "max-content",
   minWidth = 240,
   onValueChange,
   placeholder,
+  showChevron = true,
+  triggerLabel,
+  triggerClassName,
+  triggerStyle,
+  triggerVariant = "selection",
   value,
   wrapperClassName,
   wrapperStyle,
@@ -71,6 +94,21 @@ export function SingleSelectDropdown<TItem>({
   const selectedItem =
     items.find((item) => getItemValue(item) === value) ?? null;
 
+  const chevronDirection = menuPlacement === "top-start" ? "up" : "down";
+  const triggerZIndex = menuOverlapTrigger ? 1 : undefined;
+  const menuPositionStyle: CSSProperties =
+    menuPlacement === "top-start"
+      ? {
+          bottom: menuOverlapTrigger
+            ? 0
+            : `calc(100% + ${menuOffset}px)`,
+          left: 0,
+        }
+      : {
+          top: menuOverlapTrigger ? 0 : `calc(100% + ${menuOffset}px)`,
+          left: 0,
+        };
+
   const control = (
     <div
       ref={rootRef}
@@ -84,31 +122,44 @@ export function SingleSelectDropdown<TItem>({
     >
       <MenuTrigger
         type="button"
-        variant="selection"
+        variant={triggerVariant}
         open={open}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={ariaLabel}
         onClick={() => setOpen((currentOpen) => !currentOpen)}
-        style={{ width: "100%", minWidth, maxWidth: "100%" }}
+        className={triggerClassName}
+        style={{
+          position: "relative",
+          zIndex: triggerZIndex,
+          width: "100%",
+          minWidth,
+          maxWidth: "100%",
+          ...triggerStyle,
+        }}
       >
-        <span>{selectedItem ? getItemLabel(selectedItem) : placeholder}</span>
-        <MenuChevronIcon open={open} />
+        <span>
+          {triggerLabel ?? (selectedItem ? getItemLabel(selectedItem) : placeholder)}
+        </span>
+        {showChevron ? (
+          <MenuChevronIcon open={open} direction={chevronDirection} />
+        ) : null}
       </MenuTrigger>
 
       {open ? (
         <MenuSurface
           role="menu"
           aria-label={ariaLabel}
+          className={menuClassName}
           style={{
             position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
             zIndex: 10,
             width: menuWidth,
             maxWidth: menuMaxWidth,
             maxHeight: menuMaxHeight,
             overflowY: "auto",
+            ...menuPositionStyle,
+            ...menuStyle,
           }}
         >
           {items.length ? (

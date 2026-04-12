@@ -1,7 +1,7 @@
 "use client";
 
-import { typographyStyles } from "@/app/design-system/typography";
 import {
+  SingleSelectDropdown,
   Toolbar,
   ToolbarButton,
   ToolbarGroup,
@@ -12,7 +12,7 @@ import type { EditorStore, ViewportState } from "@/lib/editor-v2/editor/store";
 import { createSetViewportZoomCommand } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
 
-const ZOOM_PRESET_PERCENTS = [
+const ZOOM_BUTTONS_PRESET_PERCENTS = [
   1,
   2,
   5,
@@ -31,6 +31,15 @@ const ZOOM_PRESET_PERCENTS = [
   800,
 ] as const;
 
+const ZOOM_POPUP_PRESET_PERCENTS = [
+  25,
+  50,
+  75,
+  100,
+  150,
+  200,
+] as const;
+
 interface ViewportToolbarProps {
   dispatch: EditorStore["dispatch"];
   fitZoom: number;
@@ -39,9 +48,12 @@ interface ViewportToolbarProps {
   viewport: ViewportState;
 }
 
+type ZoomPopupItem =
+  | { kind: "preset"; percent: (typeof ZOOM_POPUP_PRESET_PERCENTS)[number]; value: string }
+  | { kind: "fit"; value: "fit" };
+
 export function ViewportToolbar({
   dispatch,
-  fitZoom: _fitZoom,
   onFitToGrid,
   zoomAnchor,
   viewport,
@@ -50,6 +62,14 @@ export function ViewportToolbar({
   const zoomLabel = getZoomLabel(zoomPercent);
   const nextZoomIn = getNextZoomInPercent(zoomPercent) / 100;
   const nextZoomOut = getNextZoomOutPercent(zoomPercent) / 100;
+  const zoomPopupItems: ZoomPopupItem[] = [
+    ...ZOOM_POPUP_PRESET_PERCENTS.map((percent) => ({
+      kind: "preset" as const,
+      percent,
+      value: String(percent),
+    })),
+    { kind: "fit", value: "fit" },
+  ];
 
   return (
     <Toolbar className={styles.viewportToolbar}>
@@ -66,8 +86,43 @@ export function ViewportToolbar({
         >
           <ToolbarIcon icon="/icons/lucide/zoom-out.svg" />
         </ToolbarButton>
-        <ToolbarMeta style={typographyStyles.p2}>
-          <strong>{zoomLabel}</strong>
+        <ToolbarMeta>
+          <SingleSelectDropdown
+            ariaLabel="Zoom level"
+            items={zoomPopupItems}
+            value={String(Math.round(zoomPercent))}
+            placeholder={zoomLabel}
+            showChevron={false}
+            triggerLabel={<strong>{zoomLabel}</strong>}
+            triggerVariant="ghost"
+            menuPlacement="top-start"
+            menuOffset={0}
+            minWidth="auto"
+            menuWidth={96}
+            getItemValue={(item) => item.value}
+            getItemLabel={(item) =>
+              item.kind === "fit" ? `Fit` : `${item.percent}%`
+            }
+            onValueChange={(_value, item) => {
+              if (item.kind === "fit") {
+                onFitToGrid();
+                return;
+              }
+
+              dispatch(
+                createSetViewportZoomCommand(
+                  item.percent / 100,
+                  zoomAnchor ?? undefined,
+                ),
+              );
+            }}
+            wrapperStyle={{ width: "fit-content" }}
+            triggerStyle={{
+              minWidth: "auto",
+              padding: "6px 8px",
+              fontWeight: 700,
+            }}
+          />
         </ToolbarMeta>
         <ToolbarButton
           type="button"
@@ -81,14 +136,6 @@ export function ViewportToolbar({
         >
           <ToolbarIcon icon="/icons/lucide/zoom-in.svg" />
         </ToolbarButton>
-        <ToolbarButton
-          type="button"
-          aria-label="Fit grid"
-          title="Fit grid"
-          onClick={onFitToGrid}
-        >
-          Fit
-        </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>
   );
@@ -99,23 +146,23 @@ function getZoomLabel(zoomPercent: number): string {
 }
 
 function getNextZoomInPercent(zoomPercent: number): number {
-  for (const preset of ZOOM_PRESET_PERCENTS) {
+  for (const preset of ZOOM_BUTTONS_PRESET_PERCENTS) {
     if (preset > zoomPercent) {
       return preset;
     }
   }
 
-  return ZOOM_PRESET_PERCENTS[ZOOM_PRESET_PERCENTS.length - 1];
+  return ZOOM_BUTTONS_PRESET_PERCENTS[ZOOM_BUTTONS_PRESET_PERCENTS.length - 1];
 }
 
 function getNextZoomOutPercent(zoomPercent: number): number {
-  for (let index = ZOOM_PRESET_PERCENTS.length - 1; index >= 0; index -= 1) {
-    const preset = ZOOM_PRESET_PERCENTS[index];
+  for (let index = ZOOM_BUTTONS_PRESET_PERCENTS.length - 1; index >= 0; index -= 1) {
+    const preset = ZOOM_BUTTONS_PRESET_PERCENTS[index];
 
     if (preset < zoomPercent) {
       return preset;
     }
   }
 
-  return ZOOM_PRESET_PERCENTS[0];
+  return ZOOM_BUTTONS_PRESET_PERCENTS[0];
 }

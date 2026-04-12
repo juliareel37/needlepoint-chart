@@ -65,7 +65,7 @@
 }
 
 .surface {
-  min-width: 172px;
+  min-width: 100px;
   border-radius: 16px;
   border: none;
   background: var(--surface-card);
@@ -112,7 +112,7 @@
 
 .itemTrailing {
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
 }
 
 .itemContent {
