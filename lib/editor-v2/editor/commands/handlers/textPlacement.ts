@@ -4,6 +4,7 @@ import type {
   BeginTextPlacementCommand,
   CancelTextPlacementCommand,
   PreviewTextPlacementCommand,
+  UpdateTextPlacementCommand,
 } from "../types";
 
 export const beginTextPlacementCommandHandler: EditorCommandHandler<BeginTextPlacementCommand> = {
@@ -64,6 +65,40 @@ export const previewTextPlacementCommandHandler: EditorCommandHandler<PreviewTex
             offsetX: command.payload.offsetX,
             offsetY: command.payload.offsetY,
             scale: command.payload.scale,
+          },
+        },
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const updateTextPlacementCommandHandler: EditorCommandHandler<UpdateTextPlacementCommand> = {
+  canHandle(command): command is UpdateTextPlacementCommand {
+    return command.kind === "text.updatePlacement";
+  },
+  handle(state, command) {
+    const placement = state.session.textInteraction.placement;
+
+    if (!placement) {
+      return buildTextSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        textInteraction: {
+          ...state.session.textInteraction,
+          placement: {
+            ...placement,
+            ...command.payload,
           },
         },
       },

@@ -42,6 +42,7 @@ import {
   beginTextPlacementCommandHandler,
   cancelTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,
+  updateTextPlacementCommandHandler,
 } from "./handlers/textPlacement";
 import {
   panViewportCommandHandler,
@@ -66,6 +67,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   doneMirrorCommandHandler,
   paletteSwapColorCommandHandler,
   beginTextPlacementCommandHandler,
+  updateTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,
   cancelTextPlacementCommandHandler,
   attachTraceCommandHandler,

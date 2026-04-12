@@ -280,6 +280,23 @@ export function createPreviewTextPlacementCommand(payload: {
   );
 }
 
+export function createUpdateTextPlacementCommand(payload: {
+  text?: string;
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
+  fontFamily?: string;
+  fontStyle?: "normal" | "italic";
+  fontWeight?: number;
+  underline?: boolean;
+}): EditorCommand {
+  return createCommand(
+    "text.updatePlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createCancelTextPlacementCommand(): EditorCommand {
   return createCommand(
     "text.cancelPlacement",

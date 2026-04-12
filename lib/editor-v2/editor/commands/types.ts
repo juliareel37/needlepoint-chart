@@ -39,6 +39,7 @@ export type EditorCommandKind =
   | "mirror.cancel"
   | "mirror.done"
   | "text.beginPlacement"
+  | "text.updatePlacement"
   | "text.previewPlacement"
   | "text.cancelPlacement"
   | "trace.attach"
@@ -170,6 +171,19 @@ export type PreviewTextPlacementCommand = BaseEditorCommand<
   { offsetX: number; offsetY: number; scale: number }
 >;
 
+export type UpdateTextPlacementCommand = BaseEditorCommand<
+  "text.updatePlacement",
+  {
+    text?: string;
+    intrinsicWidth?: number;
+    intrinsicHeight?: number;
+    fontFamily?: string;
+    fontStyle?: "normal" | "italic";
+    fontWeight?: number;
+    underline?: boolean;
+  }
+>;
+
 export type CancelTextPlacementCommand = BaseEditorCommand<
   "text.cancelPlacement",
   object
@@ -280,6 +294,7 @@ export type EditorCommand =
   | CancelMirrorCommand
   | DoneMirrorCommand
   | BeginTextPlacementCommand
+  | UpdateTextPlacementCommand
   | PreviewTextPlacementCommand
   | CancelTextPlacementCommand
   | BeginTraceRepositionCommand

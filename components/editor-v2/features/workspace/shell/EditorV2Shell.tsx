@@ -28,6 +28,7 @@ import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
+import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -314,6 +315,14 @@ export function EditorV2Shell({
                 <MirrorSessionToolbar
                   dispatch={dispatch}
                   session={mirrorSession}
+                />
+              ) : textPlacement ? (
+                <TextPlacementToolbar
+                  activeColorHex={activeColor?.hex ?? null}
+                  activeColorId={activeColorId}
+                  dispatch={dispatch}
+                  gridMetrics={gridMetrics}
+                  placement={textPlacement}
                 />
               ) : (
                 <FloatingToolbar

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Field, SingleSelectDropdown } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import { TEXT_FONT_OPTIONS } from "@/lib/editor-v2/editor/text/textFontOptions";
@@ -12,10 +12,12 @@ import type {
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import { convertTextPlacementToCells } from "@/lib/editor-v2/editor/text/convertTextPlacementToCells";
+import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
 import {
   createBeginTextPlacementCommand,
   createCancelTextPlacementCommand,
   createPaintCellsCommand,
+  createUpdateTextPlacementCommand,
 } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
 
@@ -47,6 +49,19 @@ export function TextPanelPage({
   const placementActive = Boolean(placement);
   const canAddTextBox = text.trim().length > 0;
   const canConvert = placementActive && Boolean(colorId);
+
+  useEffect(() => {
+    if (!placement) {
+      return;
+    }
+
+    setText(placement.text);
+    setFontFamily(placement.fontFamily);
+    setBold(placement.fontWeight >= 700);
+    setItalic(placement.fontStyle === "italic");
+    setUnderline(placement.underline);
+  }, [placement]);
+
   const helperText = useMemo(() => {
     if (!colorId) {
       return "Choose an active color before converting text to stitches.";
@@ -56,6 +71,37 @@ export function TextPanelPage({
       ? "Move or resize the text box on the canvas, then convert it with the active color."
       : "Add a text box to preview it on the canvas, then reposition and convert.";
   }, [colorId, placementActive]);
+
+  const updatePlacementStyle = (
+    nextText: string,
+    nextFontFamily: string,
+    nextBold: boolean,
+    nextItalic: boolean,
+    nextUnderline: boolean,
+  ) => {
+    if (!placement) {
+      return;
+    }
+
+    const measured = measureIntrinsicText(nextText, {
+      baseFontSize: placement.baseFontSize,
+      fontFamily: nextFontFamily,
+      fontStyle: nextItalic ? "italic" : "normal",
+      fontWeight: nextBold ? 700 : 400,
+    });
+
+    dispatch(
+      createUpdateTextPlacementCommand({
+        text: nextText,
+        intrinsicWidth: measured?.width ?? placement.intrinsicWidth,
+        intrinsicHeight: measured?.height ?? placement.intrinsicHeight,
+        fontFamily: nextFontFamily,
+        fontStyle: nextItalic ? "italic" : "normal",
+        fontWeight: nextBold ? 700 : 400,
+        underline: nextUnderline,
+      }),
+    );
+  };
 
   return (
     <section className={styles.sidebarSection}>
@@ -71,7 +117,20 @@ export function TextPanelPage({
           <Field label="Text" hint={helperText}>
             <textarea
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                const nextText = event.target.value;
+                setText(nextText);
+
+                if (placement) {
+                  updatePlacementStyle(
+                    nextText,
+                    fontFamily,
+                    bold,
+                    italic,
+                    underline,
+                  );
+                }
+              }}
               placeholder="Type text"
               rows={4}
               style={{
@@ -90,15 +149,14 @@ export function TextPanelPage({
               }}
             />
           </Field>
-
+{/* 
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
               Style
             </p>
 
- <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <SingleSelectDropdown
             ariaLabel="Font"
-            // label="Font"
             items={TEXT_FONT_OPTIONS}
             value={fontFamily}
             placeholder="Select font"
@@ -108,22 +166,28 @@ export function TextPanelPage({
             getItemLabel={(item) => (
               <span style={{ fontFamily: item.value }}>{item.label}</span>
             )}
-            onValueChange={(value) => setFontFamily(value)}
-            wrapperStyle={{
-              opacity: placementActive ? 0.6 : 1,
-              pointerEvents: placementActive ? "none" : "auto",
+            onValueChange={(value) => {
+              setFontFamily(value);
+              if (placement) {
+                updatePlacementStyle(text, value, bold, italic, underline);
+              }
             }}
-          />
+          /> */}
 
           {/* <Field label="Style"> */}
-           
+{/*            
               <Button
                 type="button"
                 variant="secondary"
                 size="md"
                 aria-pressed={bold}
-                onClick={() => setBold((current) => !current)}
-                disabled={placementActive}
+                onClick={() => {
+                  const nextBold = !bold;
+                  setBold(nextBold);
+                  if (placement) {
+                    updatePlacementStyle(text, fontFamily, nextBold, italic, underline);
+                  }
+                }}
                 style={{
                   fontWeight: 800,
                   textDecoration: "none",
@@ -139,8 +203,13 @@ export function TextPanelPage({
                 variant="secondary"
                 size="md"
                 aria-pressed={italic}
-                onClick={() => setItalic((current) => !current)}
-                disabled={placementActive}
+                onClick={() => {
+                  const nextItalic = !italic;
+                  setItalic(nextItalic);
+                  if (placement) {
+                    updatePlacementStyle(text, fontFamily, bold, nextItalic, underline);
+                  }
+                }}
                 style={{
                   fontStyle: "italic",
                   textDecoration: "none",
@@ -154,8 +223,13 @@ export function TextPanelPage({
                 variant="secondary"
                 size="md"
                 aria-pressed={underline}
-                onClick={() => setUnderline((current) => !current)}
-                disabled={placementActive}
+                onClick={() => {
+                  const nextUnderline = !underline;
+                  setUnderline(nextUnderline);
+                  if (placement) {
+                    updatePlacementStyle(text, fontFamily, bold, italic, nextUnderline);
+                  }
+                }}
                 style={{
                   textDecoration: "underline",
                   outline: underline ? "1px solid var(--ui-border-strong)" : undefined,
@@ -163,7 +237,7 @@ export function TextPanelPage({
               >
                 U
               </Button>
-            </div>
+            </div> */}
           {/* </Field> */}
 
           <Button
@@ -236,37 +310,6 @@ export function TextPanelPage({
       </div>
     </section>
   );
-}
-
-function measureIntrinsicText(
-  text: string,
-  options: {
-    baseFontSize: number;
-    fontFamily: string;
-    fontStyle: "normal" | "italic";
-    fontWeight: number;
-  },
-): { width: number; height: number } | null {
-  if (!text.trim()) return null;
-
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-
-  context.font = `${options.fontWeight} ${options.fontStyle} ${options.baseFontSize}px ${options.fontFamily}, sans-serif`;
-
-  const lines = text.split("\n");
-  let maxWidth = 0;
-  for (const line of lines) {
-    const width = context.measureText(line).width;
-    maxWidth = Math.max(maxWidth, width);
-  }
-
-  const height = Math.max(1, lines.length) * options.baseFontSize * 1.1;
-  return {
-    width: Math.max(1, Math.ceil(maxWidth + options.baseFontSize * 0.6)),
-    height: Math.max(1, Math.ceil(height + options.baseFontSize * 0.4)),
-  };
 }
 
 function getInitialPlacementTransform(options: {
