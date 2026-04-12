@@ -437,6 +437,15 @@ export function createSetSymbolsVisibleCommand(visible: boolean): EditorCommand 
   );
 }
 
+export function createSetPreviewModeCommand(visible: boolean): EditorCommand {
+  return createCommand(
+    "ui.setPreviewMode",
+    { visible },
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 
 // export function createSetThreadViewCommand(visible: boolean): EditorCommand {
 //   return createCommand(

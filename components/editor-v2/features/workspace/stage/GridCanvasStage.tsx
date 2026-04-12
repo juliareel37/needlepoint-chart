@@ -12,6 +12,7 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 const MAX_CANVAS_BACKING_DIMENSION = 16384;
 
@@ -42,6 +43,7 @@ interface GridCanvasStageProps {
   metrics: GridWorldMetrics;
   stageSize: { width: number; height: number };
   symbolAssignments: Record<string, string>;
+  threadView: boolean;
   viewport: ViewportState;
 }
 
@@ -64,6 +66,7 @@ export function GridCanvasStage({
   metrics,
   stageSize,
   symbolAssignments,
+  threadView,
   viewport,
 }: GridCanvasStageProps) {
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -80,6 +83,8 @@ export function GridCanvasStage({
   } | null>(null);
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
+  const previousThreadViewRef = useRef<boolean | null>(null);
+  const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -152,11 +157,13 @@ export function GridCanvasStage({
 
     const previousCells = previousCellsRef.current;
     const previousColors = previousColorsRef.current;
+    const previousThreadView = previousThreadViewRef.current;
     const shouldRedrawAll =
       !initializedRef.current ||
       !previousCells ||
       previousCells.length !== cells.length ||
-      previousColors !== colorsById;
+      previousColors !== colorsById ||
+      previousThreadView !== threadView;
 
     if (shouldRedrawAll) {
       context.clearRect(0, 0, metrics.surfaceWidth, metrics.surfaceHeight);
@@ -168,12 +175,15 @@ export function GridCanvasStage({
           colorsById,
           gridWidth,
           index,
+          stitchCanvasCache: stitchCanvasCacheRef.current,
+          threadView,
         });
       }
 
       initializedRef.current = true;
       previousCellsRef.current = cells.slice();
       previousColorsRef.current = colorsById;
+      previousThreadViewRef.current = threadView;
       return;
     }
 
@@ -189,11 +199,14 @@ export function GridCanvasStage({
         colorsById,
         gridWidth,
         index,
+        stitchCanvasCache: stitchCanvasCacheRef.current,
+        threadView,
       });
     }
 
     previousCellsRef.current = cells.slice();
     previousColorsRef.current = colorsById;
+    previousThreadViewRef.current = threadView;
   }, [
     cells,
     colorsById,
@@ -201,6 +214,7 @@ export function GridCanvasStage({
     metrics.cellSize,
     metrics.surfaceHeight,
     metrics.surfaceWidth,
+    threadView,
   ]);
 
   useEffect(() => {
@@ -291,17 +305,29 @@ export function GridCanvasStage({
 
     context.save();
     context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-    context.drawImage(
-      sourceCanvas,
-      0,
-      0,
-      sourceCanvas.width,
-      sourceCanvas.height,
-      drawX,
-      drawY,
-      drawWidth,
-      drawHeight,
-    );
+    if (threadView) {
+      drawThreadOverlay(context, {
+        cells,
+        colorsById,
+        drawX,
+        drawY,
+        gridWidth,
+        renderedCellSize: metrics.cellSize * viewport.zoom,
+        stitchCanvasCache: stitchCanvasCacheRef.current,
+      });
+    } else {
+      context.drawImage(
+        sourceCanvas,
+        0,
+        0,
+        sourceCanvas.width,
+        sourceCanvas.height,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight,
+      );
+    }
     context.restore();
 
     if (showGridlines) {
@@ -358,6 +384,7 @@ export function GridCanvasStage({
     displayTrace?.assetUrl,
     displayTraceAsset,
     paintOpacity,
+    threadView,
     viewport.offsetX,
     viewport.offsetY,
     viewport.zoom,
@@ -441,9 +468,19 @@ function drawCell(
     colorsById: Record<string, PaletteColor>;
     gridWidth: number;
     index: number;
+    stitchCanvasCache: Map<string, HTMLCanvasElement>;
+    threadView: boolean;
   },
 ): void {
-  const { cellSize, colorId, colorsById, gridWidth, index } = options;
+  const {
+    cellSize,
+    colorId,
+    colorsById,
+    gridWidth,
+    index,
+    stitchCanvasCache,
+    threadView,
+  } = options;
 
   if (!colorId) {
     return;
@@ -456,6 +493,17 @@ function drawCell(
   }
 
   const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
+
+  if (threadView) {
+    const stitchCanvas = getThreadStitchCanvas(
+      color.hex,
+      Math.max(width, height),
+      stitchCanvasCache,
+      1,
+    );
+    context.drawImage(stitchCanvas, x0, y0, width, height);
+    return;
+  }
 
   context.fillStyle = color.hex;
   context.fillRect(x0, y0, width, height);
@@ -639,6 +687,74 @@ function drawSymbolsOverlay(
     context.fillStyle = getSymbolColor(color.hex);
     context.fillText(symbol, centerX, centerY);
   }
+}
+
+function drawThreadOverlay(
+  context: CanvasRenderingContext2D,
+  options: {
+    cells: GridCellValue[];
+    colorsById: Record<string, PaletteColor>;
+    drawX: number;
+    drawY: number;
+    gridWidth: number;
+    renderedCellSize: number;
+    stitchCanvasCache: Map<string, HTMLCanvasElement>;
+  },
+) {
+  const {
+    cells,
+    colorsById,
+    drawX,
+    drawY,
+    gridWidth,
+    renderedCellSize,
+    stitchCanvasCache,
+  } = options;
+
+  const oversampleFactor =
+    renderedCellSize >= 18 ? 1 : renderedCellSize >= 12 ? 1.5 : 2;
+  const stitchSize = Math.max(1, Math.round(renderedCellSize * oversampleFactor));
+  const previousImageSmoothingEnabled = context.imageSmoothingEnabled;
+  const previousImageSmoothingQuality = context.imageSmoothingQuality;
+
+  context.imageSmoothingEnabled = oversampleFactor > 1;
+  if (oversampleFactor > 1) {
+    context.imageSmoothingQuality = "high";
+  }
+
+  for (let index = 0; index < cells.length; index += 1) {
+    const colorId = cells[index];
+
+    if (!colorId) {
+      continue;
+    }
+
+    const color = colorsById[colorId];
+
+    if (!color) {
+      continue;
+    }
+
+    const x = index % gridWidth;
+    const y = Math.floor(index / gridWidth);
+    const stitchCanvas = getThreadStitchCanvas(
+      color.hex,
+      stitchSize,
+      stitchCanvasCache,
+      1,
+    );
+
+    context.drawImage(
+      stitchCanvas,
+      drawX + x * renderedCellSize,
+      drawY + y * renderedCellSize,
+      renderedCellSize,
+      renderedCellSize,
+    );
+  }
+
+  context.imageSmoothingEnabled = previousImageSmoothingEnabled;
+  context.imageSmoothingQuality = previousImageSmoothingQuality;
 }
 
 function getSymbolColor(hex: string): string {

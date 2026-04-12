@@ -189,6 +189,7 @@ function createSwapTestState(): EditorStoreState {
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: false,
+        previewMode: false,
         threadView: false,
         darkCanvas: false,
         gridMajorInterval: 10,

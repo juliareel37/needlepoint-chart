@@ -56,6 +56,7 @@ export type EditorCommandKind =
   | "ui.setGridlinesVisible"
   | "ui.setRulerVisible"
   | "ui.setSymbolsVisible"
+  | "ui.setPreviewMode"
   | "ui.openPanel"
   | "history.undo"
   | "history.redo";
@@ -253,6 +254,11 @@ export type SetSymbolsVisibleCommand = BaseEditorCommand<
   { visible: boolean }
 >;
 
+export type SetPreviewModeCommand = BaseEditorCommand<
+  "ui.setPreviewMode",
+  { visible: boolean }
+>;
+
 export type UndoCommand = BaseEditorCommand<"history.undo", object>;
 export type RedoCommand = BaseEditorCommand<"history.redo", object>;
 
@@ -291,6 +297,7 @@ export type EditorCommand =
   | SetGridlinesVisibleCommand
   | SetRulerVisibleCommand
   | SetSymbolsVisibleCommand
+  | SetPreviewModeCommand
   | OpenPanelCommand
   | UndoCommand
   | RedoCommand;

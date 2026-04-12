@@ -310,6 +310,7 @@ export interface UiPreferenceState {
   showMajorGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  previewMode: boolean;
   threadView: boolean;
   darkCanvas: boolean;
   gridMajorInterval: number;
@@ -442,6 +443,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: true,
+        previewMode: false,
         threadView: false,
         darkCanvas: false,
         gridMajorInterval: 10,

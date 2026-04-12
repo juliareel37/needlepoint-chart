@@ -324,7 +324,7 @@ export function FloatingToolbar({
             dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
           }}
         >
-          <ToolbarIcon icon="/icons/lucide/reflect.svg" />
+          <ToolbarIcon icon="/icons/flip.svg" />
         </ToolbarButton>
       </ToolbarGroup>
 

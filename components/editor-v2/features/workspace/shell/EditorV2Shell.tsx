@@ -75,6 +75,7 @@ export function EditorV2Shell({
   const showGridlines = state.ui.preferences.showGridlines;
   const showRuler = state.ui.preferences.showRuler;
   const showSymbols = state.ui.preferences.showSymbols;
+  const previewMode = state.ui.preferences.previewMode;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
@@ -283,6 +284,7 @@ export function EditorV2Shell({
               onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
               onSaveDocument={onSaveDocument}
               onStartOver={onStartOver}
+              previewMode={previewMode}
               trace={trace}
               traceRepositionActive={traceRepositionActive}
               textPlacement={textPlacement}
@@ -294,39 +296,41 @@ export function EditorV2Shell({
             />
           </div>
 
-          <div
-            className={styles.stageToolbarTop}
-            style={{
-              left: sidebarCollapsed
-                ? "50%"
-                : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
-            }}
-          >
-            {traceRepositionActive && trace ? (
-              <TraceRepositionToolbar
-                dispatch={dispatch}
-                trace={trace}
-              />
-            ) : mirrorActive ? (
-              <MirrorSessionToolbar
-                dispatch={dispatch}
-                session={mirrorSession}
-              />
-            ) : (
-              <FloatingToolbar
-                activeColor={activeColor}
-                activeTool={activeTool}
-                brushSize={brushSize}
-                canRedo={canRedo}
-                canUndo={canUndo}
-                dispatch={dispatch}
-                hasPaintedCells={hasPaintedCells}
-                selectionBounds={selectionBounds}
-                selectionCommitted={selectionCommitted}
-                trace={trace}
-              />
-            )}
-          </div>
+          {previewMode ? null : (
+            <div
+              className={styles.stageToolbarTop}
+              style={{
+                left: sidebarCollapsed
+                  ? "50%"
+                  : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
+              }}
+            >
+              {traceRepositionActive && trace ? (
+                <TraceRepositionToolbar
+                  dispatch={dispatch}
+                  trace={trace}
+                />
+              ) : mirrorActive ? (
+                <MirrorSessionToolbar
+                  dispatch={dispatch}
+                  session={mirrorSession}
+                />
+              ) : (
+                <FloatingToolbar
+                  activeColor={activeColor}
+                  activeTool={activeTool}
+                  brushSize={brushSize}
+                  canRedo={canRedo}
+                  canUndo={canUndo}
+                  dispatch={dispatch}
+                  hasPaintedCells={hasPaintedCells}
+                  selectionBounds={selectionBounds}
+                  selectionCommitted={selectionCommitted}
+                  trace={trace}
+                />
+              )}
+            </div>
+          )}
 
           <div className={styles.stageToolbarBottomRight}>
             <ViewportToolbar
@@ -345,6 +349,7 @@ export function EditorV2Shell({
               brushSize={brushSize}
               colorsById={colorsById}
               dispatch={dispatch}
+              previewMode={previewMode}
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}

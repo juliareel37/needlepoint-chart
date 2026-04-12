@@ -34,6 +34,7 @@ interface GridWorldSurfaceProps {
   brushSize: number;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  previewMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -47,6 +48,7 @@ export function GridWorldSurface({
   brushSize,
   colorsById,
   dispatch,
+  previewMode,
   showGridlines,
   showRuler,
   showSymbols,
@@ -62,18 +64,23 @@ export function GridWorldSurface({
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
-  const traceBlendMode = trace?.blendMode ?? "image";
-  const tracePositioningEnabled = Boolean(trace && trace.visible && !trace.locked);
-  const showTraceOverlay = Boolean(trace && trace.visible && tracePositioningEnabled);
-  const showDisplayTrace = Boolean(trace && trace.visible && !tracePositioningEnabled);
+  const traceVisible = Boolean(trace?.visible) && !previewMode;
+  const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
+  const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
+  const showTraceOverlay = Boolean(trace && traceVisible && tracePositioningEnabled);
+  const showDisplayTrace = Boolean(trace && traceVisible && !tracePositioningEnabled);
   const traceImageOpacity =
-    trace && trace.visible && traceBlendMode === "crossfade"
+    trace && traceVisible && traceBlendMode === "crossfade"
       ? trace.opacity
       : trace?.opacity ?? 0;
   const gridOpacity =
-    trace && trace.visible && traceBlendMode === "crossfade"
+    trace && traceVisible && traceBlendMode === "crossfade"
       ? 1 - trace.opacity
       : 1;
+  const effectiveShowGridlines = showGridlines && !previewMode;
+  const effectiveShowSymbols = showSymbols && !previewMode;
+  const effectiveShowRuler = showRuler;
+  const threadView = previewMode || state.ui.preferences.threadView;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -302,7 +309,7 @@ export function GridWorldSurface({
           overflow: "visible",
         }}
       >
-        {showRuler ? (
+        {effectiveShowRuler ? (
           <GridRulerOverlay
             axisStep={gridOverlayStep}
             metrics={metrics}
@@ -365,10 +372,11 @@ export function GridWorldSurface({
               handlePointerEnter={handlePointerEnter}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}
-              showGridlines={showGridlines}
-              showSymbols={showSymbols}
+              showGridlines={effectiveShowGridlines}
+              showSymbols={effectiveShowSymbols}
               stageSize={stageSize}
               symbolAssignments={state.document.palette.symbolAssignments}
+              threadView={threadView}
               viewport={viewport}
             />
           </div>

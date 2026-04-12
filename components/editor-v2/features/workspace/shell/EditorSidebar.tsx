@@ -34,6 +34,7 @@ interface EditorSidebarProps {
   onClose: () => void;
   onSaveDocument: (document: EditorDocumentState) => void;
   onStartOver: () => void;
+  previewMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -61,6 +62,7 @@ export function EditorSidebar({
   onClose,
   onSaveDocument,
   onStartOver,
+  previewMode,
   showGridlines,
   showRuler,
   showSymbols,
@@ -154,6 +156,7 @@ export function EditorSidebar({
         {activeSection === "settings" ? (
           <SettingsPanelPage
             dispatch={dispatch}
+            previewMode={previewMode}
             showGridlines={showGridlines}
             showRuler={showRuler}
             showSymbols={showSymbols}

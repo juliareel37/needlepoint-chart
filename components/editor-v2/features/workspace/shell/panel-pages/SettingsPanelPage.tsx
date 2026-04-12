@@ -3,12 +3,12 @@
 import {
   CheckboxField,
 } from "@/components/design-system";
-import { typographyStyles } from "@/app/design-system/typography";
 import type {
   EditorStore,
 } from "@/lib/editor-v2/editor/store";
 import {
   createSetGridlinesVisibleCommand,
+  createSetPreviewModeCommand,
   createSetRulerVisibleCommand,
   createSetSymbolsVisibleCommand,
 } from "../../workspaceCommands";
@@ -16,6 +16,7 @@ import styles from "../EditorV2Shell.module.css";
 
 interface SettingsPanelPageProps {
   dispatch: EditorStore["dispatch"];
+  previewMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -23,12 +24,21 @@ interface SettingsPanelPageProps {
 
 export function SettingsPanelPage({
   dispatch,
+  previewMode,
   showGridlines,
   showRuler,
   showSymbols,
 }: SettingsPanelPageProps) {
   return (
     <div className={styles.sidebarSubsection}>
+      <CheckboxField
+        checked={previewMode}
+        onChange={(event) =>
+          dispatch(createSetPreviewModeCommand(event.target.checked))
+        }
+      >
+        Preview mode
+      </CheckboxField>
       <CheckboxField
         checked={showGridlines}
         onChange={(event) =>
