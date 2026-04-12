@@ -9,11 +9,25 @@ import {
 
 const DEFAULT_TITLE = "New Design";
 
+interface NewDesignSizingOptions {
+  sizingMode?: "stitches" | "inches";
+  meshCount?: number | null;
+  widthInches?: number | null;
+  heightInches?: number | null;
+}
+
 export function createNewDesignState(
   width: number,
   height: number,
+  options: NewDesignSizingOptions = {},
 ): EditorStoreState {
   const state = createInitialEditorStoreState();
+  const {
+    sizingMode = "stitches",
+    meshCount = null,
+    widthInches = null,
+    heightInches = null,
+  } = options;
 
   return {
     ...state,
@@ -27,6 +41,10 @@ export function createNewDesignState(
         ...state.document.grid,
         width,
         height,
+        sizingMode,
+        meshCount,
+        widthInches,
+        heightInches,
         cells: new Array(width * height).fill(null),
       },
       palette: {
