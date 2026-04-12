@@ -141,8 +141,10 @@ export function SelectionOverlay({
                   y={rect.y * metrics.cellSize}
                   width={rect.width * metrics.cellSize}
                   height={rect.height * metrics.cellSize}
-                  fill={getMirrorTargetFill(direction)}
-                  stroke={getMirrorTargetStroke(direction)}
+                  // fill={getMirrorTargetFill(direction)}
+                  fill="rgba(14, 164, 233, 0.34)"
+                  // stroke={getMirrorTargetStroke(direction)}
+                  stroke="#0284c7"
                   strokeWidth={mirrorSession.appliedDirection === direction ? "3" : "2"}
                 />
               ))
