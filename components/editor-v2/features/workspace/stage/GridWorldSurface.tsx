@@ -13,8 +13,8 @@ import {
   getViewportTransform,
 } from "@/lib/editor-v2/editor/viewport";
 import { GridCanvasStage } from "./GridCanvasStage";
-import { GridRulerOverlay } from "./GridRulerOverlay";
-import { SelectionOverlay } from "./SelectionOverlay";
+import { GridRulerOverlay } from "./overlays/GridRulerOverlay";
+import { SelectionOverlay } from "./overlays/SelectionOverlay";
 import { TextPlacementLayer } from "./TextPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";

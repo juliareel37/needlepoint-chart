@@ -10,19 +10,20 @@ import type {
   TraceDocument,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
-import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
-import { getThreadStitchCanvas } from "@/lib/stitchUtils";
-
-const MAX_CANVAS_BACKING_DIMENSION = 16384;
-
-interface LoadedTraceAsset {
-  assetUrl: string;
-  height: number;
-  image: HTMLImageElement | null;
-  ready: boolean;
-  width: number;
-}
+import {
+  configureDisplayCanvas,
+  renderDisplayCanvas,
+} from "./GridCanvasStage.display";
+import type {
+  CanvasSizing,
+  LoadedTraceAsset,
+} from "./GridCanvasStage.shared";
+import {
+  configureSourceCanvas,
+  drawChangedSourceCells,
+  redrawSourceCanvas,
+} from "./GridCanvasStage.source";
 
 interface GridCanvasStageProps {
   cells: GridCellValue[];
@@ -70,17 +71,9 @@ export function GridCanvasStage({
   viewport,
 }: GridCanvasStageProps) {
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const sourceCanvasSizingRef = useRef<{
-    width: number;
-    height: number;
-    pixelRatio: number;
-  } | null>(null);
+  const sourceCanvasSizingRef = useRef<CanvasSizing | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const displayCanvasSizingRef = useRef<{
-    width: number;
-    height: number;
-    pixelRatio: number;
-  } | null>(null);
+  const displayCanvasSizingRef = useRef<CanvasSizing | null>(null);
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
   const previousThreadViewRef = useRef<boolean | null>(null);
@@ -105,39 +98,14 @@ export function GridCanvasStage({
       return;
     }
 
-    const width = metrics.surfaceWidth;
-    const height = metrics.surfaceHeight;
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const maxRenderableScale = Math.min(
-      MAX_CANVAS_BACKING_DIMENSION / Math.max(width, 1),
-      MAX_CANVAS_BACKING_DIMENSION / Math.max(height, 1),
+    const nextConfiguration = configureSourceCanvas(
+      canvas,
+      context,
+      metrics,
+      sourceCanvasSizingRef.current,
     );
-    // Fractional backing ratios can bake anti-aliased gutters into the source
-    // bitmap itself, which then scale up into visible seams at high zoom.
-    const effectivePixelRatio = Math.max(
-      1,
-      Math.floor(Math.min(devicePixelRatio, maxRenderableScale)),
-    );
-
-    const nextCanvasWidth = Math.max(1, Math.round(width * effectivePixelRatio));
-    const nextCanvasHeight = Math.max(1, Math.round(height * effectivePixelRatio));
-    const previousSizing = sourceCanvasSizingRef.current;
-    const sizingChanged =
-      !previousSizing ||
-      previousSizing.width !== nextCanvasWidth ||
-      previousSizing.height !== nextCanvasHeight ||
-      previousSizing.pixelRatio !== effectivePixelRatio;
-
-    if (sizingChanged) {
-      canvas.width = nextCanvasWidth;
-      canvas.height = nextCanvasHeight;
-      context.setTransform(effectivePixelRatio, 0, 0, effectivePixelRatio, 0, 0);
-      context.imageSmoothingEnabled = false;
-      sourceCanvasSizingRef.current = {
-        width: nextCanvasWidth,
-        height: nextCanvasHeight,
-        pixelRatio: effectivePixelRatio,
-      };
+    sourceCanvasSizingRef.current = nextConfiguration.sizing;
+    if (nextConfiguration.sizingChanged) {
       initializedRef.current = false;
     }
   }, [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth]);
@@ -166,19 +134,15 @@ export function GridCanvasStage({
       previousThreadView !== threadView;
 
     if (shouldRedrawAll) {
-      context.clearRect(0, 0, metrics.surfaceWidth, metrics.surfaceHeight);
-
-      for (let index = 0; index < cells.length; index += 1) {
-        drawCell(context, {
-          cellSize: metrics.cellSize,
-          colorId: cells[index],
-          colorsById,
-          gridWidth,
-          index,
-          stitchCanvasCache: stitchCanvasCacheRef.current,
-          threadView,
-        });
-      }
+      redrawSourceCanvas({
+        context,
+        cells,
+        colorsById,
+        gridWidth,
+        metrics,
+        threadView,
+        stitchCanvasCache: stitchCanvasCacheRef.current,
+      });
 
       initializedRef.current = true;
       previousCellsRef.current = cells.slice();
@@ -187,22 +151,16 @@ export function GridCanvasStage({
       return;
     }
 
-    for (let index = 0; index < cells.length; index += 1) {
-      if (previousCells[index] === cells[index]) {
-        continue;
-      }
-
-      clearCell(context, index, gridWidth, metrics.cellSize);
-      drawCell(context, {
-        cellSize: metrics.cellSize,
-        colorId: cells[index],
-        colorsById,
-        gridWidth,
-        index,
-        stitchCanvasCache: stitchCanvasCacheRef.current,
-        threadView,
-      });
-    }
+    drawChangedSourceCells({
+      context,
+      cells,
+      previousCells,
+      colorsById,
+      gridWidth,
+      cellSize: metrics.cellSize,
+      threadView,
+      stitchCanvasCache: stitchCanvasCacheRef.current,
+    });
 
     previousCellsRef.current = cells.slice();
     previousColorsRef.current = colorsById;
@@ -231,136 +189,32 @@ export function GridCanvasStage({
       return;
     }
 
-    const width = Math.max(stageSize.width, 1);
-    const height = Math.max(stageSize.height, 1);
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const nextCanvasWidth = Math.max(1, Math.round(width * devicePixelRatio));
-    const nextCanvasHeight = Math.max(1, Math.round(height * devicePixelRatio));
-    const previousSizing = displayCanvasSizingRef.current;
-    const sizingChanged =
-      !previousSizing ||
-      previousSizing.width !== nextCanvasWidth ||
-      previousSizing.height !== nextCanvasHeight ||
-      previousSizing.pixelRatio !== devicePixelRatio;
-
-    if (sizingChanged) {
-      canvas.width = nextCanvasWidth;
-      canvas.height = nextCanvasHeight;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      displayCanvasSizingRef.current = {
-        width: nextCanvasWidth,
-        height: nextCanvasHeight,
-        pixelRatio: devicePixelRatio,
-      };
-    }
-
-    context.imageSmoothingEnabled = false;
-    context.clearRect(0, 0, width, height);
-
-    const drawX = frameOrigin.x + viewport.offsetX;
-    const drawY = frameOrigin.y + viewport.offsetY;
-    const drawWidth = metrics.surfaceWidth * viewport.zoom;
-    const drawHeight = metrics.surfaceHeight * viewport.zoom;
-
-    context.fillStyle = "#ffffff";
-    context.fillRect(drawX, drawY, drawWidth, drawHeight);
-    context.save();
-    context.beginPath();
-    context.rect(drawX, drawY, drawWidth, drawHeight);
-    context.clip();
-
-    if (
-      displayTrace &&
-      displayTraceAsset?.assetUrl === displayTrace.assetUrl &&
-      displayTraceAsset.ready &&
-      displayTraceAsset.image &&
-      displayTraceAsset.width > 0 &&
-      displayTraceAsset.height > 0
-    ) {
-      const baseRect = getContainedRect(
-        displayTraceAsset.width,
-        displayTraceAsset.height,
-        metrics.surfaceWidth,
-        metrics.surfaceHeight,
-      );
-      const bounds = getPositionedBounds(baseRect, {
-        offsetX: displayTrace.offsetX,
-        offsetY: displayTrace.offsetY,
-        scale: displayTrace.scale,
-      });
-
-      context.save();
-      context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
-      context.drawImage(
-        displayTraceAsset.image,
-        drawX + bounds.left * viewport.zoom,
-        drawY + bounds.top * viewport.zoom,
-        bounds.width * viewport.zoom,
-        bounds.height * viewport.zoom,
-      );
-      context.restore();
-    }
-
-    context.save();
-    context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-    if (threadView) {
-      drawThreadOverlay(context, {
-        cells,
-        colorsById,
-        drawX,
-        drawY,
-        gridWidth,
-        renderedCellSize: metrics.cellSize * viewport.zoom,
-        stitchCanvasCache: stitchCanvasCacheRef.current,
-      });
-    } else {
-      context.drawImage(
-        sourceCanvas,
-        0,
-        0,
-        sourceCanvas.width,
-        sourceCanvas.height,
-        drawX,
-        drawY,
-        drawWidth,
-        drawHeight,
-      );
-    }
-    context.restore();
-
-    if (showGridlines) {
-      drawGridOverlay(context, {
-        cellSize: metrics.cellSize,
-        drawHeight,
-        drawWidth,
-        drawX,
-        drawY,
-        gridHeight: metrics.height,
-        gridOverlayStep,
-        gridWidth,
-        zoom: viewport.zoom,
-      });
-    }
-
-    if (showSymbols) {
-      context.save();
-      context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-      drawSymbolsOverlay(context, {
-        cells,
-        cellSize: metrics.cellSize,
-        colorsById,
-        drawX,
-        drawY,
-        gridWidth,
-        symbolAssignments,
-        zoom: viewport.zoom,
-      });
-      context.restore();
-    }
-
-    context.restore();
+    displayCanvasSizingRef.current = configureDisplayCanvas(
+      canvas,
+      context,
+      stageSize,
+      displayCanvasSizingRef.current,
+    );
+    renderDisplayCanvas({
+      context,
+      sourceCanvas,
+      cells,
+      colorsById,
+      displayTrace,
+      displayTraceAsset,
+      frameOrigin,
+      gridOverlayStep,
+      gridWidth,
+      metrics,
+      paintOpacity,
+      showGridlines,
+      showSymbols,
+      stageSize,
+      stitchCanvasCache: stitchCanvasCacheRef.current,
+      symbolAssignments,
+      threadView,
+      viewport,
+    });
   }, [
     cells,
     colorsById,
@@ -447,334 +301,4 @@ export function GridCanvasStage({
       />
     </>
   );
-}
-
-function clearCell(
-  context: CanvasRenderingContext2D,
-  index: number,
-  gridWidth: number,
-  cellSize: number,
-): void {
-  const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
-
-  context.clearRect(x0, y0, width, height);
-}
-
-function drawCell(
-  context: CanvasRenderingContext2D,
-  options: {
-    cellSize: number;
-    colorId: GridCellValue;
-    colorsById: Record<string, PaletteColor>;
-    gridWidth: number;
-    index: number;
-    stitchCanvasCache: Map<string, HTMLCanvasElement>;
-    threadView: boolean;
-  },
-): void {
-  const {
-    cellSize,
-    colorId,
-    colorsById,
-    gridWidth,
-    index,
-    stitchCanvasCache,
-    threadView,
-  } = options;
-
-  if (!colorId) {
-    return;
-  }
-
-  const color = colorsById[colorId];
-
-  if (!color) {
-    return;
-  }
-
-  const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
-
-  if (threadView) {
-    const stitchCanvas = getThreadStitchCanvas(
-      color.hex,
-      Math.max(width, height),
-      stitchCanvasCache,
-      1,
-    );
-    context.drawImage(stitchCanvas, x0, y0, width, height);
-    return;
-  }
-
-  context.fillStyle = color.hex;
-  context.fillRect(x0, y0, width, height);
-}
-
-function getCellRect(index: number, gridWidth: number, cellSize: number) {
-  const x = index % gridWidth;
-  const y = Math.floor(index / gridWidth);
-  const x0 = Math.round(x * cellSize);
-  const y0 = Math.round(y * cellSize);
-  const x1 = Math.round((x + 1) * cellSize);
-  const y1 = Math.round((y + 1) * cellSize);
-
-  return {
-    x0,
-    y0,
-    width: Math.max(1, x1 - x0),
-    height: Math.max(1, y1 - y0),
-  };
-}
-
-function drawGridOverlay(
-  context: CanvasRenderingContext2D,
-  options: {
-    cellSize: number;
-    drawHeight: number;
-    drawWidth: number;
-    drawX: number;
-    drawY: number;
-    gridHeight: number;
-    gridOverlayStep: number;
-    gridWidth: number;
-    zoom: number;
-  },
-) {
-  const {
-    cellSize,
-    drawHeight,
-    drawWidth,
-    drawX,
-    drawY,
-    gridHeight,
-    gridOverlayStep,
-    gridWidth,
-    zoom,
-  } = options;
-
-  // Minor lines represent the physical mesh, so keep them neutral and quiet.
-  // Major lines are app-level helpers, so give them a subtle brand tint.
-  const majorLineColor = "rgba(179, 109, 200, 0.52)";
-  const minorLineColor = "rgba(120, 113, 108, 0.3)";
-  const highlightMajorColor = "rgba(252, 247, 255, 0.24)";
-  const highlightMinorColor = "rgba(255, 255, 255, 0.08)";
-  const renderedCellSize = cellSize * zoom;
-  const shouldShowMinorLines = gridOverlayStep > 1 && renderedCellSize >= 6;
-  const minorLineWidth = 1.25;
-  const majorLineWidth = gridOverlayStep > 1 && renderedCellSize >= 18 ? 2.5 : 1.5;
-  const left = Math.round(drawX);
-  const top = Math.round(drawY);
-  const right = Math.round(drawX + drawWidth);
-  const bottom = Math.round(drawY + drawHeight);
-
-  const drawLineSet = (
-    step: number,
-    strokeColor: string,
-    currentLineWidth: number,
-    includeOuterBorder: boolean,
-  ) => {
-    const stepSize = cellSize * step * zoom;
-
-    if (stepSize <= 0) {
-      return;
-    }
-
-    context.fillStyle = strokeColor;
-
-    for (let column = includeOuterBorder ? 0 : step; column < gridWidth; column += step) {
-      const x = Math.round(drawX + column * cellSize * zoom);
-      context.fillRect(x, top, currentLineWidth, Math.max(bottom - top, 1));
-    }
-
-    for (let row = includeOuterBorder ? 0 : step; row < gridHeight; row += step) {
-      const y = Math.round(drawY + row * cellSize * zoom);
-      context.fillRect(left, y, Math.max(right - left, 1), currentLineWidth);
-    }
-
-    if (includeOuterBorder) {
-      context.fillRect(
-        right - currentLineWidth,
-        top,
-        currentLineWidth,
-        Math.max(bottom - top, 1),
-      );
-      context.fillRect(
-        left,
-        bottom - currentLineWidth,
-        Math.max(right - left, 1),
-        currentLineWidth,
-      );
-    }
-  };
-
-  if (shouldShowMinorLines) {
-    drawLineSet(1, minorLineColor, minorLineWidth, false);
-    context.save();
-    context.globalCompositeOperation = "screen";
-    drawLineSet(1, highlightMinorColor, minorLineWidth, false);
-    context.restore();
-  }
-
-  drawLineSet(
-    gridOverlayStep,
-    gridOverlayStep > 1 ? majorLineColor : minorLineColor,
-    gridOverlayStep > 1 ? majorLineWidth : minorLineWidth,
-    true,
-  );
-  context.save();
-  context.globalCompositeOperation = "screen";
-  drawLineSet(
-    gridOverlayStep,
-    gridOverlayStep > 1 ? highlightMajorColor : highlightMinorColor,
-    gridOverlayStep > 1 ? majorLineWidth : minorLineWidth,
-    true,
-  );
-  context.restore();
-}
-
-function drawSymbolsOverlay(
-  context: CanvasRenderingContext2D,
-  options: {
-    cells: GridCellValue[];
-    cellSize: number;
-    colorsById: Record<string, PaletteColor>;
-    drawX: number;
-    drawY: number;
-    gridWidth: number;
-    symbolAssignments: Record<string, string>;
-    zoom: number;
-  },
-) {
-  const {
-    cells,
-    cellSize,
-    colorsById,
-    drawX,
-    drawY,
-    gridWidth,
-    symbolAssignments,
-    zoom,
-  } = options;
-  const renderedCellSize = cellSize * zoom;
-
-  if (renderedCellSize < 10) {
-    return;
-  }
-
-  const fontSize = Math.max(9, Math.min(renderedCellSize * 0.62, renderedCellSize - 4));
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-
-  for (let index = 0; index < cells.length; index += 1) {
-    const colorId = cells[index];
-
-    if (!colorId) {
-      continue;
-    }
-
-    const symbol = symbolAssignments[colorId];
-    const color = colorsById[colorId];
-
-    if (!symbol || !color) {
-      continue;
-    }
-
-    const x = index % gridWidth;
-    const y = Math.floor(index / gridWidth);
-    const centerX = drawX + (x + 0.5) * renderedCellSize;
-    const centerY = drawY + (y + 0.5) * renderedCellSize;
-
-    context.fillStyle = getSymbolColor(color.hex);
-    context.fillText(symbol, centerX, centerY);
-  }
-}
-
-function drawThreadOverlay(
-  context: CanvasRenderingContext2D,
-  options: {
-    cells: GridCellValue[];
-    colorsById: Record<string, PaletteColor>;
-    drawX: number;
-    drawY: number;
-    gridWidth: number;
-    renderedCellSize: number;
-    stitchCanvasCache: Map<string, HTMLCanvasElement>;
-  },
-) {
-  const {
-    cells,
-    colorsById,
-    drawX,
-    drawY,
-    gridWidth,
-    renderedCellSize,
-    stitchCanvasCache,
-  } = options;
-
-  const oversampleFactor =
-    renderedCellSize >= 18 ? 1 : renderedCellSize >= 12 ? 1.5 : 2;
-  const stitchSize = Math.max(1, Math.round(renderedCellSize * oversampleFactor));
-  const previousImageSmoothingEnabled = context.imageSmoothingEnabled;
-  const previousImageSmoothingQuality = context.imageSmoothingQuality;
-
-  context.imageSmoothingEnabled = oversampleFactor > 1;
-  if (oversampleFactor > 1) {
-    context.imageSmoothingQuality = "high";
-  }
-
-  for (let index = 0; index < cells.length; index += 1) {
-    const colorId = cells[index];
-
-    if (!colorId) {
-      continue;
-    }
-
-    const color = colorsById[colorId];
-
-    if (!color) {
-      continue;
-    }
-
-    const x = index % gridWidth;
-    const y = Math.floor(index / gridWidth);
-    const stitchCanvas = getThreadStitchCanvas(
-      color.hex,
-      stitchSize,
-      stitchCanvasCache,
-      1,
-    );
-
-    context.drawImage(
-      stitchCanvas,
-      drawX + x * renderedCellSize,
-      drawY + y * renderedCellSize,
-      renderedCellSize,
-      renderedCellSize,
-    );
-  }
-
-  context.imageSmoothingEnabled = previousImageSmoothingEnabled;
-  context.imageSmoothingQuality = previousImageSmoothingQuality;
-}
-
-function getSymbolColor(hex: string): string {
-  const normalizedHex = hex.replace("#", "");
-  const expandedHex =
-    normalizedHex.length === 3
-      ? normalizedHex
-          .split("")
-          .map((character) => character + character)
-          .join("")
-      : normalizedHex;
-
-  if (expandedHex.length !== 6) {
-    return "#111827";
-  }
-
-  const red = Number.parseInt(expandedHex.slice(0, 2), 16);
-  const green = Number.parseInt(expandedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(expandedHex.slice(4, 6), 16);
-  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-
-  return luminance > 0.68 ? "#111827" : "#f8fafc";
 }

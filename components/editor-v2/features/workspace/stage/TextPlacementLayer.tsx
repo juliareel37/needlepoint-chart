@@ -9,7 +9,7 @@ import {
   getPositioningTransformCss,
 } from "@/lib/editor-v2/editor/positioning";
 import { createPreviewTextPlacementCommand } from "../workspaceCommands";
-import { PositioningBoxOverlay } from "./PositioningBoxOverlay";
+import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 
 interface TextPlacementLayerProps {
   dispatch: EditorStore["dispatch"];
