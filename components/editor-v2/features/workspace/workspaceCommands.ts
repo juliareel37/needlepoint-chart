@@ -428,6 +428,25 @@ export function createSetRulerVisibleCommand(visible: boolean): EditorCommand {
   );
 }
 
+export function createSetSymbolsVisibleCommand(visible: boolean): EditorCommand {
+  return createCommand(
+    "ui.setSymbolsVisible",
+    { visible },
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+
+// export function createSetThreadViewCommand(visible: boolean): EditorCommand {
+//   return createCommand(
+//     "ui.setThreadView",
+//     { visible },
+//     "toolbar",
+//     { mode: "skip" },
+//   );
+// }
+
 function createCommand<TKind extends EditorCommand["kind"]>(
   kind: TKind,
   payload: Extract<EditorCommand, { kind: TKind }>["payload"],

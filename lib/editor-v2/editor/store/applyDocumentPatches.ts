@@ -44,6 +44,17 @@ function applyDocumentPatch(
       };
     case "palette.replaceColor":
       return applyReplaceColorPatch(document, patch.fromColorId, patch.toColorId);
+    case "palette.assignSymbols":
+      return {
+        ...document,
+        palette: {
+          ...document.palette,
+          symbolAssignments: {
+            ...document.palette.symbolAssignments,
+            ...patch.assignments,
+          },
+        },
+      };
     case "trace.upsert":
       return {
         ...document,

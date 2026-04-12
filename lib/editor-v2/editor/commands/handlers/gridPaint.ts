@@ -7,6 +7,10 @@ import {
   filterCellsWithinSelection,
   filterValidCells,
 } from "./gridMutationUtils";
+import {
+  buildAppendOnlyInverseSymbolPatches,
+  buildAssignSymbolsPatch,
+} from "./symbolAssignments";
 
 export const gridPaintCommandHandler: EditorCommandHandler<PaintCellsCommand> = {
   canHandle(command): command is PaintCellsCommand {
@@ -16,8 +20,16 @@ export const gridPaintCommandHandler: EditorCommandHandler<PaintCellsCommand> = 
     const { colorId, cells } = command.payload;
     const validCells = filterValidCells(cells, state);
     const paintableCells = filterCellsWithinSelection(validCells, state);
-    const patches = buildReplaceCellsPatch(state, paintableCells, colorId);
-    const inversePatches = buildInverseReplaceCellsPatch(state, paintableCells);
+    const cellPatches = buildReplaceCellsPatch(state, paintableCells, colorId);
+    const symbolPatches = buildAssignSymbolsPatch(
+      state,
+      cellPatches.length > 0 ? [colorId] : [],
+    );
+    const patches = [...cellPatches, ...symbolPatches];
+    const inversePatches = [
+      ...buildInverseReplaceCellsPatch(state, paintableCells),
+      ...buildAppendOnlyInverseSymbolPatches(symbolPatches),
+    ];
 
     return {
       nextSession: buildDirtySession(state),

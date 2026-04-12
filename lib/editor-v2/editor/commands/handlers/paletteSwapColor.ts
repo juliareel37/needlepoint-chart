@@ -1,7 +1,13 @@
-import type { ReplaceGridCellsPatch } from "../../store/patches";
+import type {
+  ReplaceGridCellsPatch,
+} from "../../store/patches";
 import type { SwapPaletteColorCommand } from "../types";
 import { buildDirtySession } from "./gridMutationUtils";
 import type { EditorCommandHandler } from "./types";
+import {
+  buildAppendOnlyInverseSymbolPatches,
+  buildAssignSymbolsPatch,
+} from "./symbolAssignments";
 
 export const paletteSwapColorCommandHandler: EditorCommandHandler<SwapPaletteColorCommand> = {
   canHandle(command): command is SwapPaletteColorCommand {
@@ -25,6 +31,11 @@ export const paletteSwapColorCommandHandler: EditorCommandHandler<SwapPaletteCol
     const patches: ReplaceGridCellsPatch[] = swappedCells.length > 0
       ? [{ type: "grid.replaceCells", cells: swappedCells }]
       : [];
+    const symbolPatches =
+      swappedCells.length > 0 &&
+      !state.document.palette.symbolAssignments[toColorId]
+        ? buildAssignSymbolsPatch(state, [toColorId])
+        : [];
     const inversePatches: ReplaceGridCellsPatch[] = swappedCells.length > 0
       ? [
           {
@@ -40,8 +51,11 @@ export const paletteSwapColorCommandHandler: EditorCommandHandler<SwapPaletteCol
     return {
       nextSession: swappedCells.length > 0 ? buildDirtySession(state) : state.session,
       nextUi: state.ui,
-      patches,
-      inversePatches,
+      patches: [...patches, ...symbolPatches],
+      inversePatches: [
+        ...inversePatches,
+        ...buildAppendOnlyInverseSymbolPatches(symbolPatches),
+      ],
       effects: [],
       event: {
         type: "command",

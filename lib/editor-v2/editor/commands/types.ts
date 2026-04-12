@@ -55,6 +55,7 @@ export type EditorCommandKind =
   | "ui.setActiveSidebarSection"
   | "ui.setGridlinesVisible"
   | "ui.setRulerVisible"
+  | "ui.setSymbolsVisible"
   | "ui.openPanel"
   | "history.undo"
   | "history.redo";
@@ -247,6 +248,11 @@ export type SetRulerVisibleCommand = BaseEditorCommand<
   { visible: boolean }
 >;
 
+export type SetSymbolsVisibleCommand = BaseEditorCommand<
+  "ui.setSymbolsVisible",
+  { visible: boolean }
+>;
+
 export type UndoCommand = BaseEditorCommand<"history.undo", object>;
 export type RedoCommand = BaseEditorCommand<"history.redo", object>;
 
@@ -284,6 +290,7 @@ export type EditorCommand =
   | SetActiveSidebarSectionCommand
   | SetGridlinesVisibleCommand
   | SetRulerVisibleCommand
+  | SetSymbolsVisibleCommand
   | OpenPanelCommand
   | UndoCommand
   | RedoCommand;

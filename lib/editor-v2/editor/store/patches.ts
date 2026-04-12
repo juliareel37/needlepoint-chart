@@ -9,6 +9,7 @@ export type DocumentPatch =
   | ReplaceGridCellsPatch
   | ResizeGridPatch
   | ReplaceColorPatch
+  | AssignPaletteSymbolsPatch
   | UpsertTracePatch
   | UpdateTracePatch
   | RemoveTracePatch
@@ -32,6 +33,11 @@ export interface ReplaceColorPatch {
   type: "palette.replaceColor";
   fromColorId: string;
   toColorId: string;
+}
+
+export interface AssignPaletteSymbolsPatch {
+  type: "palette.assignSymbols";
+  assignments: Record<string, string>;
 }
 
 export interface UpsertTracePatch {

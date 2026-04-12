@@ -74,6 +74,7 @@ export function EditorV2Shell({
   const viewport = getViewport(state);
   const showGridlines = state.ui.preferences.showGridlines;
   const showRuler = state.ui.preferences.showRuler;
+  const showSymbols = state.ui.preferences.showSymbols;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
@@ -289,6 +290,7 @@ export function EditorV2Shell({
               document={document}
               dispatch={dispatch}
               showGridlines={showGridlines}
+              showSymbols={showSymbols}
             />
           </div>
 
@@ -345,6 +347,7 @@ export function EditorV2Shell({
               dispatch={dispatch}
               showGridlines={showGridlines}
               showRuler={showRuler}
+              showSymbols={showSymbols}
               state={state}
               zoomAnchor={zoomAnchor}
             />

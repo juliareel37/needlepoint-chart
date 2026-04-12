@@ -265,7 +265,7 @@ export interface EditorUiState {
   preferences: UiPreferenceState;
 }
 
-export type EditorSidebarSection = "document" | "color" | "trace" | "text";
+export type EditorSidebarSection = "document" | "color" | "trace" | "text" | "settings";
 
 export interface ShellUiState {
   sidebarCollapsed: boolean;
@@ -284,6 +284,7 @@ export interface PanelUiState {
   customPalettesOpen: boolean;
   imageToPatternOpen: boolean;
   textOpen: boolean;
+  settingsOpen: boolean;
 }
 
 export interface DialogUiState {
@@ -423,6 +424,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         customPalettesOpen: false,
         imageToPatternOpen: false,
         textOpen: false,
+        settingsOpen: false,
       },
       dialogs: {
         confirmDialog: null,

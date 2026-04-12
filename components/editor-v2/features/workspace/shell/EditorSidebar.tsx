@@ -16,6 +16,7 @@ import { ColorPanelPage } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { TextPanelPage } from "./panel-pages/TextPanelPage";
 import { TracePanelPage } from "./panel-pages/TracePanelPage";
+import { SettingsPanelPage } from "./panel-pages/SettingsPanelPage";
 import styles from "./EditorV2Shell.module.css";
 
 interface EditorSidebarProps {
@@ -35,6 +36,7 @@ interface EditorSidebarProps {
   onStartOver: () => void;
   showGridlines: boolean;
   showRuler: boolean;
+  showSymbols: boolean;
   trace: TraceDocument | null;
   traceRepositionActive: boolean;
   usedColors: Array<{ colorId: string; count: number }>;
@@ -61,6 +63,7 @@ export function EditorSidebar({
   onStartOver,
   showGridlines,
   showRuler,
+  showSymbols,
   trace,
   traceRepositionActive,
   usedColors,
@@ -80,7 +83,9 @@ export function EditorSidebar({
                 ? "Color"
                 : activeSection === "trace"
                   ? "Trace"
-                  : "Text"}
+                  : activeSection === "text"
+                    ? "Text"
+                      : "Settings"}
           </h2>
           <Button
             type="button"
@@ -143,6 +148,15 @@ export function EditorSidebar({
             gridMetrics={gridMetrics}
             palette={palette}
             placement={textPlacement}
+          />
+        ) : null}
+
+        {activeSection === "settings" ? (
+          <SettingsPanelPage
+            dispatch={dispatch}
+            showGridlines={showGridlines}
+            showRuler={showRuler}
+            showSymbols={showSymbols}
           />
         ) : null}
       </div>

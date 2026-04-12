@@ -15,6 +15,7 @@ import { openPanelCommandHandler } from "./handlers/openPanel";
 import { paletteSwapColorCommandHandler } from "./handlers/paletteSwapColor";
 import { setGridlinesVisibleCommandHandler } from "./handlers/setGridlinesVisible";
 import { setRulerVisibleCommandHandler } from "./handlers/setRulerVisible";
+import { setSymbolsVisibleCommandHandler } from "./handlers/setSymbolsVisible";
 import {
   setActiveSidebarSectionCommandHandler,
   setSidebarCollapsedCommandHandler,
@@ -80,5 +81,6 @@ export const commandHandlers: EditorCommandHandler[] = [
   setActiveSidebarSectionCommandHandler,
   setGridlinesVisibleCommandHandler,
   setRulerVisibleCommandHandler,
+  setSymbolsVisibleCommandHandler,
   openPanelCommandHandler,
 ];

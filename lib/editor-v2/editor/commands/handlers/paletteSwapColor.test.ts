@@ -31,6 +31,17 @@ describe("paletteSwapColorCommandHandler", () => {
       null,
     ]);
   });
+
+  it("preserves the symbol pairing when a used color is swapped", () => {
+    const store = createEditorStore({ initialState: createSwapTestState() });
+
+    store.dispatch(createSwapCommand("dmc:310", "dmc:321"));
+
+    expect(store.getState().document.palette.symbolAssignments).toEqual({
+      "dmc:310": "!",
+      "dmc:321": "@",
+    });
+  });
 });
 
 function createSwapTestState(): EditorStoreState {
@@ -71,7 +82,10 @@ function createSwapTestState(): EditorStoreState {
         },
         customPalettesById: {},
         extractedPaletteIds: [],
-        symbolAssignments: {},
+        symbolAssignments: {
+          "dmc:310": "!",
+          "dmc:321": "@",
+        },
       },
       trace: null,
       text: {
@@ -157,6 +171,7 @@ function createSwapTestState(): EditorStoreState {
         customPalettesOpen: false,
         imageToPatternOpen: false,
         textOpen: false,
+        settingsOpen: false,
       },
       dialogs: {
         confirmDialog: null,

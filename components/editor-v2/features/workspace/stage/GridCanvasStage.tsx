@@ -38,8 +38,10 @@ interface GridCanvasStageProps {
   handlePointerEnter: (point: GridPoint) => void;
   gridOverlayStep: number;
   showGridlines: boolean;
+  showSymbols: boolean;
   metrics: GridWorldMetrics;
   stageSize: { width: number; height: number };
+  symbolAssignments: Record<string, string>;
   viewport: ViewportState;
 }
 
@@ -58,8 +60,10 @@ export function GridCanvasStage({
   handlePointerEnter,
   gridOverlayStep,
   showGridlines,
+  showSymbols,
   metrics,
   stageSize,
+  symbolAssignments,
   viewport,
 }: GridCanvasStageProps) {
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -314,9 +318,26 @@ export function GridCanvasStage({
       });
     }
 
+    if (showSymbols) {
+      context.save();
+      context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
+      drawSymbolsOverlay(context, {
+        cells,
+        cellSize: metrics.cellSize,
+        colorsById,
+        drawX,
+        drawY,
+        gridWidth,
+        symbolAssignments,
+        zoom: viewport.zoom,
+      });
+      context.restore();
+    }
+
     context.restore();
   }, [
     cells,
+    colorsById,
     frameOrigin.x,
     frameOrigin.y,
     gridOverlayStep,
@@ -326,8 +347,10 @@ export function GridCanvasStage({
     metrics.cellSize,
     metrics.height,
     showGridlines,
+    showSymbols,
     stageSize.height,
     stageSize.width,
+    symbolAssignments,
     displayTrace?.offsetX,
     displayTrace?.offsetY,
     displayTrace?.opacity,
@@ -558,4 +581,84 @@ function drawGridOverlay(
     true,
   );
   context.restore();
+}
+
+function drawSymbolsOverlay(
+  context: CanvasRenderingContext2D,
+  options: {
+    cells: GridCellValue[];
+    cellSize: number;
+    colorsById: Record<string, PaletteColor>;
+    drawX: number;
+    drawY: number;
+    gridWidth: number;
+    symbolAssignments: Record<string, string>;
+    zoom: number;
+  },
+) {
+  const {
+    cells,
+    cellSize,
+    colorsById,
+    drawX,
+    drawY,
+    gridWidth,
+    symbolAssignments,
+    zoom,
+  } = options;
+  const renderedCellSize = cellSize * zoom;
+
+  if (renderedCellSize < 10) {
+    return;
+  }
+
+  const fontSize = Math.max(9, Math.min(renderedCellSize * 0.62, renderedCellSize - 4));
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+
+  for (let index = 0; index < cells.length; index += 1) {
+    const colorId = cells[index];
+
+    if (!colorId) {
+      continue;
+    }
+
+    const symbol = symbolAssignments[colorId];
+    const color = colorsById[colorId];
+
+    if (!symbol || !color) {
+      continue;
+    }
+
+    const x = index % gridWidth;
+    const y = Math.floor(index / gridWidth);
+    const centerX = drawX + (x + 0.5) * renderedCellSize;
+    const centerY = drawY + (y + 0.5) * renderedCellSize;
+
+    context.fillStyle = getSymbolColor(color.hex);
+    context.fillText(symbol, centerX, centerY);
+  }
+}
+
+function getSymbolColor(hex: string): string {
+  const normalizedHex = hex.replace("#", "");
+  const expandedHex =
+    normalizedHex.length === 3
+      ? normalizedHex
+          .split("")
+          .map((character) => character + character)
+          .join("")
+      : normalizedHex;
+
+  if (expandedHex.length !== 6) {
+    return "#111827";
+  }
+
+  const red = Number.parseInt(expandedHex.slice(0, 2), 16);
+  const green = Number.parseInt(expandedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(expandedHex.slice(4, 6), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+  return luminance > 0.68 ? "#111827" : "#f8fafc";
 }

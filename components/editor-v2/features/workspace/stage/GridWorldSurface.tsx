@@ -36,6 +36,7 @@ interface GridWorldSurfaceProps {
   dispatch: EditorStore["dispatch"];
   showGridlines: boolean;
   showRuler: boolean;
+  showSymbols: boolean;
   state: EditorStoreState;
   zoomAnchor: { x: number; y: number } | null;
 }
@@ -48,6 +49,7 @@ export function GridWorldSurface({
   dispatch,
   showGridlines,
   showRuler,
+  showSymbols,
   state,
   zoomAnchor,
 }: GridWorldSurfaceProps) {
@@ -364,7 +366,9 @@ export function GridWorldSurface({
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}
               showGridlines={showGridlines}
+              showSymbols={showSymbols}
               stageSize={stageSize}
+              symbolAssignments={state.document.palette.symbolAssignments}
               viewport={viewport}
             />
           </div>
