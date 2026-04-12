@@ -28,20 +28,30 @@ export function usePaintStroke({
   dispatch,
 }: UsePaintStrokeOptions) {
   const [paintStrokeId, setPaintStrokeId] = useState<string | null>(null);
+
   const paintedCellKeysRef = useRef<Set<string>>(new Set());
+  const lastStrokePointRef = useRef<GridPoint | null>(null);
 
   useEffect(() => {
     if (!paintStrokeId) {
       return;
     }
 
-    function handleWindowMouseUp() {
+    function endStroke() {
       paintedCellKeysRef.current.clear();
+      lastStrokePointRef.current = null;
       setPaintStrokeId(null);
     }
 
-    window.addEventListener("mouseup", handleWindowMouseUp);
-    return () => window.removeEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("mouseup", endStroke);
+    window.addEventListener("pointerup", endStroke);
+    window.addEventListener("pointercancel", endStroke);
+
+    return () => {
+      window.removeEventListener("mouseup", endStroke);
+      window.removeEventListener("pointerup", endStroke);
+      window.removeEventListener("pointercancel", endStroke);
+    };
   }, [paintStrokeId]);
 
   return {
@@ -50,20 +60,26 @@ export function usePaintStroke({
   };
 
   function handlePointerDown(point: GridPoint): boolean {
-    if (activeTool === "paint" && activeColorId) {
-      const strokeId = createLocalStrokeId();
+    if (activeTool === "paint") {
+      if (!activeColorId) {
+        return false;
+      }
 
+      const strokeId = createLocalStrokeId();
       paintedCellKeysRef.current.clear();
+      lastStrokePointRef.current = point;
       setPaintStrokeId(strokeId);
+
       paintPoint(point, activeColorId, strokeId);
       return true;
     }
 
     if (activeTool === "erase") {
       const strokeId = createLocalStrokeId();
-
       paintedCellKeysRef.current.clear();
+      lastStrokePointRef.current = point;
       setPaintStrokeId(strokeId);
+
       erasePoint(point, strokeId);
       return true;
     }
@@ -72,13 +88,29 @@ export function usePaintStroke({
   }
 
   function handlePointerEnter(point: GridPoint): boolean {
-    if (paintStrokeId && activeTool === "paint" && activeColorId) {
-      paintPoint(point, activeColorId, paintStrokeId);
+    if (!paintStrokeId) {
+      return false;
+    }
+
+    if (activeTool === "paint") {
+      if (!activeColorId) {
+        return false;
+      }
+
+      applyStrokeSegment(lastStrokePointRef.current, point, (strokePoint) => {
+        paintPoint(strokePoint, activeColorId, paintStrokeId);
+      });
+
+      lastStrokePointRef.current = point;
       return true;
     }
 
-    if (paintStrokeId && activeTool === "erase") {
-      erasePoint(point, paintStrokeId);
+    if (activeTool === "erase") {
+      applyStrokeSegment(lastStrokePointRef.current, point, (strokePoint) => {
+        erasePoint(strokePoint, paintStrokeId);
+      });
+
+      lastStrokePointRef.current = point;
       return true;
     }
 
@@ -90,46 +122,109 @@ export function usePaintStroke({
     colorId: string,
     strokeId: string,
   ): void {
-    const cellsForBrush = getCellsFromBrush(point, brushSize);
-    const newCells: GridPoint[] = [];
+    const newCells = getNewCellsForBrush(point, brushSize, paintedCellKeysRef.current);
 
-    for (const cell of cellsForBrush) {
-      const key = getGridCellKey(cell);
-      if (!paintedCellKeysRef.current.has(key)) {
-        paintedCellKeysRef.current.add(key);
-        newCells.push(cell);
-      }
+    if (newCells.length === 0) {
+      return;
     }
 
-    if (newCells.length > 0) {
-      if (newCells.length === 1) {
-        dispatch(createPaintCellCommand(colorId, newCells[0], strokeId));
-      } else {
-        dispatch(createPaintCellsCommand(colorId, newCells, strokeId));
-      }
+    if (newCells.length === 1) {
+      dispatch(createPaintCellCommand(colorId, newCells[0], strokeId));
+      return;
     }
+
+    dispatch(createPaintCellsCommand(colorId, newCells, strokeId));
   }
 
   function erasePoint(point: GridPoint, strokeId: string): void {
-    const cellsForBrush = getCellsFromBrush(point, brushSize);
-    const newCells: GridPoint[] = [];
+    const newCells = getNewCellsForBrush(point, brushSize, paintedCellKeysRef.current);
 
-    for (const cell of cellsForBrush) {
-      const key = getGridCellKey(cell);
-      if (!paintedCellKeysRef.current.has(key)) {
-        paintedCellKeysRef.current.add(key);
-        newCells.push(cell);
-      }
+    if (newCells.length === 0) {
+      return;
     }
 
-    if (newCells.length > 0) {
-      if (newCells.length === 1) {
-        dispatch(createEraseCellCommand(newCells[0], strokeId));
-      } else {
-        dispatch(createEraseCellsCommand(newCells, strokeId));
-      }
+    if (newCells.length === 1) {
+      dispatch(createEraseCellCommand(newCells[0], strokeId));
+      return;
+    }
+
+    dispatch(createEraseCellsCommand(newCells, strokeId));
+  }
+}
+
+function applyStrokeSegment(
+  from: GridPoint | null,
+  to: GridPoint,
+  applyPoint: (point: GridPoint) => void,
+): void {
+  if (!from) {
+    applyPoint(to);
+    return;
+  }
+
+  const points = getLinePoints(from, to);
+  for (const point of points) {
+    applyPoint(point);
+  }
+}
+
+function getLinePoints(from: GridPoint, to: GridPoint): GridPoint[] {
+  const points: GridPoint[] = [];
+
+  let x0 = from.x;
+  let y0 = from.y;
+  const x1 = to.x;
+  const y1 = to.y;
+
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+
+  while (true) {
+    points.push({ x: x0, y: y0 });
+
+    if (x0 === x1 && y0 === y1) {
+      break;
+    }
+
+    const e2 = 2 * err;
+
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
     }
   }
+
+  return points;
+}
+
+function getNewCellsForBrush(
+  center: GridPoint,
+  brushSize: number,
+  paintedCellKeys: Set<string>,
+): GridPoint[] {
+  const cellsForBrush = getCellsFromBrush(center, brushSize);
+  const newCells: GridPoint[] = [];
+
+  for (const cell of cellsForBrush) {
+    const key = getGridCellKey(cell);
+
+    if (paintedCellKeys.has(key)) {
+      continue;
+    }
+
+    paintedCellKeys.add(key);
+    newCells.push(cell);
+  }
+
+  return newCells;
 }
 
 function getCellsFromBrush(center: GridPoint, brushSize: number): GridPoint[] {
@@ -151,7 +246,10 @@ function getCellsFromBrush(center: GridPoint, brushSize: number): GridPoint[] {
 }
 
 function createLocalStrokeId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
