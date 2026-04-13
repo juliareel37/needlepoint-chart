@@ -1,25 +1,38 @@
-// dmcColorLibrary.ts
-import { DMC_COLORS, DMC_FAMILY_ORDER, type DmcColor } from "@/lib/dmcColors";
+import {
+  DMC_COLORS,
+  DMC_MATRIX_COLUMNS,
+  DMC_MATRIX_ROWS,
+  type DmcColor,
+  type DmcMatrixColumn,
+  type DmcMatrixRow,
+} from "@/lib/dmcColors";
 import type { PaletteColor, PaletteDocument } from "../store/state";
 
 export const DEFAULT_DMC_COLOR_ID = "dmc-310";
 
-const FAMILY_RANK: Record<string, number> = Object.fromEntries(
-  DMC_FAMILY_ORDER.map((family, index) => [family, index]),
-);
+export type DmcMatrixCell = {
+  column: DmcMatrixColumn;
+  row: DmcMatrixRow;
+  colors: PaletteColor[];
+};
 
-export const DMC_COLOR_LIBRARY: PaletteColor[] = [...DMC_COLORS]
-  .sort(compareDmcColorsForPalette)
-  .map((color) => ({
-    id: getDmcColorId(color.code),
-    brand: "dmc",
-    code: color.code,
-    name: color.name,
-    hex: color.hex,
-  }));
+export type DmcMatrixColumnData = {
+  column: DmcMatrixColumn;
+  rows: Record<DmcMatrixRow, PaletteColor[]>;
+};
+
+type MatrixPlacement = {
+  column: DmcMatrixColumn;
+  row: DmcMatrixRow;
+};
+
+export const DMC_COLOR_LIBRARY: PaletteColor[] = buildFlatMatrixOrderedLibrary(DMC_COLORS);
 
 export const DMC_COLOR_LIBRARY_BY_ID: Record<string, PaletteColor> =
   Object.fromEntries(DMC_COLOR_LIBRARY.map((color) => [color.id, color]));
+
+export const DMC_COLOR_LIBRARY_MATRIX: DmcMatrixColumnData[] =
+  buildDmcColorLibraryMatrix(DMC_COLORS);
 
 export function addDmcColorLibraryToPalette(
   palette: PaletteDocument,
@@ -33,38 +46,132 @@ export function addDmcColorLibraryToPalette(
   };
 }
 
+export function getDmcColorLibraryMatrix(): DmcMatrixColumnData[] {
+  return DMC_COLOR_LIBRARY_MATRIX;
+}
+
+function buildFlatMatrixOrderedLibrary(colors: DmcColor[]): PaletteColor[] {
+  const matrix = buildDmcColorLibraryMatrix(colors);
+  const flattened: PaletteColor[] = [];
+
+  for (const column of matrix) {
+    for (const rowKey of DMC_MATRIX_ROWS) {
+      flattened.push(...column.rows[rowKey]);
+    }
+  }
+
+  return flattened;
+}
+
+function buildDmcColorLibraryMatrix(colors: DmcColor[]): DmcMatrixColumnData[] {
+  const matrix = createEmptyMatrix();
+
+  for (const color of colors) {
+    const placement = getMatrixPlacement(color);
+    matrix[placement.column][placement.row].push(toPaletteColor(color));
+  }
+
+  for (const column of DMC_MATRIX_COLUMNS) {
+    for (const row of DMC_MATRIX_ROWS) {
+      matrix[column][row].sort(comparePaletteColorsInCell);
+    }
+  }
+
+  return DMC_MATRIX_COLUMNS.map((column) => ({
+    column,
+    rows: matrix[column],
+  }));
+}
+
+function createEmptyMatrix(): Record<
+  DmcMatrixColumn,
+  Record<DmcMatrixRow, PaletteColor[]>
+> {
+  return DMC_MATRIX_COLUMNS.reduce((columnAcc, column) => {
+    columnAcc[column] = DMC_MATRIX_ROWS.reduce((rowAcc, row) => {
+      rowAcc[row] = [];
+      return rowAcc;
+    }, {} as Record<DmcMatrixRow, PaletteColor[]>);
+
+    return columnAcc;
+  }, {} as Record<DmcMatrixColumn, Record<DmcMatrixRow, PaletteColor[]>>);
+}
+
+function toPaletteColor(color: DmcColor): PaletteColor {
+  return {
+    id: getDmcColorId(color.code),
+    brand: "dmc",
+    code: color.code,
+    name: color.name,
+    hex: color.hex,
+  };
+}
+
 function getDmcColorId(code: string): string {
   return `dmc-${code.toLowerCase()}`;
 }
 
-function compareDmcColorsForPalette(a: DmcColor, b: DmcColor): number {
-  const familyDiff =
-    getFamilyRank(a.family) - getFamilyRank(b.family);
+function getMatrixPlacement(color: DmcColor): MatrixPlacement {
+  const hsl = hexToHsl(color.hex);
 
-  if (familyDiff !== 0) {
-    return familyDiff;
+  return {
+    column: getMatrixColumn(hsl.h, hsl.s),
+    row: getMatrixRow(hsl.l),
+  };
+}
+
+function getMatrixColumn(hue: number, saturation: number): DmcMatrixColumn {
+  if (saturation < 0.12) {
+    return "neutral";
   }
 
+  if (hue >= 345 || hue < 20) {
+    return "red";
+  }
+  if (hue < 50) {
+    return "orange";
+  }
+  if (hue < 75) {
+    return "yellow";
+  }
+  if (hue < 165) {
+    return "green";
+  }
+  if (hue < 200) {
+    return "teal";
+  }
+  if (hue < 255) {
+    return "blue";
+  }
+  return "purple";
+}
+
+function getMatrixRow(lightness: number): DmcMatrixRow {
+  if (lightness < 0.18) {
+    return "veryDark";
+  }
+  if (lightness < 0.32) {
+    return "dark";
+  }
+  if (lightness < 0.5) {
+    return "medium";
+  }
+  if (lightness < 0.68) {
+    return "light";
+  }
+  if (lightness < 0.84) {
+    return "veryLight";
+  }
+  return "ultraLight";
+}
+
+function comparePaletteColorsInCell(a: PaletteColor, b: PaletteColor): number {
   const aHsl = hexToHsl(a.hex);
   const bHsl = hexToHsl(b.hex);
 
-  const aNeutral = isNeutral(aHsl.s);
-  const bNeutral = isNeutral(bHsl.s);
-
-  // Within neutrals: dark -> light
-  if (aNeutral && bNeutral) {
-    if (aHsl.l !== bHsl.l) {
-      return aHsl.l - bHsl.l;
-    }
-    return compareCode(a.code, b.code);
-  }
-
-  // Within chromatic families:
-  // 1) hue
-  // 2) saturation
-  // 3) lightness
-  if (aHsl.h !== bHsl.h) {
-    return aHsl.h - bHsl.h;
+  const hueDiff = circularHueDistanceFromAnchor(aHsl.h) - circularHueDistanceFromAnchor(bHsl.h);
+  if (hueDiff !== 0) {
+    return hueDiff;
   }
 
   if (aHsl.s !== bHsl.s) {
@@ -78,12 +185,8 @@ function compareDmcColorsForPalette(a: DmcColor, b: DmcColor): number {
   return compareCode(a.code, b.code);
 }
 
-function getFamilyRank(family: string): number {
-  return FAMILY_RANK[family] ?? Number.MAX_SAFE_INTEGER;
-}
-
-function isNeutral(saturation: number): boolean {
-  return saturation < 0.12;
+function circularHueDistanceFromAnchor(hue: number): number {
+  return hue;
 }
 
 function compareCode(a: string, b: string): number {

@@ -2,17 +2,30 @@ import type { Color } from './grid';
 
 export type DmcColor = Color & { code: string; family: string };
 
-export const DMC_FAMILY_ORDER = [
+export const DMC_MATRIX_COLUMNS = [
   "red",
   "orange",
   "yellow",
   "green",
+  "teal",
   "blue",
-  "violet",
-  "neutrals",
+  "purple",
+  "neutral",
 ] as const;
 
-export type DmcFamily = (typeof DMC_FAMILY_ORDER)[number];
+export type DmcMatrixColumn = (typeof DMC_MATRIX_COLUMNS)[number];
+
+export const DMC_MATRIX_ROWS = [
+  "veryDark",
+  "dark",
+  "medium",
+  "light",
+  "veryLight",
+  "ultraLight",
+] as const;
+
+export type DmcMatrixRow = (typeof DMC_MATRIX_ROWS)[number];
+
 
 export const DMC_COLORS: DmcColor[] = [
   { id: 150, name: "Dusty Rose Ult Vy Dk", hex: "#ab0249", code: "150", family: "violet" },

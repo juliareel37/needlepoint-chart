@@ -31,6 +31,7 @@ import {
   ToolbarSwatch,
   VerticalTabGroup,
 } from "@/components/design-system";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import styles from "./editor-v2-design-system.module.css";
 
 const railItems = [
@@ -154,45 +155,11 @@ const buttonHoverStyles: Record<
   },
 };
 
-type ThemeMode = "light" | "dark";
-
-function applyThemeMode(nextTheme: ThemeMode) {
-  if (typeof document === "undefined") {
-    return;
-  }
-
-  if (nextTheme === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
-}
-
 export function EditorV2DesignSystemPage() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-
-  useEffect(() => {
-    try {
-      const savedTheme = window.localStorage.getItem("wippa:theme");
-      const nextTheme: ThemeMode = savedTheme === "dark" ? "dark" : "light";
-      applyThemeMode(nextTheme);
-      setThemeMode(nextTheme);
-    } catch {
-      const nextTheme: ThemeMode =
-        document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
-      applyThemeMode(nextTheme);
-      setThemeMode(nextTheme);
-    }
-  }, []);
+  const { themeMode, setThemeMode } = useThemeMode();
 
   const handleThemeChange = (nextChecked: boolean) => {
-    const nextTheme: ThemeMode = nextChecked ? "dark" : "light";
-    applyThemeMode(nextTheme);
-    setThemeMode(nextTheme);
-
-    try {
-      window.localStorage.setItem("wippa:theme", nextTheme);
-    } catch {}
+    setThemeMode(nextChecked ? "dark" : "light");
   };
 
   return (

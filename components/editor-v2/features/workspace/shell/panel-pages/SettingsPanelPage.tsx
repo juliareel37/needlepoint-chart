@@ -2,7 +2,10 @@
 
 import {
   CheckboxField,
+  Field,
+  Toggle,
 } from "@/components/design-system";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import type {
   EditorStore,
 } from "@/lib/editor-v2/editor/store";
@@ -29,8 +32,21 @@ export function SettingsPanelPage({
   showRuler,
   showSymbols,
 }: SettingsPanelPageProps) {
+  const { themeMode, setThemeMode } = useThemeMode();
+
   return (
     <div className={styles.sidebarSubsection}>
+      <Field
+        label="Appearance"
+        hint="Switch the editor chrome between light and dark."
+      >
+        <Toggle
+          checked={themeMode === "dark"}
+          aria-label={`Switch to ${themeMode === "dark" ? "light" : "dark"} mode`}
+          label={themeMode === "dark" ? "Dark mode" : "Light mode"}
+          onChange={(nextChecked) => setThemeMode(nextChecked ? "dark" : "light")}
+        />
+      </Field>
       <CheckboxField
         checked={previewMode}
         onChange={(event) =>
