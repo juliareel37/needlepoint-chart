@@ -10,7 +10,7 @@ import type {
   TextPlacementSession,
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
-import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
 import { ColorPanelPage } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
@@ -45,6 +45,7 @@ interface EditorSidebarProps {
   gridMetrics: GridWorldMetrics;
   dispatch: EditorStore["dispatch"];
   textPlacement: TextPlacementSession | null;
+  textViewportCenter: WorldPoint | null;
 }
 
 export function EditorSidebar({
@@ -73,6 +74,7 @@ export function EditorSidebar({
   gridMetrics,
   dispatch,
   textPlacement,
+  textViewportCenter,
 }: EditorSidebarProps) {
   return (
     <aside className={styles.sidebar}>
@@ -148,6 +150,7 @@ export function EditorSidebar({
             gridMetrics={gridMetrics}
             palette={palette}
             placement={textPlacement}
+            viewportCenter={textViewportCenter}
           />
         ) : null}
 

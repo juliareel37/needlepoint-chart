@@ -143,6 +143,16 @@ export function EditorV2Shell({
     gridMetrics.surfaceWidth,
     sidebarCollapsed,
   ]);
+  const textViewportCenter = useMemo(() => {
+    if (!zoomAnchor || viewport.zoom <= 0) {
+      return null;
+    }
+
+    return {
+      x: (zoomAnchor.x - viewport.offsetX) / viewport.zoom,
+      y: (zoomAnchor.y - viewport.offsetY) / viewport.zoom,
+    };
+  }, [viewport.offsetX, viewport.offsetY, viewport.zoom, zoomAnchor]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -294,6 +304,7 @@ export function EditorV2Shell({
               dispatch={dispatch}
               showGridlines={showGridlines}
               showSymbols={showSymbols}
+              textViewportCenter={textViewportCenter}
             />
           </div>
 

@@ -8,7 +8,7 @@ import type {
   PaletteColor,
   TextPlacementSession,
 } from "@/lib/editor-v2/editor/store";
-import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import { createBeginTextPlacementCommand } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
@@ -24,12 +24,14 @@ interface TextPanelPageProps {
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: TextPlacementSession | null;
+  viewportCenter: WorldPoint | null;
 }
 
 export function TextPanelPage({
   dispatch,
   gridMetrics,
   placement,
+  viewportCenter,
 }: TextPanelPageProps) {
   const placementActive = Boolean(placement);
   const helperText = useMemo(
@@ -77,6 +79,7 @@ export function TextPanelPage({
                     intrinsicWidth: measured.width,
                     intrinsicHeight: measured.height,
                     metrics: gridMetrics,
+                    viewportCenter,
                     widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
                   }),
                 }),
@@ -102,6 +105,7 @@ function getInitialPlacementTransform(options: {
   intrinsicWidth: number;
   intrinsicHeight: number;
   metrics: GridWorldMetrics;
+  viewportCenter: WorldPoint | null;
   widthRatio: number;
 }): { offsetX: number; offsetY: number; scale: number } {
   const baseRect = getContainedRect(
@@ -112,8 +116,10 @@ function getInitialPlacementTransform(options: {
   );
   const targetWidth = options.metrics.surfaceWidth * options.widthRatio;
   const scale = clampScale(targetWidth / Math.max(baseRect.width, 1));
-  const targetLeft = (options.metrics.surfaceWidth - baseRect.width * scale) / 2;
-  const targetTop = (options.metrics.surfaceHeight - baseRect.height * scale) / 2;
+  const targetCenterX = options.viewportCenter?.x ?? options.metrics.surfaceWidth / 2;
+  const targetCenterY = options.viewportCenter?.y ?? options.metrics.surfaceHeight / 2;
+  const targetLeft = targetCenterX - (baseRect.width * scale) / 2;
+  const targetTop = targetCenterY - (baseRect.height * scale) / 2;
   return {
     scale,
     offsetX: targetLeft - baseRect.left,
