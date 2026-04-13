@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/design-system";
+import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
   EditorSidebarSection,
@@ -98,10 +98,8 @@ export function EditorSidebar({
             title="Hide panel"
             onClick={onClose}
           >
-            <img
-              src="/icons/lucide/x.svg"
-              alt=""
-              aria-hidden="true"
+            <ButtonIcon
+              icon="/icons/lucide/x.svg"
               className={styles.sidebarCloseIcon}
             />
           </Button>

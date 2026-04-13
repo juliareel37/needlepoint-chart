@@ -88,12 +88,14 @@
 .sidebarCloseButton {
   min-width: 32px;
   padding-inline: 8px;
+  color: var(--text-primary);
 }
 
 .sidebarCloseIcon {
   width: 16px;
   height: 16px;
-  display: block;
+  display: grid;
+  place-items: center;
 }
 
 .sidebarSection {
@@ -188,6 +190,16 @@
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 140ms ease;
+}
+
+.titleHoverPencil {
+  width: 12px;
+  height: 12px;
+}
+
+.titleHoverPencil span {
+  width: 12px;
+  height: 12px;
 }
 
 .editableTitleTrigger:hover .titleHoverIcon,

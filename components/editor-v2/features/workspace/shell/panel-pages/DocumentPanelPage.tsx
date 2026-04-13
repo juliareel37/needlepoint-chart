@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import {
   Button,
+  ButtonIcon,
   FieldInput,
   SingleSelectDropdown,
   panelMutedTextStyle,
@@ -117,11 +118,9 @@ export function DocumentPanelPage({
                   {documentTitle}
                 </div>
                 <span className={styles.titleHoverIcon} aria-hidden="true">
-                  <img
-                    src="/icons/lucide/pencil.svg"
-                    alt=""
-                    aria-hidden="true"
-                    style={{ width: 12, height: 12, display: "block" }}
+                  <ButtonIcon
+                    icon="/icons/lucide/pencil.svg"
+                    className={styles.titleHoverPencil}
                   />
                 </span>
               </button>
