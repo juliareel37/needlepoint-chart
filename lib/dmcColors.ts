@@ -2,6 +2,18 @@ import type { Color } from './grid';
 
 export type DmcColor = Color & { code: string; family: string };
 
+export const DMC_FAMILY_ORDER = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "violet",
+  "neutrals",
+] as const;
+
+export type DmcFamily = (typeof DMC_FAMILY_ORDER)[number];
+
 export const DMC_COLORS: DmcColor[] = [
   { id: 150, name: "Dusty Rose Ult Vy Dk", hex: "#ab0249", code: "150", family: "violet" },
   { id: 151, name: "Dusty Rose Vry Lt", hex: "#f0ced4", code: "151", family: "red" },
