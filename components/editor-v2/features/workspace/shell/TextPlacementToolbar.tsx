@@ -119,11 +119,15 @@ export function TextPlacementToolbar({
             items={TEXT_FONT_OPTIONS}
             value={placement.fontFamily}
             placeholder="Font"
-            triggerLabel={<strong style={{ fontFamily: placement.fontFamily }}>{placement.fontFamily}</strong>}
+            triggerLabel={
+              <span style={{ fontFamily: placement.fontFamily, fontWeight: 400 }}>
+                {placement.fontFamily}
+              </span>
+            }
             triggerVariant="ghost"
             menuPlacement="bottom-start"
             minWidth="auto"
-            menuWidth={220}
+            menuWidth={180}
             getItemValue={(item) => item.value}
             getItemLabel={(item) => (
               <span style={{ fontFamily: item.value }}>{item.label}</span>

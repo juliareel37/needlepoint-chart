@@ -18,7 +18,10 @@ interface PositioningBoxOverlayProps {
   baseRect: PositioningRect;
   bounds: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
+  onClick?: () => void;
+  interactive?: boolean;
   onTransformChange: (transform: PositioningTransform, transactionKey: string) => void;
+  showHandles?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -29,7 +32,10 @@ export function PositioningBoxOverlay({
   baseRect,
   bounds,
   getWorldPointFromClient,
+  onClick,
+  interactive = true,
   onTransformChange,
+  showHandles = true,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -37,17 +43,38 @@ export function PositioningBoxOverlay({
   const dragRef = useRef<PositioningDragState | null>(null);
   const dragSequenceRef = useRef(0);
   const [dragMode, setDragMode] = useState<PositioningDragMode | null>(null);
+  const pointerDownRef = useRef<{
+    clientX: number;
+    clientY: number;
+    dragged: boolean;
+    mode: PositioningDragMode;
+  } | null>(null);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
+  const dragThreshold = 4;
 
   useEffect(() => {
     const handleWindowMouseMove = (event: MouseEvent) => {
       const dragState = dragRef.current;
+      const pointerDown = pointerDownRef.current;
 
-      if (!dragState) {
+      if (!dragState || !pointerDown) {
         return;
+      }
+
+      if (!pointerDown.dragged) {
+        const deltaX = event.clientX - pointerDown.clientX;
+        const deltaY = event.clientY - pointerDown.clientY;
+        const distance = Math.hypot(deltaX, deltaY);
+
+        if (distance < dragThreshold) {
+          return;
+        }
+
+        pointerDown.dragged = true;
+        setDragMode(pointerDown.mode);
       }
 
       const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
@@ -61,6 +88,13 @@ export function PositioningBoxOverlay({
     };
 
     const handleWindowMouseUp = () => {
+      const pointerDown = pointerDownRef.current;
+
+      if (interactive && pointerDown && !pointerDown.dragged && pointerDown.mode === "move") {
+        onClick?.();
+      }
+
+      pointerDownRef.current = null;
       dragRef.current = null;
       setDragMode(null);
     };
@@ -72,7 +106,7 @@ export function PositioningBoxOverlay({
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [baseRect, getWorldPointFromClient, onTransformChange]);
+  }, [baseRect, getWorldPointFromClient, interactive, onClick, onTransformChange]);
 
   function beginDrag(mode: PositioningDragMode, clientX: number, clientY: number) {
     const worldPoint = getWorldPointFromClient(clientX, clientY);
@@ -89,7 +123,13 @@ export function PositioningBoxOverlay({
       startBounds: bounds,
       transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
     };
-    setDragMode(mode);
+    pointerDownRef.current = {
+      clientX,
+      clientY,
+      dragged: false,
+      mode,
+    };
+    setDragMode(null);
   }
 
   return (
@@ -102,11 +142,15 @@ export function PositioningBoxOverlay({
         top: `${bounds.top}px`,
         width: `${bounds.width}px`,
         height: `${bounds.height}px`,
-        cursor: dragMode === "move" ? "grabbing" : "grab",
+        cursor: interactive ? (dragMode === "move" ? "grabbing" : "grab") : "default",
         userSelect: "none",
         WebkitUserSelect: "none",
+        pointerEvents: interactive ? "auto" : "none",
       }}
       onMouseDown={(event) => {
+        if (!interactive) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         beginDrag("move", event.clientX, event.clientY);
@@ -123,7 +167,7 @@ export function PositioningBoxOverlay({
         }}
       />
 
-      {POSITIONING_HANDLES.map((handle) => {
+      {showHandles ? POSITIONING_HANDLES.map((handle) => {
         const handleLeft = getHandleLeft(handle.id, bounds.width, handleSize);
         const handleTop = getHandleTop(handle.id, bounds.height, handleSize);
 
@@ -151,7 +195,7 @@ export function PositioningBoxOverlay({
             }}
           />
         );
-      })}
+      }) : null}
     </div>
   );
 }

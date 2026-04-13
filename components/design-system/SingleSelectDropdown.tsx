@@ -58,7 +58,7 @@ export function SingleSelectDropdown<TItem>({
   label,
   menuClassName,
   menuMaxHeight = 300,
-  menuMaxWidth = "min(320px, 100%)",
+  menuMaxWidth = "min(320px, calc(100vw - 32px))",
   menuOffset = 4,
   menuOverlapTrigger = false,
   menuPlacement = "bottom-start",
