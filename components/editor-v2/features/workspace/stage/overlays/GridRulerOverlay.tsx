@@ -51,7 +51,7 @@ export function GridRulerOverlay({
         pointerEvents: "none",
         userSelect: "none",
         WebkitUserSelect: "none",
-        color: "rgba(31, 41, 55, 0.9)",
+        color: "rgba(156, 156, 156, 0.9)",
         fontSize: `${fontSize}px`,
         lineHeight: `${lineHeight}px`,
         fontWeight: 600,

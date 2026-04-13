@@ -2,9 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { assetPath } from "@/lib/assetPath";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, Field, Slider, Toggle } from "@/components/design-system";
+import { Button, ButtonIcon, Field, Slider, Toggle } from "@/components/design-system";
 import type {
   EditorStore,
   TraceBlendMode,
@@ -213,13 +212,10 @@ export function TraceControls({
             textAlign: "center",
           }}
         >
-          <img
-            src={assetPath("/icons/upload.svg")}
-            alt=""
+          <ButtonIcon
+            icon="/icons/upload.svg"
             aria-hidden="true"
-            width={18}
-            height={18}
-            style={{ display: "block", filter: "var(--icon-on-bg-filter)" }}
+            style={{ width: 18, height: 18 }}
           />
           <span style={typographyStyles.p2}>Choose a file or drag &amp; drop.</span>
           <span style={{ ...typographyStyles.p2, opacity: 0.75 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
@@ -452,7 +448,7 @@ export function TraceControls({
         </>
       ) : (
         <p className={styles.emptyMessage} style={typographyStyles.p2}>
-          No trace image attached.
+          {/* No trace image attached. */}
         </p>
       )}
     </div>

@@ -37,8 +37,8 @@ export function SettingsPanelPage({
   return (
     <div className={styles.sidebarSubsection}>
       <Field
-        label="Appearance"
-        hint="Switch the editor chrome between light and dark."
+        // label="Appearance"
+        // hint="Switch the editor chrome between light and dark."
       >
         <Toggle
           checked={themeMode === "dark"}
