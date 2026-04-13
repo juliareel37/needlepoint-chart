@@ -23,8 +23,8 @@ import type { ViewportState } from "@/lib/editor-v2/editor/store";
 interface UseStagePanInteractionsOptions {
   activeTool: ActiveTool;
   dispatch: EditorStore["dispatch"];
+  dragPanningDisabled?: boolean;
   metrics: GridWorldMetrics;
-  panningDisabled?: boolean;
   stageRef: RefObject<HTMLDivElement | null>;
   stageSize: StageSize;
   viewport: ViewportState;
@@ -35,8 +35,8 @@ interface UseStagePanInteractionsOptions {
 export function useStagePanInteractions({
   activeTool,
   dispatch,
+  dragPanningDisabled = false,
   metrics,
-  panningDisabled = false,
   stageRef,
   stageSize,
   viewport,
@@ -47,12 +47,12 @@ export function useStagePanInteractions({
   const [isPanDragging, setIsPanDragging] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
-  const panToolActive = activeTool === "pan" && !panningDisabled;
+  const panToolActive = activeTool === "pan" && !dragPanningDisabled;
   const cursor = isPanDragging
     ? "grabbing"
     : activeTool === "eyedropper"
       ? "crosshair"
-    : (spacePressed && !panningDisabled) || panToolActive
+    : (spacePressed && !dragPanningDisabled) || panToolActive
       ? "grab"
       : "default";
 
@@ -60,10 +60,12 @@ export function useStagePanInteractions({
     (event: WheelEvent) => {
       event.preventDefault();
 
+      const { deltaX, deltaY } = normalizeWheelDelta(event, stageSize);
+
       if (event.ctrlKey || event.metaKey) {
         const isTrackpadPinch = event.ctrlKey && !event.metaKey;
         const zoomSensitivity = isTrackpadPinch ? 0.006 : 0.0009;
-        const zoomFactor = Math.exp(-event.deltaY * zoomSensitivity);
+        const zoomFactor = Math.exp(-deltaY * zoomSensitivity);
         const nextZoom = viewportZoom * zoomFactor;
         const anchor = zoomAnchor ?? undefined;
 
@@ -71,43 +73,46 @@ export function useStagePanInteractions({
         return;
       }
 
-      if (panningDisabled) {
-        return;
-      }
-
       const clampedViewport = clampViewportOffsets(
         {
           ...viewport,
-          offsetX: viewport.offsetX - event.deltaX,
-          offsetY: viewport.offsetY - event.deltaY,
+          offsetX: viewport.offsetX - deltaX,
+          offsetY: viewport.offsetY - deltaY,
         },
         stageSize,
         metrics,
       );
-      const deltaX = clampedViewport.offsetX - viewport.offsetX;
-      const deltaY = clampedViewport.offsetY - viewport.offsetY;
+      const panDeltaX = clampedViewport.offsetX - viewport.offsetX;
+      const panDeltaY = clampedViewport.offsetY - viewport.offsetY;
 
-      if (deltaX === 0 && deltaY === 0) {
+      if (panDeltaX === 0 && panDeltaY === 0) {
         return;
       }
 
-      dispatch(createPanViewportCommand(deltaX, deltaY));
+      dispatch(createPanViewportCommand(panDeltaX, panDeltaY));
     },
-    [dispatch, metrics, panningDisabled, stageSize, viewport, viewportZoom, zoomAnchor],
+    [dispatch, metrics, stageSize, viewport, viewportZoom, zoomAnchor],
   );
 
   const stopPanDragging = useEffectEvent(() => {
     panDragRef.current = null;
     setIsPanDragging(false);
   });
+  const startPanDragging = useEffectEvent((clientX: number, clientY: number) => {
+    panDragRef.current = {
+      lastX: clientX,
+      lastY: clientY,
+    };
+    setIsPanDragging(true);
+  });
 
   useEffect(() => {
-    if (!panningDisabled) {
+    if (!dragPanningDisabled) {
       return;
     }
 
     stopPanDragging();
-  }, [panningDisabled]);
+  }, [dragPanningDisabled, stopPanDragging]);
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -119,17 +124,44 @@ export function useStagePanInteractions({
     const handleGestureEvent = (event: Event) => {
       event.preventDefault();
     };
+    const startNativeMiddlePanCapture = (event: MouseEvent) => {
+      if (event.button !== 1) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      startPanDragging(event.clientX, event.clientY);
+    };
+    const preventNativeMiddleAuxClick = (event: MouseEvent) => {
+      if (event.button !== 1) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
 
     stageElement.addEventListener("wheel", handleWheel, { passive: false });
     stageElement.addEventListener("gesturestart", handleGestureEvent);
     stageElement.addEventListener("gesturechange", handleGestureEvent);
+    stageElement.addEventListener("mousedown", startNativeMiddlePanCapture, {
+      capture: true,
+      passive: false,
+    });
+    stageElement.addEventListener("auxclick", preventNativeMiddleAuxClick, {
+      capture: true,
+      passive: false,
+    });
 
     return () => {
       stageElement.removeEventListener("wheel", handleWheel);
       stageElement.removeEventListener("gesturestart", handleGestureEvent);
       stageElement.removeEventListener("gesturechange", handleGestureEvent);
+      stageElement.removeEventListener("mousedown", startNativeMiddlePanCapture, true);
+      stageElement.removeEventListener("auxclick", preventNativeMiddleAuxClick, true);
     };
-  }, [handleWheel, stageRef]);
+  }, [handleWheel, stageRef, startPanDragging]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -227,8 +259,9 @@ export function useStagePanInteractions({
   }, [dispatch, metrics, stageSize, viewport]);
 
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
-    const isMiddleMouseButton = event.button === 1 && !panningDisabled;
-    const isSpaceDrag = event.button === 0 && isSpacePressedRef.current && !panningDisabled;
+    const isMiddleMouseButton = event.button === 1;
+    const isSpaceDrag =
+      event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
     const isPanToolDrag = event.button === 0 && panToolActive;
 
     if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
@@ -258,4 +291,28 @@ export function useStagePanInteractions({
     handleStageAuxClick,
     handleStageMouseDownCapture,
   };
+}
+
+function normalizeWheelDelta(
+  event: WheelEvent,
+  stageSize: StageSize,
+): { deltaX: number; deltaY: number } {
+  switch (event.deltaMode) {
+    case WheelEvent.DOM_DELTA_LINE:
+      return {
+        deltaX: event.deltaX * 16,
+        deltaY: event.deltaY * 16,
+      };
+    case WheelEvent.DOM_DELTA_PAGE:
+      return {
+        deltaX: event.deltaX * Math.max(stageSize.width, 1),
+        deltaY: event.deltaY * Math.max(stageSize.height, 1),
+      };
+    case WheelEvent.DOM_DELTA_PIXEL:
+    default:
+      return {
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+      };
+  }
 }

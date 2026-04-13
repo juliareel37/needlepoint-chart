@@ -200,8 +200,8 @@ export function GridWorldSurface({
   } = useStagePanInteractions({
     activeTool,
     dispatch,
+    dragPanningDisabled: tracePositioningEnabled || textPlacementActive,
     metrics,
-    panningDisabled: tracePositioningEnabled || textPlacementActive,
     stageRef,
     stageSize,
     viewport,
