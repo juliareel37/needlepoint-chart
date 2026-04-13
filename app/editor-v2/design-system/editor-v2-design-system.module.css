@@ -1,7 +1,7 @@
 .page {
   min-height: 100%;
   padding: 20px;
-  background: var(--surface-neutral-subtle);
+  background: var(--surface-app);
   color: var(--text-primary);
 }
 
@@ -20,7 +20,10 @@
 
 .heroTopRow {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .tempLink {
@@ -43,6 +46,30 @@
 .tempLink:hover {
   background: var(--neutral-100);
   color: var(--text-primary);
+}
+
+.themeToggleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 12px;
+  background: var(--surface-card);
+}
+
+.themeToggleWrap :global(.row) {
+  width: auto;
+}
+
+.themeToggleWrap :global(.label) {
+  width: auto;
+}
+
+.themeToggleMeta {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .paletteGrid,

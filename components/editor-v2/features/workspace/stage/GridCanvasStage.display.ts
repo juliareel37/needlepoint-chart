@@ -51,6 +51,7 @@ export function configureDisplayCanvas(
 }
 
 export function renderDisplayCanvas(options: {
+  backgroundColor: string;
   context: CanvasRenderingContext2D;
   sourceCanvas: HTMLCanvasElement;
   cells: GridCellValue[];
@@ -71,6 +72,7 @@ export function renderDisplayCanvas(options: {
   viewport: ViewportState;
 }) {
   const {
+    backgroundColor,
     context,
     sourceCanvas,
     cells,
@@ -101,7 +103,7 @@ export function renderDisplayCanvas(options: {
   const drawWidth = metrics.surfaceWidth * viewport.zoom;
   const drawHeight = metrics.surfaceHeight * viewport.zoom;
 
-  context.fillStyle = "#ffffff";
+  context.fillStyle = backgroundColor;
   context.fillRect(drawX, drawY, drawWidth, drawHeight);
   context.save();
   context.beginPath();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   GridPoint,
@@ -79,6 +79,31 @@ export function GridCanvasStage({
   const previousThreadViewRef = useRef<boolean | null>(null);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    const syncBackgroundColor = () => {
+      const nextColor = getComputedStyle(root)
+        .getPropertyValue("--canvas-display-bg")
+        .trim();
+      setBackgroundColor(nextColor || "#ffffff");
+    };
+
+    syncBackgroundColor();
+
+    const observer = new MutationObserver(syncBackgroundColor);
+    observer.observe(root, {
+      attributeFilter: ["data-theme"],
+      attributes: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let canvas = sourceCanvasRef.current;
@@ -196,6 +221,7 @@ export function GridCanvasStage({
       displayCanvasSizingRef.current,
     );
     renderDisplayCanvas({
+      backgroundColor,
       context,
       sourceCanvas,
       cells,
@@ -216,6 +242,7 @@ export function GridCanvasStage({
       viewport,
     });
   }, [
+    backgroundColor,
     cells,
     colorsById,
     frameOrigin.x,

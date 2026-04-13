@@ -229,11 +229,14 @@
   --neutral-600: var(--neutral-700);
   --neutral-800: var(--neutral-900);
   --surface-app: #fcf7ff;
+  --canvas-bg: var(--neutral-100);
+  --canvas-display-bg: #ffffff;
   --surface-card: var(--neutral-0);
   --surface-brand-soft: #f9eefd;
   --surface-brand-subtle: #e9c4f5;
   --surface-neutral-subtle: var(--neutral-100);
   --surface-neutral-raised: var(--neutral-50);
+  --surface-sidebar: var(--neutral-0);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
   --brand-primary: #d08de3;
@@ -269,7 +272,7 @@
   --surface-floating: var(--surface-neutral-raised);
   --surface-elevated: var(--surface-neutral-raised);
   --canvas-surround-bg: #e2e2e2;
-  --sidebar-bg: var(--card-bg);
+  --sidebar-bg: var(--neutral-0);
   --canvas-toolbar-bg: var(--surface-floating);
   --icon-on-bg-filter: invert(0);
   --icon-on-fg-filter: invert(1);
@@ -298,8 +301,8 @@
   /* Canonical semantic tokens */
   --neutral-0: #ffffff;
   --neutral-100: #fafaf9;
-  --neutral-200: #efeeef;
-  --neutral-300: #e2dfe2;
+  --neutral-200: #f2f2f2;
+  --neutral-300: #e6e6e6;
   --neutral-500: #78716c;
   --neutral-700: #44403c;
   --neutral-900: #1c1917;
@@ -308,8 +311,10 @@
   --neutral-400: var(--neutral-500);
   --neutral-600: var(--neutral-700);
   --neutral-800: var(--neutral-900);
-  --surface-app: #141117;
-  --surface-card: var(--neutral-800);
+  --surface-app: var(--neutral-900);
+  --canvas-bg: var(--neutral-900);
+  --canvas-display-bg: #252b34;
+  --surface-card: var(--neutral-700);
   --surface-brand-soft: #2f243d;
   --surface-brand-subtle: #4d3762;
   --surface-neutral-subtle: var(--neutral-600);
@@ -349,7 +354,7 @@
   --surface-floating: var(--surface-neutral-raised);
   --surface-elevated: var(--surface-neutral-raised);
   --canvas-surround-bg: #181818;
-  --sidebar-bg: #252b34;
+  --sidebar-bg: var(--neutral-700);
   --canvas-toolbar-bg: #252b34;
   --icon-on-bg-filter: invert(1);
   --icon-on-fg-filter: invert(0);

@@ -158,7 +158,47 @@ const buttonHoverStyles: Record<
   },
 };
 
+type ThemeMode = "light" | "dark";
+
+function applyThemeMode(nextTheme: ThemeMode) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  if (nextTheme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
 export function EditorV2DesignSystemPage() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+
+  useEffect(() => {
+    try {
+      const savedTheme = window.localStorage.getItem("wippa:theme");
+      const nextTheme: ThemeMode = savedTheme === "dark" ? "dark" : "light";
+      applyThemeMode(nextTheme);
+      setThemeMode(nextTheme);
+    } catch {
+      const nextTheme: ThemeMode =
+        document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      applyThemeMode(nextTheme);
+      setThemeMode(nextTheme);
+    }
+  }, []);
+
+  const handleThemeChange = (nextChecked: boolean) => {
+    const nextTheme: ThemeMode = nextChecked ? "dark" : "light";
+    applyThemeMode(nextTheme);
+    setThemeMode(nextTheme);
+
+    try {
+      window.localStorage.setItem("wippa:theme", nextTheme);
+    } catch {}
+  };
+
   return (
     <main className={styles.page}>
       <div className={styles.stack}>
@@ -167,6 +207,17 @@ export function EditorV2DesignSystemPage() {
             <Link href="/editor-v2" className={styles.tempLink}>
               Back to editor
             </Link>
+            <div className={styles.themeToggleWrap}>
+              <span className={styles.themeToggleMeta} style={typographyStyles.s}>
+                {themeMode === "dark" ? "Dark mode" : "Light mode"}
+              </span>
+              <Toggle
+                checked={themeMode === "dark"}
+                aria-label={`Switch to ${themeMode === "dark" ? "light" : "dark"} mode`}
+                label={themeMode === "dark" ? "Dark" : "Light"}
+                onChange={handleThemeChange}
+              />
+            </div>
           </div>
           <h1 className={styles.heroTitle} style={typographyStyles.h2}>
             Editor V2 Design System
