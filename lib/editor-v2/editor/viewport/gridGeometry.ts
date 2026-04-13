@@ -36,8 +36,7 @@ export interface ViewportOffsetBounds {
   maxOffsetY: number;
 }
 
-const EXTRA_STAGE_SPACE_HORIZONTAL_PER_SIDE_RATIO = 0.75;
-const EXTRA_STAGE_SPACE_VERTICAL_PER_SIDE_RATIO = 0.5;
+const MIN_VISIBLE_CANVAS_PX = 24;
 
 export function createGridWorldMetrics(
   width: number,
@@ -123,44 +122,20 @@ export function getViewportOffsetBounds(
   metrics: GridWorldMetrics,
   zoom: number,
 ): ViewportOffsetBounds {
-  const extraWorldWidthPerSide =
-    metrics.surfaceWidth * EXTRA_STAGE_SPACE_HORIZONTAL_PER_SIDE_RATIO;
-  const extraWorldHeightPerSide =
-    metrics.surfaceHeight * EXTRA_STAGE_SPACE_VERTICAL_PER_SIDE_RATIO;
   const frameOriginX = (stageSize.width - metrics.surfaceWidth) / 2;
   const frameOriginY = (stageSize.height - metrics.surfaceHeight) / 2;
-  const virtualStageRenderedWidth =
-    (metrics.surfaceWidth + extraWorldWidthPerSide * 2) * zoom;
-  const virtualStageRenderedHeight =
-    (metrics.surfaceHeight + extraWorldHeightPerSide * 2) * zoom;
-  const minOffsetX =
-    stageSize.width -
-    frameOriginX -
-    (metrics.surfaceWidth + extraWorldWidthPerSide) * zoom;
-  const maxOffsetX = extraWorldWidthPerSide * zoom - frameOriginX;
-  const minOffsetY =
-    stageSize.height -
-    frameOriginY -
-    (metrics.surfaceHeight + extraWorldHeightPerSide) * zoom;
-  const maxOffsetY = extraWorldHeightPerSide * zoom - frameOriginY;
+  const renderedWidth = metrics.surfaceWidth * zoom;
+  const renderedHeight = metrics.surfaceHeight * zoom;
+  const minOffsetX = MIN_VISIBLE_CANVAS_PX - frameOriginX - renderedWidth;
+  const maxOffsetX = stageSize.width - MIN_VISIBLE_CANVAS_PX - frameOriginX;
+  const minOffsetY = MIN_VISIBLE_CANVAS_PX - frameOriginY - renderedHeight;
+  const maxOffsetY = stageSize.height - MIN_VISIBLE_CANVAS_PX - frameOriginY;
 
   return {
-    minOffsetX:
-      virtualStageRenderedWidth <= stageSize.width
-        ? (minOffsetX + maxOffsetX) / 2
-        : minOffsetX,
-    maxOffsetX:
-      virtualStageRenderedWidth <= stageSize.width
-        ? (minOffsetX + maxOffsetX) / 2
-        : maxOffsetX,
-    minOffsetY:
-      virtualStageRenderedHeight <= stageSize.height
-        ? (minOffsetY + maxOffsetY) / 2
-        : minOffsetY,
-    maxOffsetY:
-      virtualStageRenderedHeight <= stageSize.height
-        ? (minOffsetY + maxOffsetY) / 2
-        : maxOffsetY,
+    minOffsetX,
+    maxOffsetX,
+    minOffsetY,
+    maxOffsetY,
   };
 }
 
