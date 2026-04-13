@@ -13,12 +13,21 @@ import {
   createPanViewportCommand,
   createSetViewportZoomCommand,
 } from "../workspaceCommands";
+import {
+  clampViewportOffsets,
+  type GridWorldMetrics,
+  type StageSize,
+} from "@/lib/editor-v2/editor/viewport";
+import type { ViewportState } from "@/lib/editor-v2/editor/store";
 
 interface UseStagePanInteractionsOptions {
   activeTool: ActiveTool;
   dispatch: EditorStore["dispatch"];
+  metrics: GridWorldMetrics;
   panningDisabled?: boolean;
   stageRef: RefObject<HTMLDivElement | null>;
+  stageSize: StageSize;
+  viewport: ViewportState;
   viewportZoom: number;
   zoomAnchor: { x: number; y: number } | null;
 }
@@ -26,8 +35,11 @@ interface UseStagePanInteractionsOptions {
 export function useStagePanInteractions({
   activeTool,
   dispatch,
+  metrics,
   panningDisabled = false,
   stageRef,
+  stageSize,
+  viewport,
   viewportZoom,
   zoomAnchor,
 }: UseStagePanInteractionsOptions) {
@@ -52,12 +64,10 @@ export function useStagePanInteractions({
         const isTrackpadPinch = event.ctrlKey && !event.metaKey;
         const zoomSensitivity = isTrackpadPinch ? 0.006 : 0.0009;
         const zoomFactor = Math.exp(-event.deltaY * zoomSensitivity);
-        dispatch(
-          createSetViewportZoomCommand(
-            viewportZoom * zoomFactor,
-            zoomAnchor ?? undefined,
-          ),
-        );
+        const nextZoom = viewportZoom * zoomFactor;
+        const anchor = zoomAnchor ?? undefined;
+
+        dispatch(createSetViewportZoomCommand(nextZoom, anchor));
         return;
       }
 
@@ -65,9 +75,25 @@ export function useStagePanInteractions({
         return;
       }
 
-      dispatch(createPanViewportCommand(-event.deltaX, -event.deltaY));
+      const clampedViewport = clampViewportOffsets(
+        {
+          ...viewport,
+          offsetX: viewport.offsetX - event.deltaX,
+          offsetY: viewport.offsetY - event.deltaY,
+        },
+        stageSize,
+        metrics,
+      );
+      const deltaX = clampedViewport.offsetX - viewport.offsetX;
+      const deltaY = clampedViewport.offsetY - viewport.offsetY;
+
+      if (deltaX === 0 && deltaY === 0) {
+        return;
+      }
+
+      dispatch(createPanViewportCommand(deltaX, deltaY));
     },
-    [dispatch, panningDisabled, viewportZoom, zoomAnchor],
+    [dispatch, metrics, panningDisabled, stageSize, viewport, viewportZoom, zoomAnchor],
   );
 
   const stopPanDragging = useEffectEvent(() => {
@@ -164,7 +190,23 @@ export function useStagePanInteractions({
         return;
       }
 
-      dispatch(createPanViewportCommand(deltaX, deltaY));
+      const clampedViewport = clampViewportOffsets(
+        {
+          ...viewport,
+          offsetX: viewport.offsetX + deltaX,
+          offsetY: viewport.offsetY + deltaY,
+        },
+        stageSize,
+        metrics,
+      );
+      const clampedDeltaX = clampedViewport.offsetX - viewport.offsetX;
+      const clampedDeltaY = clampedViewport.offsetY - viewport.offsetY;
+
+      if (clampedDeltaX === 0 && clampedDeltaY === 0) {
+        return;
+      }
+
+      dispatch(createPanViewportCommand(clampedDeltaX, clampedDeltaY));
     };
 
     const handleWindowMouseUp = () => {
@@ -182,7 +224,7 @@ export function useStagePanInteractions({
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [dispatch]);
+  }, [dispatch, metrics, stageSize, viewport]);
 
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
     const isMiddleMouseButton = event.button === 1 && !panningDisabled;

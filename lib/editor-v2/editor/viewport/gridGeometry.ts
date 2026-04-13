@@ -24,6 +24,21 @@ export interface WorldPoint {
   y: number;
 }
 
+export interface StageSize {
+  width: number;
+  height: number;
+}
+
+export interface ViewportOffsetBounds {
+  minOffsetX: number;
+  maxOffsetX: number;
+  minOffsetY: number;
+  maxOffsetY: number;
+}
+
+const EXTRA_STAGE_SPACE_HORIZONTAL_PER_SIDE_RATIO = 0.75;
+const EXTRA_STAGE_SPACE_VERTICAL_PER_SIDE_RATIO = 0.5;
+
 export function createGridWorldMetrics(
   width: number,
   height: number,
@@ -101,4 +116,68 @@ export function getGridCellFromWorldPoint(
   }
 
   return { x: cellX, y: cellY };
+}
+
+export function getViewportOffsetBounds(
+  stageSize: StageSize,
+  metrics: GridWorldMetrics,
+  zoom: number,
+): ViewportOffsetBounds {
+  const extraWorldWidthPerSide =
+    metrics.surfaceWidth * EXTRA_STAGE_SPACE_HORIZONTAL_PER_SIDE_RATIO;
+  const extraWorldHeightPerSide =
+    metrics.surfaceHeight * EXTRA_STAGE_SPACE_VERTICAL_PER_SIDE_RATIO;
+  const frameOriginX = (stageSize.width - metrics.surfaceWidth) / 2;
+  const frameOriginY = (stageSize.height - metrics.surfaceHeight) / 2;
+  const virtualStageRenderedWidth =
+    (metrics.surfaceWidth + extraWorldWidthPerSide * 2) * zoom;
+  const virtualStageRenderedHeight =
+    (metrics.surfaceHeight + extraWorldHeightPerSide * 2) * zoom;
+  const minOffsetX =
+    stageSize.width -
+    frameOriginX -
+    (metrics.surfaceWidth + extraWorldWidthPerSide) * zoom;
+  const maxOffsetX = extraWorldWidthPerSide * zoom - frameOriginX;
+  const minOffsetY =
+    stageSize.height -
+    frameOriginY -
+    (metrics.surfaceHeight + extraWorldHeightPerSide) * zoom;
+  const maxOffsetY = extraWorldHeightPerSide * zoom - frameOriginY;
+
+  return {
+    minOffsetX:
+      virtualStageRenderedWidth <= stageSize.width
+        ? (minOffsetX + maxOffsetX) / 2
+        : minOffsetX,
+    maxOffsetX:
+      virtualStageRenderedWidth <= stageSize.width
+        ? (minOffsetX + maxOffsetX) / 2
+        : maxOffsetX,
+    minOffsetY:
+      virtualStageRenderedHeight <= stageSize.height
+        ? (minOffsetY + maxOffsetY) / 2
+        : minOffsetY,
+    maxOffsetY:
+      virtualStageRenderedHeight <= stageSize.height
+        ? (minOffsetY + maxOffsetY) / 2
+        : maxOffsetY,
+  };
+}
+
+export function clampViewportOffsets(
+  viewport: ViewportState,
+  stageSize: StageSize,
+  metrics: GridWorldMetrics,
+): ViewportState {
+  const bounds = getViewportOffsetBounds(stageSize, metrics, viewport.zoom);
+
+  return {
+    ...viewport,
+    offsetX: clamp(viewport.offsetX, bounds.minOffsetX, bounds.maxOffsetX),
+    offsetY: clamp(viewport.offsetY, bounds.minOffsetY, bounds.maxOffsetY),
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }

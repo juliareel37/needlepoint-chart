@@ -576,20 +576,20 @@
 @media (max-width: 1080px) {
   .shell {
     height: auto;
-    grid-template-columns: 1fr;
+    /* grid-template-columns: 1fr; */
   }
 
   .rail {
-    display: none;
+    /* display: none; */
   }
 
   .sidebar {
     width: auto;
-    height: auto;
+    /* height: auto; */
     box-shadow: none;
   }
 
-  .sidePanelOverlay {
+  /* .sidePanelOverlay {
     position: static;
     pointer-events: auto;
   }
@@ -597,25 +597,28 @@
   .sidePanelOverlay[data-collapsed="true"] .sidebar {
     transform: none;
     opacity: 1;
-  }
+  } */
 
   .floatingToolbar {
     position: static;
-    width: 100%;
+    width: 60%;
+    flex-wrap: nowrap;
+    overflow: scroll;
   }
 
   .viewportToolbar {
     position: static;
-    width: 100%;
+    /* width: 100%; */
   }
 
   .stageToolbarTop {
-    position: absolute;
+    /* position: absolute;
     top: 10px;
     left: 16px;
     right: 16px;
     width: auto;
-    transform: none;
+    transform: none; */
+    /* width: 50%; */
   }
 
   .stageToolbarBottomRight {
@@ -628,5 +631,46 @@
 
   .traceFieldGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .viewportToolbar {
+    display: none;
+  }
+  .stageToolbarTop {
+    width: 100%;
+    position: absolute;
+    left: 50% !important;
+  }
+  .rail {
+    grid-row: 2;
+  }
+  .railSurface {
+    flex-direction: row;
+  };
+  .shell {
+    grid-template-columns: auto;
+    grid-template-rows: 1fr .1fr;
+  }
+  .floatingToolbar {
+    width: 90%;
+  }
+
+  .sidePanelOverlay {
+    width: 100%;
+    top: 25%;
+  }
+
+  .sidePanelOverlay[data-collapsed="true"] .sidebar {
+    transform: translateY(calc(100% + 12px));
+    opacity: 0;
+  }
+
+  .sidebar {
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 180ms ease, opacity 180ms ease;
   }
 }

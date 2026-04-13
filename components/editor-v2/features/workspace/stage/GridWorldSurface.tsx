@@ -8,6 +8,7 @@ import type {
   PaletteColor,
 } from "@/lib/editor-v2/editor/store";
 import {
+  clampViewportOffsets,
   createGridWorldMetrics,
   clientToWorldPoint,
   getViewportTransform,
@@ -19,6 +20,7 @@ import { TextPlacementLayer } from "./TextPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
+import { createPanViewportCommand } from "../workspaceCommands";
 
 interface LoadedTraceAsset {
   assetUrl: string;
@@ -198,8 +200,11 @@ export function GridWorldSurface({
   } = useStagePanInteractions({
     activeTool,
     dispatch,
+    metrics,
     panningDisabled: tracePositioningEnabled || textPlacementActive,
     stageRef,
+    stageSize,
+    viewport,
     viewportZoom: viewport.zoom,
     zoomAnchor,
   });
@@ -232,6 +237,28 @@ export function GridWorldSurface({
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (stageSize.width <= 0 || stageSize.height <= 0) {
+      return;
+    }
+
+    const clampedViewport = clampViewportOffsets(viewport, stageSize, metrics);
+    const deltaX = clampedViewport.offsetX - viewport.offsetX;
+    const deltaY = clampedViewport.offsetY - viewport.offsetY;
+
+    if (deltaX === 0 && deltaY === 0) {
+      return;
+    }
+
+    dispatch(createPanViewportCommand(deltaX, deltaY));
+  }, [
+    dispatch,
+    metrics,
+    stageSize.height,
+    stageSize.width,
+    viewport,
+  ]);
 
   useEffect(() => {
     if (!trace?.assetUrl) {

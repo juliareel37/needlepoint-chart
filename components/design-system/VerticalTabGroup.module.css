@@ -66,3 +66,10 @@
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
 }
+
+
+@media (max-width: 768px) {
+  .group {
+    display: flex;
+  }
+}
