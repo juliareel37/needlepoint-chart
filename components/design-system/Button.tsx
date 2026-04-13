@@ -9,7 +9,6 @@ import { assetPath } from "@/lib/assetPath";
 type ButtonVariant =
   | "primary"
   | "secondary"
-  | "tertiaryold"
   | "destructive"
   | "ghost"
   | "ghostV2";

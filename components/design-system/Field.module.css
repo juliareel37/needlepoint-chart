@@ -22,7 +22,7 @@
   border: 1px solid var(--ui-border-subtle);
   background: var(--surface-card);
   box-shadow: var(--ui-shadow-sm);
-  color: var(--foreground);
+  color: var(--text-primary);
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
@@ -42,7 +42,7 @@
 .control:focus-visible,
 .control:focus-within {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px var(--surface-brand-subtle);
+  box-shadow: 0 0 0 2px var(--brand-200);
 }
 
 .checkboxRow {

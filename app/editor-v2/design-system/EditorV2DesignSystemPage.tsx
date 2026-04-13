@@ -64,22 +64,22 @@ const paletteGroups = [
   {
     title: "Brand",
     tokens: [
-      { name: "brand-fill-50", cssVar: "--surface-app", sourceType: "literal" },
-      { name: "brand-fill-100", cssVar: "--surface-brand-soft", sourceType: "literal" },
-      { name: "brand-fill-300", cssVar: "--surface-brand-subtle", sourceType: "literal" },
+      { name: "brand-fill-50", cssVar: "--brand-lightest", sourceType: "literal" },
+      { name: "brand-fill-100", cssVar: "--brand-100", sourceType: "literal" },
+      { name: "brand-fill-300", cssVar: "--brand-200", sourceType: "literal" },
       { name: "brand-500", cssVar: "--brand-primary", sourceType: "literal" },
-      { name: "brand-600", cssVar: "--brand-primary-medium", sourceType: "literal" },
-      { name: "brand-700", cssVar: "--brand-primary-strong", sourceType: "literal" },
-      { name: "brand-900", cssVar: "--brand-primary-deep", sourceType: "literal" },
+      { name: "brand-600", cssVar: "--brand-400", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--brand-500", sourceType: "literal" },
+      { name: "brand-900", cssVar: "--brand-600", sourceType: "literal" },
     ],
   },
   {
     title: "UI",
     tokens: [
-      { name: "ui-surface-app", cssVar: "--surface-app", sourceType: "alias", aliasOf: "--surface-app" },
+      { name: "ui-surface-app", cssVar: "--brand-lightest", sourceType: "alias", aliasOf: "--brand-lightest" },
       { name: "surface-card", cssVar: "--surface-card", sourceType: "alias", aliasOf: "--neutral-0 / --neutral-800" },
       { name: "ui-border-subtle", cssVar: "--ui-border-subtle", sourceType: "alias", aliasOf: "--neutral-200 / --neutral-500" },
-      { name: "ui-divider", cssVar: "--ui-divider", sourceType: "alias", aliasOf: "--ui-border-subtle" },
+      // { name: "ui-divider", ßcssVar: "--ui-border-subtle", sourceType: "alias", aliasOf: "--ui-border-subtle" },
       { name: "text-primary", cssVar: "--text-primary", sourceType: "alias", aliasOf: "--neutral-900 / --neutral-0" },
       { name: "text-secondary", cssVar: "--text-secondary", sourceType: "alias", aliasOf: "--neutral-700 / --neutral-200" },
     ],
@@ -93,11 +93,11 @@ const notificationToneStyles: Record<
   { bg: string; border: string; icon: string; badge: string; badgeFg: string }
 > = {
   info: {
-    bg: "var(--surface-app)",
-    border: "var(--surface-brand-subtle)",
-    icon: "var(--brand-primary-deep)",
-    badge: "var(--surface-brand-subtle)",
-    badgeFg: "var(--brand-primary-deep)",
+    bg: "var(--brand-lightest)",
+    border: "var(--brand-200)",
+    icon: "var(--brand-600)",
+    badge: "var(--brand-200)",
+    badgeFg: "var(--brand-600)",
   },
   success: {
     bg: "var(--status-success-soft)",
@@ -123,29 +123,25 @@ const notificationToneStyles: Record<
 };
 
 const buttonVariants: Array<{
-  variant: "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "destructive" | "ghost" | "ghostV2";
   label: string;
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
-  { variant: "tertiaryold", label: "tertiaryold" },
   { variant: "destructive", label: "Destructive" },
   { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 
 const buttonHoverStyles: Record<
-  "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2",
+  "primary" | "secondary" | "destructive" | "ghost" | "ghostV2",
   CSSProperties
 > = {
   primary: {
-    background: "var(--brand-primary-strong)",
+    background: "var(--brand-500)",
   },
   secondary: {
     background: "var(--neutral-200)",
-  },
-  tertiaryold: {
-    background: "var(--neutral-100)",
   },
   destructive: {
     background: "var(--status-destructive-strong)",
@@ -786,7 +782,7 @@ function ButtonStateRow({
   active: boolean;
   label: string;
   onToggle: () => void;
-  variant: "primary" | "secondary" | "tertiaryold" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "destructive" | "ghost" | "ghostV2";
 }) {
   return (
     <>

@@ -89,7 +89,7 @@ export function GridCanvasStage({
     const root = document.documentElement;
     const syncBackgroundColor = () => {
       const nextColor = getComputedStyle(root)
-        .getPropertyValue("--canvas-display-bg")
+        .getPropertyValue("--canvas-bg")
         .trim();
       setBackgroundColor(nextColor || "#ffffff");
     };

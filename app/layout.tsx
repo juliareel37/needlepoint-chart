@@ -91,8 +91,8 @@ export default function RootLayout({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "0 28px 0 16px",
-                background: "var(--card-bg)",
-                borderBottom: "1px solid var(--ui-divider)",
+                background: "var(--surface-header)",
+                borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
                 zIndex: 200,
               }}

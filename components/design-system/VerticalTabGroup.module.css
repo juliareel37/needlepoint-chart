@@ -18,7 +18,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: var(--neutral-900);
+  color: var(--toolbar-button-default-text);
   text-align: center;
   cursor: pointer;
   filter: none;
@@ -51,18 +51,18 @@
 }
 
 .item:hover {
-  background: var(--neutral-100);
-  color: var(--neutral-900);
+  background: var(--toolbar-button-hover);
+  color: var(--toolbar-button-hover-text);
   filter: none !important;
 }
 
 .item[data-active="true"] {
-  background: var(--surface-app);
-  color: var(--brand-primary-deep);
+  background: var(--toolbar-button-active);
+  color: var(--toolbar-button-active-text);
   filter: none !important;
 }
 
 .item:focus-visible {
-  outline: 2px solid var(--brand-primary-strong);
+  outline: 2px solid var(--brand-500);
   outline-offset: 2px;
 }
