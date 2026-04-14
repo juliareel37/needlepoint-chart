@@ -230,14 +230,27 @@ export function TraceControls({
           </Button>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={traceUploadStatus === "uploading"}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {traceUploadStatus === "uploading" ? "Uploading..." : "Replace trace"}
-        </Button>
+        <div className={styles.traceActionRow}>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.traceActionButton}
+            disabled={traceUploadStatus === "uploading"}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ButtonIcon icon="/icons/lucide/swap.svg" />
+            {traceUploadStatus === "uploading" ? "Uploading..." : "Replace"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.traceActionButton}
+            onClick={() => dispatch(createRemoveTraceCommand())}
+          >
+            <ButtonIcon icon="/icons/lucide/trash.svg" />
+            Remove
+          </Button>
+        </div>
       )}
 
       {traceUploadStatus === "error" ? (
@@ -263,32 +276,6 @@ export function TraceControls({
 
       {trace ? (
         <>
-          <div className={styles.sidebarSubsection}>
-            <div className={styles.panelRow}>
-              {/* <Button
-                type="button"
-                onClick={() =>
-                  dispatch(
-                    createUpdateTraceCommand({
-                      offsetX: 0,
-                      offsetY: 0,
-                      scale: 1,
-                    }),
-                  )
-                }
-              >
-                Reset trace
-              </Button> */}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => dispatch(createRemoveTraceCommand())}
-              >
-                Remove trace
-              </Button>
-            </div>
-          </div>
-
           <TraceSection
             title="Positioning"
             tone="neutral"
