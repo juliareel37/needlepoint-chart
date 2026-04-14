@@ -265,7 +265,7 @@ export function TraceControls({
         <>
           <div className={styles.sidebarSubsection}>
             <div className={styles.panelRow}>
-              <Button
+              {/* <Button
                 type="button"
                 onClick={() =>
                   dispatch(
@@ -278,10 +278,10 @@ export function TraceControls({
                 }
               >
                 Reset trace
-              </Button>
+              </Button> */}
               <Button
                 type="button"
-                variant="ghostV2"
+                variant="ghost"
                 onClick={() => dispatch(createRemoveTraceCommand())}
               >
                 Remove trace
@@ -299,6 +299,7 @@ export function TraceControls({
                   type="button"
                   variant="secondary"
                   onClick={() => dispatch(createCancelTraceRepositionCommand())}
+                   style={{ width: "47%"}}
                 >
                   Cancel
                 </Button>
@@ -306,6 +307,7 @@ export function TraceControls({
                   type="button"
                   variant="primary"
                   onClick={() => dispatch(createCommitTraceRepositionCommand())}
+                   style={{ width: "47%"}}
                 >
                   Done
                 </Button>

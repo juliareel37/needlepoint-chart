@@ -361,7 +361,7 @@ export function FloatingToolbar({
           >
             Done
           </Button>
-
+{/* 
           <Button
             type="button"
             variant="ghost"
@@ -369,7 +369,10 @@ export function FloatingToolbar({
             onClick={() => closeImageMenu()}
           >
             <ButtonIcon icon="/icons/lucide/x.svg" />
-          </Button>
+          </Button> */}
+
+
+
         </ToolbarGroup>
       </Toolbar>
     );
@@ -591,7 +594,7 @@ export function FloatingToolbar({
               setSelectOpen(true);
             }}
           >
-            <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+            <ToolbarIcon icon="/icons/lucide/lasso.svg" />
           </ToolbarButton>
 
           {activeTool === "lasso" && selectOpen ? (

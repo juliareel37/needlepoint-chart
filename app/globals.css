@@ -278,7 +278,7 @@
 
   --ui-border-subtle: var(--neutral-200);
   --ui-border-reg: var(--neutral-300);
-  --ui-border-strong: var(--neutral-400);
+  --ui-border-strong: var(--neutral-300);
 
   /* Buttons */
   --button-primary-text: var(--neutral-0);

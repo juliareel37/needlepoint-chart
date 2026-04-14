@@ -91,14 +91,23 @@ style={{
             onClick={() => dispatch(createCommitTraceRepositionCommand())}>
           Done
         </Button>
-        <Button style={{padding:"6px",}}
+        {/* <Button style={{padding:"6px",}}
             type="button" 
             variant="ghost" 
             onClick={() => dispatch(createCancelTraceRepositionCommand())}>
           <ButtonIcon
             icon="/icons/lucide/x.svg"
           />
-        </Button>
+        </Button> */}
+
+          <ToolbarButton
+            type="button"
+            onClick={() => {
+              dispatch(createCancelTraceRepositionCommand())
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/x.svg" />
+          </ToolbarButton>
         
        
 </div>

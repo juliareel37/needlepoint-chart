@@ -3,11 +3,15 @@
 import type {
   ActiveTool,
   MirrorInteractionState,
-  MirrorDirection,
   SelectionState,
 } from "@/lib/editor-v2/editor/store";
 import { getMirrorTargetRects } from "@/lib/editor-v2/editor/selection/mirrorGeometry";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+
+const DIMMED_CANVAS_FILL = "rgba(15, 23, 42, 0.24)";
+const SELECTION_STROKE = "#f8fafc";
+const SELECTION_STROKE_DASH = "6 4";
+const SELECTION_STROKE_WIDTH = 2;
 
 interface SelectionOverlayProps {
   activeTool: ActiveTool;
@@ -23,22 +27,29 @@ export function SelectionOverlay({
   selection,
 }: SelectionOverlayProps) {
   const mirrorSession = mirrorInteraction.session;
+  const mirrorSourceRect = mirrorSession?.sourceRect ?? null;
   const lassoPoints = selection.lassoPoints
     .map((point) => `${point.x * metrics.cellSize},${point.y * metrics.cellSize}`)
     .join(" ");
-  const shouldDimCanvas = activeTool === "lasso";
+  const shouldDimCanvas = activeTool === "lasso" || activeTool === "mirror" || Boolean(mirrorSession);
   const hasCommittedLassoSelection =
     selection.mode === "lasso" &&
     !selection.preview &&
     selection.lassoPoints.length >= 3;
-  const mirrorTargets = mirrorSession?.sourceRect
-    ? getMirrorTargetRects(mirrorSession.sourceRect, metrics.width, metrics.height)
+  const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
+  const appliedMirrorDirection = mirrorSession?.appliedDirection ?? null;
+  const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
+  const mirrorTargets = mirrorSourceRect
+    ? getMirrorTargetRects(mirrorSourceRect, metrics.width, metrics.height)
     : [];
+  const mirrorCutoutPath = mirrorSourceRect
+    ? buildRectPath(mirrorSourceRect, metrics.cellSize)
+    : null;
 
   return (
     <>
       {shouldDimCanvas ? (
-        hasCommittedLassoSelection ? (
+        hasCommittedLassoSelection || hasCommittedMirrorSelection ? (
           <svg
             aria-hidden="true"
             style={{
@@ -53,9 +64,15 @@ export function SelectionOverlay({
             viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
           >
             <path
-              fill="rgba(15, 23, 42, 0.24)"
+              fill={DIMMED_CANVAS_FILL}
               fillRule="evenodd"
-              d={`M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z M ${lassoPoints} Z`}
+              d={[
+                `M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z`,
+                hasCommittedLassoSelection ? `M ${lassoPoints} Z` : null,
+                hasCommittedMirrorSelection && mirrorCutoutPath ? mirrorCutoutPath : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
           </svg>
         ) : (
@@ -66,7 +83,7 @@ export function SelectionOverlay({
               inset: 0,
               zIndex: 2,
               pointerEvents: "none",
-              backgroundColor: "rgba(15, 23, 42, 0.24)",
+              backgroundColor: DIMMED_CANVAS_FILL,
             }}
           />
         )
@@ -89,17 +106,19 @@ export function SelectionOverlay({
           {selection.preview ? (
             <polyline
               fill="none"
-              stroke="#2563eb"
-              strokeWidth="2"
+              stroke={SELECTION_STROKE}
+              strokeWidth={SELECTION_STROKE_WIDTH}
+              strokeDasharray={SELECTION_STROKE_DASH}
               strokeLinejoin="round"
               strokeLinecap="round"
               points={lassoPoints}
             />
           ) : (
             <polygon
-              fill="rgba(37, 99, 235, 0.08)"
-              stroke="#2563eb"
-              strokeWidth="2"
+              fill="none"
+              stroke={SELECTION_STROKE}
+              strokeWidth={SELECTION_STROKE_WIDTH}
+              strokeDasharray={SELECTION_STROKE_DASH}
               strokeLinejoin="round"
               strokeLinecap="round"
               points={lassoPoints}
@@ -108,7 +127,7 @@ export function SelectionOverlay({
         </svg>
       ) : null}
 
-      {mirrorSession?.sourceRect ? (
+      {mirrorSourceRect ? (
         <svg
           aria-hidden="true"
           style={{
@@ -123,17 +142,17 @@ export function SelectionOverlay({
           viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
         >
           <rect
-            x={mirrorSession.sourceRect.x * metrics.cellSize}
-            y={mirrorSession.sourceRect.y * metrics.cellSize}
-            width={mirrorSession.sourceRect.width * metrics.cellSize}
-            height={mirrorSession.sourceRect.height * metrics.cellSize}
-            fill="rgba(15, 23, 42, 0.12)"
-            stroke="#f8fafc"
-            strokeWidth="2"
-            strokeDasharray={mirrorSession.dragAnchor ? "6 4" : undefined}
+            x={mirrorSourceRect.x * metrics.cellSize}
+            y={mirrorSourceRect.y * metrics.cellSize}
+            width={mirrorSourceRect.width * metrics.cellSize}
+            height={mirrorSourceRect.height * metrics.cellSize}
+            fill={isMirrorDragging ? "rgba(15, 23, 42, 0.12)" : "none"}
+            stroke={SELECTION_STROKE}
+            strokeWidth={SELECTION_STROKE_WIDTH}
+            strokeDasharray={SELECTION_STROKE_DASH}
           />
 
-          {!mirrorSession.dragAnchor
+          {!isMirrorDragging
             ? mirrorTargets.map(({ direction, rect }) => (
                 <rect
                   key={direction}
@@ -145,7 +164,7 @@ export function SelectionOverlay({
                   fill="rgba(14, 164, 233, 0.34)"
                   // stroke={getMirrorTargetStroke(direction)}
                   stroke="#0284c7"
-                  strokeWidth={mirrorSession.appliedDirection === direction ? "3" : "2"}
+                  strokeWidth={appliedMirrorDirection === direction ? "3" : "2"}
                 />
               ))
             : null}
@@ -155,28 +174,14 @@ export function SelectionOverlay({
   );
 }
 
-function getMirrorTargetFill(direction: MirrorDirection): string {
-  switch (direction) {
-    case "left":
-      return "rgba(14, 165, 233, 0.22)";
-    case "right":
-      return "rgba(34, 197, 94, 0.22)";
-    case "top":
-      return "rgba(245, 158, 11, 0.22)";
-    case "bottom":
-      return "rgba(236, 72, 153, 0.22)";
-  }
-}
+function buildRectPath(
+  rect: { x: number; y: number; width: number; height: number },
+  cellSize: number,
+): string {
+  const x = rect.x * cellSize;
+  const y = rect.y * cellSize;
+  const width = rect.width * cellSize;
+  const height = rect.height * cellSize;
 
-function getMirrorTargetStroke(direction: MirrorDirection): string {
-  switch (direction) {
-    case "left":
-      return "#0284c7";
-    case "right":
-      return "#16a34a";
-    case "top":
-      return "#d97706";
-    case "bottom":
-      return "#db2777";
-  }
+  return `M ${x} ${y} H ${x + width} V ${y + height} H ${x} Z`;
 }

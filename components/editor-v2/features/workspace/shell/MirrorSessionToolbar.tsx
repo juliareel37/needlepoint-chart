@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonIcon, Toolbar, ToolbarDivider, ToolbarGroup, ToolbarLabel } from "@/components/design-system";
+import { Button, ButtonIcon, Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore, MirrorSessionState } from "@/lib/editor-v2/editor/store";
 import {
   createCancelMirrorCommand,
@@ -18,12 +18,10 @@ export function MirrorSessionToolbar({
   dispatch,
   session,
 }: MirrorSessionToolbarProps) {
-  const hasSelection = Boolean(session?.sourceRect);
-  const instruction = !hasSelection
-    ? "Drag to choose an area"
-    : session?.dragAnchor
-      ? "Release to place mirror targets"
-      : "Click a colored edge to mirror";
+  const hasCommittedSelection = Boolean(session?.sourceRect && !session?.dragAnchor);
+  const instruction = !hasCommittedSelection
+    ? "Drag to select mirror area"
+    : "Select a region to mirror";
 
   return (
     <Toolbar className={styles.floatingToolbar}>
@@ -45,11 +43,13 @@ export function MirrorSessionToolbar({
         <Button
           type="button"
           variant="secondary"
-          disabled={!hasSelection}
+          disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
-          New area
+          Clear selection
         </Button>
+
+        <ToolbarDivider />
 
         <Button
           type="button"
@@ -59,14 +59,23 @@ export function MirrorSessionToolbar({
           Done
         </Button>
 
-        <Button
+        {/* <Button
           type="button"
           variant="ghost"
           aria-label="Cancel mirror session"
           onClick={() => dispatch(createCancelMirrorCommand())}
         >
           <ButtonIcon icon="/icons/lucide/x.svg" />
-        </Button>
+        </Button> */}
+
+        <ToolbarButton
+          type="button"
+          onClick={() => {
+            dispatch(createCancelMirrorCommand())
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/x.svg" />
+        </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>
   );

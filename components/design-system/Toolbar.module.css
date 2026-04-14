@@ -15,7 +15,7 @@
 .group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
   flex-wrap: nowrap;
 }
 
@@ -37,7 +37,7 @@
 .divider {
   width: 1px;
   height: 24px;
-  background: var(--ui-border-subtle);
+  background: var(--ui-border-strong);
   flex: 0 0 auto;
 }
 
@@ -211,14 +211,14 @@
 }
 
 .popover .button:not(.buttonPrimary):hover:not(:disabled):not([data-active="true"]) {
-  background: var(--neutral-100);
-  color: var(--neutral-900);
+  background: var(--toolbar-button-hover);
+  /* color: var(--neutral-900); */
   box-shadow: none !important;
 }
 
 .popover .button[data-inert-active="true"]:hover:not(:disabled) {
-  background: var(--brand-lightest);
-  color: var(--brand-600);
+  background: var(--toolbar-button-hover);
+  /* color: var(--brand-600); */
   box-shadow: none !important;
 }
 
@@ -235,12 +235,12 @@
 
 .popover .button[data-active="true"] {
   background: var(--brand-lightest);
-  color: var(--brand-600);
+  /* color: var(--brand-600); */
   box-shadow: none !important;
 }
 
 .popover .buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--brand-500);
+  background: var(--brand-400);
   color: var(--neutral-0);
   box-shadow: none !important;
 }
