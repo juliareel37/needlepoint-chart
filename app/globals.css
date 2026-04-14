@@ -274,6 +274,7 @@
   --canvas-bg: var(--neutral-0);
 
   --toolbar-bg: var(--neutral-0);
+  --toolbar-border: var(--neutral-300);
 
   --ui-border-subtle: var(--neutral-200);
   --ui-border-reg: var(--neutral-300);

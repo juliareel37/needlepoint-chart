@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
+  Button,
+  ButtonIcon,
   Slider,
   Toolbar,
   ToolbarAnchor,
@@ -37,6 +40,76 @@ import {
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
 
+function FloatingToolbarPortalPopover({
+  anchorRef,
+  children,
+  subtoolbar = false,
+  ...props
+}: React.ComponentProps<typeof ToolbarPopover> & {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    function updatePosition() {
+      const anchor = anchorRef.current;
+
+      if (!anchor) {
+        setPosition(null);
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+      });
+    }
+
+    updatePosition();
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorRef, mounted]);
+
+  if (!mounted || !position) {
+    return null;
+  }
+
+  return createPortal(
+    <ToolbarPopover
+      {...props}
+      subtoolbar={subtoolbar}
+      style={{
+        ...props.style,
+        position: "fixed",
+        top: position.top,
+        left: position.left,
+        zIndex: 40,
+      }}
+    >
+      {children}
+    </ToolbarPopover>,
+    document.body,
+  );
+}
+
 interface FloatingToolbarProps {
   activeColor: PaletteColor | null;
   activeTool: "paint" | "erase" | "lasso" | string;
@@ -67,6 +140,10 @@ export function FloatingToolbar({
   const [imageOpen, setImageOpen] = useState(false);
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const drawAnchorRef = useRef<HTMLDivElement | null>(null);
+  const selectAnchorRef = useRef<HTMLDivElement | null>(null);
+  const imageAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedBrushSize = Number.isFinite(brushSize)
     ? Math.min(Math.max(Math.round(brushSize), 1), 10)
@@ -83,6 +160,27 @@ export function FloatingToolbar({
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const canPaintSelection = Boolean(selectionCommitted && selectionBounds && activeColor);
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
+  const useImageToolbarReplacement =
+    isCompactViewport && Boolean(trace) && imageOpen;
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 1080px)");
+    const update = () => setIsCompactViewport(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
 
   useEffect(() => {
     if (!brushSizeTooltipVisible) {
@@ -145,6 +243,136 @@ export function FloatingToolbar({
     }
 
     dispatch(createSetToolCommand("pan"));
+  }
+
+  if (useImageToolbarReplacement && trace) {
+    return (
+      <Toolbar
+        className={[styles.floatingToolbar, styles.floatingToolbarContextual]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <ToolbarGroup>
+          <ToolbarButton
+            type="button"
+            onClick={() => {
+              dispatch(
+                createUpdateTraceCommand(
+                  { visible: !trace.visible },
+                  { history: { mode: "skip" } },
+                ),
+              );
+            }}
+          >
+            <ToolbarIcon
+              icon={trace.visible ? "/icons/eye.svg" : "/icons/eye_off.svg"}
+            />
+            <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "nowrap",
+              padding: "6px 8px",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                color: trace.visible ? "inherit" : "var(--text-secondary)",
+                opacity: trace.visible ? 1 : 0.45,
+              }}
+            >
+              <ToolbarIcon icon="/icons/lucide/blend.svg" />
+              <ToolbarLabel>Opacity</ToolbarLabel>
+            </span>
+            <div
+              className={styles.traceSliderTooltipWrap}
+              style={{ width: 80, flexShrink: 0 }}
+            >
+              <div
+                className={[
+                  styles.traceSliderTooltip,
+                  imageOpacityTooltipVisible && trace.visible
+                    ? styles.traceSliderTooltipVisible
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden="true"
+                style={{ left: `${normalizedImageOpacity * 100}%` }}
+              >
+                {imageOpacityLabel}
+              </div>
+              <Slider
+                min="0"
+                max="1"
+                step="0.05"
+                value={normalizedImageOpacity}
+                disabled={!trace.visible}
+                aria-label="Image opacity"
+                aria-valuetext={`${imageOpacityLabel} image opacity`}
+                onPointerDown={() => setImageOpacityTooltipVisible(true)}
+                onBlur={() => setImageOpacityTooltipVisible(false)}
+                onChange={(event) =>
+                  dispatch(
+                    createUpdateTraceCommand(
+                      {
+                        opacity: Number(event.currentTarget.value),
+                      },
+                      { history: { mode: "skip" } },
+                    ),
+                  )
+                }
+                style={{ width: "100%", maxWidth: "none" }}
+              />
+            </div>
+          </div>
+
+          <ToolbarDivider />
+
+          <ToolbarButton
+            type="button"
+            aria-label="Reposition trace"
+            title="Reposition trace"
+            onClick={() => {
+              openSidebarSection("trace");
+              closeImageMenu();
+              dispatch(createBeginTraceRepositionCommand());
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+            <ToolbarLabel>Reposition</ToolbarLabel>
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => closeImageMenu()}
+          >
+            Done
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label="Close image toolbar"
+            onClick={() => closeImageMenu()}
+          >
+            <ButtonIcon icon="/icons/lucide/x.svg" />
+          </Button>
+        </ToolbarGroup>
+      </Toolbar>
+    );
   }
 
   return (
@@ -226,7 +454,7 @@ export function FloatingToolbar({
           <ToolbarIcon icon="/icons/lucide/dropper.svg" />
         </ToolbarButton>
 
-        <ToolbarAnchor>
+        <ToolbarAnchor ref={drawAnchorRef}>
           <ToolbarButton
             type="button"
             active={drawOpen}
@@ -243,7 +471,11 @@ export function FloatingToolbar({
           </ToolbarButton>
 
           {drawOpen ? (
-            <ToolbarPopover role="dialog" aria-label="Draw size">
+            <FloatingToolbarPortalPopover
+              anchorRef={drawAnchorRef}
+              role="dialog"
+              aria-label="Draw size"
+            >
               <ToolbarSubtoolGroup>
                 <div
                   style={{
@@ -298,7 +530,7 @@ export function FloatingToolbar({
                   </div>
                 </div>
               </ToolbarSubtoolGroup>
-            </ToolbarPopover>
+            </FloatingToolbarPortalPopover>
           ) : null}
         </ToolbarAnchor>
 
@@ -329,7 +561,7 @@ export function FloatingToolbar({
       </ToolbarGroup>
 
       <ToolbarGroup>
-        <ToolbarAnchor>
+        <ToolbarAnchor ref={selectAnchorRef}>
           <ToolbarButton
             type="button"
             active={activeTool === "lasso"}
@@ -363,7 +595,11 @@ export function FloatingToolbar({
           </ToolbarButton>
 
           {activeTool === "lasso" && selectOpen ? (
-            <ToolbarPopover role="dialog" aria-label="Selection tools">
+            <FloatingToolbarPortalPopover
+              anchorRef={selectAnchorRef}
+              role="dialog"
+              aria-label="Selection tools"
+            >
               <ToolbarSubtoolGroup>
                 <ToolbarButton
                   type="button"
@@ -418,9 +654,9 @@ export function FloatingToolbar({
                   }}
                 >
                   <ToolbarLabel>Done</ToolbarLabel>
-                </ToolbarButton>
-              </ToolbarSubtoolGroup>
-            </ToolbarPopover>
+                  </ToolbarButton>
+                </ToolbarSubtoolGroup>
+            </FloatingToolbarPortalPopover>
           ) : null}
         </ToolbarAnchor>
       </ToolbarGroup>
@@ -428,7 +664,7 @@ export function FloatingToolbar({
       <ToolbarDivider />
 
       <ToolbarGroup>
-        <ToolbarAnchor>
+        <ToolbarAnchor ref={imageAnchorRef}>
           <ToolbarButton
             type="button"
             active={imageOpen}
@@ -439,6 +675,8 @@ export function FloatingToolbar({
               exitSelectionFlow();
               if (imageOpen) {
                 closeImageMenu();
+              } else if (isCompactViewport && trace) {
+                setImageOpen(true);
               } else {
                 setImageOpen(true);
               }
@@ -449,7 +687,8 @@ export function FloatingToolbar({
           </ToolbarButton>
 
           {imageOpen ? (
-            <ToolbarPopover
+            <FloatingToolbarPortalPopover
+              anchorRef={imageAnchorRef}
               subtoolbar
               role="dialog"
               aria-label="Image tools"
@@ -575,9 +814,9 @@ export function FloatingToolbar({
                 >
                   <ToolbarIcon icon="/icons/lucide/image.svg" />
                   <ToolbarLabel>Add image</ToolbarLabel>
-                </ToolbarButton>
-              )}
-            </ToolbarPopover>
+                  </ToolbarButton>
+                )}
+            </FloatingToolbarPortalPopover>
           ) : null}
         </ToolbarAnchor>
       </ToolbarGroup>

@@ -1,5 +1,6 @@
 "use client";
 
+import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { assetPath } from "@/lib/assetPath";
 import { typographySpecs, typographyStyles } from "@/app/design-system/typography";
@@ -127,25 +128,26 @@ export function ToolbarButton({
   );
 }
 
-export function ToolbarAnchor({
-  children,
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
+export const ToolbarAnchor = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & { children: ReactNode }
+>(function ToolbarAnchor({ children, className, ...props }, ref) {
   return (
     <div
       {...props}
+      ref={ref}
       className={[styles.anchor, className].filter(Boolean).join(" ")}
     >
       {children}
     </div>
   );
-}
+});
 
 export function ToolbarPopover({
   children,
   className,
   subtoolbar = false,
+  style,
   ...props
 }: HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
@@ -161,6 +163,7 @@ export function ToolbarPopover({
       ]
         .filter(Boolean)
         .join(" ")}
+      style={{ ...typographyStyles.p2, ...style }}
     >
       {children}
     </div>

@@ -202,7 +202,8 @@
   gap: 8px;
   padding: 8px;
   border-radius: 16px;
-  background: var(--surface-card);
+  background: var(--toolbar-bg);
+  border: 1px solid var(--toolbar-border);
   box-shadow: var(--ui-shadow-md);
   backdrop-filter: blur(10px);
   transform: translateX(-50%);
