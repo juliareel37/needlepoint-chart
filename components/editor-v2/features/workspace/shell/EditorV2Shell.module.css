@@ -309,6 +309,15 @@
   overflow: visible;
 }
 
+.colorLibraryPopover {
+  padding: 10px;
+}
+
+.toolbarColorLibrary {
+  width: min(260px, calc(100vw - 40px));
+  height: min(250px, calc(100vh - 180px));
+}
+
 .historyButton {
   min-width: 36px;
   min-height: 28px;
@@ -379,29 +388,6 @@
   color: var(--text-primary);
 }
 
-.colorRow {
-  display: flex;
-  flex-wrap: wrap;
-  height: 250px;
-  overflow: scroll;
-  background-color: var(--surface-card);
-  padding-left:10px;
-  padding-top:10px;
-  border-radius: 12px;
-}
-
-.colorButton {
-  justify-content: flex-start;
-  padding: 4px !important;
-}
-
-.colorButton:hover:not(:disabled),
-.colorButton[data-active="true"],
-.colorButton[data-active="true"]:hover:not(:disabled),
-.colorButton[data-inert-active="true"]:hover:not(:disabled) {
-  background: transparent;
-}
-
 .swatch {
   display: inline-flex;
   align-items: center;
@@ -416,21 +402,6 @@
     box-shadow 160ms ease,
     border-color 160ms ease;
   transform: scale(1);
-}
-
-.colorButton:hover:not(:disabled) .swatch,
-.colorButton:focus-visible .swatch {
-  transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
-}
-
-.swatchCheck {
-  font-size: 14px;
-  line-height: 1;
-  font-weight: 700;
 }
 
 .usedColorsBlock {

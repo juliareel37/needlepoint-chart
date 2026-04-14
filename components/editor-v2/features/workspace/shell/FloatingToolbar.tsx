@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
   Button,
   ButtonIcon,
@@ -26,6 +27,7 @@ import {
   createBeginTraceRepositionCommand,
   createClearCanvasCommand,
   createRedoCommand,
+  createSetActiveColorCommand,
   createSetActiveSidebarSectionCommand,
   createSetSidebarCollapsedCommand,
   createSetToolCommand,
@@ -107,30 +109,36 @@ function FloatingToolbarPortalPopover({
 
 interface FloatingToolbarProps {
   activeColor: PaletteColor | null;
+  activeColorId: string | null;
   activeTool: "paint" | "erase" | string;
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
   dispatch: EditorStore["dispatch"];
   hasPaintedCells: boolean;
+  palette: PaletteColor[];
   trace: TraceDocument | null;
 }
 
 export function FloatingToolbar({
   activeColor,
+  activeColorId,
   activeTool,
   brushSize,
   canRedo,
   canUndo,
   dispatch,
   hasPaintedCells,
+  palette,
   trace,
 }: FloatingToolbarProps) {
+  const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const drawAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -203,6 +211,10 @@ export function FloatingToolbar({
   function closeImageMenu(): void {
     setImageOpen(false);
     setImageOpacityTooltipVisible(false);
+  }
+
+  function closeColorLibrary(): void {
+    setColorLibraryOpen(false);
   }
 
   if (useImageToolbarReplacement && trace) {
@@ -341,17 +353,43 @@ export function FloatingToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-        <ToolbarButton
-          type="button"
-          swatch
-          aria-label="Open color panel"
-          title="Open color panel"
-          onClick={() => {
-            openSidebarSection("color");
-          }}
-        >
-          <ToolbarSwatch color={activeSwatchColor} />
-        </ToolbarButton>
+        <ToolbarAnchor ref={colorAnchorRef}>
+          <ToolbarButton
+            type="button"
+            swatch
+            active={colorLibraryOpen}
+            aria-pressed={colorLibraryOpen}
+            aria-label="Open color library"
+            title="Open color library"
+            onClick={() => {
+              setColorLibraryOpen((current) => !current);
+              setDrawOpen(false);
+              closeImageMenu();
+            }}
+          >
+            <ToolbarSwatch color={activeSwatchColor} />
+          </ToolbarButton>
+
+          {colorLibraryOpen ? (
+            <FloatingToolbarPortalPopover
+              anchorRef={colorAnchorRef}
+              role="dialog"
+              aria-label="Color library"
+              className={styles.colorLibraryPopover}
+              style={{ whiteSpace: "normal" }}
+            >
+              <ColorLibrary
+                activeColorId={activeColorId}
+                className={styles.toolbarColorLibrary}
+                colors={palette}
+                onColorSelect={(colorId) => {
+                  dispatch(createSetActiveColorCommand(colorId));
+                  closeColorLibrary();
+                }}
+              />
+            </FloatingToolbarPortalPopover>
+          ) : null}
+        </ToolbarAnchor>
       </ToolbarGroup>
 
       <ToolbarDivider />
@@ -365,6 +403,7 @@ export function FloatingToolbar({
           aria-label="Pan"
           title="Pan"
           onClick={() => {
+            closeColorLibrary();
             setDrawOpen(false);
             closeImageMenu();
             dispatch(createSetToolCommand("pan"));
@@ -380,6 +419,7 @@ export function FloatingToolbar({
           aria-label="Brush"
           title="Brush"
           onClick={() => {
+            closeColorLibrary();
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "paint" ? "pan" : "paint"));
           }}
@@ -394,6 +434,7 @@ export function FloatingToolbar({
           aria-label="Erase"
           title="Erase"
           onClick={() => {
+            closeColorLibrary();
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "erase" ? "pan" : "erase"));
           }}
@@ -408,6 +449,7 @@ export function FloatingToolbar({
           aria-label="Eyedropper"
           title="Eyedropper"
           onClick={() => {
+            closeColorLibrary();
             closeImageMenu();
             dispatch(createSetToolCommand("eyedropper"));
           }}
@@ -424,6 +466,7 @@ export function FloatingToolbar({
             title="Brush size"
             onClick={() => {
               setDrawOpen((current) => !current);
+              closeColorLibrary();
               closeImageMenu();
             }}
           >
@@ -510,6 +553,7 @@ export function FloatingToolbar({
           aria-label="Mirror"
           title="Mirror"
           onClick={() => {
+            closeColorLibrary();
             setDrawOpen(false);
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
@@ -527,6 +571,7 @@ export function FloatingToolbar({
           aria-label="Select"
           title="Select"
           onClick={() => {
+            closeColorLibrary();
             setDrawOpen(false);
             closeImageMenu();
             dispatch(createSetToolCommand("lasso"));
@@ -547,6 +592,7 @@ export function FloatingToolbar({
           aria-label="Image"
           title="Image"
           onClick={() => {
+              closeColorLibrary();
               if (imageOpen) {
                 closeImageMenu();
               } else if (isCompactViewport && trace) {
@@ -705,6 +751,7 @@ export function FloatingToolbar({
           title="Undo"
           className={styles.historyButton}
           onClick={() => {
+            closeColorLibrary();
             dispatch(createUndoCommand());
           }}
         >
@@ -717,6 +764,7 @@ export function FloatingToolbar({
           title="Redo"
           className={styles.historyButton}
           onClick={() => {
+            closeColorLibrary();
             dispatch(createRedoCommand());
           }}
         >
@@ -731,6 +779,7 @@ export function FloatingToolbar({
           aria-label="Clear canvas"
           title="Clear canvas"
           onClick={() => {
+            closeColorLibrary();
             if (!hasPaintedCells) {
               return;
             }

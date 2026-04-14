@@ -15,7 +15,7 @@ export function UsedColorsSummary({
   return (
     <div className={styles.usedColorsBlock}>
       <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-        Used colors
+        Design Colors
       </p>
       {usedColors.length === 0 ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>

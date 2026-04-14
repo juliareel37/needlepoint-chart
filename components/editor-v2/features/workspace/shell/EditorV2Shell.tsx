@@ -356,12 +356,14 @@ export function EditorV2Shell({
                 ) : (
                   <FloatingToolbar
                     activeColor={activeColor}
+                    activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
                     canRedo={canRedo}
                     canUndo={canUndo}
                     dispatch={dispatch}
                     hasPaintedCells={hasPaintedCells}
+                    palette={palette}
                     trace={trace}
                   />
                 )}

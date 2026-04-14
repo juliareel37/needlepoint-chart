@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
   Field,
   FieldSelect,
 } from "@/components/design-system";
-import { typographyStyles } from "@/app/design-system/typography";
-import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
+import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import type {
   EditorStore,
   PaletteColor,
@@ -18,18 +18,6 @@ import {
 } from "../../workspaceCommands";
 import { UsedColorsSummary } from "../UsedColorsSummary";
 import styles from "../EditorV2Shell.module.css";
-
-function getSwatchCheckColor(hex: string) {
-  const rgb = hexToRgb(hex);
-
-  if (!rgb) {
-    return "#ffffff";
-  }
-
-  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-
-  return luminance > 0.6 ? "#111111" : "#ffffff";
-}
 
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
@@ -69,41 +57,11 @@ export function ColorPanelPage({
               {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
             </strong>
           </div>
-          <div className={styles.colorRow}>
-            {palette.map((color) => {
-              const selected = color.id === activeColorId;
-              return (
-                <Button
-                  key={color.id}
-                  type="button"
-                  onClick={() => dispatch(createSetActiveColorCommand(color.id))}
-                  variant="ghost"
-                  size="sm"
-                  active={selected}
-                  inertWhenActive
-                  className={styles.colorButton}
-                  aria-pressed={selected}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={styles.swatch}
-                    style={{ backgroundColor: color.hex }}
-                  >
-                    {selected ? (
-                      <span
-                        aria-hidden="true"
-                        className={styles.swatchCheck}
-                        style={{ color: getSwatchCheckColor(color.hex) }}
-                      >
-                        ✓
-                      </span>
-                    ) : null}
-                  </span>
-                  {/* <span style={typographyStyles.p2}>{color.name}</span> */}
-                </Button>
-              );
-            })}
-          </div>
+          <ColorLibrary
+            activeColorId={activeColorId}
+            colors={palette}
+            onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+          />
         </div>
 
         <div className={styles.sidebarSubsection}>
