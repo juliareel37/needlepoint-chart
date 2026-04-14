@@ -8,6 +8,7 @@ import type {
   ActiveTool,
   EditorSidebarSection,
   GridPoint,
+  SelectionState,
   SelectionPoint,
 } from "@/lib/editor-v2/editor/store";
 
@@ -179,6 +180,17 @@ export function createClearSelectionCommand(
   source: EditorCommandSource = "toolbar",
 ): EditorCommand {
   return createCommand("selection.clear", {}, source, { mode: "skip" });
+}
+
+export function createSetSelectionShapeCommand(
+  shape: SelectionState["shape"],
+): EditorCommand {
+  return createCommand(
+    "selection.setShape",
+    { shape },
+    "toolbar",
+    { mode: "skip" },
+  );
 }
 
 export function createStartMirrorSelectionCommand(point: GridPoint): EditorCommand {

@@ -9,6 +9,17 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
   handle(state, command) {
     const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
     const currentTool = state.session.activeTool.tool;
+    const nextSelection =
+      currentTool === "lasso" && nextTool !== "lasso"
+        ? {
+            mode: "none" as const,
+            shape: state.session.selection.shape,
+            rect: null,
+            lassoPoints: [],
+            mirrorAxis: null,
+            preview: null,
+          }
+        : state.session.selection;
 
     if (
       currentTool === "mirror" &&
@@ -57,6 +68,7 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
               ? state.session.activeTool.colorId
               : command.payload.colorId,
         },
+        selection: nextSelection,
         eyedropperReturnTool,
       },
       nextUi: state.ui,

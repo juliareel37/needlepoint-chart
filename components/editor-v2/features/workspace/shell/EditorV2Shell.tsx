@@ -28,6 +28,7 @@ import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
+import { SelectionSessionToolbar } from "./SelectionSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
@@ -82,6 +83,7 @@ export function EditorV2Shell({
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const mirrorSession = state.session.mirrorInteraction.session;
   const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
+  const selectionActive = activeTool === "lasso";
   const textPlacement = state.session.textInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
@@ -327,6 +329,14 @@ export function EditorV2Shell({
                   dispatch={dispatch}
                   session={mirrorSession}
                 />
+              ) : selectionActive ? (
+                <SelectionSessionToolbar
+                  activeColor={activeColor}
+                  dispatch={dispatch}
+                  selectionBounds={selectionBounds}
+                  selectionCommitted={selectionCommitted}
+                  selectionShape={state.session.selection.shape}
+                />
               ) : textPlacement ? (
                 <TextPlacementToolbar
                   activeColorHex={activeColor?.hex ?? null}
@@ -344,8 +354,6 @@ export function EditorV2Shell({
                   canUndo={canUndo}
                   dispatch={dispatch}
                   hasPaintedCells={hasPaintedCells}
-                  selectionBounds={selectionBounds}
-                  selectionCommitted={selectionCommitted}
                   trace={trace}
                 />
               )}

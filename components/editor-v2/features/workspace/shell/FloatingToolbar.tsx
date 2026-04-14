@@ -19,17 +19,12 @@ import {
 } from "@/components/design-system";
 import type {
   EditorStore,
-  GridPoint,
-  GridRect,
   PaletteColor,
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
   createBeginTraceRepositionCommand,
-  createClearSelectionCommand,
   createClearCanvasCommand,
-  createEraseCellsCommand,
-  createPaintCellsCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetSidebarCollapsedCommand,
@@ -112,14 +107,12 @@ function FloatingToolbarPortalPopover({
 
 interface FloatingToolbarProps {
   activeColor: PaletteColor | null;
-  activeTool: "paint" | "erase" | "lasso" | string;
+  activeTool: "paint" | "erase" | string;
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
   dispatch: EditorStore["dispatch"];
   hasPaintedCells: boolean;
-  selectionBounds: GridRect | null;
-  selectionCommitted: boolean;
   trace: TraceDocument | null;
 }
 
@@ -131,18 +124,14 @@ export function FloatingToolbar({
   canUndo,
   dispatch,
   hasPaintedCells,
-  selectionBounds,
-  selectionCommitted,
   trace,
 }: FloatingToolbarProps) {
   const [drawOpen, setDrawOpen] = useState(false);
-  const [selectOpen, setSelectOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const drawAnchorRef = useRef<HTMLDivElement | null>(null);
-  const selectAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedBrushSize = Number.isFinite(brushSize)
@@ -158,8 +147,6 @@ export function FloatingToolbar({
   const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
 
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
-  const canPaintSelection = Boolean(selectionCommitted && selectionBounds && activeColor);
-  const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const useImageToolbarReplacement =
     isCompactViewport && Boolean(trace) && imageOpen;
 
@@ -209,7 +196,6 @@ export function FloatingToolbar({
   }, [imageOpacityTooltipVisible]);
 
   function openSidebarSection(section: "color" | "trace") {
-    exitSelectionFlow();
     dispatch(createSetActiveSidebarSectionCommand(section));
     dispatch(createSetSidebarCollapsedCommand(false));
   }
@@ -217,32 +203,6 @@ export function FloatingToolbar({
   function closeImageMenu(): void {
     setImageOpen(false);
     setImageOpacityTooltipVisible(false);
-  }
-
-  function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
-    const cells: GridPoint[] = [];
-
-    for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
-      for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
-        cells.push({ x, y });
-      }
-    }
-
-    return cells;
-  }
-
-  function exitSelectionFlow(): void {
-    setSelectOpen(false);
-
-    if (activeTool !== "lasso") {
-      return;
-    }
-
-    if (selectionBounds) {
-      dispatch(createClearSelectionCommand());
-    }
-
-    dispatch(createSetToolCommand("pan"));
   }
 
   if (useImageToolbarReplacement && trace) {
@@ -348,7 +308,7 @@ export function FloatingToolbar({
               dispatch(createBeginTraceRepositionCommand());
             }}
           >
-            <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+            <ToolbarIcon icon="/icons/lucide/crop.svg" />
             <ToolbarLabel>Reposition</ToolbarLabel>
           </ToolbarButton>
 
@@ -386,7 +346,9 @@ export function FloatingToolbar({
           swatch
           aria-label="Open color panel"
           title="Open color panel"
-          onClick={() => openSidebarSection("color")}
+          onClick={() => {
+            openSidebarSection("color");
+          }}
         >
           <ToolbarSwatch color={activeSwatchColor} />
         </ToolbarButton>
@@ -403,7 +365,6 @@ export function FloatingToolbar({
           aria-label="Pan"
           title="Pan"
           onClick={() => {
-            exitSelectionFlow();
             setDrawOpen(false);
             closeImageMenu();
             dispatch(createSetToolCommand("pan"));
@@ -419,7 +380,6 @@ export function FloatingToolbar({
           aria-label="Brush"
           title="Brush"
           onClick={() => {
-            exitSelectionFlow();
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "paint" ? "pan" : "paint"));
           }}
@@ -434,7 +394,6 @@ export function FloatingToolbar({
           aria-label="Erase"
           title="Erase"
           onClick={() => {
-            exitSelectionFlow();
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "erase" ? "pan" : "erase"));
           }}
@@ -449,7 +408,6 @@ export function FloatingToolbar({
           aria-label="Eyedropper"
           title="Eyedropper"
           onClick={() => {
-            exitSelectionFlow();
             closeImageMenu();
             dispatch(createSetToolCommand("eyedropper"));
           }}
@@ -465,7 +423,6 @@ export function FloatingToolbar({
             aria-label="Brush size"
             title="Brush size"
             onClick={() => {
-              exitSelectionFlow();
               setDrawOpen((current) => !current);
               closeImageMenu();
             }}
@@ -553,7 +510,6 @@ export function FloatingToolbar({
           aria-label="Mirror"
           title="Mirror"
           onClick={() => {
-            exitSelectionFlow();
             setDrawOpen(false);
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
@@ -564,104 +520,20 @@ export function FloatingToolbar({
       </ToolbarGroup>
 
       <ToolbarGroup>
-        <ToolbarAnchor ref={selectAnchorRef}>
-          <ToolbarButton
-            type="button"
-            active={activeTool === "lasso"}
-            aria-pressed={activeTool === "lasso"}
-            aria-label="Select"
-            title="Select"
-            onClick={() => {
-              setDrawOpen(false);
-              closeImageMenu();
-
-                if (activeTool === "lasso") {
-                  if (selectOpen) {
-                    if (selectionBounds) {
-                      dispatch(createClearSelectionCommand());
-                    } else {
-                      dispatch(createSetToolCommand("pan"));
-                    }
-                    setSelectOpen(false);
-                    return;
-                  }
-
-                setSelectOpen(true);
-                return;
-              }
-
-              dispatch(createSetToolCommand("lasso"));
-              setSelectOpen(true);
-            }}
-          >
-            <ToolbarIcon icon="/icons/lucide/lasso.svg" />
-          </ToolbarButton>
-
-          {activeTool === "lasso" && selectOpen ? (
-            <FloatingToolbarPortalPopover
-              anchorRef={selectAnchorRef}
-              role="dialog"
-              aria-label="Selection tools"
-            >
-              <ToolbarSubtoolGroup>
-                <ToolbarButton
-                  type="button"
-                  disabled={!canPaintSelection}
-                  onClick={() => {
-                    if (!selectionBounds || !activeColor) {
-                      return;
-                    }
-
-                    dispatch(
-                      createPaintCellsCommand(
-                        activeColor.id,
-                        buildSelectionCandidateCells(selectionBounds),
-                      ),
-                    );
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
-                  <ToolbarLabel>Fill</ToolbarLabel>
-                </ToolbarButton>
-
-                <ToolbarButton
-                  type="button"
-                  disabled={!canEraseSelection}
-                  onClick={() => {
-                    if (!selectionBounds) {
-                      return;
-                    }
-
-                    dispatch(
-                      createEraseCellsCommand(
-                        buildSelectionCandidateCells(selectionBounds),
-                      ),
-                    );
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-                  <ToolbarLabel>Erase</ToolbarLabel>
-                </ToolbarButton>
-
-                <ToolbarDivider />
-                <ToolbarButton
-                  type="button"
-                  primary
-                  onClick={() => {
-                    if (selectionCommitted && selectionBounds) {
-                      dispatch(createClearSelectionCommand());
-                    } else {
-                      dispatch(createSetToolCommand("pan"));
-                    }
-                    setSelectOpen(false);
-                  }}
-                >
-                  <ToolbarLabel>Done</ToolbarLabel>
-                  </ToolbarButton>
-                </ToolbarSubtoolGroup>
-            </FloatingToolbarPortalPopover>
-          ) : null}
-        </ToolbarAnchor>
+        <ToolbarButton
+          type="button"
+          active={activeTool === "lasso"}
+          aria-pressed={activeTool === "lasso"}
+          aria-label="Select"
+          title="Select"
+          onClick={() => {
+            setDrawOpen(false);
+            closeImageMenu();
+            dispatch(createSetToolCommand("lasso"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+        </ToolbarButton>
       </ToolbarGroup>
 
       <ToolbarDivider />
@@ -670,12 +542,11 @@ export function FloatingToolbar({
         <ToolbarAnchor ref={imageAnchorRef}>
           <ToolbarButton
             type="button"
-            active={imageOpen}
-            aria-pressed={imageOpen}
-            aria-label="Image"
-            title="Image"
-            onClick={() => {
-              exitSelectionFlow();
+          active={imageOpen}
+          aria-pressed={imageOpen}
+          aria-label="Image"
+          title="Image"
+          onClick={() => {
               if (imageOpen) {
                 closeImageMenu();
               } else if (isCompactViewport && trace) {
@@ -795,7 +666,7 @@ export function FloatingToolbar({
                       );
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+                    <ToolbarIcon icon="/icons/lucide/crop.svg" />
                     <ToolbarLabel>Reposition</ToolbarLabel>
                   </ToolbarButton>
 
@@ -834,7 +705,6 @@ export function FloatingToolbar({
           title="Undo"
           className={styles.historyButton}
           onClick={() => {
-            exitSelectionFlow();
             dispatch(createUndoCommand());
           }}
         >
@@ -847,7 +717,6 @@ export function FloatingToolbar({
           title="Redo"
           className={styles.historyButton}
           onClick={() => {
-            exitSelectionFlow();
             dispatch(createRedoCommand());
           }}
         >
@@ -862,7 +731,6 @@ export function FloatingToolbar({
           aria-label="Clear canvas"
           title="Clear canvas"
           onClick={() => {
-            exitSelectionFlow();
             if (!hasPaintedCells) {
               return;
             }

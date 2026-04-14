@@ -240,8 +240,8 @@
 }
 
 .popover .buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--brand-400);
-  color: var(--neutral-0);
+  background: var(--toolbar-button-hover);
+  /* color: var(--neutral-0); */
   box-shadow: none !important;
 }
 

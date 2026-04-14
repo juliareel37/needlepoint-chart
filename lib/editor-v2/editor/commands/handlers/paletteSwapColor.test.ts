@@ -112,6 +112,7 @@ function createSwapTestState(): EditorStoreState {
       },
       selection: {
         mode: "none",
+        shape: "freehand",
         rect: null,
         lassoPoints: [],
         mirrorAxis: null,

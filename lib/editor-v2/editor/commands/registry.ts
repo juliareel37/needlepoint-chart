@@ -24,6 +24,7 @@ import {
 import {
   clearSelectionCommandHandler,
   commitSelectionCommandHandler,
+  setSelectionShapeCommandHandler,
   startSelectionCommandHandler,
   updateSelectionCommandHandler,
 } from "./handlers/selection";
@@ -58,6 +59,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   updateSelectionCommandHandler,
   commitSelectionCommandHandler,
   clearSelectionCommandHandler,
+  setSelectionShapeCommandHandler,
   startMirrorCommandHandler,
   updateMirrorCommandHandler,
   commitMirrorCommandHandler,

@@ -53,7 +53,7 @@ export function useGridInteractions({
     activeTool,
     dispatch,
     getClampedSelectionPointFromClient,
-    getSelectionPointFromClient,
+    selectionShape: state.session.selection.shape,
   });
   const mirrorDrag = useMirrorDrag({
     activeTool,
@@ -66,6 +66,7 @@ export function useGridInteractions({
     clearLocalSelection: selectionDrag.clearDragSelection,
     dispatch,
     hasSelection:
+      activeTool === "lasso" ||
       Boolean(state.session.selection.rect) ||
       Boolean(state.session.mirrorInteraction.session),
   });

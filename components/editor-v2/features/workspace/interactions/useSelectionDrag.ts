@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
   EditorStore,
+  SelectionState,
   SelectionPoint,
 } from "@/lib/editor-v2/editor/store";
 import {
@@ -19,14 +20,14 @@ interface UseSelectionDragOptions {
     clientX: number,
     clientY: number,
   ) => SelectionPoint | null;
-  getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
+  selectionShape: SelectionState["shape"];
 }
 
 export function useSelectionDrag({
   activeTool,
   dispatch,
   getClampedSelectionPointFromClient,
-  getSelectionPointFromClient,
+  selectionShape,
 }: UseSelectionDragOptions) {
   const [isLassoing, setIsLassoing] = useState(false);
   const lastLassoPointRef = useRef<SelectionPoint | null>(null);
@@ -37,20 +38,34 @@ export function useSelectionDrag({
     }
 
     function handleWindowMouseUp(event: MouseEvent) {
-      const point = getClampedSelectionPointFromClient(
+      const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
       );
+      const point =
+        rawPoint && selectionShape === "rect"
+          ? {
+              x: Math.floor(rawPoint.x),
+              y: Math.floor(rawPoint.y),
+            }
+          : rawPoint;
       dispatch(createSelectionCommitCommand(point));
       lastLassoPointRef.current = null;
       setIsLassoing(false);
     }
 
     function handleWindowMouseMove(event: MouseEvent) {
-      const point = getClampedSelectionPointFromClient(
+      const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
       );
+      const point =
+        rawPoint && selectionShape === "rect"
+          ? {
+              x: Math.floor(rawPoint.x),
+              y: Math.floor(rawPoint.y),
+            }
+          : rawPoint;
 
       if (!point) {
         return;
@@ -76,7 +91,7 @@ export function useSelectionDrag({
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [dispatch, getClampedSelectionPointFromClient, isLassoing]);
+  }, [dispatch, getClampedSelectionPointFromClient, isLassoing, selectionShape]);
 
   return {
     clearDragSelection,
@@ -93,8 +108,16 @@ export function useSelectionDrag({
       return false;
     }
 
-    dispatch(createSelectionStartCommand(point));
-    lastLassoPointRef.current = point;
+    const normalizedPoint =
+      selectionShape === "rect"
+        ? {
+            x: Math.floor(point.x),
+            y: Math.floor(point.y),
+          }
+        : point;
+
+    dispatch(createSelectionStartCommand(normalizedPoint));
+    lastLassoPointRef.current = normalizedPoint;
     setIsLassoing(true);
 
     return true;

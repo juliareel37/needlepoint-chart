@@ -26,6 +26,14 @@ export function MirrorSessionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
+          <ToolbarButton
+            type="button"
+            onClick={() => dispatch(createCancelMirrorCommand())}
+          >
+          <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
+          </ToolbarButton>
+                  <ToolbarDivider />
+
         <div
           style={{
             display: "flex",
@@ -38,7 +46,7 @@ export function MirrorSessionToolbar({
           <ToolbarLabel>{instruction}</ToolbarLabel>
         </div>
 
-        <ToolbarDivider />
+        {/* <ToolbarDivider /> */}
 
         <Button
           type="button"
@@ -47,17 +55,37 @@ export function MirrorSessionToolbar({
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
           Clear selection
+           {/* <ToolbarIcon icon="/icons/lucide/trash.svg" /> */}
         </Button>
 
         <ToolbarDivider />
 
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => dispatch(createDoneMirrorCommand())}
-        >
-          Done
-        </Button>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,}}>
+          {/* <Button
+            type="button"
+            variant="secondary"
+            onClick={() => dispatch(createCancelMirrorCommand())}
+            style = {{padding:"8px 20px",}}
+
+          >
+            Cancel
+          </Button> */}
+
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => dispatch(createDoneMirrorCommand())}
+            style = {{padding:"8px 20px",}}
+          >
+            Done
+          </Button>
+        </div>
+
+
+
 
         {/* <Button
           type="button"
@@ -68,14 +96,14 @@ export function MirrorSessionToolbar({
           <ButtonIcon icon="/icons/lucide/x.svg" />
         </Button> */}
 
-        <ToolbarButton
+        {/* <ToolbarButton
           type="button"
           onClick={() => {
             dispatch(createCancelMirrorCommand())
           }}
         >
           <ToolbarIcon icon="/icons/lucide/x.svg" />
-        </ToolbarButton>
+        </ToolbarButton> */}
       </ToolbarGroup>
     </Toolbar>
   );

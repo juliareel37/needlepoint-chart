@@ -4,6 +4,7 @@ import type {
   GridPoint,
   MirrorDirection,
   PanelUiState,
+  SelectionState,
   SelectionPoint,
 } from "../store/state";
 import type { TraceUpdateChanges } from "../store/patches";
@@ -31,6 +32,7 @@ export type EditorCommandKind =
   | "selection.update"
   | "selection.commit"
   | "selection.clear"
+  | "selection.setShape"
   | "mirror.start"
   | "mirror.update"
   | "mirror.commit"
@@ -113,6 +115,11 @@ export type CommitSelectionCommand = BaseEditorCommand<
 >;
 
 export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>;
+
+export type SetSelectionShapeCommand = BaseEditorCommand<
+  "selection.setShape",
+  { shape: SelectionState["shape"] }
+>;
 
 export type StartMirrorCommand = BaseEditorCommand<
   "mirror.start",
@@ -286,6 +293,7 @@ export type EditorCommand =
   | UpdateSelectionCommand
   | CommitSelectionCommand
   | ClearSelectionCommand
+  | SetSelectionShapeCommand
   | StartMirrorCommand
   | UpdateMirrorCommand
   | CommitMirrorCommand

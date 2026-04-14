@@ -32,10 +32,17 @@ export function SelectionOverlay({
     .map((point) => `${point.x * metrics.cellSize},${point.y * metrics.cellSize}`)
     .join(" ");
   const shouldDimCanvas = activeTool === "lasso" || activeTool === "mirror" || Boolean(mirrorSession);
-  const hasCommittedLassoSelection =
+  const hasCommittedFreehandSelection =
     selection.mode === "lasso" &&
     !selection.preview &&
     selection.lassoPoints.length >= 3;
+  const hasCommittedRectSelection =
+    selection.mode === "rect" &&
+    !selection.preview &&
+    Boolean(selection.rect);
+  const selectionRectPath = selection.rect
+    ? buildRectPath(selection.rect, metrics.cellSize)
+    : null;
   const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
   const appliedMirrorDirection = mirrorSession?.appliedDirection ?? null;
   const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
@@ -49,7 +56,7 @@ export function SelectionOverlay({
   return (
     <>
       {shouldDimCanvas ? (
-        hasCommittedLassoSelection || hasCommittedMirrorSelection ? (
+        hasCommittedFreehandSelection || hasCommittedRectSelection || hasCommittedMirrorSelection ? (
           <svg
             aria-hidden="true"
             style={{
@@ -68,7 +75,8 @@ export function SelectionOverlay({
               fillRule="evenodd"
               d={[
                 `M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z`,
-                hasCommittedLassoSelection ? `M ${lassoPoints} Z` : null,
+                hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
+                hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
                 hasCommittedMirrorSelection && mirrorCutoutPath ? mirrorCutoutPath : null,
               ]
                 .filter(Boolean)
@@ -124,6 +132,33 @@ export function SelectionOverlay({
               points={lassoPoints}
             />
           )}
+        </svg>
+      ) : null}
+
+      {selection.mode === "rect" && selection.rect ? (
+        <svg
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: "none",
+            overflow: "visible",
+          }}
+          width={metrics.surfaceWidth}
+          height={metrics.surfaceHeight}
+          viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
+        >
+          <rect
+            x={selection.rect.x * metrics.cellSize}
+            y={selection.rect.y * metrics.cellSize}
+            width={selection.rect.width * metrics.cellSize}
+            height={selection.rect.height * metrics.cellSize}
+            fill={selection.preview ? "rgba(15, 23, 42, 0.12)" : "none"}
+            stroke={SELECTION_STROKE}
+            strokeWidth={SELECTION_STROKE_WIDTH}
+            strokeDasharray={SELECTION_STROKE_DASH}
+          />
         </svg>
       ) : null}
 
