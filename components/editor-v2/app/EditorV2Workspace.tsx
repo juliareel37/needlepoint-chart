@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "./editorV2LocalPersistence";
 import { EditorV2Shell } from "../features/workspace/shell/EditorV2Shell";
@@ -8,25 +8,28 @@ import { EditorV2Shell } from "../features/workspace/shell/EditorV2Shell";
 export function EditorV2Workspace({
   currentStorageId,
   savedDocuments,
+  selectedStorageId,
+  setSelectedStorageId,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
+  setupModal,
+  setupModalOpen,
 }: {
   currentStorageId: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  selectedStorageId: string;
+  setSelectedStorageId: (value: string) => void;
   onSaveDocument: (
     document: EditorDocumentState,
     storageId?: string,
   ) => SavedEditorV2DocumentRecord;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => void;
   onStartOver: () => void;
+  setupModal: ReactNode;
+  setupModalOpen: boolean;
 }) {
-  const [selectedStorageId, setSelectedStorageId] = useState<string>(currentStorageId);
   const [saveMessage, setSaveMessage] = useState<string>("");
-
-  useEffect(() => {
-    setSelectedStorageId(currentStorageId);
-  }, [currentStorageId]);
 
   return (
     <div>
@@ -58,6 +61,8 @@ export function EditorV2Workspace({
         savedDocuments={savedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
+        setupModal={setupModal}
+        setupModalOpen={setupModalOpen}
       />
     </div>
   );

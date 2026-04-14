@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   getActiveColor,
   getActiveColorId,
@@ -47,6 +47,8 @@ export function EditorV2Shell({
   savedDocuments,
   selectedStorageId,
   setSelectedStorageId,
+  setupModal,
+  setupModalOpen,
 }: {
   onSaveDocument: (document: EditorDocumentState) => void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => void;
@@ -55,6 +57,8 @@ export function EditorV2Shell({
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
+  setupModal: ReactNode;
+  setupModalOpen: boolean;
 }) {
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
@@ -254,139 +258,150 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
-      <EditorRail
-        activeSection={activeSidebarSection}
-        panelCollapsed={sidebarCollapsed}
-        onSelectSection={(section) => {
-          if (!sidebarCollapsed && activeSidebarSection === section) {
-            dispatch(createSetSidebarCollapsedCommand(true));
-            return;
-          }
+      <div
+        className={styles.shellContent}
+        data-modal-open={setupModalOpen ? "true" : "false"}
+      >
+        <EditorRail
+          activeSection={activeSidebarSection}
+          panelCollapsed={sidebarCollapsed}
+          onSelectSection={(section) => {
+            if (!sidebarCollapsed && activeSidebarSection === section) {
+              dispatch(createSetSidebarCollapsedCommand(true));
+              return;
+            }
 
-          dispatch(createSetActiveSidebarSectionCommand(section));
-          dispatch(createSetSidebarCollapsedCommand(false));
-        }}
-      />
+            dispatch(createSetActiveSidebarSectionCommand(section));
+            dispatch(createSetSidebarCollapsedCommand(false));
+          }}
+        />
 
-      <section className={styles.canvasColumn}>
-        <div className={styles.canvasStage}>
-          <div
-            className={styles.sidePanelOverlay}
-            data-collapsed={sidebarCollapsed ? "true" : "false"}
-          >
-            <EditorSidebar
-              activeSection={activeSidebarSection}
-              activeColor={activeColor}
-              activeColorId={activeColorId}
-              colorsById={colorsById}
-              documentTitle={title}
-              palette={palette}
-              gridMetrics={gridMetrics}
-              showRuler={showRuler}
-              saveMessage={saveMessage}
-              savedDocuments={savedDocuments}
-              selectedStorageId={selectedStorageId}
-              setSelectedStorageId={setSelectedStorageId}
-              onLoadSelected={() => {
-                const selectedRecord = savedDocuments.find(
-                  (record) => record.storageId === selectedStorageId,
-                );
-                if (!selectedRecord) return;
-                onLoadDocument(selectedRecord);
-              }}
-              onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
-              onSaveDocument={onSaveDocument}
-              onStartOver={onStartOver}
-              previewMode={previewMode}
-              trace={trace}
-              traceRepositionActive={traceRepositionActive}
-              textPlacement={textPlacement}
-              usedColors={usedColors}
-              document={document}
-              dispatch={dispatch}
-              showGridlines={showGridlines}
-              showSymbols={showSymbols}
-              textViewportCenter={textViewportCenter}
-            />
-          </div>
-
-          {previewMode ? null : (
+        <section className={styles.canvasColumn}>
+          <div className={styles.canvasStage}>
             <div
-              className={styles.stageToolbarTop}
-              style={{
-                left: sidebarCollapsed
-                  ? "50%"
-                  : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
-              }}
+              className={styles.sidePanelOverlay}
+              data-collapsed={sidebarCollapsed ? "true" : "false"}
             >
-              {traceRepositionActive && trace ? (
-                <TraceRepositionToolbar
-                  dispatch={dispatch}
-                  trace={trace}
-                />
-              ) : mirrorActive ? (
-                <MirrorSessionToolbar
-                  dispatch={dispatch}
-                  session={mirrorSession}
-                />
-              ) : selectionActive ? (
-                <SelectionSessionToolbar
-                  activeColor={activeColor}
-                  dispatch={dispatch}
-                  selectionBounds={selectionBounds}
-                  selectionCommitted={selectionCommitted}
-                  selectionShape={state.session.selection.shape}
-                />
-              ) : textPlacement ? (
-                <TextPlacementToolbar
-                  activeColorHex={activeColor?.hex ?? null}
-                  activeColorId={activeColorId}
-                  dispatch={dispatch}
-                  gridMetrics={gridMetrics}
-                  placement={textPlacement}
-                />
-              ) : (
-                <FloatingToolbar
-                  activeColor={activeColor}
-                  activeTool={activeTool}
-                  brushSize={brushSize}
-                  canRedo={canRedo}
-                  canUndo={canUndo}
-                  dispatch={dispatch}
-                  hasPaintedCells={hasPaintedCells}
-                  trace={trace}
-                />
-              )}
+              <EditorSidebar
+                activeSection={activeSidebarSection}
+                activeColor={activeColor}
+                activeColorId={activeColorId}
+                colorsById={colorsById}
+                documentTitle={title}
+                palette={palette}
+                gridMetrics={gridMetrics}
+                showRuler={showRuler}
+                saveMessage={saveMessage}
+                savedDocuments={savedDocuments}
+                selectedStorageId={selectedStorageId}
+                setSelectedStorageId={setSelectedStorageId}
+                onLoadSelected={() => {
+                  const selectedRecord = savedDocuments.find(
+                    (record) => record.storageId === selectedStorageId,
+                  );
+                  if (!selectedRecord) return;
+                  onLoadDocument(selectedRecord);
+                }}
+                onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
+                onSaveDocument={onSaveDocument}
+                onStartOver={onStartOver}
+                previewMode={previewMode}
+                trace={trace}
+                traceRepositionActive={traceRepositionActive}
+                textPlacement={textPlacement}
+                usedColors={usedColors}
+                document={document}
+                dispatch={dispatch}
+                showGridlines={showGridlines}
+                showSymbols={showSymbols}
+                textViewportCenter={textViewportCenter}
+              />
             </div>
-          )}
 
-          <div className={styles.stageToolbarBottomRight}>
-            <ViewportToolbar
-              dispatch={dispatch}
-              fitZoom={fitZoom}
-              onFitToGrid={fitToGrid}
-              zoomAnchor={zoomAnchor}
-              viewport={viewport}
-            />
-          </div>
+            {previewMode ? null : (
+              <div
+                className={styles.stageToolbarTop}
+                style={{
+                  left: sidebarCollapsed
+                    ? "50%"
+                    : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
+                }}
+              >
+                {traceRepositionActive && trace ? (
+                  <TraceRepositionToolbar
+                    dispatch={dispatch}
+                    trace={trace}
+                  />
+                ) : mirrorActive ? (
+                  <MirrorSessionToolbar
+                    dispatch={dispatch}
+                    session={mirrorSession}
+                  />
+                ) : selectionActive ? (
+                  <SelectionSessionToolbar
+                    activeColor={activeColor}
+                    dispatch={dispatch}
+                    selectionBounds={selectionBounds}
+                    selectionCommitted={selectionCommitted}
+                    selectionShape={state.session.selection.shape}
+                  />
+                ) : textPlacement ? (
+                  <TextPlacementToolbar
+                    activeColorHex={activeColor?.hex ?? null}
+                    activeColorId={activeColorId}
+                    dispatch={dispatch}
+                    gridMetrics={gridMetrics}
+                    placement={textPlacement}
+                  />
+                ) : (
+                  <FloatingToolbar
+                    activeColor={activeColor}
+                    activeTool={activeTool}
+                    brushSize={brushSize}
+                    canRedo={canRedo}
+                    canUndo={canUndo}
+                    dispatch={dispatch}
+                    hasPaintedCells={hasPaintedCells}
+                    trace={trace}
+                  />
+                )}
+              </div>
+            )}
 
-          <div ref={canvasWorldRef} className={styles.canvasWorld}>
-            <GridWorldSurface
-              activeColorId={activeColorId}
-              activeTool={activeTool}
-              brushSize={brushSize}
-              colorsById={colorsById}
-              dispatch={dispatch}
-              previewMode={previewMode}
-              showGridlines={showGridlines}
-              showRuler={showRuler}
-              showSymbols={showSymbols}
-              state={state}
-              zoomAnchor={zoomAnchor}
-            />
+            <div className={styles.stageToolbarBottomRight}>
+              <ViewportToolbar
+                dispatch={dispatch}
+                fitZoom={fitZoom}
+                onFitToGrid={fitToGrid}
+                zoomAnchor={zoomAnchor}
+                viewport={viewport}
+              />
+            </div>
+
+            <div ref={canvasWorldRef} className={styles.canvasWorld}>
+              <GridWorldSurface
+                activeColorId={activeColorId}
+                activeTool={activeTool}
+                brushSize={brushSize}
+                colorsById={colorsById}
+                dispatch={dispatch}
+                previewMode={previewMode}
+                showGridlines={showGridlines}
+                showRuler={showRuler}
+                showSymbols={showSymbols}
+                state={state}
+                zoomAnchor={zoomAnchor}
+              />
+            </div>
           </div>
+        </section>
+      </div>
+
+      {setupModalOpen ? (
+        <div className={styles.modalOverlay}>
+          {setupModal}
         </div>
-      </section>
+      ) : null}
     </main>
   );
 }

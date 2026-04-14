@@ -27,7 +27,7 @@ export function UsedColorsSummary({
             <li key={entry.colorId} className={styles.usedColorsItem} style={typographyStyles.p2}>
               <span
                 aria-hidden="true"
-                className={styles.usedColorSwatch}
+                className={styles.swatch}
                 style={{
                   backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
                   justifyContent: "left",

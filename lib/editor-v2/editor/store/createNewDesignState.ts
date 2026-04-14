@@ -7,7 +7,7 @@ import {
   DEFAULT_DMC_COLOR_ID,
 } from "../color-library";
 
-const DEFAULT_TITLE = "New Design";
+const DEFAULT_TITLE = "Untitled Design";
 
 interface NewDesignSizingOptions {
   sizingMode?: "stitches" | "inches";
