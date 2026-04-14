@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Button,
   SingleSelectDropdown,
   Toolbar,
   ToolbarButton,
@@ -176,22 +177,35 @@ export function TextPlacementToolbar({
 
       <ToolbarDivider />
 
-      <ToolbarGroup actions>
-        <ToolbarButton
+      <ToolbarGroup actions style={{ marginLeft: 6, gap: 8 }}>
+        {/* <ToolbarButton
           type="button"
           onClick={() => dispatch(createCancelTextPlacementCommand())}
         >
           <ToolbarLabel>Cancel</ToolbarLabel>
-        </ToolbarButton>
-
-        <ToolbarButton
+        </ToolbarButton> */}
+        <Button 
+          type="button" 
+          variant="secondary" 
+          onClick={() => dispatch(createCancelTextPlacementCommand())}
+        >
+          Cancel
+        </Button>
+        {/* <Button
           type="button"
           primary
           disabled={!canConvert}
           onClick={handleConvert}
         >
           <ToolbarLabel>Convert</ToolbarLabel>
-        </ToolbarButton>
+        </Button> */}
+
+        <Button 
+          type="button" 
+          variant="primary" 
+          onClick={handleConvert}>
+        Convert
+      </Button>
       </ToolbarGroup>
     </Toolbar>
   );

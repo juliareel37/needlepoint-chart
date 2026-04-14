@@ -103,12 +103,12 @@ export default function RootLayout({
                   alt="Wippa"
                   style={{ height: 24, width: "auto", display: "block" }}
                 />
-                <Link
+                {/* <Link
                   href="/editor-v2/design-system"
                   style={headerUtilityLinkStyle}
                 >
                   V2 DS
-                </Link>
+                </Link> */}
                 <div id="app-header-history" />
                 <div id="app-header-file-left" />
                 <div id="app-header-autosave" />

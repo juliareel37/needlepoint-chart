@@ -358,8 +358,8 @@
   height: 250px;
   overflow: scroll;
   background-color: var(--surface-card);
-  padding-left:5px;
-  padding-right:5px;
+  padding-left:10px;
+  padding-top:10px;
   border-radius: 12px;
 }
 
