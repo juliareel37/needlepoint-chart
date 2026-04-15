@@ -143,19 +143,23 @@ export const ToolbarAnchor = forwardRef<
   );
 });
 
-export function ToolbarPopover({
+export const ToolbarPopover = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & {
+    children: ReactNode;
+    subtoolbar?: boolean;
+  }
+>(function ToolbarPopover({
   children,
   className,
   subtoolbar = false,
   style,
   ...props
-}: HTMLAttributes<HTMLDivElement> & {
-  children: ReactNode;
-  subtoolbar?: boolean;
-}) {
+}, ref) {
   return (
     <div
       {...props}
+      ref={ref}
       className={[
         styles.popover,
         subtoolbar ? styles.popoverSubtoolbar : null,
@@ -168,7 +172,7 @@ export function ToolbarPopover({
       {children}
     </div>
   );
-}
+});
 
 export function ToolbarSubtoolGroup({
   children,

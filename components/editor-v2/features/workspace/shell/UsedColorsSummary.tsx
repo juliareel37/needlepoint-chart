@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
@@ -27,32 +27,47 @@ function UsedColorsPortalPopover({
   anchorRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+    direction: "up" | "down";
+    maxHeight: number;
+  } | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) {
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      setPosition(null);
       return;
     }
 
-    function updatePosition() {
-      const anchor = anchorRef.current;
+    const gap = 10;
+    const viewportPadding = 12;
+    const rect = anchor.getBoundingClientRect();
+    const popoverHeight = popoverRef.current?.offsetHeight ?? 0;
+    const spaceAbove = Math.max(rect.top - viewportPadding, 0);
+    const spaceBelow = Math.max(window.innerHeight - rect.bottom - viewportPadding, 0);
+    const direction =
+      spaceBelow < popoverHeight && spaceAbove > spaceBelow ? "up" : "down";
+    const availableSpace = direction === "up" ? spaceAbove : spaceBelow;
 
-      if (!anchor) {
-        setPosition(null);
-        return;
-      }
+    setPosition({
+      top: direction === "up" ? rect.top - gap : rect.bottom + gap,
+      left: rect.left,
+      direction,
+      maxHeight: Math.max(availableSpace - gap, 140),
+    });
+  }, [anchorRef]);
 
-      const rect = anchor.getBoundingClientRect();
-      setPosition({
-        top: rect.top - 10,
-        left: rect.left,
-      });
+  useEffect(() => {
+    if (!mounted) {
+      return;
     }
 
     updatePosition();
@@ -64,7 +79,19 @@ function UsedColorsPortalPopover({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchorRef, mounted]);
+  }, [mounted, updatePosition]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      updatePosition();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [children, mounted, updatePosition]);
 
   if (!mounted || !position) {
     return null;
@@ -73,13 +100,15 @@ function UsedColorsPortalPopover({
   return createPortal(
     <ToolbarPopover
       {...props}
+      ref={popoverRef}
       style={{
         ...props.style,
         position: "fixed",
         top: position.top,
         left: position.left,
         zIndex: 40,
-        transform: "translateY(-100%)",
+        transform: position.direction === "up" ? "translateY(-100%)" : "none",
+        ["--used-colors-popover-max-height" as string]: `${position.maxHeight}px`,
       }}
     >
       {children}

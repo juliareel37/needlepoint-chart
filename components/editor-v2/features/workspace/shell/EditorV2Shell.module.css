@@ -581,7 +581,8 @@
 
 .usedColorsMergeLibraryGrid {
   width: min(260px, calc(100vw - 120px));
-  height: min(220px, calc(100vh - 240px));
+  height: min(220px, var(--used-colors-popover-max-height, calc(100vh - 240px)));
+  max-height: var(--used-colors-popover-max-height, calc(100vh - 240px));
 }
 
 .usedColorsListCard {
