@@ -634,15 +634,22 @@
   cursor: pointer;
 }
 
-.usedColorsItem[data-selectable="true"]:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--surface-raised) 76%, var(--brand-100));
-  border-color: color-mix(in srgb, var(--brand-300) 54%, transparent);
+.usedColorsItem[data-selectable="true"]:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+.usedColorsItem[data-selectable="true"][data-selected="false"]:hover:not(:disabled) {
+  background: var(--button-ghost2-hover);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .usedColorsItem[data-selected="true"] {
-  background: color-mix(in srgb, var(--brand-100) 60%, var(--surface-raised));
-  border-color: color-mix(in srgb, var(--brand-400) 68%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-300) 45%, transparent);
+  background: var(--button-ghost2-active);
+  color: var(--button-ghost2-active-text);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .usedColorsItemButton {
@@ -665,6 +672,14 @@
 
 .usedColorsItemButton[data-selectable="true"] {
   cursor: pointer;
+}
+
+.usedColorsItem[data-selectable="true"] .usedColorsItemButton {
+  pointer-events: none;
+}
+
+.usedColorsItem[data-selectable="true"] .usedColorSwatchTriggerWrap {
+  pointer-events: none;
 }
 
 .usedColorSwatchTriggerWrap {
@@ -707,7 +722,6 @@
   z-index: 1;
   display: flex;
   /* flex-direction: column; */
-  /* gap: 12px; */
   padding: 10px 12px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--surface-card) 86%, var(--brand-100));
@@ -721,7 +735,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* gap: 12px; */
+  gap: 4px;
 }
 
 .usedColorsSelectionBarActions {

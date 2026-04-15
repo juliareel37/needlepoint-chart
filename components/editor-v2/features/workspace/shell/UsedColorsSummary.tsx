@@ -248,7 +248,22 @@ export function UsedColorsSummary({
                   className={styles.usedColorsItem}
                   data-selectable={isSelecting ? "true" : "false"}
                   data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
+                  role={isSelecting ? "button" : undefined}
+                  tabIndex={isSelecting ? 0 : undefined}
                   style={typographyStyles.p2}
+                  onClick={() => toggleColorSelection(entry.colorId)}
+                  onKeyDown={(event) => {
+                    if (!isSelecting) {
+                      return;
+                    }
+
+                    if (event.key !== "Enter" && event.key !== " ") {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    toggleColorSelection(entry.colorId);
+                  }}
                 >
                   <ToolbarAnchor
                     ref={
@@ -322,7 +337,12 @@ export function UsedColorsSummary({
                     data-selectable={isSelecting ? "true" : "false"}
                     data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                     style={typographyStyles.p2}
-                    onClick={() => toggleColorSelection(entry.colorId)}
+                    onClick={(event) => {
+                      if (isSelecting) {
+                        event.stopPropagation();
+                      }
+                      toggleColorSelection(entry.colorId);
+                    }}
                     disabled={!isSelecting}
                     aria-pressed={
                       isSelecting ? selectedColorIdSet.has(entry.colorId) : undefined

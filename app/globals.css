@@ -231,7 +231,7 @@
   --brand-300: #d08de3;
   --brand-400: #b36dc8;
   --brand-500: #954cad;
-  --brand-600: #732a8d;
+  --brand-600: #4c205d;
   
   --status-success-soft: #e5f6ea;
   --status-success-base: #4ea56b;
@@ -368,11 +368,11 @@
   --button-secondary-active-text: var(--neutral-0);
 
   --button-ghost-default: transparent;
-  --button-ghost-hover: var(--neutral-800);
+  --button-ghost-hover: var(--neutral-700);
   --button-ghost-active: var(--neutral-700);
 
   --button-ghost2-default: transparent;
-  --button-ghost2-hover: var(--neutral-800);
+  --button-ghost2-hover: var(--neutral-700);
   --button-ghost2-active: var(--brand-600);
   --button-ghost2-active-text: var(--brand-100);
 
