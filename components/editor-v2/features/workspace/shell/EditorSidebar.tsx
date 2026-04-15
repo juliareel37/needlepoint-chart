@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
@@ -12,7 +13,7 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
-import { ColorPanelPage } from "./panel-pages/ColorPanelPage";
+import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { TextPanelPage } from "./panel-pages/TextPanelPage";
 import { TracePanelPage } from "./panel-pages/TracePanelPage";
@@ -76,21 +77,40 @@ export function EditorSidebar({
   textPlacement,
   textViewportCenter,
 }: EditorSidebarProps) {
+  const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
+
+  useEffect(() => {
+    if (activeSection !== "color") {
+      setColorPanelView("overview");
+    }
+  }, [activeSection]);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarSurface}>
         <div className={styles.sidebarPanelHeader}>
-          <h2 className={styles.sidebarPanelTitle} style={typographyStyles.h4}>
-            {activeSection === "document"
-              ? "Document"
-              : activeSection === "color"
-                ? "Color"
-                : activeSection === "trace"
-                  ? "Trace"
-                  : activeSection === "text"
-                    ? "Text"
-                      : "Settings"}
-          </h2>
+          {activeSection === "color" && colorPanelView === "design-colors" ? (
+            <button
+              type="button"
+              className={styles.sidebarPanelBackTitle}
+              onClick={() => setColorPanelView("overview")}
+            >
+              <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+              <span style={typographyStyles.h4}>Design Colors</span>
+            </button>
+          ) : (
+            <h2 className={styles.sidebarPanelTitle} style={typographyStyles.h4}>
+              {activeSection === "document"
+                ? "Document"
+                : activeSection === "color"
+                  ? "Color"
+                  : activeSection === "trace"
+                    ? "Trace"
+                    : activeSection === "text"
+                      ? "Text"
+                        : "Settings"}
+            </h2>
+          )}
           <Button
             type="button"
             variant="ghostV2"
@@ -128,10 +148,10 @@ export function EditorSidebar({
             activeColorId={activeColorId}
             colorsById={colorsById}
             dispatch={dispatch}
+            onViewChange={setColorPanelView}
             palette={palette}
-            showGridlines={showGridlines}
-            showRuler={showRuler}
             usedColors={usedColors}
+            view={colorPanelView}
           />
         ) : null}
 

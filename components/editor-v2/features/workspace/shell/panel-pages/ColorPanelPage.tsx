@@ -1,13 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
-  Button,
-  Field,
-  FieldSelect,
+  ButtonIcon,
 } from "@/components/design-system";
-import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import type {
   EditorStore,
   PaletteColor,
@@ -19,17 +15,20 @@ import {
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
 import { UsedColorsSummary } from "../UsedColorsSummary";
+import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import styles from "../EditorV2Shell.module.css";
+
+export type ColorPanelView = "overview" | "design-colors";
 
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  onViewChange: (view: ColorPanelView) => void;
   palette: PaletteColor[];
-  showGridlines: boolean;
-  showRuler: boolean;
   usedColors: Array<{ colorId: string; count: number }>;
+  view: ColorPanelView;
 }
 
 export function ColorPanelPage({
@@ -37,104 +36,79 @@ export function ColorPanelPage({
   activeColorId,
   colorsById,
   dispatch,
+  onViewChange,
   palette,
-  showGridlines,
-  showRuler,
   usedColors,
+  view,
 }: ColorPanelPageProps) {
-  const [swapFromColorId, setSwapFromColorId] = useState("");
-  const [swapToColorId, setSwapToColorId] = useState("");
-  const canSwap =
-    swapFromColorId !== "" &&
-    swapToColorId !== "" &&
-    swapFromColorId !== swapToColorId;
-
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        <div className={styles.sidebarSubsection}>
-          <div className={styles.metaRow} style={typographyStyles.p2}>
-            <span>Active:</span>
-            <strong className={styles.activeColorValue}>
-              {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
-            </strong>
-          </div>
-          <ColorLibrary
-            activeColorId={activeColorId}
-            colors={palette}
-            onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
-          />
-        </div>
+        {view === "overview" ? (
+          <>
+            <div className={styles.sidebarSubsection}>
+              <div className={styles.metaRow} style={typographyStyles.p2}>
+                <span>Active:</span>
+                <strong className={styles.activeColorValue}>
+                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
+                </strong>
+              </div>
+              <ColorLibrary
+                activeColorId={activeColorId}
+                colors={palette}
+                onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+              />
+            </div>
 
-        <div className={styles.sidebarSubsection}>
-          <UsedColorsSummary
-            usedColors={usedColors}
-            colorsById={colorsById}
-            palette={palette}
-            onDeleteColors={(colorIds) => dispatch(createDeleteUsedColorsCommand(colorIds))}
-            onMergeColors={(fromColorIds, toColorId) =>
-              dispatch(createMergeUsedColorsCommand(fromColorIds, toColorId))
-            }
-          />
-        </div>
-
-        <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
-            <h3 style={typographyStyles.h5}>Swap color</h3>
-            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-              Change painted cells from one used color to a library color.
-            </p>
-          </div>
-          <Field label="Used color">
-            <FieldSelect
-              value={swapFromColorId}
-              onChange={(event) => setSwapFromColorId(event.target.value)}
-              disabled={usedColors.length === 0}
-            >
-              <option value="">Choose used color</option>
-              {usedColors.map((entry) => {
-                const color = colorsById[entry.colorId];
-
-                return (
-                  <option key={entry.colorId} value={entry.colorId}>
-                    {color ? `${color.name} (${color.code})` : entry.colorId} - {entry.count}
-                  </option>
-                );
-              })}
-            </FieldSelect>
-          </Field>
-          <Field label="Library color">
-            <FieldSelect
-              value={swapToColorId}
-              onChange={(event) => setSwapToColorId(event.target.value)}
-              disabled={palette.length === 0}
-            >
-              <option value="">Choose library color</option>
-              {palette.map((color) => (
-                <option key={color.id} value={color.id}>
-                  {color.name} ({color.code})
-                </option>
-              ))}
-            </FieldSelect>
-          </Field>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={!canSwap}
-            onClick={() => {
-              if (!canSwap) {
-                return;
+            <div className={styles.sidebarSubsection}>
+              <button
+                type="button"
+                className={styles.sidebarDetailCard}
+                onClick={() => onViewChange("design-colors")}
+              >
+                <span className={styles.sidebarDetailCardBody}>
+                  <span className={styles.sidebarDetailCardTitle} style={typographyStyles.h5}>
+                    Design Colors
+                  </span>
+                  <span className={styles.sidebarDetailCardHint} style={typographyStyles.p2}>
+                    {usedColors.length === 0
+                      ? "Review, replace, merge, or delete the colors used in this design."
+                      : `${usedColors.length} colors used in this design.`}
+                  </span>
+                  {usedColors.length > 0 ? (
+                    <span className={styles.sidebarDetailSwatchGrid} aria-hidden="true">
+                      {usedColors.map((entry) => (
+                        <span
+                          key={entry.colorId}
+                          className={styles.sidebarDetailSwatch}
+                          style={{
+                            backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
+                          }}
+                        />
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
+                <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className={styles.sidebarSubsection}>
+            <UsedColorsSummary
+              usedColors={usedColors}
+              colorsById={colorsById}
+              palette={palette}
+              onSwapColor={(fromColorId, toColorId) =>
+                dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }
-
-              dispatch(createSwapPaletteColorCommand(swapFromColorId, swapToColorId));
-              setSwapFromColorId("");
-              setSwapToColorId("");
-            }}
-          >
-            Swap color
-          </Button>
-        </div>
+              onDeleteColors={(colorIds) => dispatch(createDeleteUsedColorsCommand(colorIds))}
+              onMergeColors={(fromColorIds, toColorId) =>
+                dispatch(createMergeUsedColorsCommand(fromColorIds, toColorId))
+              }
+            />
+          </div>
+        )}
       </div>
     </section>
   );

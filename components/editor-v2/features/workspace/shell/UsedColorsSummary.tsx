@@ -92,12 +92,14 @@ export function UsedColorsSummary({
   usedColors,
   colorsById,
   palette,
+  onSwapColor,
   onDeleteColors,
   onMergeColors,
 }: {
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
   palette: PaletteColor[];
+  onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
 }) {
@@ -106,13 +108,25 @@ export function UsedColorsSummary({
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [mergeTargetColorId, setMergeTargetColorId] = useState<string | null>(null);
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
+  const [swapSourceColorId, setSwapSourceColorId] = useState<string | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
+  const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSelectedColorIds((current) =>
       current.filter((colorId) => usedColors.some((entry) => entry.colorId === colorId)),
     );
   }, [usedColors]);
+
+  useEffect(() => {
+    if (!swapSourceColorId) {
+      return;
+    }
+
+    if (!usedColors.some((entry) => entry.colorId === swapSourceColorId)) {
+      setSwapSourceColorId(null);
+    }
+  }, [swapSourceColorId, usedColors]);
 
   const selectedColorIdSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds]);
   const isSelecting = toolMode !== "idle";
@@ -141,6 +155,7 @@ export function UsedColorsSummary({
     setSelectedColorIds([]);
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
+    setSwapSourceColorId(null);
   };
 
   const clearSelection = () => {
@@ -148,6 +163,7 @@ export function UsedColorsSummary({
     setSelectedColorIds([]);
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
+    setSwapSourceColorId(null);
   };
 
   const toggleColorSelection = (colorId: string) => {
@@ -168,6 +184,7 @@ export function UsedColorsSummary({
     setSelectedColorIds([]);
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
+    setSwapSourceColorId(null);
   };
 
   return (
@@ -227,27 +244,94 @@ export function UsedColorsSummary({
             >
             {usedColors.map((entry) => (
               <li key={entry.colorId}>
-                <button
-                  type="button"
+                <div
                   className={styles.usedColorsItem}
                   data-selectable={isSelecting ? "true" : "false"}
                   data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                   style={typographyStyles.p2}
-                  onClick={() => toggleColorSelection(entry.colorId)}
-                  disabled={!isSelecting}
-                  aria-pressed={isSelecting ? selectedColorIdSet.has(entry.colorId) : undefined}
                 >
-                <span
-                  aria-hidden="true"
-                  className={styles.swatch}
-                  style={{
-                    backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
-                    justifyContent: "left",
-                  }}
-                />
-                <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
-                <span className={styles.usedColorsItemCount}>×{entry.count}</span>
-                </button>
+                  <ToolbarAnchor
+                    ref={
+                      swapSourceColorId === entry.colorId
+                        ? swapSourceAnchorRef
+                        : undefined
+                    }
+                    className={styles.usedColorSwatchTriggerWrap}
+                  >
+                    <button
+                      type="button"
+                      className={styles.usedColorSwatchButton}
+                      aria-label={
+                        isSelecting
+                          ? `${colorsById[entry.colorId]?.name ?? entry.colorId} color`
+                          : `Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`
+                      }
+                      aria-haspopup={isSelecting ? undefined : "dialog"}
+                      aria-expanded={
+                        !isSelecting && swapSourceColorId === entry.colorId
+                          ? true
+                          : undefined
+                      }
+                      disabled={isSelecting}
+                      onClick={() => {
+                        if (isSelecting) {
+                          return;
+                        }
+
+                        setSwapSourceColorId((current) =>
+                          current === entry.colorId ? null : entry.colorId,
+                        );
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={styles.swatch}
+                        style={{
+                          backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
+                          justifyContent: "left",
+                        }}
+                      />
+                    </button>
+
+                    {!isSelecting && swapSourceColorId === entry.colorId ? (
+                      <UsedColorsPortalPopover
+                        anchorRef={swapSourceAnchorRef}
+                        role="dialog"
+                        aria-label={`Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`}
+                        className={styles.usedColorsMergePopover}
+                        style={{ whiteSpace: "normal" }}
+                      >
+                        <ColorLibrary
+                          activeColorId={entry.colorId}
+                          className={styles.usedColorsMergeLibraryGrid}
+                          colors={palette}
+                          onColorSelect={(colorId) => {
+                            if (colorId !== entry.colorId) {
+                              onSwapColor(entry.colorId, colorId);
+                            }
+                            setSwapSourceColorId(null);
+                          }}
+                        />
+                      </UsedColorsPortalPopover>
+                    ) : null}
+                  </ToolbarAnchor>
+
+                  <button
+                    type="button"
+                    className={styles.usedColorsItemButton}
+                    data-selectable={isSelecting ? "true" : "false"}
+                    data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
+                    style={typographyStyles.p2}
+                    onClick={() => toggleColorSelection(entry.colorId)}
+                    disabled={!isSelecting}
+                    aria-pressed={
+                      isSelecting ? selectedColorIdSet.has(entry.colorId) : undefined
+                    }
+                  >
+                    <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
+                    <span className={styles.usedColorsItemCount}>×{entry.count}</span>
+                  </button>
+                </div>
               </li>
             ))}
             </ul>
