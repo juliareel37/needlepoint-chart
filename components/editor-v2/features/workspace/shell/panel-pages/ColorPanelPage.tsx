@@ -14,6 +14,8 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import {
   createSetActiveColorCommand,
+  createDeleteUsedColorsCommand,
+  createMergeUsedColorsCommand,
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
 import { UsedColorsSummary } from "../UsedColorsSummary";
@@ -65,7 +67,15 @@ export function ColorPanelPage({
         </div>
 
         <div className={styles.sidebarSubsection}>
-          <UsedColorsSummary usedColors={usedColors} colorsById={colorsById} />
+          <UsedColorsSummary
+            usedColors={usedColors}
+            colorsById={colorsById}
+            palette={palette}
+            onDeleteColors={(colorIds) => dispatch(createDeleteUsedColorsCommand(colorIds))}
+            onMergeColors={(fromColorIds, toColorId) =>
+              dispatch(createMergeUsedColorsCommand(fromColorIds, toColorId))
+            }
+          />
         </div>
 
         <div className={styles.sidebarSubsection}>

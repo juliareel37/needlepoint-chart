@@ -28,6 +28,8 @@ export type EditorCommandKind =
   | "grid.erase"
   | "grid.clear"
   | "palette.swapColor"
+  | "palette.deleteUsedColors"
+  | "palette.mergeUsedColors"
   | "selection.start"
   | "selection.update"
   | "selection.commit"
@@ -97,6 +99,16 @@ export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", object>;
 export type SwapPaletteColorCommand = BaseEditorCommand<
   "palette.swapColor",
   { fromColorId: string; toColorId: string }
+>;
+
+export type DeleteUsedColorsCommand = BaseEditorCommand<
+  "palette.deleteUsedColors",
+  { colorIds: string[] }
+>;
+
+export type MergeUsedColorsCommand = BaseEditorCommand<
+  "palette.mergeUsedColors",
+  { fromColorIds: string[]; toColorId: string }
 >;
 
 export type StartSelectionCommand = BaseEditorCommand<
@@ -289,6 +301,8 @@ export type EditorCommand =
   | EraseCellsCommand
   | ClearCanvasCommand
   | SwapPaletteColorCommand
+  | DeleteUsedColorsCommand
+  | MergeUsedColorsCommand
   | StartSelectionCommand
   | UpdateSelectionCommand
   | CommitSelectionCommand

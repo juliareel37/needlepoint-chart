@@ -12,6 +12,8 @@ import {
   updateMirrorCommandHandler,
 } from "./handlers/mirror";
 import { openPanelCommandHandler } from "./handlers/openPanel";
+import { paletteDeleteUsedColorsCommandHandler } from "./handlers/paletteDeleteUsedColors";
+import { paletteMergeUsedColorsCommandHandler } from "./handlers/paletteMergeUsedColors";
 import { paletteSwapColorCommandHandler } from "./handlers/paletteSwapColor";
 import { setGridlinesVisibleCommandHandler } from "./handlers/setGridlinesVisible";
 import { setPreviewModeCommandHandler } from "./handlers/setPreviewMode";
@@ -68,6 +70,8 @@ export const commandHandlers: EditorCommandHandler[] = [
   cancelMirrorCommandHandler,
   doneMirrorCommandHandler,
   paletteSwapColorCommandHandler,
+  paletteDeleteUsedColorsCommandHandler,
+  paletteMergeUsedColorsCommandHandler,
   beginTextPlacementCommandHandler,
   updateTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,

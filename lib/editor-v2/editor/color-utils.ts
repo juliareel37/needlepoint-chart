@@ -50,3 +50,41 @@ export function findClosestPaletteColorId(
   return bestId;
 }
 
+export function findClosestColorIdFromCandidates(
+  colors: Record<string, PaletteColor>,
+  candidateIds: string[],
+  targetColorId: string,
+): string | null {
+  const target = colors[targetColorId];
+  const targetRgb = target ? hexToRgb(target.hex) : null;
+  if (!targetRgb) {
+    return null;
+  }
+
+  let bestId: string | null = null;
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (const candidateId of candidateIds) {
+    if (candidateId === targetColorId) {
+      continue;
+    }
+
+    const candidate = colors[candidateId];
+    const candidateRgb = candidate ? hexToRgb(candidate.hex) : null;
+    if (!candidateRgb) {
+      continue;
+    }
+
+    const dr = candidateRgb.r - targetRgb.r;
+    const dg = candidateRgb.g - targetRgb.g;
+    const db = candidateRgb.b - targetRgb.b;
+    const dist = dr * dr + dg * dg + db * db;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestId = candidateId;
+    }
+  }
+
+  return bestId;
+}

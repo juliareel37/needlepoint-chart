@@ -145,6 +145,29 @@ export function createSwapPaletteColorCommand(
   );
 }
 
+export function createDeleteUsedColorsCommand(
+  colorIds: string[],
+): EditorCommand {
+  return createCommand(
+    "palette.deleteUsedColors",
+    { colorIds },
+    "toolbar",
+    { mode: "push", label: "Delete Colors" },
+  );
+}
+
+export function createMergeUsedColorsCommand(
+  fromColorIds: string[],
+  toColorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.mergeUsedColors",
+    { fromColorIds, toColorId },
+    "toolbar",
+    { mode: "push", label: "Merge Colors" },
+  );
+}
+
 export function createSelectionStartCommand(point: SelectionPoint): EditorCommand {
   return createCommand(
     "selection.start",
