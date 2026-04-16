@@ -467,6 +467,30 @@
   height: min(250px, calc(100vh - 180px));
 }
 
+.libraryPopoverSwatchTrigger {
+  background: transparent !important;
+}
+
+.libraryPopoverSwatch {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+  transform: scale(1);
+}
+
+.libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch,
+.libraryPopoverSwatchTrigger:focus-visible .libraryPopoverSwatch,
+.libraryPopoverSwatchTrigger[data-active="true"] .libraryPopoverSwatch {
+  transform: scale(1.14);
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 0 0 3px rgba(15, 23, 42, 0.14);
+}
+
 .historyButton {
   min-width: 36px;
   min-height: 28px;
@@ -838,11 +862,40 @@
   cursor: default;
 }
 
+.usedColorSwatchSwapIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.usedColorSwatchSwapIcon :global(.icon) {
+  width: 14px;
+  height: 14px;
+}
+
+.usedColorSwatchSwapIcon :global(.glyph) {
+  background: currentColor;
+}
+
 .usedColorSwatchButton:hover:not(:disabled) .swatch,
 .usedColorSwatchButton:focus-visible .swatch {
-  transform: scale(1.06);
-  border-color: color-mix(in srgb, var(--brand-400) 55%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-100) 80%, transparent);
+  transform: scale(1.14);
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 0 0 3px rgba(15, 23, 42, 0.14);
+}
+
+.usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon,
+.usedColorSwatchButton:focus-visible .usedColorSwatchSwapIcon,
+.usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSwapIcon {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .usedColorsItemCount {

@@ -387,6 +387,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     dispatch={dispatch}
                     gridMetrics={gridMetrics}
+                    palette={palette}
                     placement={textPlacement}
                   />
                 ) : (

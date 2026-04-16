@@ -41,15 +41,18 @@ import styles from "./EditorV2Shell.module.css";
 function FloatingToolbarPortalPopover({
   anchorRef,
   children,
+  onRequestClose,
   subtoolbar = false,
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
   anchorRef: React.RefObject<HTMLDivElement | null>;
+  onRequestClose?: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(
     null,
   );
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -71,7 +74,7 @@ function FloatingToolbarPortalPopover({
       const rect = anchor.getBoundingClientRect();
       setPosition({
         top: rect.bottom + 8,
-        left: rect.left + rect.width / 2,
+        left: rect.left - 12,
       });
     }
 
@@ -86,6 +89,29 @@ function FloatingToolbarPortalPopover({
     };
   }, [anchorRef, mounted]);
 
+  useEffect(() => {
+    if (!mounted || !onRequestClose) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target) || anchorRef.current?.contains(target)) {
+        return;
+      }
+
+      onRequestClose?.();
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [anchorRef, mounted, onRequestClose]);
+
   if (!mounted || !position) {
     return null;
   }
@@ -93,6 +119,7 @@ function FloatingToolbarPortalPopover({
   return createPortal(
     <ToolbarPopover
       {...props}
+      ref={popoverRef}
       subtoolbar={subtoolbar}
       style={{
         ...props.style,
@@ -100,6 +127,7 @@ function FloatingToolbarPortalPopover({
         top: position.top,
         left: position.left,
         zIndex: 40,
+        transform: "none",
       }}
     >
       {children}
@@ -364,18 +392,23 @@ export function FloatingToolbar({
             aria-pressed={colorLibraryOpen}
             aria-label="Open color library"
             title="Open color library"
+            className={styles.libraryPopoverSwatchTrigger}
             onClick={() => {
               setColorLibraryOpen((current) => !current);
               setDrawOpen(false);
               closeImageMenu();
             }}
           >
-            <ToolbarSwatch color={activeSwatchColor} />
+            <ToolbarSwatch
+              color={activeSwatchColor}
+              className={styles.libraryPopoverSwatch}
+            />
           </ToolbarButton>
 
           {colorLibraryOpen ? (
             <FloatingToolbarPortalPopover
               anchorRef={colorAnchorRef}
+              onRequestClose={closeColorLibrary}
               role="dialog"
               aria-label="Color library"
               className={styles.colorLibraryPopover}

@@ -19,8 +19,23 @@ import {
   ToolbarSwatch,
 } from "@/components/design-system/Toolbar";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
-import { findClosestColorIdFromCandidates } from "@/lib/editor-v2/editor/color-utils";
+import {
+  findClosestColorIdFromCandidates,
+  hexToRgb,
+} from "@/lib/editor-v2/editor/color-utils";
 import styles from "./EditorV2Shell.module.css";
+
+function getSwatchIconColor(hex: string) {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return "#ffffff";
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  return luminance > 0.75 ? "#111111" : "#ffffff";
+}
 
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge";
@@ -32,10 +47,12 @@ type UsedColorsSuccessNotification = {
 function UsedColorsPortalPopover({
   anchorRef,
   children,
+  onRequestClose,
   preferredDirection = "auto",
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
   anchorRef: React.RefObject<HTMLDivElement | null>;
+  onRequestClose?: () => void;
   preferredDirection?: "auto" | "up" | "down";
 }) {
   const [mounted, setMounted] = useState(false);
@@ -62,20 +79,24 @@ function UsedColorsPortalPopover({
     const gap = 10;
     const viewportPadding = 12;
     const rect = anchor.getBoundingClientRect();
-    const popoverHeight = popoverRef.current?.offsetHeight ?? 0;
     const spaceAbove = Math.max(rect.top - viewportPadding, 0);
     const spaceBelow = Math.max(window.innerHeight - rect.bottom - viewportPadding, 0);
+    const popoverHeight = popoverRef.current?.scrollHeight ?? 0;
     const direction =
       preferredDirection === "auto"
-        ? spaceBelow < popoverHeight && spaceAbove > spaceBelow
-          ? "up"
-          : "down"
+        ? popoverHeight > 0
+          ? popoverHeight <= spaceBelow || spaceBelow >= spaceAbove
+            ? "down"
+            : "up"
+          : spaceBelow >= spaceAbove
+            ? "down"
+            : "up"
         : preferredDirection;
     const availableSpace = direction === "up" ? spaceAbove : spaceBelow;
 
     setPosition({
       top: direction === "up" ? rect.top - gap : rect.bottom + gap,
-      left: rect.left,
+      left: rect.left - 12,
       direction,
       maxHeight: Math.max(availableSpace - gap, 140),
     });
@@ -108,6 +129,29 @@ function UsedColorsPortalPopover({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [children, mounted, updatePosition]);
+
+  useEffect(() => {
+    if (!mounted || !onRequestClose) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target) || anchorRef.current?.contains(target)) {
+        return;
+      }
+
+      onRequestClose?.();
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [anchorRef, mounted, onRequestClose]);
 
   if (!mounted || !position) {
     return null;
@@ -316,7 +360,7 @@ export function UsedColorsSummary({
       <div className={styles.usedColorsBlock}>
       <div className={styles.usedColorsHeaderRow}>
         <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-          Design Colors
+          {`Colors in canvas (${usedColors.length})`}
         </p>
         {isSelecting ? (
           <Button
@@ -330,7 +374,7 @@ export function UsedColorsSummary({
           >
             <ButtonIcon icon="/icons/lucide/x.svg" />
           </Button>
-        ) : (
+        ) : usedColors.length > 0 ? (
           <div className={styles.usedColorsToolButtons}>
             <Button
               type="button"
@@ -342,7 +386,7 @@ export function UsedColorsSummary({
               Select
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {usedColors.length === 0 ? (
@@ -434,19 +478,34 @@ export function UsedColorsSummary({
                         );
                       }}
                     >
+                      {(() => {
+                        const swatchColor = colorsById[entry.colorId]?.hex ?? "#ffffff";
+
+                        return (
                       <span
                         aria-hidden="true"
                         className={styles.swatch}
                         style={{
-                          backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
-                          justifyContent: "left",
+                          backgroundColor: swatchColor,
                         }}
-                      />
+                      >
+                        {!isSelecting ? (
+                          <span
+                            className={styles.usedColorSwatchSwapIcon}
+                            style={{ color: getSwatchIconColor(swatchColor) }}
+                          >
+                            <ButtonIcon icon="/icons/lucide/swap.svg" />
+                          </span>
+                        ) : null}
+                      </span>
+                        );
+                      })()}
                     </button>
 
                     {!isSelecting && swapSourceColorId === entry.colorId ? (
                       <UsedColorsPortalPopover
                         anchorRef={swapSourceAnchorRef}
+                        onRequestClose={() => setSwapSourceColorId(null)}
                         role="dialog"
                         aria-label={`Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`}
                         className={styles.usedColorsMergePopover}
@@ -549,6 +608,7 @@ export function UsedColorsSummary({
                             swatch
                             active={mergePickerOpen}
                             aria-pressed={mergePickerOpen}
+                            className={styles.libraryPopoverSwatchTrigger}
                             aria-label={
                               mergeTargetColorId
                                 ? `Merge target ${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
@@ -562,6 +622,7 @@ export function UsedColorsSummary({
                             onClick={() => setMergePickerOpen((current) => !current)}
                           >
                             <ToolbarSwatch
+                              className={styles.libraryPopoverSwatch}
                               color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
                             />
                           </ToolbarButton>
@@ -569,6 +630,7 @@ export function UsedColorsSummary({
                           {mergePickerOpen ? (
                             <UsedColorsPortalPopover
                               anchorRef={mergeTargetAnchorRef}
+                              onRequestClose={() => setMergePickerOpen(false)}
                               preferredDirection="up"
                               role="dialog"
                               aria-label="Merge target color library"
