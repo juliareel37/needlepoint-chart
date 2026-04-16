@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon, Field, Slider, Toggle } from "@/components/design-system";
+import { Button, ButtonIcon, Field, Modal, Slider, Toggle } from "@/components/design-system";
 import type {
   EditorStore,
   TraceBlendMode,
@@ -40,10 +40,12 @@ export function TraceControls({
     userOverrode: boolean;
   } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
+  const [removeConfirmationOpen, setRemoveConfirmationOpen] = useState(false);
   const [traceUploadStatus, setTraceUploadStatus] = useState<
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
+  const traceFileName = trace ? getTraceDisplayName(trace.assetUrl) : null;
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
@@ -230,27 +232,64 @@ export function TraceControls({
           </Button>
         </div>
       ) : (
-        <div className={styles.traceActionRow}>
-          <Button
-            type="button"
-            variant="secondary"
-            className={styles.traceActionButton}
-            disabled={traceUploadStatus === "uploading"}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ButtonIcon icon="/icons/lucide/swap.svg" />
-            {traceUploadStatus === "uploading" ? "Uploading..." : "Replace"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className={styles.traceActionButton}
-            onClick={() => dispatch(createRemoveTraceCommand())}
-          >
-            <ButtonIcon icon="/icons/lucide/trash.svg" />
-            Remove
-          </Button>
-        </div>
+        <TraceSection title="Uploaded File">
+          <div className={styles.traceAttachmentSummary}>
+            <button
+              type="button"
+              className={styles.traceAttachmentButton}
+              disabled={traceUploadStatus === "uploading"}
+              aria-label={
+                traceUploadStatus === "uploading"
+                  ? "Uploading replacement trace image"
+                  : "Replace trace image"
+              }
+              title={
+                traceUploadStatus === "uploading"
+                  ? "Uploading replacement..."
+                  : "Replace image"
+              }
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <span className={styles.traceAttachmentThumbFrame}>
+                <img
+                  src={trace.assetUrl}
+                  alt={traceFileName ? `Trace image ${traceFileName}` : "Trace image"}
+                  className={styles.traceAttachmentThumb}
+                />
+                <span className={styles.traceAttachmentThumbOverlay} aria-hidden="true">
+                  <ButtonIcon icon="/icons/lucide/swap.svg" />
+                </span>
+              </span>
+              <span className={styles.traceAttachmentMeta}>
+                <span
+                  className={styles.traceAttachmentLabel}
+                  style={typographyStyles.s}
+                >
+                  {traceUploadStatus === "uploading"
+                    ? "Uploading replacement..."
+                    : null}
+                </span>
+                <span
+                  className={styles.traceAttachmentName}
+                  style={typographyStyles.p2}
+                  title={traceFileName ?? undefined}
+                >
+                  {traceFileName}
+                </span>
+              </span>
+            </button>
+            <Button
+              type="button"
+              variant="ghost"
+              className={styles.traceAttachmentRemoveButton}
+              aria-label="Remove trace image"
+              title="Remove image"
+              onClick={() => setRemoveConfirmationOpen(true)}
+            >
+              <ButtonIcon icon="/icons/lucide/trash.svg" />
+            </Button>
+          </div>
+        </TraceSection>
       )}
 
       {traceUploadStatus === "error" ? (
@@ -274,12 +313,26 @@ export function TraceControls({
         style={{ display: "none" }}
       />
 
+      <Modal
+        isOpen={removeConfirmationOpen}
+        title="Remove image?"
+        description="Your image will be removed from the design. This does not affect your painted cells."
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel="Remove image"
+        confirmVariant="destructive"
+        onDismiss={() => setRemoveConfirmationOpen(false)}
+        onConfirm={() => {
+          setRemoveConfirmationOpen(false);
+          dispatch(createRemoveTraceCommand());
+        }}
+      />
+
       {trace ? (
         <>
-          <TraceSection
-            title="Positioning"
-            tone="neutral"
-          >
+          <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+          <TraceSection title="Positioning">
             {positioningEnabled ? (
               <div className={styles.panelRow}>
                 <Button
@@ -311,10 +364,9 @@ export function TraceControls({
             )}
           </TraceSection>
 
-          <TraceSection
-            title="Visibility"
-            tone="neutral"
-          >
+          <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+          <TraceSection title="Visibility">
             <Toggle
               aria-label="Show image"
               checked={trace.visible}
@@ -458,6 +510,29 @@ async function uploadTraceFile(file: File): Promise<string> {
   return uploaded.url;
 }
 
+function getTraceDisplayName(assetUrl: string): string {
+  const fallbackName = "Trace image";
+
+  try {
+    const url = new URL(assetUrl);
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+    const rawName = pathSegments[pathSegments.length - 1];
+
+    if (!rawName) {
+      return fallbackName;
+    }
+
+    const decodedName = decodeURIComponent(rawName);
+    const match = decodedName.match(
+      /^editor-v2-trace-\d+-[0-9a-f-]+-(.+)$/i,
+    );
+
+    return match?.[1] || decodedName;
+  } catch {
+    return fallbackName;
+  }
+}
+
 function BlendModeButton({
   active,
   disabled = false,
@@ -499,22 +574,13 @@ function TraceSection({
   children,
   hint,
   title,
-  tone,
 }: {
   children: ReactNode;
   hint?: string;
   title: string;
-  tone: "brand" | "neutral";
 }) {
   return (
-    <section
-      className={[
-        styles.traceSection,
-        tone === "brand" ? styles.traceSectionBrand : styles.traceSectionNeutral,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <section className={styles.traceSection}>
       <div className={styles.traceSectionHeader}>
         <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>
           {title}

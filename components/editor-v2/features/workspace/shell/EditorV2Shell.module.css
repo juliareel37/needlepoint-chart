@@ -1019,18 +1019,6 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--ui-border-subtle);
-}
-
-.traceSectionBrand {
-  background: var(--surface-card);
-  border-color: color-mix(in srgb, var(--brand-primary) 28%, var(--ui-border-subtle));
-}
-
-.traceSectionNeutral {
-  background: var(--surface-card);
 }
 
 .traceSectionHeader {
@@ -1054,14 +1042,144 @@
   gap: 12px;
 }
 
-.traceActionRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.traceSectionDivider {
+  width: 100%;
+  height: 1px;
+  background: var(--ui-border-subtle);
+}
+
+.traceAttachmentSummary {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.traceActionButton {
+.traceAttachmentButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.traceAttachmentButton:disabled {
+  cursor: progress;
+}
+
+.traceAttachmentButton:focus-visible {
+  outline: none;
+}
+
+.traceAttachmentThumbFrame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-sidebar) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 72%, transparent);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transform: scale(1);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.traceAttachmentThumb {
+  display: block;
   width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 160ms ease;
+}
+
+.traceAttachmentThumbOverlay {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 1;
+  transform: scale(0.96);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  pointer-events: none;
+}
+
+.traceAttachmentThumbOverlay :global(.icon) {
+  width: 16px;
+  height: 16px;
+}
+
+.traceAttachmentThumbOverlay :global(.glyph) {
+  background: currentColor;
+}
+
+.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbFrame,
+.traceAttachmentButton:focus-visible .traceAttachmentThumbFrame {
+  transform: scale(1.08);
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumb,
+.traceAttachmentButton:focus-visible .traceAttachmentThumb {
+  filter: brightness(0.68);
+}
+
+.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbOverlay,
+.traceAttachmentButton:focus-visible .traceAttachmentThumbOverlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.traceAttachmentMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.traceAttachmentLabel {
+  color: var(--text-secondary);
+}
+
+.traceAttachmentName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.traceAttachmentRemoveButton {
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--text-primary) 58%, transparent);
+}
+
+.traceAttachmentRemoveButton:hover:not(:disabled),
+.traceAttachmentRemoveButton:focus-visible {
+  color: var(--text-primary);
 }
 
 .traceOpacityControls {

@@ -111,7 +111,7 @@ export function EditorSidebar({
                 : activeSection === "color"
                   ? "Color"
                   : activeSection === "trace"
-                    ? "Trace"
+                    ? "Image Reference"
                     : activeSection === "text"
                       ? "Text"
                         : "Settings"}
