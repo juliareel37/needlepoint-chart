@@ -46,6 +46,9 @@ export function EditorV2Page() {
   const [selectedStorageId, setSelectedStorageId] = useState("");
   const [setupModalOpen, setSetupModalOpen] = useState(true);
   const [canvasLoadingKey, setCanvasLoadingKey] = useState<string | null>(null);
+  const [savedDocumentsErrorMessage, setSavedDocumentsErrorMessage] =
+    useState<string | null>(null);
+  const [setupErrorMessage, setSetupErrorMessage] = useState<string | null>(null);
   const isInitialSession =
     designConfig.kind === "new" &&
     designConfig.instanceKey === INITIAL_DESIGN_CONFIG.instanceKey &&
@@ -60,6 +63,8 @@ export function EditorV2Page() {
 
     if (!isSignedIn) {
       setSavedDocuments([]);
+      setSavedDocumentsErrorMessage(null);
+      setSetupErrorMessage(null);
       setCurrentStorageId("");
       setSelectedStorageId("");
       return;
@@ -69,11 +74,15 @@ export function EditorV2Page() {
       .then((documents) => {
         if (!cancelled) {
           setSavedDocuments(documents);
+          setSavedDocumentsErrorMessage(null);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
           setSavedDocuments([]);
+          setSavedDocumentsErrorMessage(
+            getErrorMessage(error, "Try signing in again or refreshing the page."),
+          );
         }
       });
 
@@ -121,6 +130,7 @@ export function EditorV2Page() {
           const savedRecord = await saveEditorV2Document(document, storageId);
           setCurrentStorageId(savedRecord.storageId);
           setSelectedStorageId(savedRecord.storageId);
+          setSetupErrorMessage(null);
           setSavedDocuments((existing) => {
             const nextRecord: SavedEditorV2DocumentRecord = {
               storageId: savedRecord.storageId,
@@ -143,6 +153,7 @@ export function EditorV2Page() {
           const document = await loadSavedEditorV2Document(record.storageId);
           setCurrentStorageId(record.storageId);
           setSelectedStorageId(record.storageId);
+          setSetupErrorMessage(null);
           setDesignConfig({
             kind: "loaded",
             document,
@@ -163,10 +174,13 @@ export function EditorV2Page() {
             draftWidth={draftWidth}
             draftWidthInches={draftWidthInches}
             hasSavedDesignAccess={Boolean(isLoaded && isSignedIn)}
+            onDismissSavedDocumentsError={() => setSavedDocumentsErrorMessage(null)}
+            onDismissSetupError={() => setSetupErrorMessage(null)}
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={(config) => {
               setCurrentStorageId("");
               setSelectedStorageId("");
+              setSetupErrorMessage(null);
               setDesignConfig(config);
               setSetupModalOpen(false);
             }}
@@ -179,24 +193,42 @@ export function EditorV2Page() {
             onLoadSavedDesign={(storageId) => {
               const instanceKey = `loaded_${storageId}_${Date.now()}`;
               setCanvasLoadingKey(instanceKey);
-              void loadSavedEditorV2Document(storageId).then((document) => {
-                setCurrentStorageId(storageId);
-                setSelectedStorageId(storageId);
-                setDesignConfig({
-                  kind: "loaded",
-                  document,
-                  storageId,
-                  instanceKey,
+              void loadSavedEditorV2Document(storageId)
+                .then((document) => {
+                  setCurrentStorageId(storageId);
+                  setSelectedStorageId(storageId);
+                  setSetupErrorMessage(null);
+                  setDesignConfig({
+                    kind: "loaded",
+                    document,
+                    storageId,
+                    instanceKey,
+                  });
+                  setSetupModalOpen(false);
+                })
+                .catch((error) => {
+                  setCanvasLoadingKey(null);
+                  setSetupErrorMessage(
+                    getErrorMessage(error, "Try again in a moment."),
+                  );
                 });
-                setSetupModalOpen(false);
-              });
             }}
             savedDocuments={savedDocuments}
+            savedDocumentsErrorMessage={savedDocumentsErrorMessage}
             selectedStorageId={selectedStorageId}
             setSelectedStorageId={setSelectedStorageId}
+            setupErrorMessage={setupErrorMessage}
           />
         }
       />
     </EditorV2Providers>
   );
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
 }

@@ -7,6 +7,7 @@ import {
   ButtonIcon,
   Field,
   FieldInput,
+  Notification,
   SingleSelectDropdown,
 } from "@/components/design-system";
 import {
@@ -48,6 +49,8 @@ interface EditorV2SetupModalProps {
   draftWidth: string;
   draftWidthInches: string;
   hasSavedDesignAccess: boolean;
+  onDismissSavedDocumentsError: () => void;
+  onDismissSetupError: () => void;
   onClose: () => void;
   onCreateDesign: (config: EditorV2DesignConfigNew) => void;
   onDraftHeightChange: (value: string) => void;
@@ -58,8 +61,10 @@ interface EditorV2SetupModalProps {
   onDraftWidthInchesChange: (value: string) => void;
   onLoadSavedDesign: (storageId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsErrorMessage: string | null;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
+  setupErrorMessage: string | null;
 }
 
 export function EditorV2SetupModal({
@@ -71,6 +76,8 @@ export function EditorV2SetupModal({
   draftWidth,
   draftWidthInches,
   hasSavedDesignAccess,
+  onDismissSavedDocumentsError,
+  onDismissSetupError,
   onClose,
   onCreateDesign,
   onDraftHeightChange,
@@ -81,8 +88,10 @@ export function EditorV2SetupModal({
   onDraftWidthInchesChange,
   onLoadSavedDesign,
   savedDocuments,
+  savedDocumentsErrorMessage,
   selectedStorageId,
   setSelectedStorageId,
+  setupErrorMessage,
 }: EditorV2SetupModalProps) {
   const inchSizing = resolveInchSizing({
     widthInches: draftWidthInches,
@@ -219,9 +228,12 @@ export function EditorV2SetupModal({
                 </Field>
 
                 {inchSizing.error ? (
-                  <p className={styles.validation} style={typographyStyles.p2}>
-                    {inchSizing.error}
-                  </p>
+                  <Notification
+                    tone="destructive"
+                    title="Check your dimensions"
+                    description={inchSizing.error}
+                    layout="compact"
+                  />
                 ) : (
                   <p className={styles.helper} style={typographyStyles.p2}>
                     Grid size: {inchSizing.width} x {inchSizing.height} cells
@@ -294,6 +306,26 @@ export function EditorV2SetupModal({
                 Load a saved project from this browser.
               </p> */}
             </div>
+
+            {savedDocumentsErrorMessage ? (
+              <Notification
+                tone="destructive"
+                title="Couldn't load your saved designs"
+                description={savedDocumentsErrorMessage}
+                layout="compact"
+                onDismiss={onDismissSavedDocumentsError}
+              />
+            ) : null}
+
+            {setupErrorMessage ? (
+              <Notification
+                tone="destructive"
+                title="Couldn't open saved design"
+                description={setupErrorMessage}
+                layout="compact"
+                onDismiss={onDismissSetupError}
+              />
+            ) : null}
 
             {hasSavedDesignAccess ? (
               <>

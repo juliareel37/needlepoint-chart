@@ -263,3 +263,12 @@
   gap: 4px;
   flex-wrap: nowrap;
 }
+
+
+@media (max-width: 1080px) {
+
+  .group {
+    gap: 4px;
+  }
+
+}

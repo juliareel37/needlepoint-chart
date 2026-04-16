@@ -20,7 +20,10 @@ import type {
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
-import type { SaveButtonState } from "../../../app/EditorV2Workspace";
+import type {
+  EditorV2ErrorNotification,
+  SaveButtonState,
+} from "../../../app/EditorV2Workspace";
 import {
   createSetActiveSidebarSectionCommand,
   createPanViewportCommand,
@@ -43,11 +46,14 @@ const EXPANDED_SIDEBAR_WIDTH = 320;
 const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
+const ERROR_NOTIFICATION_DURATION_MS = 8000;
 
 export function EditorV2Shell({
   canvasLoading,
+  errorNotification,
   hasSavedDesignAccess,
   onCanvasReady,
+  onDismissErrorNotification,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
@@ -60,8 +66,10 @@ export function EditorV2Shell({
   setupModalOpen,
 }: {
   canvasLoading: boolean;
+  errorNotification: EditorV2ErrorNotification | null;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
+  onDismissErrorNotification: () => void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
@@ -292,6 +300,18 @@ export function EditorV2Shell({
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
   }, []);
 
+  useEffect(() => {
+    if (!errorNotification) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      onDismissErrorNotification();
+    }, ERROR_NOTIFICATION_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [errorNotification, onDismissErrorNotification]);
+
   return (
     <main className={styles.shell}>
       {headerAutosaveTarget
@@ -313,6 +333,25 @@ export function EditorV2Shell({
                   tone="success"
                   title="Design saved"
                   onDismiss={() => setSaveNotificationVisible(false)}
+                />
+              </div>
+            </div>,
+            window.document.body,
+          )
+        : null}
+      {errorNotification
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div
+                className={styles.editorNotificationStack}
+                data-auto-dismiss="true"
+                style={{ animationDuration: `${ERROR_NOTIFICATION_DURATION_MS}ms` }}
+              >
+                <Notification
+                  tone="destructive"
+                  title={errorNotification.title}
+                  description={errorNotification.description}
+                  onDismiss={onDismissErrorNotification}
                 />
               </div>
             </div>,
