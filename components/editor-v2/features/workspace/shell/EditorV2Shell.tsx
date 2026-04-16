@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   getActiveColor,
   getActiveColorId,
@@ -27,6 +28,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { Notification } from "@/components/design-system";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
 import { SelectionSessionToolbar } from "./SelectionSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
@@ -93,6 +95,7 @@ export function EditorV2Shell({
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
+  const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const gridMetrics = useMemo(
     () =>
       createGridWorldMetrics(
@@ -256,8 +259,41 @@ export function EditorV2Shell({
     }
   }, [activeSidebarSection, dispatch, sidebarCollapsed, traceRepositionActive]);
 
+  useEffect(() => {
+    if (!saveMessage || saveMessage.startsWith("Couldn't")) {
+      setSaveNotificationVisible(false);
+      return;
+    }
+
+    setSaveNotificationVisible(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setSaveNotificationVisible(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, 
+  [saveMessage]);
+
   return (
     <main className={styles.shell}>
+      {saveNotificationVisible
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div className={styles.editorNotificationStack} 
+              data-auto-dismiss="true"
+              >
+                <Notification
+                  tone="success"
+                  title="Design saved"
+                  onDismiss={() => setSaveNotificationVisible(false)}
+                />
+              </div>
+            </div>,
+            window.document.body,
+          )
+        : null}
+
       <div
         className={styles.shellContent}
         data-modal-open={setupModalOpen ? "true" : "false"}

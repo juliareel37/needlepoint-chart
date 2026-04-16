@@ -499,6 +499,62 @@
   gap: 10px;
 }
 
+.editorNotificationOverlay {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  z-index: 9999;
+  width: min(520px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.editorNotificationOverlayTop {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 9999;
+  width: min(300px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.editorNotificationStack {
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.editorNotificationStack[data-auto-dismiss="true"] {
+  animation: editorNotificationFadeOut 5000ms ease forwards;
+}
+
+.editorNotificationStack > * {
+  pointer-events: auto;
+}
+
+@keyframes editorNotificationFadeOut {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 .usedColorsHeader {
   margin: 0;
   color: var(--text-secondary);

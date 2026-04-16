@@ -3,6 +3,7 @@ export * from "./Checkbox";
 export * from "./Field";
 export * from "./Menu";
 export * from "./Modal";
+export * from "./Notification";
 export * from "./Panel";
 export * from "./Slider";
 export * from "./SingleSelectDropdown";

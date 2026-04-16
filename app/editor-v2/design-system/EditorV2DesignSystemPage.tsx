@@ -16,6 +16,7 @@ import {
   Field,
   FieldInput,
   Modal,
+  Notification,
   SingleSelectDropdown,
   Slider,
   Toggle,
@@ -87,42 +88,6 @@ const paletteGroups = [
     ],
   },
 ];
-
-type NotificationTone = "info" | "success" | "warning" | "destructive";
-
-const notificationToneStyles: Record<
-  NotificationTone,
-  { bg: string; border: string; icon: string; badge: string; badgeFg: string }
-> = {
-  info: {
-    bg: "var(--brand-lightest)",
-    border: "var(--brand-200)",
-    icon: "var(--brand-600)",
-    badge: "var(--brand-200)",
-    badgeFg: "var(--brand-600)",
-  },
-  success: {
-    bg: "var(--status-success-soft)",
-    border: "var(--status-success-base)",
-    icon: "var(--status-success-strong)",
-    badge: "var(--status-success-base)",
-    badgeFg: "var(--neutral-0)",
-  },
-  warning: {
-    bg: "var(--status-warning-soft)",
-    border: "var(--status-warning-base)",
-    icon: "var(--status-warning-strong)",
-    badge: "var(--status-warning-base)",
-    badgeFg: "var(--neutral-900)",
-  },
-  destructive: {
-    bg: "var(--status-destructive-soft)",
-    border: "var(--status-destructive-base)",
-    icon: "var(--status-destructive-strong)",
-    badge: "var(--status-destructive-base)",
-    badgeFg: "var(--neutral-0)",
-  },
-};
 
 const buttonVariants: Array<{
   variant: "primary" | "secondary" | "destructive" | "ghost" | "ghostV2";
@@ -361,39 +326,47 @@ function NotificationLibrary() {
               tone: "info" as const,
               title: "Chart autosaved",
               description: "Your latest edits were saved to this pattern a moment ago.",
-              symbol: "i",
             },
             {
               tone: "success" as const,
               title: "Export complete",
               description: "Your PDF pattern is ready and has been added to downloads.",
-              symbol: "✓",
             },
             {
               tone: "warning" as const,
               title: "Thread colors changed",
               description: "One or more floss colors were substituted to match your palette.",
-              icon: "icons/alert.svg",
             },
             {
               tone: "destructive" as const,
               title: "Save failed",
               description: "We couldn’t save your latest edits. Check your connection and try again.",
-              icon: "icons/alert.svg",
             },
           ].map((item) => (
-            <NotificationCard key={`passive-${item.tone}`} item={item} />
+            <Notification
+              key={`passive-${item.tone}`}
+              tone={item.tone}
+              title={item.title}
+              description={item.description}
+              onDismiss={() => undefined}
+            />
           ))}
         </div>
 
         <div className={styles.notificationStackCompact}>
           {[
-            { tone: "info" as const, title: "Autosave on", symbol: "i" },
-            { tone: "success" as const, title: "Export ready", symbol: "✓" },
-            { tone: "warning" as const, title: "Palette changed", icon: "icons/alert.svg" },
-            { tone: "destructive" as const, title: "Save failed", icon: "icons/alert.svg" },
+            { tone: "info" as const, title: "Autosave on" },
+            { tone: "success" as const, title: "Export ready" },
+            { tone: "warning" as const, title: "Palette changed" },
+            { tone: "destructive" as const, title: "Save failed" },
           ].map((item) => (
-            <NotificationCard key={`compact-${item.tone}`} item={item} compact />
+            <Notification
+              key={`compact-${item.tone}`}
+              tone={item.tone}
+              title={item.title}
+              layout="compact"
+              onDismiss={() => undefined}
+            />
           ))}
         </div>
       </div>
@@ -404,111 +377,25 @@ function NotificationLibrary() {
         </div>
         <div className={styles.notificationStackCompact}>
           {[
-            { tone: "info" as const, title: "Sign in to keep your chart", action: "Sign in", symbol: "i" },
-            { tone: "success" as const, title: "Pattern shared", action: "View access", symbol: "✓" },
-            { tone: "warning" as const, title: "Low contrast detected", action: "Review colors", icon: "icons/alert.svg" },
-            { tone: "destructive" as const, title: "Unsaved work will be lost", action: "Review changes", icon: "icons/alert.svg" },
+            { tone: "info" as const, title: "Sign in to keep your chart", action: "Sign in" },
+            { tone: "success" as const, title: "Pattern shared", action: "View access" },
+            { tone: "warning" as const, title: "Low contrast detected", action: "Review colors" },
+            { tone: "destructive" as const, title: "Unsaved work will be lost", action: "Review changes" },
           ].map((item) => (
-            <NotificationCard key={`action-${item.tone}`} item={item} compact action={item.action} neutralSurface />
+            <Notification
+              key={`action-${item.tone}`}
+              tone={item.tone}
+              title={item.title}
+              actionLabel={item.action}
+              layout="compact"
+              neutralSurface
+              onAction={() => undefined}
+              onDismiss={() => undefined}
+            />
           ))}
         </div>
       </div>
     </div>
-  );
-}
-
-function NotificationCard({
-  action,
-  compact = false,
-  item,
-  neutralSurface = false,
-}: {
-  action?: string;
-  compact?: boolean;
-  item:
-    | { tone: NotificationTone; title: string; description: string; symbol: string }
-    | { tone: NotificationTone; title: string; description: string; icon: string }
-    | { tone: NotificationTone; title: string; symbol: string }
-    | { tone: NotificationTone; title: string; icon: string };
-  neutralSurface?: boolean;
-}) {
-  const tone = notificationToneStyles[item.tone];
-
-  return (
-    <div
-      className={[styles.notificationCard, compact ? styles.notificationCardCompact : null]
-        .filter(Boolean)
-        .join(" ")}
-      style={{
-        background: neutralSurface ? "var(--surface-card)" : tone.bg,
-        borderColor: neutralSurface ? "var(--ui-border-subtle)" : tone.border,
-      }}
-    >
-      <div style={{ color: tone.icon }}>
-        <span
-          className={styles.notificationIconBadge}
-          aria-hidden="true"
-          style={{ background: tone.badge, color: tone.badgeFg }}
-        >
-          {"symbol" in item ? (
-            <span className={styles.notificationSymbol}>{item.symbol}</span>
-          ) : (
-            <span
-              className={styles.notificationIcon}
-              style={{
-                WebkitMaskImage: `url(${assetPath(item.icon)})`,
-                maskImage: `url(${assetPath(item.icon)})`,
-              }}
-            />
-          )}
-        </span>
-      </div>
-
-      <div className={styles.notificationContent}>
-        <div className={styles.notificationTitle} style={typographyStyles.h5}>
-          {item.title}
-        </div>
-        {"description" in item ? (
-          <div className={styles.notificationDescription} style={typographyStyles.p2}>
-            {item.description}
-          </div>
-        ) : null}
-      </div>
-
-      {action ? (
-        <div className={styles.notificationControls}>
-          <Button type="button" variant="secondary" size="md">
-            {action}
-          </Button>
-          <IconDismissButton label={`Dismiss ${item.title}`} />
-        </div>
-      ) : (
-        <IconDismissButton
-          className={!neutralSurface ? styles.notificationCloseGhost : undefined}
-          label={`Dismiss ${item.title}`}
-        />
-      )}
-    </div>
-  );
-}
-
-function IconDismissButton({
-  className,
-  label,
-}: {
-  className?: string;
-  label: string;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghostV2"
-      size="sm"
-      aria-label={label}
-      className={[styles.notificationClose, className].filter(Boolean).join(" ")}
-    >
-      <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="12" height="12" />
-    </Button>
   );
 }
 

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon, Modal } from "@/components/design-system";
+import { Button, ButtonIcon, Modal, Notification } from "@/components/design-system";
 import {
   ToolbarAnchor,
   ToolbarButton,
@@ -18,6 +18,10 @@ import styles from "./EditorV2Shell.module.css";
 
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge";
+type UsedColorsSuccessNotification = {
+  title: string;
+  description: string;
+};
 
 function UsedColorsPortalPopover({
   anchorRef,
@@ -146,6 +150,8 @@ export function UsedColorsSummary({
   const [swapSourceColorId, setSwapSourceColorId] = useState<string | null>(null);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [mergeConfirmationOpen, setMergeConfirmationOpen] = useState(false);
+  const [successNotification, setSuccessNotification] =
+    useState<UsedColorsSuccessNotification | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -171,6 +177,18 @@ export function UsedColorsSummary({
       setMergeConfirmationOpen(false);
     }
   }, [selectedColorIds]);
+
+  useEffect(() => {
+    if (!successNotification) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessNotification(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successNotification]);
 
   const selectedColorIdSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds]);
   const selectedUsedColors = useMemo(
@@ -272,7 +290,24 @@ export function UsedColorsSummary({
   };
 
   return (
-    <div className={styles.usedColorsBlock}>
+    <>
+      {successNotification
+        ? createPortal(
+            <div className={styles.editorNotificationOverlay}>
+              <div className={styles.editorNotificationStack} data-auto-dismiss="true">
+                <Notification
+                  tone="success"
+                  title={successNotification.title}
+                  description={successNotification.description}
+                  onDismiss={() => setSuccessNotification(null)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      <div className={styles.usedColorsBlock}>
       <div className={styles.usedColorsHeaderRow}>
         <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
           Design Colors
@@ -303,6 +338,7 @@ export function UsedColorsSummary({
           </div>
         )}
       </div>
+
       {usedColors.length === 0 ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>
           None yet
@@ -614,7 +650,21 @@ export function UsedColorsSummary({
             return;
           }
 
+          const mergedColorCount = mergeColorCount;
+          const affectedCellCount = mergeStitchCount;
+          const targetColorName = mergeTargetName;
+
           onMergeColors(selectedColorIds, mergeTargetColorId);
+          setSuccessNotification({
+            title:
+              mergedColorCount === 1
+                ? `Merged 1 color into ${targetColorName}`
+                : `Merged ${mergedColorCount} colors into ${targetColorName}`,
+            description:
+              affectedCellCount === 1
+                ? "1 canvas cell was reassigned to the target color."
+                : `${affectedCellCount} canvas cells were reassigned to the target color.`,
+          });
           exitToolMode();
         }}
       />
@@ -634,10 +684,24 @@ export function UsedColorsSummary({
             return;
           }
 
+          const removedColorCount = deleteSelectionCount;
+          const affectedCellCount = deleteStitchCount;
+
           onDeleteColors(selectedColorIds);
+          setSuccessNotification({
+            title:
+              removedColorCount === 1
+                ? "Deleted 1 color"
+                : `Deleted ${removedColorCount} colors`,
+            description:
+              affectedCellCount === 1
+                ? "1 canvas cell was replaced with the closest remaining color."
+                : `${affectedCellCount} canvas cells were replaced with the closest remaining colors.`,
+          });
           exitToolMode();
         }}
       />
-    </div>
+      </div>
+    </>
   );
 }
