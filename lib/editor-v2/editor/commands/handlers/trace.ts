@@ -26,6 +26,11 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
   handle(state, command) {
     const nextTrace: TraceDocument = {
       assetUrl: command.payload.assetUrl,
+      fileName: command.payload.fileName,
+      byteSize: command.payload.byteSize,
+      mimeType: command.payload.mimeType,
+      imageWidth: command.payload.imageWidth,
+      imageHeight: command.payload.imageHeight,
       blendMode: "image",
       opacity: 0.35,
       offsetX: 0,

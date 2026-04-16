@@ -29,6 +29,24 @@ export function createSetProjectTitleCommand(title: string): EditorCommand {
   );
 }
 
+export function createApplyProjectServerStateCommand(payload: {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastSavedAt?: number;
+}): EditorCommand {
+  return createCommand(
+    "project.applyServerState",
+    {
+      ...payload,
+      lastSavedAt: payload.lastSavedAt ?? Date.now(),
+    },
+    "system",
+    { mode: "skip" },
+  );
+}
+
 export function createSetToolCommand(tool: ActiveTool): EditorCommand {
   return createCommand("tool.setActive", { tool }, "toolbar", { mode: "skip" });
 }
@@ -381,10 +399,17 @@ export function createPreviewTraceRepositionCommand(payload: {
   );
 }
 
-export function createAttachTraceCommand(assetUrl: string): EditorCommand {
+export function createAttachTraceCommand(payload: {
+  assetUrl: string;
+  fileName: string | null;
+  byteSize: number | null;
+  mimeType: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+}): EditorCommand {
   return createCommand(
     "trace.attach",
-    { assetUrl },
+    payload,
     "toolbar",
     { mode: "push", label: "Attach Trace" },
   );

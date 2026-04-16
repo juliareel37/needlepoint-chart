@@ -13,7 +13,7 @@ import {
   EDITOR_V2_MIN_GRID_SIZE,
 } from "@/lib/editor-v2/config";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
-import type { SavedEditorV2DocumentRecord } from "./editorV2LocalPersistence";
+import type { SavedEditorV2DocumentRecord } from "./editorV2ServerPersistence";
 import styles from "./EditorV2SetupModal.module.css";
 
 export interface EditorV2DesignConfigNew {
@@ -54,7 +54,7 @@ interface EditorV2SetupModalProps {
   onDraftSizingModeChange: (value: "stitches" | "inches") => void;
   onDraftWidthChange: (value: string) => void;
   onDraftWidthInchesChange: (value: string) => void;
-  onLoadSavedDesign: (config: EditorV2DesignConfigLoaded) => void;
+  onLoadSavedDesign: (storageId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -312,19 +312,11 @@ export function EditorV2SetupModal({
                 variant="primary"
                 disabled={!selectedStorageId}
                 onClick={() => {
-                  const selectedRecord = savedDocuments.find(
-                    (record) => record.storageId === selectedStorageId,
-                  );
-                  if (!selectedRecord) {
+                  if (!selectedStorageId) {
                     return;
                   }
 
-                  onLoadSavedDesign({
-                    kind: "loaded",
-                    document: selectedRecord.document,
-                    storageId: selectedRecord.storageId,
-                    instanceKey: `loaded_${selectedRecord.storageId}_${Date.now()}`,
-                  });
+                  onLoadSavedDesign(selectedStorageId);
                 }}
               >
               Load Design
@@ -363,9 +355,7 @@ function SizingModeButton({
 }
 
 function formatSavedDesignLabel(record: SavedEditorV2DocumentRecord): string {
-  const title = record.document.project.title || "Untitled Design";
-  const { width, height } = record.document.grid;
-  return `${title} (${width}x${height})`;
+  return `${record.title || "Untitled Design"} (${record.gridWidth}x${record.gridHeight})`;
 }
 
 function clampGridSize(value: string): number {

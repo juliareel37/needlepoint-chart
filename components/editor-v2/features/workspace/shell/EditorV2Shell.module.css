@@ -557,6 +557,22 @@
   flex-wrap: wrap;
 }
 
+.saveButtonSpinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: saveButtonSpin 900ms linear infinite;
+}
+
+.saveButtonIcon,
+.saveButtonIcon span {
+  width: 14px;
+  height: 14px;
+}
+
 .panelStack {
   display: flex;
   flex-direction: column;
@@ -631,6 +647,38 @@
   pointer-events: auto;
 }
 
+.canvasLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  padding: 20px;
+}
+
+.canvasLoadingCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-card) 92%, white);
+  border: 1px solid var(--ui-border-subtle);
+  box-shadow: var(--ui-shadow-md);
+  color: var(--text-secondary);
+}
+
+.canvasLoadingSpinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: saveButtonSpin 900ms linear infinite;
+}
+
 @keyframes editorNotificationFadeOut {
   0% {
     opacity: 0;
@@ -650,6 +698,16 @@
   100% {
     opacity: 0;
     transform: translateY(8px);
+  }
+}
+
+@keyframes saveButtonSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -1014,6 +1072,7 @@
 .loadButton {
   width: 100%;
 }
+
 
 .traceSection {
   display: flex;

@@ -59,6 +59,11 @@ export interface CustomPalette {
 
 export interface TraceDocument {
   assetUrl: string;
+  fileName: string | null;
+  byteSize: number | null;
+  mimeType: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   blendMode: TraceBlendMode;
   opacity: number;
   offsetX: number;

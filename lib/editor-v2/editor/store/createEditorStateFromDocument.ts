@@ -10,6 +10,7 @@ export function createEditorStateFromDocument(
   document: EditorDocumentState,
 ): EditorStoreState {
   const state = createInitialEditorStoreState();
+  const now = Date.now();
   const normalizedDocument: EditorDocumentState = {
     ...document,
     palette: (() => {
@@ -26,6 +27,11 @@ export function createEditorStateFromDocument(
     trace: document.trace
       ? {
           ...document.trace,
+          fileName: document.trace.fileName ?? null,
+          byteSize: document.trace.byteSize ?? null,
+          mimeType: document.trace.mimeType ?? null,
+          imageWidth: document.trace.imageWidth ?? null,
+          imageHeight: document.trace.imageHeight ?? null,
           blendMode: document.trace.blendMode ?? "image",
         }
       : null,
@@ -46,6 +52,16 @@ export function createEditorStateFromDocument(
         colorId: defaultColorId,
       },
       eyedropperReturnTool: null,
+      persistence: {
+        ...state.session.persistence,
+        currentDraftId: normalizedDocument.project.id,
+        dirty: false,
+        saving: false,
+        loading: false,
+        lastLoadedAt: now,
+        restoreSource: normalizedDocument.project.id ? "server" : "none",
+        versionPreview: null,
+      },
     },
   };
 }

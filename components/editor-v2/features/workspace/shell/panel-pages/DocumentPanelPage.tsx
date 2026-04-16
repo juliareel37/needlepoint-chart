@@ -9,7 +9,8 @@ import {
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
-import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2LocalPersistence";
+import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
+import type { SaveButtonState } from "../../../../app/EditorV2Workspace";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
 
@@ -18,8 +19,9 @@ interface DocumentPanelPageProps {
   document: EditorDocumentState;
   documentTitle: string;
   onLoadSelected: () => void;
-  onSaveDocument: (document: EditorDocumentState) => void;
+  onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
+  saveButtonState: SaveButtonState;
   saveMessage: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
@@ -33,6 +35,7 @@ export function DocumentPanelPage({
   onLoadSelected,
   onSaveDocument,
   onStartOver,
+  saveButtonState,
   saveMessage,
   savedDocuments,
   selectedStorageId,
@@ -134,9 +137,10 @@ export function DocumentPanelPage({
             <Button
               type="button"
               variant="primary"
+              disabled={saveButtonState === "saving"}
               onClick={() => onSaveDocument(document)}
             >
-              Save
+              <SaveButtonLabel state={saveButtonState} />
             </Button>
           </div>
         </div>
@@ -163,6 +167,28 @@ export function DocumentPanelPage({
       </div>
     </section>
   );
+}
+
+function SaveButtonLabel({ state }: { state: SaveButtonState }) {
+  if (state === "saving") {
+    return (
+      <>
+        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+        Saving
+      </>
+    );
+  }
+
+  if (state === "saved") {
+    return (
+      <>
+        <ButtonIcon icon="/icons/lucide/check.svg" className={styles.saveButtonIcon} />
+        Saved
+      </>
+    );
+  }
+
+  return <>Save</>;
 }
 
 function SaveStatus({ saveMessage }: { saveMessage: string }) {
@@ -224,7 +250,5 @@ function SavedDesignSingleSelect({
 }
 
 function formatSavedDesignLabel(record: SavedEditorV2DocumentRecord): string {
-  const title = record.document.project.title || "Untitled Design";
-  const { width, height } = record.document.grid;
-  return `${title} (${width}x${height})`;
+  return `${record.title || "Untitled Design"} (${record.gridWidth}x${record.gridHeight})`;
 }

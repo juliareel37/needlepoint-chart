@@ -45,7 +45,7 @@ export function TraceControls({
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
-  const traceFileName = trace ? getTraceDisplayName(trace.assetUrl) : null;
+  const traceFileName = trace ? getTraceDisplayName(trace) : null;
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
@@ -55,13 +55,13 @@ export function TraceControls({
     setTraceUploadStatus("uploading");
 
     try {
-      const assetUrl = await uploadTraceFile(file);
+      const uploadedTrace = await uploadTraceFile(file);
 
       if (sequence !== traceUploadSequenceRef.current) {
         return;
       }
 
-      dispatch(createAttachTraceCommand(assetUrl));
+      dispatch(createAttachTraceCommand(uploadedTrace));
       setTraceUploadStatus("idle");
     } catch {
       if (sequence !== traceUploadSequenceRef.current) {
@@ -496,21 +496,70 @@ export function TraceControls({
   );
 }
 
-async function uploadTraceFile(file: File): Promise<string> {
+async function uploadTraceFile(file: File): Promise<{
+  assetUrl: string;
+  fileName: string;
+  byteSize: number;
+  mimeType: string;
+  imageWidth: number | null;
+  imageHeight: number | null;
+}> {
   const { upload } = await import("@vercel/blob/client");
-  const uploaded = await upload(
-    `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`,
-    file,
-    {
-      access: "public",
-      handleUploadUrl: "/api/upload-trace",
-    },
-  );
+  const [uploaded, dimensions] = await Promise.all([
+    upload(
+      `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`,
+      file,
+      {
+        access: "public",
+        handleUploadUrl: "/api/upload-trace",
+      },
+    ),
+    getImageDimensions(file),
+  ]);
 
-  return uploaded.url;
+  return {
+    assetUrl: uploaded.url,
+    fileName: file.name,
+    byteSize: file.size,
+    mimeType: file.type,
+    imageWidth: dimensions?.width ?? null,
+    imageHeight: dimensions?.height ?? null,
+  };
 }
 
-function getTraceDisplayName(assetUrl: string): string {
+async function getImageDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    return {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+    };
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load image"));
+    image.src = src;
+  });
+}
+
+function getTraceDisplayName(trace: TraceDocument): string {
+  if (trace.fileName) {
+    return trace.fileName;
+  }
+
+  const assetUrl = trace.assetUrl;
   const fallbackName = "Trace image";
 
   try {

@@ -56,6 +56,7 @@ export function renderDisplayCanvas(options: {
   sourceCanvas: HTMLCanvasElement;
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
+  deferPaintUntilTraceReady?: boolean;
   displayTrace?: TraceDocument | null;
   displayTraceAsset: LoadedTraceAsset | null;
   frameOrigin: { x: number; y: number };
@@ -77,6 +78,7 @@ export function renderDisplayCanvas(options: {
     sourceCanvas,
     cells,
     colorsById,
+    deferPaintUntilTraceReady = false,
     displayTrace = null,
     displayTraceAsset,
     frameOrigin,
@@ -142,32 +144,34 @@ export function renderDisplayCanvas(options: {
     context.restore();
   }
 
-  context.save();
-  context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-  if (threadView) {
-    drawThreadOverlay(context, {
-      cells,
-      colorsById,
-      drawX,
-      drawY,
-      gridWidth,
-      renderedCellSize: metrics.cellSize * viewport.zoom,
-      stitchCanvasCache,
-    });
-  } else {
-    context.drawImage(
-      sourceCanvas,
-      0,
-      0,
-      sourceCanvas.width,
-      sourceCanvas.height,
-      drawX,
-      drawY,
-      drawWidth,
-      drawHeight,
-    );
+  if (!deferPaintUntilTraceReady) {
+    context.save();
+    context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
+    if (threadView) {
+      drawThreadOverlay(context, {
+        cells,
+        colorsById,
+        drawX,
+        drawY,
+        gridWidth,
+        renderedCellSize: metrics.cellSize * viewport.zoom,
+        stitchCanvasCache,
+      });
+    } else {
+      context.drawImage(
+        sourceCanvas,
+        0,
+        0,
+        sourceCanvas.width,
+        sourceCanvas.height,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight,
+      );
+    }
+    context.restore();
   }
-  context.restore();
 
   if (showGridlines) {
     drawGridOverlay(context, {
@@ -183,7 +187,7 @@ export function renderDisplayCanvas(options: {
     });
   }
 
-  if (showSymbols) {
+  if (showSymbols && !deferPaintUntilTraceReady) {
     context.save();
     context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
     drawSymbolsOverlay(context, {

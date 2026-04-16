@@ -30,28 +30,14 @@ model PatternDraft {
 }
 
 model PatternVersion {
-  id        String       @id @default(cuid())
-  draftId   String
-  data      Json
-  dataHash  String
+  id         String      @id @default(cuid())
+  draftId    String
+  data       Json
+  dataHash   String
   saveSource SaveSource?
-  createdAt DateTime     @default(now())
+  createdAt  DateTime    @default(now())
 
   draft PatternDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
 
   @@index([draftId])
-}
-
-model EditorDesign {
-  id         String   @id @default(cuid())
-  userId     String
-  title      String
-  data       Json
-  gridWidth  Int
-  gridHeight Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([userId])
-  @@index([updatedAt])
 }

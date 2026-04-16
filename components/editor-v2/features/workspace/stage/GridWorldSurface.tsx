@@ -36,6 +36,7 @@ interface GridWorldSurfaceProps {
   brushSize: number;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  onSurfaceReady?: () => void;
   previewMode: boolean;
   showGridlines: boolean;
   showRuler: boolean;
@@ -50,6 +51,7 @@ export function GridWorldSurface({
   brushSize,
   colorsById,
   dispatch,
+  onSurfaceReady,
   previewMode,
   showGridlines,
   showRuler,
@@ -298,6 +300,25 @@ export function GridWorldSurface({
     };
   }, [trace?.assetUrl]);
 
+  const traceAssetReady =
+    !trace?.assetUrl ||
+    (loadedTraceAsset?.assetUrl === trace.assetUrl &&
+      loadedTraceAsset.ready &&
+      !!loadedTraceAsset.image &&
+      loadedTraceAsset.width > 0 &&
+      loadedTraceAsset.height > 0);
+  const deferPaintUntilTraceReady =
+    Boolean(onSurfaceReady) &&
+    Boolean(trace?.assetUrl) &&
+    !traceAssetReady;
+  const handleDisplayRendered = useCallback(() => {
+    if (!traceAssetReady) {
+      return;
+    }
+
+    onSurfaceReady?.();
+  }, [onSurfaceReady, traceAssetReady]);
+
 
 
   return (
@@ -383,7 +404,9 @@ export function GridWorldSurface({
             <GridCanvasStage
               cells={grid.cells}
               colorsById={colorsById}
+              deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}
+              onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
                 trace && loadedTraceAsset?.assetUrl === trace.assetUrl
                   ? loadedTraceAsset

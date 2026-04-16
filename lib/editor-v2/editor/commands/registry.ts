@@ -2,6 +2,7 @@ import type { EditorCommandHandler } from "./handlers/types";
 import { gridClearCommandHandler } from "./handlers/gridClear";
 import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
+import { applyProjectServerStateCommandHandler } from "./handlers/applyProjectServerState";
 import {
   applyMirrorCommandHandler,
   cancelMirrorCommandHandler,
@@ -53,6 +54,7 @@ import {
 } from "./handlers/viewport";
 
 export const commandHandlers: EditorCommandHandler[] = [
+  applyProjectServerStateCommandHandler,
   gridPaintCommandHandler,
   gridEraseCommandHandler,
   gridClearCommandHandler,

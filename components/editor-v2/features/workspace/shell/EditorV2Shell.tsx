@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { typographyStyles } from "@/app/design-system/typography";
 import {
   getActiveColor,
   getActiveColorId,
@@ -18,7 +19,8 @@ import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/edi
 import type {
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
-import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
+import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
+import type { SaveButtonState } from "../../../app/EditorV2Workspace";
 import {
   createSetActiveSidebarSectionCommand,
   createPanViewportCommand,
@@ -42,9 +44,12 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 
 export function EditorV2Shell({
+  canvasLoading,
+  onCanvasReady,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
+  saveButtonState,
   saveMessage,
   savedDocuments,
   selectedStorageId,
@@ -52,9 +57,12 @@ export function EditorV2Shell({
   setupModal,
   setupModalOpen,
 }: {
-  onSaveDocument: (document: EditorDocumentState) => void;
-  onLoadDocument: (record: SavedEditorV2DocumentRecord) => void;
+  canvasLoading: boolean;
+  onCanvasReady: () => void;
+  onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
+  onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
+  saveButtonState: SaveButtonState;
   saveMessage: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
@@ -314,6 +322,15 @@ export function EditorV2Shell({
 
         <section className={styles.canvasColumn}>
           <div className={styles.canvasStage}>
+            {canvasLoading ? (
+              <div className={styles.canvasLoadingOverlay} role="status" aria-live="polite">
+                <div className={styles.canvasLoadingCard}>
+                  <span className={styles.canvasLoadingSpinner} aria-hidden="true" />
+                  <span style={{ ...typographyStyles.p2 }}>Loading design...</span>
+                </div>
+              </div>
+            ) : null}
+
             <div
               className={styles.sidePanelOverlay}
               data-collapsed={sidebarCollapsed ? "true" : "false"}
@@ -327,6 +344,7 @@ export function EditorV2Shell({
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
+                saveButtonState={saveButtonState}
                 saveMessage={saveMessage}
                 savedDocuments={savedDocuments}
                 selectedStorageId={selectedStorageId}
@@ -336,7 +354,7 @@ export function EditorV2Shell({
                     (record) => record.storageId === selectedStorageId,
                   );
                   if (!selectedRecord) return;
-                  onLoadDocument(selectedRecord);
+                  void onLoadDocument(selectedRecord);
                 }}
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                 onSaveDocument={onSaveDocument}
@@ -417,13 +435,18 @@ export function EditorV2Shell({
               />
             </div>
 
-            <div ref={canvasWorldRef} className={styles.canvasWorld}>
+            <div
+              ref={canvasWorldRef}
+              className={styles.canvasWorld}
+              data-loading={canvasLoading ? "true" : "false"}
+            >
               <GridWorldSurface
                 activeColorId={activeColorId}
                 activeTool={activeTool}
                 brushSize={brushSize}
                 colorsById={colorsById}
                 dispatch={dispatch}
+                onSurfaceReady={onCanvasReady}
                 previewMode={previewMode}
                 showGridlines={showGridlines}
                 showRuler={showRuler}

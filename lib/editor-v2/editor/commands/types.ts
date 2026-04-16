@@ -24,6 +24,7 @@ export type HistoryPolicy =
 
 export type EditorCommandKind =
   | "project.setTitle"
+  | "project.applyServerState"
   | "grid.paint"
   | "grid.erase"
   | "grid.clear"
@@ -82,6 +83,17 @@ export interface EditorCommandMeta {
 export type SetProjectTitleCommand = BaseEditorCommand<
   "project.setTitle",
   { title: string }
+>;
+
+export type ApplyProjectServerStateCommand = BaseEditorCommand<
+  "project.applyServerState",
+  {
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+    lastSavedAt: number;
+  }
 >;
 
 export type PaintCellsCommand = BaseEditorCommand<
@@ -230,7 +242,14 @@ export type CommitTraceRepositionCommand = BaseEditorCommand<
 
 export type AttachTraceCommand = BaseEditorCommand<
   "trace.attach",
-  { assetUrl: string }
+  {
+    assetUrl: string;
+    fileName: string | null;
+    byteSize: number | null;
+    mimeType: string | null;
+    imageWidth: number | null;
+    imageHeight: number | null;
+  }
 >;
 
 export type RemoveTraceCommand = BaseEditorCommand<"trace.remove", object>;
@@ -297,6 +316,7 @@ export type RedoCommand = BaseEditorCommand<"history.redo", object>;
 
 export type EditorCommand =
   | SetProjectTitleCommand
+  | ApplyProjectServerStateCommand
   | PaintCellsCommand
   | EraseCellsCommand
   | ClearCanvasCommand

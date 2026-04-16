@@ -28,7 +28,9 @@ import {
 interface GridCanvasStageProps {
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
+  deferPaintUntilTraceReady?: boolean;
   displayHost: HTMLElement | null;
+  onDisplayRendered?: () => void;
   displayTraceAsset: LoadedTraceAsset | null;
   paintOpacity?: number;
   displayTrace?: TraceDocument | null;
@@ -51,7 +53,9 @@ interface GridCanvasStageProps {
 export function GridCanvasStage({
   cells,
   colorsById,
+  deferPaintUntilTraceReady = false,
   displayHost,
+  onDisplayRendered,
   displayTraceAsset,
   paintOpacity = 1,
   displayTrace = null,
@@ -226,6 +230,7 @@ export function GridCanvasStage({
       sourceCanvas,
       cells,
       colorsById,
+      deferPaintUntilTraceReady,
       displayTrace,
       displayTraceAsset,
       frameOrigin,
@@ -241,10 +246,20 @@ export function GridCanvasStage({
       threadView,
       viewport,
     });
+
+    let frameId = window.requestAnimationFrame(() => {
+      onDisplayRendered?.();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [
     backgroundColor,
     cells,
     colorsById,
+    deferPaintUntilTraceReady,
+    onDisplayRendered,
     frameOrigin.x,
     frameOrigin.y,
     gridOverlayStep,

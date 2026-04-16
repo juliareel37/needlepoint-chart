@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { EditorV2Providers } from "./EditorV2Providers";
@@ -10,11 +11,11 @@ import {
 } from "./EditorV2SetupModal";
 import { EditorV2Workspace } from "./EditorV2Workspace";
 import {
-  getServerSavedEditorV2DocumentsSnapshot,
   listSavedEditorV2Documents,
+  loadSavedEditorV2Document,
   saveEditorV2Document,
-  subscribeToSavedEditorV2Documents,
-} from "./editorV2LocalPersistence";
+  type SavedEditorV2DocumentRecord,
+} from "./editorV2ServerPersistence";
 
 const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
   kind: "new",
@@ -28,6 +29,8 @@ const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
 };
 
 export function EditorV2Page() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const clerk = useClerk();
   const [draftWidth, setDraftWidth] = useState("8");
   const [draftHeight, setDraftHeight] = useState("8");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
@@ -36,20 +39,48 @@ export function EditorV2Page() {
   const [draftWidthInches, setDraftWidthInches] = useState("1");
   const [draftHeightInches, setDraftHeightInches] = useState("1");
   const [draftMeshCount, setDraftMeshCount] = useState("8");
-  const savedDocuments = useSyncExternalStore(
-    subscribeToSavedEditorV2Documents,
-    listSavedEditorV2Documents,
-    getServerSavedEditorV2DocumentsSnapshot,
-  );
+  const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
   const [designConfig, setDesignConfig] =
     useState<EditorV2DesignConfig>(INITIAL_DESIGN_CONFIG);
   const [currentStorageId, setCurrentStorageId] = useState("");
   const [selectedStorageId, setSelectedStorageId] = useState("");
   const [setupModalOpen, setSetupModalOpen] = useState(true);
+  const [canvasLoadingKey, setCanvasLoadingKey] = useState<string | null>(null);
   const isInitialSession =
     designConfig.kind === "new" &&
     designConfig.instanceKey === INITIAL_DESIGN_CONFIG.instanceKey &&
     currentStorageId.length === 0;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      setSavedDocuments([]);
+      setCurrentStorageId("");
+      setSelectedStorageId("");
+      return;
+    }
+
+    void listSavedEditorV2Documents()
+      .then((documents) => {
+        if (!cancelled) {
+          setSavedDocuments(documents);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSavedDocuments([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn]);
 
   const initialState = useMemo(() => {
     if (designConfig.kind === "loaded") {
@@ -70,24 +101,52 @@ export function EditorV2Page() {
       initialState={initialState}
     >
       <EditorV2Workspace
+        canvasLoading={canvasLoadingKey !== null}
+        onCanvasReady={() => {
+          setCanvasLoadingKey((currentKey) =>
+            currentKey === designConfig.instanceKey ? null : currentKey,
+          );
+        }}
         currentStorageId={currentStorageId}
         savedDocuments={savedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        onSaveDocument={(document, storageId) => {
-          const savedRecord = saveEditorV2Document(document, storageId);
+        onSaveDocument={async (document, storageId) => {
+          if (!isLoaded || !isSignedIn) {
+            void clerk.openSignIn();
+            return null;
+          }
+
+          const savedRecord = await saveEditorV2Document(document, storageId);
           setCurrentStorageId(savedRecord.storageId);
           setSelectedStorageId(savedRecord.storageId);
+          setSavedDocuments((existing) => {
+            const nextRecord: SavedEditorV2DocumentRecord = {
+              storageId: savedRecord.storageId,
+              title: savedRecord.title,
+              gridWidth: savedRecord.gridWidth,
+              gridHeight: savedRecord.gridHeight,
+              updatedAt: savedRecord.updatedAt,
+            };
+
+            return [
+              nextRecord,
+              ...existing.filter((record) => record.storageId !== nextRecord.storageId),
+            ];
+          });
           return savedRecord;
         }}
-        onLoadDocument={(record) => {
+        onLoadDocument={async (record) => {
+          const instanceKey = `loaded_${record.storageId}_${Date.now()}`;
+          setCanvasLoadingKey(instanceKey);
+          const document = await loadSavedEditorV2Document(record.storageId);
           setCurrentStorageId(record.storageId);
           setSelectedStorageId(record.storageId);
           setDesignConfig({
             kind: "loaded",
-            document: record.document,
+            document,
             storageId: record.storageId,
-            instanceKey: `loaded_${record.storageId}_${Date.now()}`,
+            instanceKey,
           });
           setSetupModalOpen(false);
         }}
@@ -115,11 +174,20 @@ export function EditorV2Page() {
             onDraftSizingModeChange={setDraftSizingMode}
             onDraftWidthChange={setDraftWidth}
             onDraftWidthInchesChange={setDraftWidthInches}
-            onLoadSavedDesign={(config) => {
-              setCurrentStorageId(config.storageId);
-              setSelectedStorageId(config.storageId);
-              setDesignConfig(config);
-              setSetupModalOpen(false);
+            onLoadSavedDesign={(storageId) => {
+              const instanceKey = `loaded_${storageId}_${Date.now()}`;
+              setCanvasLoadingKey(instanceKey);
+              void loadSavedEditorV2Document(storageId).then((document) => {
+                setCurrentStorageId(storageId);
+                setSelectedStorageId(storageId);
+                setDesignConfig({
+                  kind: "loaded",
+                  document,
+                  storageId,
+                  instanceKey,
+                });
+                setSetupModalOpen(false);
+              });
             }}
             savedDocuments={savedDocuments}
             selectedStorageId={selectedStorageId}

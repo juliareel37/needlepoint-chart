@@ -779,7 +779,7 @@ export function FloatingToolbar({
 
       <ToolbarDivider />
 
-      <ToolbarGroup>
+      <ToolbarGroup style={{"gap": 4}}>
         <ToolbarButton
           type="button"
           disabled={!canUndo}

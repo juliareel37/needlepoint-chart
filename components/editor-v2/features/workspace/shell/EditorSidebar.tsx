@@ -12,7 +12,8 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
-import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2LocalPersistence";
+import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
+import type { SaveButtonState } from "../../../app/EditorV2Workspace";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { TextPanelPage } from "./panel-pages/TextPanelPage";
@@ -27,13 +28,14 @@ interface EditorSidebarProps {
   colorsById: Record<string, PaletteColor>;
   documentTitle: string;
   palette: PaletteColor[];
+  saveButtonState: SaveButtonState;
   saveMessage: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
   onClose: () => void;
-  onSaveDocument: (document: EditorDocumentState) => void;
+  onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -56,6 +58,7 @@ export function EditorSidebar({
   colorsById,
   documentTitle,
   palette,
+  saveButtonState,
   saveMessage,
   savedDocuments,
   selectedStorageId,
@@ -141,6 +144,7 @@ export function EditorSidebar({
             onLoadSelected={onLoadSelected}
             onSaveDocument={onSaveDocument}
             onStartOver={onStartOver}
+            saveButtonState={saveButtonState}
             saveMessage={saveMessage}
             savedDocuments={savedDocuments}
             selectedStorageId={selectedStorageId}
