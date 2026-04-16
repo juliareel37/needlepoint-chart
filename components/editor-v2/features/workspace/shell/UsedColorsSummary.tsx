@@ -5,7 +5,13 @@ import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon, Modal, Notification } from "@/components/design-system";
+import {
+  Button,
+  ButtonIcon,
+  Checkbox,
+  Modal,
+  Notification,
+} from "@/components/design-system";
 import {
   ToolbarAnchor,
   ToolbarButton,
@@ -385,6 +391,16 @@ export function UsedColorsSummary({
                     toggleColorSelection(entry.colorId);
                   }}
                 >
+                  {isSelecting ? (
+                    <span className={styles.usedColorsSelectionCheckbox} aria-hidden="true">
+                      <Checkbox
+                        checked={selectedColorIdSet.has(entry.colorId)}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                    </span>
+                  ) : null}
+
                   <ToolbarAnchor
                     ref={
                       swapSourceColorId === entry.colorId
@@ -475,7 +491,7 @@ export function UsedColorsSummary({
               </li>
             ))}
             </ul>
-            {isSelecting && selectedColorIds.length > 0 ? (
+            {isSelecting ? (
               <div className={styles.usedColorsSelectionBar}>
                 <div className={styles.usedColorsSelectionBarTop}>
                   {actionMode === "merge" ? (
@@ -500,13 +516,16 @@ export function UsedColorsSummary({
                         className={styles.usedColorsSelectionCount}
                         style={typographyStyles.p2}
                       >
-                        {selectedColorIds.length} selected
+                        {selectedColorIds.length > 0
+                          ? `${selectedColorIds.length} selected`
+                          : "0 selected"}
                       </span>
                       <Button
                         type="button"
                         variant="ghostV2"
                         size="sm"
                         className={styles.usedColorsClearSelectionButton}
+                        disabled={selectedColorIds.length === 0}
                         onClick={clearSelection}
                       >
                         <ButtonIcon icon="/icons/lucide/x.svg" />

@@ -714,7 +714,7 @@
   list-style: none;
   /* height: 350px; */
   overflow: scroll;
-  padding:8px;
+  /* padding:8px; */
   background:var(--surface-card);
   border-radius:12px;
 }
@@ -727,7 +727,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 10px;
+  gap: 0;
   color: var(--text-primary);
   margin: 0;
   padding: 8px;
@@ -769,6 +769,24 @@
   box-shadow: none;
 }
 
+.usedColorsSelectionCheckbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-right: 20px;
+  pointer-events: none;
+}
+
+.usedColorsSelectionCheckbox input {
+  pointer-events: none;
+}
+
+.usedColorsItem[data-selected="true"] .usedColorsSelectionCheckbox input:not(:checked) {
+  border-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 16%, var(--surface-card));
+}
+
 .usedColorsItemButton {
   display: inline-flex;
   align-items: center;
@@ -803,6 +821,7 @@
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
+  margin-right: 4px;
 }
 
 .usedColorSwatchButton {
