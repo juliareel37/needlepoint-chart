@@ -53,11 +53,15 @@ export function ColorPanelPage({
                   {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
                 </strong>
               </div>
+              <div style={{"border": "solid 1px var(--ui-border-subtle)",
+                "borderRadius": "16px"}}>
               <ColorLibrary
                 activeColorId={activeColorId}
                 colors={palette}
                 onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
               />
+              </div>
+
             </div>
 
             <div className={styles.sidebarSubsection}>
