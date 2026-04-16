@@ -140,6 +140,7 @@ function createSwapTestState(): EditorStoreState {
       traceInteraction: {
         uploadStatus: "idle",
         placementMode: "idle",
+        repositionOrigin: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
       },

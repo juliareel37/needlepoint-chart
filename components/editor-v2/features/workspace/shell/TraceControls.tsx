@@ -61,7 +61,12 @@ export function TraceControls({
         return;
       }
 
-      dispatch(createAttachTraceCommand(uploadedTrace));
+      dispatch(
+        createAttachTraceCommand({
+          ...uploadedTrace,
+          origin: trace ? "replace" : "upload",
+        }),
+      );
       setTraceUploadStatus("idle");
     } catch {
       if (sequence !== traceUploadSequenceRef.current) {
@@ -365,7 +370,7 @@ export function TraceControls({
                 type="button"
                 variant="primary"
                 disabled={!trace}
-                onClick={() => dispatch(createBeginTraceRepositionCommand())}
+                onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
               >
                 Reposition
               </Button>

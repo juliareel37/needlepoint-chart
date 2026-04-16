@@ -222,9 +222,16 @@ export interface VersionPreviewState {
 export interface TraceInteractionState {
   uploadStatus: "idle" | "uploading" | "uploaded" | "error";
   placementMode: "idle" | "move" | "scale" | "rotate";
+  repositionOrigin: TraceRepositionOrigin | null;
   repositionSnapshot: TraceRepositionSnapshot | null;
   runtimeImageRefId: string | null;
 }
+
+export type TraceRepositionOrigin =
+  | "upload"
+  | "replace"
+  | "panel"
+  | "toolbar";
 
 export type TraceRepositionSnapshot = Pick<
   TraceDocument,
@@ -400,6 +407,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
       traceInteraction: {
         uploadStatus: "idle",
         placementMode: "idle",
+        repositionOrigin: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
       },

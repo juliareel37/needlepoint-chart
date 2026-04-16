@@ -347,7 +347,7 @@ export function FloatingToolbar({
             onClick={() => {
               openSidebarSection("trace");
               closeImageMenu();
-              dispatch(createBeginTraceRepositionCommand());
+              dispatch(createBeginTraceRepositionCommand("toolbar"));
             }}
           >
             <ToolbarIcon icon="/icons/lucide/crop.svg" />
@@ -744,7 +744,7 @@ export function FloatingToolbar({
                       openSidebarSection("trace");
                       closeImageMenu();
                       dispatch(
-                        createBeginTraceRepositionCommand(),
+                        createBeginTraceRepositionCommand("toolbar"),
                       );
                     }}
                   >

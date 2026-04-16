@@ -47,6 +47,7 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
         traceInteraction: {
           ...state.session.traceInteraction,
           placementMode: "move",
+          repositionOrigin: command.payload.origin,
           repositionSnapshot: buildTraceRepositionSnapshot(nextTrace),
         },
       }),
@@ -124,6 +125,7 @@ export const beginTraceRepositionCommandHandler: EditorCommandHandler<BeginTrace
         traceInteraction: {
           ...state.session.traceInteraction,
           placementMode: "move",
+          repositionOrigin: command.payload.origin,
           repositionSnapshot: buildTraceRepositionSnapshot(currentTrace),
         },
       },
@@ -303,6 +305,7 @@ function buildTraceRepositionSnapshot(
 function clearTraceRepositionSession<TSession extends {
   traceInteraction: {
     placementMode: "idle" | "move" | "scale" | "rotate";
+    repositionOrigin: import("../../store/state").TraceRepositionOrigin | null;
     repositionSnapshot: TraceRepositionSnapshot | null;
   };
 }>(session: TSession): TSession {
@@ -311,6 +314,7 @@ function clearTraceRepositionSession<TSession extends {
     traceInteraction: {
       ...session.traceInteraction,
       placementMode: "idle",
+      repositionOrigin: null,
       repositionSnapshot: null,
     },
   };

@@ -222,7 +222,7 @@ export type CancelTextPlacementCommand = BaseEditorCommand<
 
 export type BeginTraceRepositionCommand = BaseEditorCommand<
   "trace.beginReposition",
-  object
+  { origin: "panel" | "toolbar" }
 >;
 
 export type PreviewTraceRepositionCommand = BaseEditorCommand<
@@ -249,6 +249,7 @@ export type AttachTraceCommand = BaseEditorCommand<
     mimeType: string | null;
     imageWidth: number | null;
     imageHeight: number | null;
+    origin: "upload" | "replace";
   }
 >;
 

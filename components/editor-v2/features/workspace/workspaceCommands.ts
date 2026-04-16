@@ -359,10 +359,12 @@ export function createCancelTextPlacementCommand(): EditorCommand {
   );
 }
 
-export function createBeginTraceRepositionCommand(): EditorCommand {
+export function createBeginTraceRepositionCommand(
+  origin: "panel" | "toolbar",
+): EditorCommand {
   return createCommand(
     "trace.beginReposition",
-    {},
+    { origin },
     "toolbar",
     { mode: "skip" },
   );
@@ -406,6 +408,7 @@ export function createAttachTraceCommand(payload: {
   mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
+  origin: "upload" | "replace";
 }): EditorCommand {
   return createCommand(
     "trace.attach",

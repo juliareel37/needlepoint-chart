@@ -248,7 +248,7 @@ export function useFloatingToolbarActions({
   }
 
   function handleBeginTraceReposition() {
-    dispatch(createBeginTraceRepositionCommand());
+    dispatch(createBeginTraceRepositionCommand("toolbar"));
   }
 
   function handleCancelTraceReposition() {
