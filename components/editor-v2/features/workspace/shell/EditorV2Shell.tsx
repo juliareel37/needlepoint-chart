@@ -15,6 +15,10 @@ import {
   getViewport,
 } from "@/lib/editor-v2/editor/selectors";
 import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import {
+  ToolbarButton,
+  ToolbarIcon,
+} from "@/components/design-system";
 import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
 import type {
   EditorDocumentState,
@@ -25,10 +29,12 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createUndoCommand,
 } from "../workspaceCommands";
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
@@ -117,6 +123,7 @@ export function EditorV2Shell({
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
+  const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
   const gridMetrics = useMemo(
     () =>
       createGridWorldMetrics(
@@ -298,6 +305,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
+    setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
   }, []);
 
   useEffect(() => {
@@ -321,6 +329,33 @@ export function EditorV2Shell({
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
+          )
+        : null}
+      {headerHistoryTarget
+        ? createPortal(
+            <div className={styles.headerHistoryControls}>
+              <ToolbarButton
+                type="button"
+                disabled={!canUndo}
+                aria-label="Undo"
+                title="Undo"
+                className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                onClick={() => dispatch(createUndoCommand())}
+              >
+                <ToolbarIcon icon="/icons/lucide/undo.svg" />
+              </ToolbarButton>
+              <ToolbarButton
+                type="button"
+                disabled={!canRedo}
+                aria-label="Redo"
+                title="Redo"
+                className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                onClick={() => dispatch(createRedoCommand())}
+              >
+                <ToolbarIcon icon="/icons/lucide/redo.svg" />
+              </ToolbarButton>
+            </div>,
+            headerHistoryTarget,
           )
         : null}
       {saveNotificationVisible

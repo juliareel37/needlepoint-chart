@@ -515,6 +515,24 @@
   margin-inline: 4px;
 }
 
+.toolbarHistoryControl,
+.toolbarHistoryDivider {
+  display: inline-flex;
+}
+
+.headerHistoryControls {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.headerHistoryButton {
+  min-width: 32px;
+  min-height: 28px;
+  padding: 6px;
+}
+
 .viewportToolbar {
   position: relative;
 }
@@ -1460,10 +1478,25 @@
   .traceActionRow {
     grid-template-columns: 1fr;
   }
+
 }
 
 
 @media (max-width: 768px) {
+      .floatingToolbar {
+    max-width: min-content;
+    width: 90%;
+  }
+  .headerHistoryControls {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .toolbarHistoryControl,
+  .toolbarHistoryDivider {
+    display: none;
+  }
+
   .headerSaveStatus {
     display: none;
   }
@@ -1489,9 +1522,7 @@
     grid-template-columns: auto;
     grid-template-rows: 1fr .1fr;
   }
-  .floatingToolbar {
-    width: 90%;
-  }
+
 
   .sidePanelOverlay {
     width: 100%;

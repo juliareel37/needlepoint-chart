@@ -128,6 +128,7 @@ export default function RootLayout({
                   <div id="app-header-file-right" />
                   <div id="app-header-actions" />
                 </div>
+                <div id="app-header-history-right" />
                 <HeaderAuth />
               </div>
             </div>

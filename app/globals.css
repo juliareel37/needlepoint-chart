@@ -939,14 +939,16 @@ input[type="number"] {
     z-index: 2;
   }
   .app-shell-header-right {
-    gap: 8px !important;
+    gap: 16px !important;
     z-index: 3;
+    min-width: 0;
   }
   .app-shell-header-controls {
     gap: 6px !important;
   }
   .app-header-auth {
-    display: none !important;
+    display: flex !important;
+    flex: 0 0 auto;
   }
   .app-header-title-slot {
     position: static !important;

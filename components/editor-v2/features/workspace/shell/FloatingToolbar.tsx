@@ -701,7 +701,7 @@ export function FloatingToolbar({
           disabled={!canUndo}
           aria-label="Undo"
           title="Undo"
-          className={styles.historyButton}
+          className={[styles.historyButton, styles.toolbarHistoryControl].join(" ")}
           onClick={() => {
             closeColorLibrary();
             dispatch(createUndoCommand());
@@ -714,7 +714,7 @@ export function FloatingToolbar({
           disabled={!canRedo}
           aria-label="Redo"
           title="Redo"
-          className={styles.historyButton}
+          className={[styles.historyButton, styles.toolbarHistoryControl].join(" ")}
           onClick={() => {
             closeColorLibrary();
             dispatch(createRedoCommand());
@@ -723,7 +723,9 @@ export function FloatingToolbar({
           <ToolbarIcon icon="/icons/lucide/redo.svg" />
         </ToolbarButton>
 
-        <ToolbarDivider className={styles.historyDivider} />
+        <ToolbarDivider
+          className={[styles.historyDivider, styles.toolbarHistoryDivider].join(" ")}
+        />
 
         <ToolbarButton
           type="button"
