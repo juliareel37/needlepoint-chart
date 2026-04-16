@@ -65,6 +65,9 @@ export function TraceControls({
   const preservePositioningSectionLayout =
     repositionOrigin === "upload" || repositionOrigin === "replace";
   const traceFileName = trace ? getTraceDisplayName(trace) : null;
+  const traceFileNameParts = traceFileName
+    ? splitFileNameForDisplay(traceFileName)
+    : null;
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
@@ -353,7 +356,20 @@ export function TraceControls({
                 >
                   {traceUploadStatus === "uploading"
                     ? "Loading image..."
-                    : traceFileName}
+                    : traceFileNameParts
+                      ? (
+                        <>
+                          <span className={styles.traceAttachmentNameBase}>
+                            {traceFileNameParts.baseName}
+                          </span>
+                          {traceFileNameParts.extension ? (
+                            <span className={styles.traceAttachmentNameExtension}>
+                              {traceFileNameParts.extension}
+                            </span>
+                          ) : null}
+                        </>
+                      )
+                      : null}
                 </span>
               </span>
             </button>
@@ -656,6 +672,26 @@ function getTraceDisplayName(trace: TraceDocument): string {
   } catch {
     return fallbackName;
   }
+}
+
+function splitFileNameForDisplay(fileName: string): {
+  baseName: string;
+  extension: string;
+} {
+  const trimmedFileName = fileName.trim();
+  const lastDotIndex = trimmedFileName.lastIndexOf(".");
+
+  if (lastDotIndex <= 0 || lastDotIndex === trimmedFileName.length - 1) {
+    return {
+      baseName: trimmedFileName,
+      extension: "",
+    };
+  }
+
+  return {
+    baseName: trimmedFileName.slice(0, lastDotIndex),
+    extension: trimmedFileName.slice(lastDotIndex),
+  };
 }
 
 function BlendModeButton({
