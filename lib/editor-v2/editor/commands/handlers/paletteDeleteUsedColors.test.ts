@@ -151,6 +151,7 @@ function createDeleteTestState(): EditorStoreState {
         uploadStatus: "idle",
         placementMode: "idle",
         repositionOrigin: null,
+        replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
       },

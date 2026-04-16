@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton } from "@clerk/nextjs";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
@@ -46,6 +47,7 @@ interface EditorV2SetupModalProps {
   draftSizingMode: "stitches" | "inches";
   draftWidth: string;
   draftWidthInches: string;
+  hasSavedDesignAccess: boolean;
   onClose: () => void;
   onCreateDesign: (config: EditorV2DesignConfigNew) => void;
   onDraftHeightChange: (value: string) => void;
@@ -68,6 +70,7 @@ export function EditorV2SetupModal({
   draftSizingMode,
   draftWidth,
   draftWidthInches,
+  hasSavedDesignAccess,
   onClose,
   onCreateDesign,
   onDraftHeightChange,
@@ -292,36 +295,54 @@ export function EditorV2SetupModal({
               </p> */}
             </div>
 
-            <SingleSelectDropdown
-              ariaLabel="Saved designs"
-              emptyLabel="No saved designs"
-              getItemLabel={formatSavedDesignLabel}
-              getItemValue={(record) => record.storageId}
-              items={savedDocuments}
-              label="Choose a design"
-              onValueChange={setSelectedStorageId}
-              placeholder="Load saved design"
-              value={selectedStorageId}
-              wrapperStyle={{ width: "100%" }}
-              triggerStyle={{ width: "100%" }}
-            />
+            {hasSavedDesignAccess ? (
+              <>
+                <SingleSelectDropdown
+                  ariaLabel="Saved designs"
+                  emptyLabel="No saved designs"
+                  getItemLabel={formatSavedDesignLabel}
+                  getItemValue={(record) => record.storageId}
+                  items={savedDocuments}
+                  label="Choose a design"
+                  onValueChange={setSelectedStorageId}
+                  placeholder="Load saved design"
+                  value={selectedStorageId}
+                  wrapperStyle={{ width: "100%" }}
+                  triggerStyle={{ width: "100%" }}
+                />
 
-            <div className={styles.actions}>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={!selectedStorageId}
-                onClick={() => {
-                  if (!selectedStorageId) {
-                    return;
-                  }
+                <div className={styles.actions}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={!selectedStorageId}
+                    onClick={() => {
+                      if (!selectedStorageId) {
+                        return;
+                      }
 
-                  onLoadSavedDesign(selectedStorageId);
-                }}
-              >
-              Load Design
-              </Button>
-            </div>
+                      onLoadSavedDesign(selectedStorageId);
+                    }}
+                  >
+                    Load Design
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className={styles.helper} style={typographyStyles.p2}>
+                  Sign in to access your saved designs.
+                </p>
+
+                <div className={styles.actions}>
+                  <SignInButton mode="modal">
+                    <Button type="button" variant="primary">
+                      Sign in
+                    </Button>
+                  </SignInButton>
+                </div>
+              </>
+            )}
           </section>
         </div>
       </section>

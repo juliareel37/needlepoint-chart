@@ -48,6 +48,7 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
           ...state.session.traceInteraction,
           placementMode: "move",
           repositionOrigin: command.payload.origin,
+          replacedTrace: command.payload.origin === "replace" ? state.document.trace : null,
           repositionSnapshot: buildTraceRepositionSnapshot(nextTrace),
         },
       }),
@@ -126,6 +127,7 @@ export const beginTraceRepositionCommandHandler: EditorCommandHandler<BeginTrace
           ...state.session.traceInteraction,
           placementMode: "move",
           repositionOrigin: command.payload.origin,
+          replacedTrace: null,
           repositionSnapshot: buildTraceRepositionSnapshot(currentTrace),
         },
       },
@@ -178,19 +180,48 @@ export const cancelTraceRepositionCommandHandler: EditorCommandHandler<CancelTra
     return command.kind === "trace.cancelReposition";
   },
   handle(state, command) {
-    const snapshot = state.session.traceInteraction.repositionSnapshot;
+    const { repositionOrigin, replacedTrace, repositionSnapshot } =
+      state.session.traceInteraction;
 
-    if (!state.document.trace || !snapshot) {
+    if (!state.document.trace || !repositionSnapshot) {
       return buildTraceSessionNoop(state, command.id);
     }
 
-    return {
-      nextSession: clearTraceRepositionSession(state.session),
-      nextUi: state.ui,
-      patches: [{ type: "trace.update", changes: snapshot }],
-      inversePatches: [],
-      effects: [],
-      event: {
+    if (repositionOrigin === "upload") {
+      return {
+        nextSession: clearTraceRepositionSession(state.session),
+        nextUi: state.ui,
+        patches: [{ type: "trace.remove" }],
+        inversePatches: [],
+        effects: [],
+        event: {
+          type: "session",
+          commandId: command.id,
+        },
+      };
+    }
+
+    if (repositionOrigin === "replace" && replacedTrace) {
+      return {
+        nextSession: clearTraceRepositionSession(state.session),
+        nextUi: state.ui,
+        patches: [{ type: "trace.upsert", trace: replacedTrace }],
+        inversePatches: [],
+        effects: [],
+        event: {
+          type: "session",
+          commandId: command.id,
+        },
+      };
+    }
+
+      return {
+        nextSession: clearTraceRepositionSession(state.session),
+        nextUi: state.ui,
+        patches: [{ type: "trace.update", changes: repositionSnapshot }],
+        inversePatches: [],
+        effects: [],
+        event: {
         type: "session",
         commandId: command.id,
       },
@@ -306,6 +337,7 @@ function clearTraceRepositionSession<TSession extends {
   traceInteraction: {
     placementMode: "idle" | "move" | "scale" | "rotate";
     repositionOrigin: import("../../store/state").TraceRepositionOrigin | null;
+    replacedTrace: TraceDocument | null;
     repositionSnapshot: TraceRepositionSnapshot | null;
   };
 }>(session: TSession): TSession {
@@ -315,6 +347,7 @@ function clearTraceRepositionSession<TSession extends {
       ...session.traceInteraction,
       placementMode: "idle",
       repositionOrigin: null,
+      replacedTrace: null,
       repositionSnapshot: null,
     },
   };

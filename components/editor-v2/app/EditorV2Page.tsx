@@ -102,6 +102,7 @@ export function EditorV2Page() {
     >
       <EditorV2Workspace
         canvasLoading={canvasLoadingKey !== null}
+        hasSavedDesignAccess={Boolean(isLoaded && isSignedIn)}
         onCanvasReady={() => {
           setCanvasLoadingKey((currentKey) =>
             currentKey === designConfig.instanceKey ? null : currentKey,
@@ -161,6 +162,7 @@ export function EditorV2Page() {
             draftSizingMode={draftSizingMode}
             draftWidth={draftWidth}
             draftWidthInches={draftWidthInches}
+            hasSavedDesignAccess={Boolean(isLoaded && isSignedIn)}
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={(config) => {
               setCurrentStorageId("");

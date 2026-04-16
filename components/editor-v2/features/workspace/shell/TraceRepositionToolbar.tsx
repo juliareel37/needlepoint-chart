@@ -30,16 +30,6 @@ export function TraceRepositionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-          <ToolbarButton
-            type="button"
-            onClick={() => {
-              dispatch(createCancelTraceRepositionCommand())
-            }}          >
-          <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
-          </ToolbarButton>
-          
-        <ToolbarDivider />
-
         <ToolbarButton
           type="button"
           onClick={() => {
@@ -94,31 +84,18 @@ export function TraceRepositionToolbar({
         alignItems: "center",
         flexWrap: "nowrap",
       }}>
+        <Button
+            type="button"
+            variant="secondary"
+            onClick={() => dispatch(createCancelTraceRepositionCommand())}>
+          Cancel
+        </Button>
         <Button 
             type="button" 
             variant="primary" 
             onClick={() => dispatch(createCommitTraceRepositionCommand())}>
           Done
         </Button>
-        {/* <Button style={{padding:"6px",}}
-            type="button" 
-            variant="ghost" 
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}>
-          <ButtonIcon
-            icon="/icons/lucide/x.svg"
-          />
-        </Button> */}
-
-          {/* <ToolbarButton
-            type="button"
-            onClick={() => {
-              dispatch(createCancelTraceRepositionCommand())
-            }}
-          >
-            <ToolbarIcon icon="/icons/lucide/x.svg" />
-          </ToolbarButton> */}
-        
-       
       </div>
          
 

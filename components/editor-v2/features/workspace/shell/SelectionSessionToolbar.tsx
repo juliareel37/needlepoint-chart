@@ -86,7 +86,7 @@ export function SelectionSessionToolbar({
           aria-pressed={selectionShape === "freehand"}
           onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
         >
-          <ToolbarIcon icon="/icons/lucide/lasso.svg" />
+          <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
           {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
         </ToolbarButton>
 
@@ -96,7 +96,7 @@ export function SelectionSessionToolbar({
           aria-pressed={selectionShape === "rect"}
           onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
         >
-          <ToolbarIcon icon="/icons/lucide/selection.svg" />
+          <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
           {/* <ToolbarLabel>Rect</ToolbarLabel> */}
         </ToolbarButton>
 

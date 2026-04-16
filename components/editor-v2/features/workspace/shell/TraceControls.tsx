@@ -1,13 +1,23 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon, Field, Modal, Slider, Toggle } from "@/components/design-system";
+import {
+  Button,
+  ButtonIcon,
+  Field,
+  Modal,
+  Notification,
+  Slider,
+  Toggle,
+} from "@/components/design-system";
 import type {
   EditorStore,
   TraceBlendMode,
   TraceDocument,
+  TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import {
   createAttachTraceCommand,
@@ -19,16 +29,20 @@ import {
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
 
+const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
+
 interface TraceControlsProps {
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
   repositionActive?: boolean;
+  repositionOrigin?: TraceRepositionOrigin | null;
 }
 
 export function TraceControls({
   trace,
   dispatch,
   repositionActive = false,
+  repositionOrigin = null,
 }: TraceControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const traceUploadSequenceRef = useRef(0);
@@ -41,10 +55,15 @@ export function TraceControls({
   } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
   const [removeConfirmationOpen, setRemoveConfirmationOpen] = useState(false);
+  const [traceUploadErrorMessage, setTraceUploadErrorMessage] = useState<string | null>(
+    null,
+  );
   const [traceUploadStatus, setTraceUploadStatus] = useState<
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
+  const preservePositioningSectionLayout =
+    repositionOrigin === "upload" || repositionOrigin === "replace";
   const traceFileName = trace ? getTraceDisplayName(trace) : null;
 
   const handleTraceFileSelect = async (file: File) => {
@@ -53,6 +72,7 @@ export function TraceControls({
     const sequence = traceUploadSequenceRef.current + 1;
     traceUploadSequenceRef.current = sequence;
     setTraceUploadStatus("uploading");
+    setTraceUploadErrorMessage(null);
 
     try {
       const uploadedTrace = await uploadTraceFile(file);
@@ -74,6 +94,9 @@ export function TraceControls({
       }
 
       setTraceUploadStatus("error");
+      setTraceUploadErrorMessage(
+        "Try signing in again or choose a smaller PNG, JPG, WEBP, or GIF.",
+      );
     }
   };
 
@@ -89,6 +112,18 @@ export function TraceControls({
     window.addEventListener("pointerup", handlePointerUp);
     return () => window.removeEventListener("pointerup", handlePointerUp);
   }, [opacityTooltipVisible]);
+
+  useEffect(() => {
+    if (!traceUploadErrorMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setTraceUploadErrorMessage(null);
+    }, TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [traceUploadErrorMessage]);
 
   useEffect(() => {
     if (!dispatch) {
@@ -196,7 +231,28 @@ export function TraceControls({
   }
 
   return (
-    <div className={styles.panelStack}>
+    <>
+      {traceUploadErrorMessage
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div
+                className={styles.editorNotificationStack}
+                data-auto-dismiss="true"
+                style={{ animationDuration: `${TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS}ms` }}
+              >
+                <Notification
+                  tone="destructive"
+                  title="Couldn't upload image"
+                  description={traceUploadErrorMessage}
+                  onDismiss={() => setTraceUploadErrorMessage(null)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      <div className={styles.panelStack}>
       {!trace ? (
         <div
           onDragOver={(event) => {
@@ -264,30 +320,40 @@ export function TraceControls({
               onClick={() => fileInputRef.current?.click()}
             >
               <span className={styles.traceAttachmentThumbFrame}>
-                <img
-                  src={trace.assetUrl}
-                  alt={traceFileName ? `Trace image ${traceFileName}` : "Trace image"}
-                  className={styles.traceAttachmentThumb}
-                />
-                <span className={styles.traceAttachmentThumbOverlay} aria-hidden="true">
-                  <ButtonIcon icon="/icons/lucide/swap.svg" />
-                </span>
+                {traceUploadStatus === "uploading" ? (
+                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                ) : (
+                  <>
+                    <img
+                      src={trace.assetUrl}
+                      alt={traceFileName ? `Trace image ${traceFileName}` : "Trace image"}
+                      className={styles.traceAttachmentThumb}
+                    />
+                    <span className={styles.traceAttachmentThumbOverlay} aria-hidden="true">
+                      <ButtonIcon icon="/icons/lucide/swap.svg" />
+                    </span>
+                  </>
+                )}
               </span>
               <span className={styles.traceAttachmentMeta}>
                 <span
                   className={styles.traceAttachmentLabel}
                   style={typographyStyles.s}
                 >
-                  {traceUploadStatus === "uploading"
-                    ? "Uploading replacement..."
-                    : null}
+                  {null}
                 </span>
                 <span
                   className={styles.traceAttachmentName}
                   style={typographyStyles.p2}
-                  title={traceFileName ?? undefined}
+                  title={
+                    traceUploadStatus === "uploading"
+                      ? "Loading image..."
+                      : traceFileName ?? undefined
+                  }
                 >
-                  {traceFileName}
+                  {traceUploadStatus === "uploading"
+                    ? "Loading image..."
+                    : traceFileName}
                 </span>
               </span>
             </button>
@@ -304,13 +370,6 @@ export function TraceControls({
           </div>
         </TraceSection>
       )}
-
-      {traceUploadStatus === "error" ? (
-        <p className={styles.emptyMessage} style={typographyStyles.p2}>
-          Couldn&apos;t upload the trace image. Try signing in again or choose a
-          smaller PNG, JPG, WEBP, or GIF.
-        </p>
-      ) : null}
 
       <input
         ref={fileInputRef}
@@ -346,7 +405,7 @@ export function TraceControls({
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection title="Positioning">
-            {positioningEnabled ? (
+            {positioningEnabled && !preservePositioningSectionLayout ? (
               <div className={styles.panelRow}>
                 <Button
                   type="button"
@@ -369,10 +428,13 @@ export function TraceControls({
               <Button
                 type="button"
                 variant="primary"
-                disabled={!trace}
+                disabled={!trace || positioningEnabled}
                 onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
               >
+                <ButtonIcon icon="/icons/lucide/vector_square.svg" />
+
                 Reposition
+
               </Button>
             )}
           </TraceSection>
@@ -505,7 +567,8 @@ export function TraceControls({
           {/* No trace image attached. */}
         </p>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

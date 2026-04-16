@@ -10,6 +10,7 @@ import type {
   PaletteColor,
   TextPlacementSession,
   TraceDocument,
+  TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
@@ -27,6 +28,7 @@ interface EditorSidebarProps {
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   documentTitle: string;
+  hasSavedDesignAccess: boolean;
   palette: PaletteColor[];
   saveButtonState: SaveButtonState;
   saveMessage: string;
@@ -43,6 +45,7 @@ interface EditorSidebarProps {
   showSymbols: boolean;
   trace: TraceDocument | null;
   traceRepositionActive: boolean;
+  traceRepositionOrigin: TraceRepositionOrigin | null;
   usedColors: Array<{ colorId: string; count: number }>;
   document: EditorDocumentState;
   gridMetrics: GridWorldMetrics;
@@ -57,6 +60,7 @@ export function EditorSidebar({
   activeColorId,
   colorsById,
   documentTitle,
+  hasSavedDesignAccess,
   palette,
   saveButtonState,
   saveMessage,
@@ -73,6 +77,7 @@ export function EditorSidebar({
   showSymbols,
   trace,
   traceRepositionActive,
+  traceRepositionOrigin,
   usedColors,
   document,
   gridMetrics,
@@ -141,6 +146,7 @@ export function EditorSidebar({
             dispatch={dispatch}
             document={document}
             documentTitle={documentTitle}
+            hasSavedDesignAccess={hasSavedDesignAccess}
             onLoadSelected={onLoadSelected}
             onSaveDocument={onSaveDocument}
             onStartOver={onStartOver}
@@ -169,6 +175,7 @@ export function EditorSidebar({
           <TracePanelPage
             dispatch={dispatch}
             repositionActive={traceRepositionActive}
+            repositionOrigin={traceRepositionOrigin}
             trace={trace}
           />
         ) : null}

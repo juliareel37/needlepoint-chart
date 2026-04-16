@@ -340,7 +340,7 @@ export function FloatingToolbar({
 
           <ToolbarDivider />
 
-          <ToolbarButton
+          {/* <ToolbarButton
             type="button"
             aria-label="Reposition trace"
             title="Reposition trace"
@@ -352,7 +352,7 @@ export function FloatingToolbar({
           >
             <ToolbarIcon icon="/icons/lucide/crop.svg" />
             <ToolbarLabel>Reposition</ToolbarLabel>
-          </ToolbarButton>
+          </ToolbarButton> */}
 
           <ToolbarDivider />
 
@@ -613,12 +613,12 @@ export function FloatingToolbar({
             dispatch(createSetToolCommand("lasso"));
           }}
         >
-          <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+          <ToolbarIcon icon="/icons/lucide/lasso.svg" />
         </ToolbarButton>
       </ToolbarGroup>
 
       <ToolbarDivider />
-
+ 
       <ToolbarGroup>
         <ToolbarAnchor ref={imageAnchorRef}>
           <ToolbarButton
@@ -748,7 +748,7 @@ export function FloatingToolbar({
                       );
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                    <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
                     <ToolbarLabel>Reposition</ToolbarLabel>
                   </ToolbarButton>
 

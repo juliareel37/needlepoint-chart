@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton } from "@clerk/nextjs";
 import { useRef, useState } from "react";
 import {
   Button,
@@ -18,6 +19,7 @@ interface DocumentPanelPageProps {
   dispatch: EditorStore["dispatch"];
   document: EditorDocumentState;
   documentTitle: string;
+  hasSavedDesignAccess: boolean;
   onLoadSelected: () => void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
@@ -32,6 +34,7 @@ export function DocumentPanelPage({
   dispatch,
   document,
   documentTitle,
+  hasSavedDesignAccess,
   onLoadSelected,
   onSaveDocument,
   onStartOver,
@@ -141,7 +144,10 @@ export function DocumentPanelPage({
               disabled={saveButtonState === "saving"}
               onClick={() => onSaveDocument(document)}
             >
-              <SaveButtonLabel state={saveButtonState} />
+              <SaveButtonLabel
+                hasSavedDesignAccess={hasSavedDesignAccess}
+                state={saveButtonState}
+              />
             </Button>
           </div>
         </div>
@@ -150,27 +156,48 @@ export function DocumentPanelPage({
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Saved designs</h3>
           </div>
-          <SavedDesignSingleSelect
-            savedDocuments={savedDocuments}
-            selectedStorageId={selectedStorageId}
-            setSelectedStorageId={setSelectedStorageId}
-          />
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!selectedStorageId}
-            onClick={onLoadSelected}
-            className={styles.loadButton}
-          >
-            Load
-          </Button>
+          {hasSavedDesignAccess ? (
+            <>
+              <SavedDesignSingleSelect
+                savedDocuments={savedDocuments}
+                selectedStorageId={selectedStorageId}
+                setSelectedStorageId={setSelectedStorageId}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!selectedStorageId}
+                onClick={onLoadSelected}
+                className={styles.loadButton}
+              >
+                Load
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                Sign in to access your saved designs.
+              </p>
+              <SignInButton mode="modal">
+                <Button type="button" variant="primary" className={styles.loadButton}>
+                  Sign in
+                </Button>
+              </SignInButton>
+            </>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function SaveButtonLabel({ state }: { state: SaveButtonState }) {
+function SaveButtonLabel({
+  hasSavedDesignAccess,
+  state,
+}: {
+  hasSavedDesignAccess: boolean;
+  state: SaveButtonState;
+}) {
   if (state === "saving") {
     return (
       <>
@@ -189,7 +216,7 @@ function SaveButtonLabel({ state }: { state: SaveButtonState }) {
     );
   }
 
-  return <>Save</>;
+  return <>{hasSavedDesignAccess ? "Save" : "Sign in to save"}</>;
 }
 
 function SaveStatus({ saveMessage }: { saveMessage: string }) {
@@ -199,8 +226,13 @@ function SaveStatus({ saveMessage }: { saveMessage: string }) {
       ? saveMessage
       : state === "error"
         ? saveMessage
-        : "Not saved yet";
-  const icon = state === "error" ? "/icons/lucide/alert.svg" : "/icons/lucide/save.svg";
+        : state === "info"
+          ? saveMessage
+          : "Not saved yet";
+  const icon =
+    state === "error"
+      ? "/icons/lucide/alert.svg"
+      : "/icons/lucide/save.svg";
 
   return (
     <div className={styles.saveStatus} data-state={state} role="status" aria-live="polite">
@@ -214,16 +246,22 @@ function SaveStatus({ saveMessage }: { saveMessage: string }) {
   );
 }
 
-function getSaveStatusState(saveMessage: string): "ready" | "saved" | "error" {
+function getSaveStatusState(
+  saveMessage: string,
+): "ready" | "saved" | "error" | "info" {
   if (!saveMessage) {
     return "ready";
+  }
+
+  if (saveMessage.startsWith("Saved at ")) {
+    return "saved";
   }
 
   if (saveMessage.startsWith("Couldn't")) {
     return "error";
   }
 
-  return "saved";
+  return "info";
 }
 
 function SavedDesignSingleSelect({

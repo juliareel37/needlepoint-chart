@@ -42,9 +42,11 @@ import styles from "./EditorV2Shell.module.css";
 const EXPANDED_SIDEBAR_WIDTH = 320;
 const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
+const SAVE_SUCCESS_PREFIX = "Saved at ";
 
 export function EditorV2Shell({
   canvasLoading,
+  hasSavedDesignAccess,
   onCanvasReady,
   onSaveDocument,
   onLoadDocument,
@@ -58,6 +60,7 @@ export function EditorV2Shell({
   setupModalOpen,
 }: {
   canvasLoading: boolean;
+  hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
@@ -95,6 +98,7 @@ export function EditorV2Shell({
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
+  const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
   const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
   const selectionActive = activeTool === "lasso";
@@ -268,7 +272,7 @@ export function EditorV2Shell({
   }, [activeSidebarSection, dispatch, sidebarCollapsed, traceRepositionActive]);
 
   useEffect(() => {
-    if (!saveMessage || saveMessage.startsWith("Couldn't")) {
+    if (!saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
       setSaveNotificationVisible(false);
       return;
     }
@@ -341,6 +345,7 @@ export function EditorV2Shell({
                 activeColorId={activeColorId}
                 colorsById={colorsById}
                 documentTitle={title}
+                hasSavedDesignAccess={hasSavedDesignAccess}
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
@@ -362,6 +367,7 @@ export function EditorV2Shell({
                 previewMode={previewMode}
                 trace={trace}
                 traceRepositionActive={traceRepositionActive}
+                traceRepositionOrigin={traceRepositionOrigin}
                 textPlacement={textPlacement}
                 usedColors={usedColors}
                 document={document}

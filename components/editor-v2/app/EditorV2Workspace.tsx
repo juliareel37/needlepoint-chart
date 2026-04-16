@@ -14,6 +14,7 @@ export type SaveButtonState = "idle" | "saving" | "saved";
 
 export function EditorV2Workspace({
   canvasLoading,
+  hasSavedDesignAccess,
   onCanvasReady,
   currentStorageId,
   savedDocuments,
@@ -26,6 +27,7 @@ export function EditorV2Workspace({
   setupModalOpen,
 }: {
   canvasLoading: boolean;
+  hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   currentStorageId: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
@@ -57,6 +59,7 @@ export function EditorV2Workspace({
     <div>
       <EditorV2Shell
         canvasLoading={canvasLoading}
+        hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={onCanvasReady}
         onSaveDocument={async (nextDocument) => {
           if (saveButtonResetTimeoutRef.current !== null) {
