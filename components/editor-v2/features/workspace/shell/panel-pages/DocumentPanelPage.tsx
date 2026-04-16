@@ -137,6 +137,7 @@ export function DocumentPanelPage({
             <Button
               type="button"
               variant="primary"
+              className={styles.pendingActionButton}
               disabled={saveButtonState === "saving"}
               onClick={() => onSaveDocument(document)}
             >

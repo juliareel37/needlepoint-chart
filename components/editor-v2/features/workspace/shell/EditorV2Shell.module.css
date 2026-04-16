@@ -573,6 +573,10 @@
   height: 14px;
 }
 
+.pendingActionButton:disabled {
+  opacity: 1;
+}
+
 .panelStack {
   display: flex;
   flex-direction: column;

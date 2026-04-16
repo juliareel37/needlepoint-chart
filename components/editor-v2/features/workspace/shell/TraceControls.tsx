@@ -225,10 +225,18 @@ export function TraceControls({
             type="button"
             variant="primary"
             size="md"
+            className={styles.pendingActionButton}
             disabled={traceUploadStatus === "uploading"}
             onClick={() => fileInputRef.current?.click()}
           >
-            {traceUploadStatus === "uploading" ? "Uploading..." : "Browse file"}
+            {traceUploadStatus === "uploading" ? (
+              <>
+                <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                Uploading...
+              </>
+            ) : (
+              "Browse file"
+            )}
           </Button>
         </div>
       ) : (
