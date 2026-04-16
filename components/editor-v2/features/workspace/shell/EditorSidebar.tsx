@@ -90,14 +90,20 @@ export function EditorSidebar({
       <div className={styles.sidebarSurface}>
         <div className={styles.sidebarPanelHeader}>
           {activeSection === "color" && colorPanelView === "design-colors" ? (
-            <button
-              type="button"
-              className={styles.sidebarPanelBackTitle}
-              onClick={() => setColorPanelView("overview")}
-            >
-              <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              <span style={typographyStyles.h4}>Design Colors</span>
-            </button>
+            <div className={styles.sidebarPanelBackRow}>
+              <button
+                type="button"
+                className={styles.sidebarPanelBackButton}
+                aria-label="Back to color overview"
+                title="Back to color overview"
+                onClick={() => setColorPanelView("overview")}
+              >
+                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+              </button>
+              <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                Design Colors
+              </span>
+            </div>
           ) : (
             <h2 className={styles.sidebarPanelTitle} style={typographyStyles.h4}>
               {activeSection === "document"
