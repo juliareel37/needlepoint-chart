@@ -6,7 +6,6 @@ import {
   ButtonIcon,
   FieldInput,
   SingleSelectDropdown,
-  panelMutedTextStyle,
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
@@ -69,6 +68,8 @@ export function DocumentPanelPage({
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
         <div className={styles.sidebarSubsection}>
+          <SaveStatus saveMessage={saveMessage} />
+
           <div className={styles.sidebarTitleBlock}>
             {isRenaming ? (
               <div>
@@ -138,11 +139,6 @@ export function DocumentPanelPage({
               Save
             </Button>
           </div>
-          {saveMessage ? (
-            <p className={styles.emptyMessage} style={panelMutedTextStyle}>
-              {saveMessage}
-            </p>
-          ) : null}
         </div>
 
         <div className={styles.sidebarSubsection}>
@@ -167,6 +163,40 @@ export function DocumentPanelPage({
       </div>
     </section>
   );
+}
+
+function SaveStatus({ saveMessage }: { saveMessage: string }) {
+  const state = getSaveStatusState(saveMessage);
+  const message =
+    state === "saved"
+      ? saveMessage
+      : state === "error"
+        ? saveMessage
+        : "Not saved yet";
+  const icon = state === "error" ? "/icons/lucide/alert.svg" : "/icons/lucide/save.svg";
+
+  return (
+    <div className={styles.saveStatus} data-state={state} role="status" aria-live="polite">
+      <span className={styles.saveStatusIconWrap} aria-hidden="true">
+        <ButtonIcon icon={icon} className={styles.saveStatusIcon} />
+      </span>
+      <p className={styles.saveStatusMessage} style={typographyStyles.p2}>
+        {message}
+      </p>
+    </div>
+  );
+}
+
+function getSaveStatusState(saveMessage: string): "ready" | "saved" | "error" {
+  if (!saveMessage) {
+    return "ready";
+  }
+
+  if (saveMessage.startsWith("Couldn't")) {
+    return "error";
+  }
+
+  return "saved";
 }
 
 function SavedDesignSingleSelect({
