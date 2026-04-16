@@ -1,9 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { typographyStyles } from "@/app/design-system/typography";
 import {
-  CheckboxField,
-  Field,
-  Toggle,
+  ButtonIcon,
 } from "@/components/design-system";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import type {
@@ -35,50 +35,197 @@ export function SettingsPanelPage({
   const { themeMode, setThemeMode } = useThemeMode();
 
   return (
-    <div className={styles.sidebarSubsection}>
-      <Field
-        // label="Appearance"
-        // hint="Switch the editor chrome between light and dark."
+    <section className={styles.sidebarSection}>
+      <div className={styles.sidebarPageBody}>
+             <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSubsectionHeader}>
+            <h3 style={typographyStyles.h5}>App Theme</h3>
+          </div>
+          <SegmentedChoiceSetting
+            label="Theme"
+            value={themeMode}
+            ariaLabel="Application theme"
+            options={[
+              {
+                label: (
+                  <>
+                    <ButtonIcon icon="/icons/lucide/sun.svg" />
+                    Light
+                  </>
+                ),
+                value: "light",
+              },
+              {
+                label: (
+                  <>
+                    <ButtonIcon icon="/icons/lucide/moon.svg" />
+                    Dark
+                  </>
+                ),
+                value: "dark",
+              },
+            ]}
+            onChange={(nextValue) => setThemeMode(nextValue)}
+          />
+        </div>
+      </div>
+        <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSubsectionHeader}>
+            <h3 style={typographyStyles.h5}>Canvas Aids</h3>
+          </div>
+          {/* <SegmentedBooleanSetting
+            label="Preview mode"
+            value={previewMode}
+            ariaLabel="Preview mode"
+            onChange={(nextChecked) => dispatch(createSetPreviewModeCommand(nextChecked))}
+          /> */}
+          <SegmentedBooleanSetting
+            label="Grid lines"
+            value={showGridlines}
+            ariaLabel="Grid lines visibility"
+            options={{
+              show: (
+                <>
+                  <ButtonIcon icon="/icons/other/noun-grid.svg" />
+                  Show
+                </>
+              ),
+              hide: (
+                <>
+                  <ButtonIcon icon="/icons/other/noun-grid-off.svg" />
+                  Hide
+                </>
+              ),
+            }}
+            onChange={(nextChecked) => dispatch(createSetGridlinesVisibleCommand(nextChecked))}
+          />
+          <SegmentedBooleanSetting
+            label="Ruler"
+            value={showRuler}
+            ariaLabel="Ruler visibility"
+                        options={{
+              show: (
+                <>
+                  <ButtonIcon icon="/icons/lucide/ruler.svg" />
+                  Show
+                </>
+              ),
+              hide: (
+                <>
+                  <ButtonIcon icon="/icons/other/ruler-off.svg" />
+                  Hide
+                </>
+              ),
+            }}
+            onChange={(nextChecked) => dispatch(createSetRulerVisibleCommand(nextChecked))}
+          />
+        {/* </div>
+
+        <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSubsectionHeader}>
+            <h3 style={typographyStyles.h5}>Colors</h3>
+          </div> */}
+          <SegmentedBooleanSetting
+            label="Color Symbol Key"
+            value={showSymbols}
+            ariaLabel="Symbols visibility"
+            options={{
+              show: (
+                <>
+                  <ButtonIcon icon="/icons/other/glyphs2.svg" />
+                  Show
+                </>
+              ),
+              hide: (
+                <>
+                  <ButtonIcon icon="/icons/other/glyphs2-off.svg" />
+                  Hide
+                </>
+              ),
+            }}
+            onChange={(nextChecked) => dispatch(createSetSymbolsVisibleCommand(nextChecked))}
+          />
+        </div>
+
+   
+    </section>
+  );
+}
+
+function SegmentedBooleanSetting({
+  ariaLabel,
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  ariaLabel: string;
+  label: string;
+  onChange: (next: boolean) => void;
+  options?: {
+    hide: ReactNode;
+    show: ReactNode;
+  };
+  value: boolean;
+}) {
+  return (
+    <SegmentedChoiceSetting
+      label={label}
+      value={value ? "show" : "hide"}
+      ariaLabel={ariaLabel}
+      options={[
+        { label: options?.show ?? "Show", value: "show" },
+        { label: options?.hide ?? "Hide", value: "hide" },
+      ]}
+      onChange={(nextValue) => onChange(nextValue === "show")}
+    />
+  );
+}
+
+function SegmentedChoiceSetting<T extends string>({
+  ariaLabel,
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  ariaLabel: string;
+  label: ReactNode;
+  onChange: (next: T) => void;
+  options: { label: ReactNode; value: T }[];
+  value: T;
+}) {
+  return (
+    <div className={styles.settingsControlGroup}>
+      <span className={styles.settingsControlLabel} style={typographyStyles.p2}>
+        {label}
+      </span>
+      <div
+        className={styles.sidebarSegmentedControl}
+        role="radiogroup"
+        aria-label={ariaLabel}
       >
-        <Toggle
-          checked={themeMode === "dark"}
-          aria-label={`Switch to ${themeMode === "dark" ? "light" : "dark"} mode`}
-          label={themeMode === "dark" ? "Dark mode" : "Light mode"}
-          onChange={(nextChecked) => setThemeMode(nextChecked ? "dark" : "light")}
-        />
-      </Field>
-      <CheckboxField
-        checked={previewMode}
-        onChange={(event) =>
-          dispatch(createSetPreviewModeCommand(event.target.checked))
-        }
-      >
-        Preview mode
-      </CheckboxField>
-      <CheckboxField
-        checked={showGridlines}
-        onChange={(event) =>
-          dispatch(createSetGridlinesVisibleCommand(event.target.checked))
-        }
-      >
-        Show grid lines
-      </CheckboxField>
-      <CheckboxField
-        checked={showRuler}
-        onChange={(event) =>
-          dispatch(createSetRulerVisibleCommand(event.target.checked))
-        }
-      >
-        Show ruler
-      </CheckboxField>
-      <CheckboxField
-        checked={showSymbols}
-        onChange={(event) =>
-          dispatch(createSetSymbolsVisibleCommand(event.target.checked))
-        }
-      >
-        Show symbols
-      </CheckboxField>
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={styles.sidebarSegmentedItem}
+              data-active={active ? "true" : "false"}
+              aria-pressed={active}
+              onClick={() => {
+                if (!active) {
+                  onChange(option.value);
+                }
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

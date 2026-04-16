@@ -349,6 +349,66 @@
   background: var(--ui-border-subtle);
 }
 
+.settingsControlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingsControlLabel {
+  color: var(--text-primary);
+}
+
+.sidebarSegmentedControl {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
+  border: 1px solid var(--ui-border-subtle);
+}
+
+.sidebarSegmentedItem {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 550;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.sidebarSegmentedItem:hover {
+  background: var(--button-ghost-hover);
+}
+
+.sidebarSegmentedItem[data-active="true"] {
+  background: var(--button-ghost-active);
+  cursor: default;
+}
+
+.sidebarSegmentedItem[data-active="true"]:hover {
+  background: var(--button-ghost-active);
+}
+
+.sidebarSegmentedItem:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
+}
+
 .canvasColumn {
   min-width: 0;
   display: flex;

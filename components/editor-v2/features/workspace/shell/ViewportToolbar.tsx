@@ -73,7 +73,7 @@ export function ViewportToolbar({
 
   return (
     <Toolbar className={styles.viewportToolbar}>
-      <ToolbarGroup>
+      <ToolbarGroup  style={{"gap": "2px"}}>
         <ToolbarButton
           type="button"
           aria-label="Zoom out"

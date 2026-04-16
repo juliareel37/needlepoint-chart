@@ -37,8 +37,8 @@ export function TextPanelPage({
   const helperText = useMemo(
     () =>
       placementActive
-        ? "Edit the text directly on the canvas. Use the top toolbar to style, convert, or cancel."
-        : "Add a text box, then type directly on the canvas. When you're ready, convert it to stitches.",
+        ? "Convert text to painted cells."
+        : "Convert text to painted cells.",
     [placementActive],
   );
 
