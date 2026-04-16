@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon } from "@/components/design-system";
+import { Button, ButtonIcon, Modal } from "@/components/design-system";
 import {
   ToolbarAnchor,
   ToolbarButton,
@@ -22,9 +22,11 @@ type UsedColorsActionMode = "none" | "merge";
 function UsedColorsPortalPopover({
   anchorRef,
   children,
+  preferredDirection = "auto",
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
   anchorRef: React.RefObject<HTMLDivElement | null>;
+  preferredDirection?: "auto" | "up" | "down";
 }) {
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
@@ -54,7 +56,11 @@ function UsedColorsPortalPopover({
     const spaceAbove = Math.max(rect.top - viewportPadding, 0);
     const spaceBelow = Math.max(window.innerHeight - rect.bottom - viewportPadding, 0);
     const direction =
-      spaceBelow < popoverHeight && spaceAbove > spaceBelow ? "up" : "down";
+      preferredDirection === "auto"
+        ? spaceBelow < popoverHeight && spaceAbove > spaceBelow
+          ? "up"
+          : "down"
+        : preferredDirection;
     const availableSpace = direction === "up" ? spaceAbove : spaceBelow;
 
     setPosition({
@@ -63,7 +69,7 @@ function UsedColorsPortalPopover({
       direction,
       maxHeight: Math.max(availableSpace - gap, 140),
     });
-  }, [anchorRef]);
+  }, [anchorRef, preferredDirection]);
 
   useEffect(() => {
     if (!mounted) {
@@ -138,6 +144,8 @@ export function UsedColorsSummary({
   const [mergeTargetColorId, setMergeTargetColorId] = useState<string | null>(null);
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
   const [swapSourceColorId, setSwapSourceColorId] = useState<string | null>(null);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [mergeConfirmationOpen, setMergeConfirmationOpen] = useState(false);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -157,7 +165,23 @@ export function UsedColorsSummary({
     }
   }, [swapSourceColorId, usedColors]);
 
+  useEffect(() => {
+    if (selectedColorIds.length === 0) {
+      setDeleteConfirmationOpen(false);
+      setMergeConfirmationOpen(false);
+    }
+  }, [selectedColorIds]);
+
   const selectedColorIdSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds]);
+  const selectedUsedColors = useMemo(
+    () => usedColors.filter((entry) => selectedColorIdSet.has(entry.colorId)),
+    [selectedColorIdSet, usedColors],
+  );
+  const defaultMergeTargetColorId = useMemo(
+    () =>
+      usedColors.find((entry) => !selectedColorIdSet.has(entry.colorId))?.colorId ?? null,
+    [selectedColorIdSet, usedColors],
+  );
   const isSelecting = toolMode !== "idle";
   const canDelete =
     selectedColorIds.length > 0 &&
@@ -177,6 +201,33 @@ export function UsedColorsSummary({
     selectedColorIds.length > 0 &&
     mergeTargetColorId !== null &&
     selectedColorIds.some((colorId) => colorId !== mergeTargetColorId);
+  const mergeSourceColorIds = mergeTargetColorId
+    ? selectedColorIds.filter((colorId) => colorId !== mergeTargetColorId)
+    : [];
+  const deleteSelectionCount = selectedColorIds.length;
+  const deleteStitchCount = selectedUsedColors.reduce(
+    (total, entry) => total + entry.count,
+    0,
+  );
+  const mergeColorCount = mergeSourceColorIds.length;
+  const mergeStitchCount = selectedUsedColors
+    .filter((entry) => mergeTargetColorId === null || entry.colorId !== mergeTargetColorId)
+    .reduce((total, entry) => total + entry.count, 0);
+  const mergeTargetName = mergeTargetColorId
+    ? (colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId)
+    : "selected target color";
+  const mergeTitle =
+    mergeColorCount === 1 ? "Merge 1 color?" : `Merge ${mergeColorCount} colors?`;
+  const mergeDescription =
+    mergeColorCount === 1
+      ? `${mergeStitchCount} canvas cell${mergeStitchCount === 1 ? "" : "s"} will be reassigned to ${mergeTargetName}.`
+      : `${mergeStitchCount} canvas cells will be reassigned to ${mergeTargetName}.`;
+  const deleteTitle =
+    deleteSelectionCount === 1 ? "Delete 1 color?" : `Delete ${deleteSelectionCount} colors?`;
+  const deleteDescription =
+    deleteSelectionCount === 1
+      ? `${deleteStitchCount} canvas cell${deleteStitchCount === 1 ? "" : "s"} will be replaced with the closest remaining color in the design palette.`
+      : `${deleteStitchCount} canvas cells will be replaced with the most similar remaining color in the design palette.`;
 
   const exitToolMode = () => {
     setToolMode("idle");
@@ -185,6 +236,8 @@ export function UsedColorsSummary({
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
+    setDeleteConfirmationOpen(false);
+    setMergeConfirmationOpen(false);
   };
 
   const clearSelection = () => {
@@ -193,6 +246,8 @@ export function UsedColorsSummary({
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
+    setDeleteConfirmationOpen(false);
+    setMergeConfirmationOpen(false);
   };
 
   const toggleColorSelection = (colorId: string) => {
@@ -398,6 +453,7 @@ export function UsedColorsSummary({
                       onClick={() => {
                         setActionMode("none");
                         setMergePickerOpen(false);
+                        setMergeConfirmationOpen(false);
                       }}
                     >
                       <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
@@ -458,6 +514,7 @@ export function UsedColorsSummary({
                           {mergePickerOpen ? (
                             <UsedColorsPortalPopover
                               anchorRef={mergeTargetAnchorRef}
+                              preferredDirection="up"
                               role="dialog"
                               aria-label="Merge target color library"
                               className={styles.usedColorsMergePopover}
@@ -486,9 +543,7 @@ export function UsedColorsSummary({
                           if (!canMerge || !mergeTargetColorId) {
                             return;
                           }
-
-                          onMergeColors(selectedColorIds, mergeTargetColorId);
-                          exitToolMode();
+                          setMergeConfirmationOpen(true);
                         }}
                       >
                         {/* <ButtonIcon icon="/icons/lucide/merge.svg" /> */}
@@ -511,6 +566,7 @@ export function UsedColorsSummary({
                           }
 
                           setActionMode("merge");
+                          setMergeTargetColorId(defaultMergeTargetColorId);
                           setMergePickerOpen(false);
                         }}
                       >
@@ -529,9 +585,7 @@ export function UsedColorsSummary({
                           if (!canDelete) {
                             return;
                           }
-
-                          onDeleteColors(selectedColorIds);
-                          exitToolMode();
+                          setDeleteConfirmationOpen(true);
                         }}
                       >
                         <ButtonIcon icon="/icons/lucide/trash.svg" />
@@ -544,6 +598,46 @@ export function UsedColorsSummary({
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={mergeConfirmationOpen}
+        title={mergeTitle}
+        description={mergeDescription}
+        tone="warning"
+        dismissLabel="Cancel"
+        confirmLabel={mergeColorCount === 1 ? "Merge color" : "Merge colors"}
+        confirmVariant="primary"
+        onDismiss={() => setMergeConfirmationOpen(false)}
+        onConfirm={() => {
+          if (!canMerge || !mergeTargetColorId) {
+            setMergeConfirmationOpen(false);
+            return;
+          }
+
+          onMergeColors(selectedColorIds, mergeTargetColorId);
+          exitToolMode();
+        }}
+      />
+
+      <Modal
+        isOpen={deleteConfirmationOpen}
+        title={deleteTitle}
+        description={deleteDescription}
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel={deleteSelectionCount === 1 ? "Delete color" : "Delete colors"}
+        confirmVariant="destructive"
+        onDismiss={() => setDeleteConfirmationOpen(false)}
+        onConfirm={() => {
+          if (!canDelete || selectedColorIds.length === 0) {
+            setDeleteConfirmationOpen(false);
+            return;
+          }
+
+          onDeleteColors(selectedColorIds);
+          exitToolMode();
+        }}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
   Button,
   ButtonIcon,
+  Modal,
   Slider,
   Toolbar,
   ToolbarAnchor,
@@ -138,6 +139,7 @@ export function FloatingToolbar({
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const drawAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -351,7 +353,8 @@ export function FloatingToolbar({
   }
 
   return (
-    <Toolbar className={styles.floatingToolbar}>
+    <>
+      <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
         <ToolbarAnchor ref={colorAnchorRef}>
           <ToolbarButton
@@ -783,17 +786,28 @@ export function FloatingToolbar({
             if (!hasPaintedCells) {
               return;
             }
-
-            if (!window.confirm("Clear the entire canvas?")) {
-              return;
-            }
-
-            dispatch(createClearCanvasCommand());
+            setClearCanvasModalOpen(true);
           }}
         >
           <ToolbarIcon icon="/icons/lucide/trash2.svg" />
         </ToolbarButton>
       </ToolbarGroup>
-    </Toolbar>
+      </Toolbar>
+
+      <Modal
+        isOpen={clearCanvasModalOpen}
+        title="Clear canvas?"
+        description="This will remove all painted stitches."
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel="Clear canvas"
+        confirmVariant="destructive"
+        onDismiss={() => setClearCanvasModalOpen(false)}
+        onConfirm={() => {
+          setClearCanvasModalOpen(false);
+          dispatch(createClearCanvasCommand());
+        }}
+      />
+    </>
   );
 }

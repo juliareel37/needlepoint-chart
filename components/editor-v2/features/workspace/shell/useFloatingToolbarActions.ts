@@ -68,7 +68,6 @@ export function useFloatingToolbarActions({
     handleBrushMenuButtonClick,
     handleCancelTraceReposition,
     handleCommitTraceReposition,
-    handleClearCanvasClick,
     handleEraseClick,
     handleEyedropperClick,
     handleImageButtonClick,
@@ -270,19 +269,6 @@ export function useFloatingToolbarActions({
     dispatch(createRedoCommand());
   }
 
-  function handleClearCanvasClick() {
-    exitSelectionFlow();
-
-    if (!hasPaintedCells) {
-      return;
-    }
-
-    if (!window.confirm("Clear the entire canvas?")) {
-      return;
-    }
-
-    dispatch(createClearCanvasCommand());
-  }
 }
 
 function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {

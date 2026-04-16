@@ -1,0 +1,100 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
+    rgba(10, 15, 26, 0.22);
+  backdrop-filter: blur(3px);
+}
+
+.card {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  gap: 20px;
+  width: min(100%, 360px);
+  padding: 28px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 16px;
+  background: var(--surface-card);
+  box-shadow: var(--ui-shadow-lg);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  flex: 0 0 40px;
+}
+
+.badgeIcon {
+  width: 20px;
+  height: 20px;
+  background: currentColor center / contain no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.titleWrap,
+.title,
+.description {
+  margin: 0;
+}
+
+.closeButton {
+  flex: 0 0 auto;
+}
+
+.description {
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.actions > * {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 24px;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+  }
+}

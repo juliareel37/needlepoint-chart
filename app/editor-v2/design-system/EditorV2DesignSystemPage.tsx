@@ -15,6 +15,7 @@ import {
   Checkbox,
   Field,
   FieldInput,
+  Modal,
   SingleSelectDropdown,
   Slider,
   Toggle,
@@ -317,7 +318,7 @@ function FeedbackAndOverlaysDemo() {
 }
 
 function ModalDemoCard({ variant = "default" }: { variant?: "default" | "destructive" }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const destructive = variant === "destructive";
 
   const title = destructive ? "Delete chart?" : "Save changes?";
@@ -332,65 +333,17 @@ function ModalDemoCard({ variant = "default" }: { variant?: "default" | "destruc
       <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
         {destructive ? "Open destructive modal" : "Open modal"}
       </Button>
-
-      <div className={styles.modalStage} aria-hidden={open ? undefined : "true"}>
-        {open ? (
-          <div className={styles.modalScrim}>
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={`${variant}-modal-title`}
-              aria-describedby={`${variant}-modal-description`}
-              className={styles.modalCard}
-            >
-              {destructive ? (
-                <div className={styles.modalAlertBadge} aria-hidden="true">
-                  <span
-                    className={styles.modalAlertIcon}
-                    style={{
-                      WebkitMaskImage: `url(${assetPath("icons/alert.svg")})`,
-                      maskImage: `url(${assetPath("icons/alert.svg")})`,
-                    }}
-                  />
-                </div>
-              ) : null}
-
-              <div className={styles.modalHeader}>
-                <div id={`${variant}-modal-title`} style={typographyStyles.h4}>
-                  {title}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghostV2"
-                  size="sm"
-                  className={styles.modalClose}
-                  aria-label="Close modal"
-                  onClick={() => setOpen(false)}
-                >
-                  <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="12" height="12" />
-                </Button>
-              </div>
-
-              <div
-                id={`${variant}-modal-description`}
-                className={styles.modalDescription}
-                style={typographyStyles.p2}
-              >
-                {description}
-              </div>
-
-              <div className={styles.modalActions}>
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                  {secondaryLabel}
-                </Button>
-                <Button type="button" variant={destructive ? "destructive" : "primary"}>
-                  {primaryLabel}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
+      <Modal
+        isOpen={open}
+        title={title}
+        description={description}
+        tone={destructive ? "fail" : "none"}
+        dismissLabel={secondaryLabel}
+        confirmLabel={primaryLabel}
+        confirmVariant={destructive ? "destructive" : "primary"}
+        onDismiss={() => setOpen(false)}
+        onConfirm={() => setOpen(false)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { typographySpecs } from "@/app/design-system/typography";
 import styles from "./Button.module.css";
 import { assetPath } from "@/lib/assetPath";
 
-type ButtonVariant =
+export type ButtonVariant =
   | "primary"
   | "secondary"
   | "destructive"
