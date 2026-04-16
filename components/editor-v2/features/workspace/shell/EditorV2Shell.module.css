@@ -1040,21 +1040,43 @@
   color: var(--text-secondary);
 }
 
-.saveStatus {
+.headerSaveStatus {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 20px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--ui-border-subtle);
+  min-width: 0;
+  max-width: min(260px, 32vw);
+  padding: 6px 10px;
+  border: 1px solid var(--ui-border-reg);
   border-radius: 6px;
-  background: var(--surface-card);
-  box-shadow: var(--ui-shadow-sm);
+  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
+  color: var(--text-secondary);
+  /* box-shadow: var(--ui-shadow-sm); */
+}
+
+.headerSaveStatus[data-state="ready"] {
   color: var(--text-secondary);
 }
 
-.saveStatusIconWrap {
+.headerSaveStatus[data-state="alert"] {
+  color: color-mix(in srgb, var(--text-primary) 76%, #8a5a00);
+  background: color-mix(in srgb, var(--surface-card) 32%, #fff3cd);
+  border-color: color-mix(in srgb, #e0b84f 46%, var(--ui-border-subtle));
+}
+
+.headerSaveStatus[data-state="saved"] {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-card) 70%, var(--brand-100));
+  border-color: color-mix(in srgb, var(--brand-300) 48%, var(--ui-border-subtle));
+}
+
+.headerSaveStatus[data-state="error"] {
+  color: color-mix(in srgb, var(--text-primary) 82%, #8a1c1c);
+  background: color-mix(in srgb, var(--surface-card) 62%, #fff1f1);
+  border-color: color-mix(in srgb, #d85c5c 40%, var(--ui-border-subtle));
+}
+
+.headerSaveStatusIconWrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1062,15 +1084,18 @@
   color: inherit;
 }
 
-.saveStatusIcon,
-.saveStatusIcon span {
+.headerSaveStatusIcon,
+.headerSaveStatusIcon span {
   width: 14px;
   height: 14px;
 }
 
-.saveStatusMessage {
+.headerSaveStatusMessage {
   margin: 0;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loadButton {
@@ -1428,6 +1453,10 @@
 
 
 @media (max-width: 768px) {
+  .headerSaveStatus {
+    display: none;
+  }
+
   .viewportToolbar {
     display: none;
   }

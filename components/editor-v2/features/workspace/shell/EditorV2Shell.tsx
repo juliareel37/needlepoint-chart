@@ -30,7 +30,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
-import { Notification } from "@/components/design-system";
+import { ButtonIcon, Notification } from "@/components/design-system";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
 import { SelectionSessionToolbar } from "./SelectionSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
@@ -108,6 +108,7 @@ export function EditorV2Shell({
   const hasAppliedInitialFitRef = useRef(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
+  const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const gridMetrics = useMemo(
     () =>
       createGridWorldMetrics(
@@ -287,8 +288,21 @@ export function EditorV2Shell({
   }, 
   [saveMessage]);
 
+  useEffect(() => {
+    setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
+  }, []);
+
   return (
     <main className={styles.shell}>
+      {headerAutosaveTarget
+        ? createPortal(
+            <HeaderSaveStatus
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              saveMessage={saveMessage}
+            />,
+            headerAutosaveTarget,
+          )
+        : null}
       {saveNotificationVisible
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
@@ -350,7 +364,6 @@ export function EditorV2Shell({
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
                 saveButtonState={saveButtonState}
-                saveMessage={saveMessage}
                 savedDocuments={savedDocuments}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
@@ -472,4 +485,64 @@ export function EditorV2Shell({
       ) : null}
     </main>
   );
+}
+
+function HeaderSaveStatus({
+  hasSavedDesignAccess,
+  saveMessage,
+}: {
+  hasSavedDesignAccess: boolean;
+  saveMessage: string;
+}) {
+  const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
+  const message =
+    !hasSavedDesignAccess && !saveMessage
+      ? "Sign in to save changes"
+      : saveMessage || "Not saved yet";
+  const icon =
+    state === "alert"
+      ? "/icons/lucide/alert.svg"
+      : state === "error"
+        ? "/icons/lucide/alert.svg"
+        : "/icons/lucide/save.svg";
+
+  return (
+    <div
+      className={styles.headerSaveStatus}
+      data-state={state}
+      role="status"
+      aria-live="polite"
+      title={message}
+    >
+      <span className={styles.headerSaveStatusIconWrap} aria-hidden="true">
+        <ButtonIcon icon={icon} className={styles.headerSaveStatusIcon} />
+      </span>
+      <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
+        {message}
+      </p>
+    </div>
+  );
+}
+
+function getSaveStatusState(
+  saveMessage: string,
+  hasSavedDesignAccess: boolean,
+): "ready" | "saved" | "error" | "info" | "alert" {
+  if (!hasSavedDesignAccess && !saveMessage) {
+    return "alert";
+  }
+
+  if (!saveMessage) {
+    return "ready";
+  }
+
+  if (saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
+    return "saved";
+  }
+
+  if (saveMessage.startsWith("Couldn't")) {
+    return "error";
+  }
+
+  return "info";
 }

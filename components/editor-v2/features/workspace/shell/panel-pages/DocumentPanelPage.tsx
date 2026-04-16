@@ -24,7 +24,6 @@ interface DocumentPanelPageProps {
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   saveButtonState: SaveButtonState;
-  saveMessage: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -39,7 +38,6 @@ export function DocumentPanelPage({
   onSaveDocument,
   onStartOver,
   saveButtonState,
-  saveMessage,
   savedDocuments,
   selectedStorageId,
   setSelectedStorageId,
@@ -74,8 +72,6 @@ export function DocumentPanelPage({
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
         <div className={styles.sidebarSubsection}>
-          <SaveStatus saveMessage={saveMessage} />
-
           <div className={styles.sidebarTitleBlock}>
             {isRenaming ? (
               <div>
@@ -217,51 +213,6 @@ function SaveButtonLabel({
   }
 
   return <>{hasSavedDesignAccess ? "Save" : "Sign in to save"}</>;
-}
-
-function SaveStatus({ saveMessage }: { saveMessage: string }) {
-  const state = getSaveStatusState(saveMessage);
-  const message =
-    state === "saved"
-      ? saveMessage
-      : state === "error"
-        ? saveMessage
-        : state === "info"
-          ? saveMessage
-          : "Not saved yet";
-  const icon =
-    state === "error"
-      ? "/icons/lucide/alert.svg"
-      : "/icons/lucide/save.svg";
-
-  return (
-    <div className={styles.saveStatus} data-state={state} role="status" aria-live="polite">
-      <span className={styles.saveStatusIconWrap} aria-hidden="true">
-        <ButtonIcon icon={icon} className={styles.saveStatusIcon} />
-      </span>
-      <p className={styles.saveStatusMessage} style={typographyStyles.p2}>
-        {message}
-      </p>
-    </div>
-  );
-}
-
-function getSaveStatusState(
-  saveMessage: string,
-): "ready" | "saved" | "error" | "info" {
-  if (!saveMessage) {
-    return "ready";
-  }
-
-  if (saveMessage.startsWith("Saved at ")) {
-    return "saved";
-  }
-
-  if (saveMessage.startsWith("Couldn't")) {
-    return "error";
-  }
-
-  return "info";
 }
 
 function SavedDesignSingleSelect({
