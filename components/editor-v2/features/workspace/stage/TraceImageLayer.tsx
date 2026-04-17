@@ -12,6 +12,8 @@ import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
+const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
+
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
@@ -27,7 +29,8 @@ interface TraceImageLayerProps {
 interface MobileDragState {
   moved: boolean;
   pointerId: number;
-  startPoint: WorldPoint;
+  startClientX: number;
+  startClientY: number;
   startTransform: {
     offsetX: number;
     offsetY: number;
@@ -118,101 +121,36 @@ export function TraceImageLayer({
 
   useEffect(() => {
     const imageSource = traceAsset?.image;
-    const canvases = [desktopCanvasRef.current, mobileCanvasRef.current];
+    const desktopCanvas = desktopCanvasRef.current;
+    const mobileCanvas = mobileCanvasRef.current;
 
-    for (const canvas of canvases) {
-      if (!canvas || !traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
-        if (canvas) {
-          canvas.width = 0;
-          canvas.height = 0;
-        }
-        continue;
+    if (!traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
+      if (desktopCanvas) {
+        desktopCanvas.width = 0;
+        desktopCanvas.height = 0;
       }
-
-      canvas.width = traceAsset.width;
-      canvas.height = traceAsset.height;
-
-      const context = canvas.getContext("2d");
-      if (!context) {
-        continue;
+      if (mobileCanvas) {
+        mobileCanvas.width = 0;
+        mobileCanvas.height = 0;
       }
-
-      context.clearRect(0, 0, traceAsset.width, traceAsset.height);
-      context.drawImage(
-        imageSource as CanvasImageSource,
-        0,
-        0,
-        traceAsset.width,
-        traceAsset.height,
-      );
-    }
-  }, [traceAsset, coarsePointer]);
-
-  useEffect(() => {
-    if (!coarsePointer || !positioningEnabled) {
-      mobileDragStateRef.current = null;
       return;
     }
 
-    const handleWindowPointerMove = (event: PointerEvent) => {
-      const dragState = mobileDragStateRef.current;
+    if (desktopCanvas) {
+      drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
+        width: traceAsset.width,
+        height: traceAsset.height,
+      });
+    }
 
-      if (!dragState || event.pointerId !== dragState.pointerId) {
-        return;
-      }
-
-      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
-
-      if (!worldPoint) {
-        return;
-      }
-
-      const deltaX = worldPoint.x - dragState.startPoint.x;
-      const deltaY = worldPoint.y - dragState.startPoint.y;
-      dragState.moved = dragState.moved || Math.hypot(deltaX, deltaY) >= 1;
-      const nextTransform = {
-        offsetX: dragState.startTransform.offsetX + deltaX,
-        offsetY: dragState.startTransform.offsetY + deltaY,
-        scale: dragState.startTransform.scale,
-      };
-
-      mobilePreviewTransformRef.current = nextTransform;
-      applyMobileWrapperTransform(mobileWrapperRef.current, nextTransform);
-    };
-
-    const handleWindowPointerUp = (event: PointerEvent) => {
-      const dragState = mobileDragStateRef.current;
-
-      if (!dragState || event.pointerId !== dragState.pointerId) {
-        return;
-      }
-
-      const wrapper = mobileWrapperRef.current;
-      if (wrapper?.hasPointerCapture(event.pointerId)) {
-        wrapper.releasePointerCapture(event.pointerId);
-      }
-
-      if (dragState.moved) {
-        dispatch(
-          createPreviewTraceRepositionCommand(mobilePreviewTransformRef.current),
-        );
-      } else {
-        applyMobileWrapperTransform(wrapper, traceTransform);
-      }
-
-      mobileDragStateRef.current = null;
-    };
-
-    window.addEventListener("pointermove", handleWindowPointerMove);
-    window.addEventListener("pointerup", handleWindowPointerUp);
-    window.addEventListener("pointercancel", handleWindowPointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", handleWindowPointerMove);
-      window.removeEventListener("pointerup", handleWindowPointerUp);
-      window.removeEventListener("pointercancel", handleWindowPointerUp);
-    };
-  }, [coarsePointer, dispatch, getWorldPointFromClient, positioningEnabled, traceTransform]);
+    if (mobileCanvas) {
+      drawTraceSourceToCanvas(
+        mobileCanvas,
+        imageSource as CanvasImageSource,
+        getMobileTracePreviewSize(traceAsset.width, traceAsset.height),
+      );
+    }
+  }, [traceAsset, coarsePointer]);
 
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
     const canvas = desktopCanvasRef.current;
@@ -242,23 +180,71 @@ export function TraceImageLayer({
         return;
       }
 
-      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
-
-      if (!worldPoint) {
-        return;
-      }
-
       event.preventDefault();
       event.stopPropagation();
       event.currentTarget.setPointerCapture(event.pointerId);
       mobileDragStateRef.current = {
         moved: false,
         pointerId: event.pointerId,
-        startPoint: worldPoint,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
         startTransform: mobilePreviewTransformRef.current,
       };
     },
-    [coarsePointer, getWorldPointFromClient, positioningEnabled],
+    [coarsePointer, positioningEnabled],
+  );
+
+  const handleMobilePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = mobileDragStateRef.current;
+
+      if (!coarsePointer || !dragState || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+
+      const deltaClientX = event.clientX - dragState.startClientX;
+      const deltaClientY = event.clientY - dragState.startClientY;
+      const viewportScale = Math.max(zoom, 0.001);
+      const deltaX = deltaClientX / viewportScale;
+      const deltaY = deltaClientY / viewportScale;
+
+      dragState.moved = dragState.moved || Math.hypot(deltaClientX, deltaClientY) >= 3;
+
+      const nextTransform = {
+        offsetX: dragState.startTransform.offsetX + deltaX,
+        offsetY: dragState.startTransform.offsetY + deltaY,
+        scale: dragState.startTransform.scale,
+      };
+
+      mobilePreviewTransformRef.current = nextTransform;
+      applyMobileWrapperTransform(mobileWrapperRef.current, nextTransform);
+    },
+    [coarsePointer, zoom],
+  );
+
+  const handleMobilePointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = mobileDragStateRef.current;
+
+      if (!coarsePointer || !dragState || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      if (dragState.moved) {
+        dispatch(
+          createPreviewTraceRepositionCommand(mobilePreviewTransformRef.current),
+        );
+      } else {
+        applyMobileWrapperTransform(event.currentTarget, traceTransform);
+      }
+
+      mobileDragStateRef.current = null;
+    },
+    [coarsePointer, dispatch, traceTransform],
   );
 
   return (
@@ -279,6 +265,9 @@ export function TraceImageLayer({
           aria-label="Trace image controls"
           role="presentation"
           onPointerDown={handleMobilePointerDown}
+          onPointerMove={handleMobilePointerMove}
+          onPointerUp={handleMobilePointerEnd}
+          onPointerCancel={handleMobilePointerEnd}
           style={{
             position: "absolute",
             top: `${traceBaseRect.top}px`,
@@ -378,4 +367,36 @@ function getMobileWrapperTransformCss(transform: {
   scale: number;
 }): string {
   return `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0) scale(${transform.scale})`;
+}
+
+function getMobileTracePreviewSize(width: number, height: number): {
+  width: number;
+  height: number;
+} {
+  const scale = Math.min(
+    1,
+    MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION / Math.max(width, height),
+  );
+
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
+function drawTraceSourceToCanvas(
+  canvas: HTMLCanvasElement,
+  imageSource: CanvasImageSource,
+  size: { width: number; height: number },
+): void {
+  canvas.width = size.width;
+  canvas.height = size.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return;
+  }
+
+  context.clearRect(0, 0, size.width, size.height);
+  context.drawImage(imageSource, 0, 0, size.width, size.height);
 }
