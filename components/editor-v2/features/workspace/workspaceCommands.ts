@@ -341,6 +341,9 @@ export function createUpdateTextPlacementCommand(payload: {
   fontStyle?: "normal" | "italic";
   fontWeight?: number;
   underline?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
 }): EditorCommand {
   return createCommand(
     "text.updatePlacement",

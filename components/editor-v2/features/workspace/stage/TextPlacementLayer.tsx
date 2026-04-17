@@ -10,7 +10,6 @@ import {
 } from "@/lib/editor-v2/editor/positioning";
 import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
 import {
-  createPreviewTextPlacementCommand,
   createUpdateTextPlacementCommand,
 } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
@@ -67,10 +66,21 @@ export function TextPlacementLayer({
     () => getPositionedBounds(baseRect, transform),
     [baseRect, transform],
   );
-  const handleTransformChange = useCallback(
+  const previewTextRef = useRef<HTMLDivElement | null>(null);
+  const textareaPreviewRef = useRef<HTMLTextAreaElement | null>(null);
+  const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
+    const nextStyle = getPositioningTransformCss(nextTransform);
+    if (previewTextRef.current) {
+      previewTextRef.current.style.transform = nextStyle;
+    }
+    if (textareaPreviewRef.current) {
+      textareaPreviewRef.current.style.transform = nextStyle;
+    }
+  }, []);
+  const handleTransformCommit = useCallback(
     (nextTransform: typeof transform) => {
       dispatch(
-        createPreviewTextPlacementCommand({
+        createUpdateTextPlacementCommand({
           offsetX: nextTransform.offsetX,
           offsetY: nextTransform.offsetY,
           scale: nextTransform.scale,
@@ -135,6 +145,7 @@ export function TextPlacementLayer({
       }}
     >
       <div
+        ref={previewTextRef}
         aria-hidden={isEditing ? "true" : undefined}
         style={{
           position: "absolute",
@@ -180,7 +191,6 @@ export function TextPlacementLayer({
             bounds={bounds}
             getWorldPointFromClient={getWorldPointFromClient}
             interactive={false}
-            onTransformChange={handleTransformChange}
             showHandles={false}
             transactionKeyPrefix="text-drag"
             transform={transform}
@@ -188,7 +198,10 @@ export function TextPlacementLayer({
           />
 
           <textarea
-            ref={textareaRef}
+            ref={(node) => {
+              textareaRef.current = node;
+              textareaPreviewRef.current = node;
+            }}
             value={placement.text}
             aria-label="Edit text"
             onChange={(event) => {
@@ -250,7 +263,8 @@ export function TextPlacementLayer({
           bounds={bounds}
           getWorldPointFromClient={getWorldPointFromClient}
           onClick={() => setIsEditing(true)}
-          onTransformChange={handleTransformChange}
+          onTransformCommit={handleTransformCommit}
+          onTransformPreview={handleTransformPreview}
           transactionKeyPrefix="text-drag"
           transform={transform}
           zoom={zoom}

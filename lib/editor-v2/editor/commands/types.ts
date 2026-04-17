@@ -212,6 +212,9 @@ export type UpdateTextPlacementCommand = BaseEditorCommand<
     fontStyle?: "normal" | "italic";
     fontWeight?: number;
     underline?: boolean;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
   }
 >;
 
