@@ -398,14 +398,17 @@ export function GridWorldSurface({
         >
           {showTraceOverlay && trace ? (
             <TraceImageLayer
-              assetHeight={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.height : null}
-              assetWidth={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.width : null}
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
               trace={trace}
+              traceAsset={
+                loadedTraceAsset?.assetUrl === trace.assetUrl
+                  ? loadedTraceAsset
+                  : null
+              }
               zIndex={3}
               zoom={viewport.zoom}
             />

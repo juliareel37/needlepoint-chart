@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
@@ -10,43 +10,43 @@ import {
 } from "@/lib/editor-v2/editor/positioning";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
+import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 interface TraceImageLayerProps {
-  assetHeight: number | null;
-  assetWidth: number | null;
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
   positioningEnabled: boolean;
   trace: TraceDocument;
+  traceAsset: LoadedTraceAsset | null;
   zIndex?: number;
   zoom: number;
 }
 
 export function TraceImageLayer({
-  assetHeight,
-  assetWidth,
   dispatch,
   getWorldPointFromClient,
   imageOpacity,
   metrics,
   positioningEnabled,
   trace,
+  traceAsset,
   zIndex = 3,
   zoom,
 }: TraceImageLayerProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const traceBaseRect = useMemo(
     () =>
-      assetWidth && assetHeight
+      traceAsset?.width && traceAsset?.height
         ? getContainedRect(
-            assetWidth,
-            assetHeight,
+            traceAsset.width,
+            traceAsset.height,
             metrics.surfaceWidth,
             metrics.surfaceHeight,
           )
         : null,
-    [assetHeight, assetWidth, metrics.surfaceHeight, metrics.surfaceWidth],
+    [metrics.surfaceHeight, metrics.surfaceWidth, traceAsset?.height, traceAsset?.width],
   );
   const traceTransform = useMemo(
     () => ({
@@ -61,6 +61,36 @@ export function TraceImageLayer({
   useEffect(() => {
     setDraftTransform(traceTransform);
   }, [traceTransform]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const imageSource = traceAsset?.image;
+
+    if (!canvas || !traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      return;
+    }
+
+    canvas.width = traceAsset.width;
+    canvas.height = traceAsset.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    context.clearRect(0, 0, traceAsset.width, traceAsset.height);
+    context.drawImage(
+      imageSource as CanvasImageSource,
+      0,
+      0,
+      traceAsset.width,
+      traceAsset.height,
+    );
+  }, [traceAsset]);
 
   const traceBounds = useMemo(
     () =>
@@ -96,26 +126,25 @@ export function TraceImageLayer({
         WebkitUserSelect: "none",
       }}
     >
-      <img
-        src={trace.assetUrl}
-        alt="Trace reference"
-        draggable={false}
-        onDragStart={(event) => event.preventDefault()}
+      <canvas
+        ref={canvasRef}
+        aria-label="Trace reference"
+        role="img"
         style={{
           position: "absolute",
           top: `${traceBaseRect?.top ?? 0}px`,
           left: `${traceBaseRect?.left ?? 0}px`,
           width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
           height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-          objectFit: "contain",
           opacity: imageOpacity,
           pointerEvents: "none",
           transform: getPositioningTransformCss(draftTransform),
           transformOrigin: "top left",
-          willChange: "opacity, transform",
+          willChange: "transform",
           backfaceVisibility: "hidden",
           userSelect: "none",
           WebkitUserSelect: "none",
+          imageRendering: "auto",
         }}
       />
 
