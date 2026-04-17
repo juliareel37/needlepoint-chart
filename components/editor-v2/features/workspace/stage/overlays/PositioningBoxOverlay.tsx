@@ -67,6 +67,11 @@ export function PositioningBoxOverlay({
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
   const dragThreshold = 4;
   const latestTransformRef = useRef(transform);
+  const latestBoundsRef = useRef(bounds);
+  const latestBaseRectRef = useRef(baseRect);
+  const latestGetWorldPointFromClientRef = useRef(getWorldPointFromClient);
+  const latestOnTransformCommitRef = useRef(onTransformCommit);
+  const latestOnClickRef = useRef(onClick);
   const pendingTransformRef = useRef<{
     transactionKey: string;
     transform: PositioningTransform;
@@ -76,6 +81,26 @@ export function PositioningBoxOverlay({
   useEffect(() => {
     latestTransformRef.current = transform;
   }, [transform]);
+
+  useEffect(() => {
+    latestBoundsRef.current = bounds;
+  }, [bounds]);
+
+  useEffect(() => {
+    latestBaseRectRef.current = baseRect;
+  }, [baseRect]);
+
+  useEffect(() => {
+    latestGetWorldPointFromClientRef.current = getWorldPointFromClient;
+  }, [getWorldPointFromClient]);
+
+  useEffect(() => {
+    latestOnTransformCommitRef.current = onTransformCommit;
+  }, [onTransformCommit]);
+
+  useEffect(() => {
+    latestOnClickRef.current = onClick;
+  }, [onClick]);
 
   useEffect(() => {
     return () => {
@@ -134,13 +159,20 @@ export function PositioningBoxOverlay({
         setDragMode(pointerDown.mode);
       }
 
-      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
+      const worldPoint = latestGetWorldPointFromClientRef.current(
+        event.clientX,
+        event.clientY,
+      );
 
       if (!worldPoint) {
         return;
       }
 
-      const nextTransform = getTransformFromDrag(dragState, worldPoint, baseRect);
+      const nextTransform = getTransformFromDrag(
+        dragState,
+        worldPoint,
+        latestBaseRectRef.current,
+      );
       scheduleTransformChange(nextTransform, dragState.transactionKey);
     };
 
@@ -152,11 +184,11 @@ export function PositioningBoxOverlay({
       const pointerDown = pointerDownRef.current;
 
       if (interactive && pointerDown && !pointerDown.dragged && pointerDown.mode === "move") {
-        onClick?.();
+        latestOnClickRef.current?.();
       }
 
       if (pointerDown?.dragged && dragRef.current) {
-        onTransformCommit?.(
+        latestOnTransformCommitRef.current?.(
           latestTransformRef.current,
           dragRef.current.transactionKey,
         );
@@ -177,11 +209,7 @@ export function PositioningBoxOverlay({
       window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [
-    baseRect,
-    getWorldPointFromClient,
     interactive,
-    onClick,
-    onTransformCommit,
     scheduleTransformChange,
   ]);
 
@@ -201,7 +229,10 @@ export function PositioningBoxOverlay({
       const second = touches[1];
       const centerClientX = (first.clientX + second.clientX) / 2;
       const centerClientY = (first.clientY + second.clientY) / 2;
-      const centerWorld = getWorldPointFromClient(centerClientX, centerClientY);
+      const centerWorld = latestGetWorldPointFromClientRef.current(
+        centerClientX,
+        centerClientY,
+      );
 
       if (!centerWorld) {
         return null;
@@ -240,25 +271,33 @@ export function PositioningBoxOverlay({
       pinchRef.current = {
         gesture: {
           anchorX:
-            bounds.width > 0
+            latestBoundsRef.current.width > 0
               ? Math.min(
                   1,
-                  Math.max(0, (geometry.centerWorld.x - bounds.left) / bounds.width),
+                  Math.max(
+                    0,
+                    (geometry.centerWorld.x - latestBoundsRef.current.left) /
+                      latestBoundsRef.current.width,
+                  ),
                 )
               : 0.5,
           anchorY:
-            bounds.height > 0
+            latestBoundsRef.current.height > 0
               ? Math.min(
                   1,
-                  Math.max(0, (geometry.centerWorld.y - bounds.top) / bounds.height),
+                  Math.max(
+                    0,
+                    (geometry.centerWorld.y - latestBoundsRef.current.top) /
+                      latestBoundsRef.current.height,
+                  ),
                 )
               : 0.5,
           startDistance: geometry.distance,
-          startTransform: transform,
+          startTransform: latestTransformRef.current,
         },
         transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
       };
-      latestTransformRef.current = transform;
+      pendingTransformRef.current = null;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
@@ -286,7 +325,7 @@ export function PositioningBoxOverlay({
         pinch.gesture,
         geometry.centerWorld,
         geometry.distance,
-        baseRect,
+        latestBaseRectRef.current,
       );
       scheduleTransformChange(nextTransform, pinch.transactionKey);
     };
@@ -302,7 +341,7 @@ export function PositioningBoxOverlay({
         return;
       }
 
-      onTransformCommit?.(
+      latestOnTransformCommitRef.current?.(
         latestTransformRef.current,
         pinchRef.current.transactionKey,
       );
@@ -325,18 +364,13 @@ export function PositioningBoxOverlay({
       overlayElement.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [
-    baseRect,
-    bounds,
-    getWorldPointFromClient,
     interactive,
-    onTransformCommit,
     scheduleTransformChange,
     transactionKeyPrefix,
-    transform,
   ]);
 
   function beginDrag(mode: PositioningDragMode, clientX: number, clientY: number) {
-    const worldPoint = getWorldPointFromClient(clientX, clientY);
+    const worldPoint = latestGetWorldPointFromClientRef.current(clientX, clientY);
 
     if (!worldPoint) {
       return;
@@ -346,11 +380,11 @@ export function PositioningBoxOverlay({
     dragRef.current = {
       mode,
       startPoint: worldPoint,
-      startTransform: transform,
-      startBounds: bounds,
+      startTransform: latestTransformRef.current,
+      startBounds: latestBoundsRef.current,
       transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
     };
-    latestTransformRef.current = transform;
+    pendingTransformRef.current = null;
     pointerDownRef.current = {
       clientX,
       clientY,
