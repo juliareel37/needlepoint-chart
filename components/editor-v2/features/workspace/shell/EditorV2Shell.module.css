@@ -1514,13 +1514,14 @@
   }
   .railSurface {
     flex-direction: row;
+    padding: 0px 10px;
   };
   .shell {
     position: relative;
   }
   .shellContent {
     grid-template-columns: auto;
-    grid-template-rows: 1fr .1fr;
+    grid-template-rows: 1fr .15fr;
   }
 
 

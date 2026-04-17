@@ -1,6 +1,10 @@
 "use client";
 
-import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  RefObject,
+} from "react";
 import {
   useCallback,
   useEffect,
@@ -328,7 +332,7 @@ export function useStagePanInteractions({
   }, []);
 
   useEffect(() => {
-    const handleWindowMouseMove = (event: MouseEvent) => {
+    const handleWindowPointerMove = (event: PointerEvent) => {
       const dragState = panDragRef.current;
       const currentViewport = viewportRef.current;
 
@@ -367,7 +371,7 @@ export function useStagePanInteractions({
       dispatch(createPanViewportCommand(clampedDeltaX, clampedDeltaY));
     };
 
-    const handleWindowMouseUp = () => {
+    const handleWindowPointerUp = () => {
       if (!panDragRef.current) {
         return;
       }
@@ -375,12 +379,14 @@ export function useStagePanInteractions({
       stopPanDragging();
     };
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
 
     return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [dispatch, metrics, stageSize, stopPanDragging]);
 
@@ -404,6 +410,26 @@ export function useStagePanInteractions({
     setIsPanDragging(true);
   }
 
+  function handleStagePointerDownCapture(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse") {
+      return;
+    }
+
+    if (dragPanningDisabled || !panToolActive) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    panDragRef.current = {
+      lastX: event.clientX,
+      lastY: event.clientY,
+    };
+    setIsPanDragging(true);
+  }
+
   function handleStageAuxClick(event: ReactMouseEvent<HTMLDivElement>) {
     if (event.button !== 1) {
       return;
@@ -416,6 +442,7 @@ export function useStagePanInteractions({
     cursor,
     handleStageAuxClick,
     handleStageMouseDownCapture,
+    handleStagePointerDownCapture,
   };
 }
 

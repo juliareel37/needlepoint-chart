@@ -56,7 +56,7 @@ export function PositioningBoxOverlay({
   const dragThreshold = 4;
 
   useEffect(() => {
-    const handleWindowMouseMove = (event: MouseEvent) => {
+    const handleWindowPointerMove = (event: PointerEvent) => {
       const dragState = dragRef.current;
       const pointerDown = pointerDownRef.current;
 
@@ -87,7 +87,7 @@ export function PositioningBoxOverlay({
       onTransformChange(nextTransform, dragState.transactionKey);
     };
 
-    const handleWindowMouseUp = () => {
+    const handleWindowPointerUp = () => {
       const pointerDown = pointerDownRef.current;
 
       if (interactive && pointerDown && !pointerDown.dragged && pointerDown.mode === "move") {
@@ -99,12 +99,14 @@ export function PositioningBoxOverlay({
       setDragMode(null);
     };
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
 
     return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [baseRect, getWorldPointFromClient, interactive, onClick, onTransformChange]);
 
@@ -146,13 +148,18 @@ export function PositioningBoxOverlay({
         userSelect: "none",
         WebkitUserSelect: "none",
         pointerEvents: interactive ? "auto" : "none",
+        touchAction: "none",
       }}
-      onMouseDown={(event) => {
+      onPointerDown={(event) => {
         if (!interactive) {
+          return;
+        }
+        if (event.pointerType === "mouse" && event.button !== 0) {
           return;
         }
         event.preventDefault();
         event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
         beginDrag("move", event.clientX, event.clientY);
       }}
     >
@@ -176,9 +183,13 @@ export function PositioningBoxOverlay({
             key={handle.id}
             role="presentation"
             aria-hidden="true"
-            onMouseDown={(event) => {
+            onPointerDown={(event) => {
+              if (event.pointerType === "mouse" && event.button !== 0) {
+                return;
+              }
               event.preventDefault();
               event.stopPropagation();
+              event.currentTarget.setPointerCapture(event.pointerId);
               beginDrag(handle.id, event.clientX, event.clientY);
             }}
             style={{

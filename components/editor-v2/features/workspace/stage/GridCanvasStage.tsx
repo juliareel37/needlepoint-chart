@@ -83,6 +83,7 @@ export function GridCanvasStage({
   const previousThreadViewRef = useRef<boolean | null>(null);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
 
   useEffect(() => {
@@ -307,7 +308,11 @@ export function GridCanvasStage({
 
       <div
         aria-label="Grid canvas"
-        onMouseDown={(event) => {
+        onPointerDown={(event) => {
+          if (event.pointerType === "mouse" && event.button !== 0) {
+            return;
+          }
+
           const point = getGridPointFromClient(event.clientX, event.clientY);
           const selectionPoint = getSelectionPointFromClient(
             event.clientX,
@@ -318,10 +323,17 @@ export function GridCanvasStage({
             return;
           }
 
+          activePointerIdRef.current = event.pointerId;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          event.preventDefault();
           handlePointerDown(point, selectionPoint);
         }}
-        onMouseMove={(event) => {
-          if ((event.buttons & 1) === 0) {
+        onPointerMove={(event) => {
+          const isActivePointer = activePointerIdRef.current === event.pointerId;
+          const isPressed =
+            event.pointerType === "mouse" ? (event.buttons & 1) !== 0 : isActivePointer;
+
+          if (!isPressed) {
             return;
           }
 
@@ -331,7 +343,30 @@ export function GridCanvasStage({
             return;
           }
 
+          if (isActivePointer) {
+            event.preventDefault();
+          }
           handlePointerEnter(point);
+        }}
+        onPointerUp={(event) => {
+          if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          activePointerIdRef.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+        }}
+        onPointerCancel={(event) => {
+          if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          activePointerIdRef.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
         }}
         style={{
           position: "absolute",
@@ -339,6 +374,7 @@ export function GridCanvasStage({
           zIndex: 2,
           background: "transparent",
           cursor: "inherit",
+          touchAction: "none",
         }}
       />
     </>

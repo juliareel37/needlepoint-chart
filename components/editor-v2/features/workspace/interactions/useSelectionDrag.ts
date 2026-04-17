@@ -37,7 +37,7 @@ export function useSelectionDrag({
       return;
     }
 
-    function handleWindowMouseUp(event: MouseEvent) {
+    function handleWindowPointerUp(event: PointerEvent) {
       const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
@@ -54,7 +54,7 @@ export function useSelectionDrag({
       setIsLassoing(false);
     }
 
-    function handleWindowMouseMove(event: MouseEvent) {
+    function handleWindowPointerMove(event: PointerEvent) {
       const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
@@ -85,11 +85,13 @@ export function useSelectionDrag({
       dispatch(createSelectionUpdateCommand(point));
     }
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
     return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [dispatch, getClampedSelectionPointFromClient, isLassoing, selectionShape]);
 

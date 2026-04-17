@@ -199,6 +199,7 @@ export function GridWorldSurface({
     cursor,
     handleStageAuxClick,
     handleStageMouseDownCapture,
+    handleStagePointerDownCapture,
   } = useStagePanInteractions({
     activeTool,
     dispatch,
@@ -324,6 +325,7 @@ export function GridWorldSurface({
     <div
       ref={stageRef}
       onMouseDownCapture={handleStageMouseDownCapture}
+      onPointerDownCapture={handleStagePointerDownCapture}
       onAuxClick={handleStageAuxClick}
       style={{
         position: "relative",
