@@ -183,6 +183,7 @@ export function TraceImageLayer({
           ariaLabel="Trace image controls"
           baseRect={traceBaseRect}
           bounds={traceBounds}
+          disableLivePreview={coarsePointer}
           getWorldPointFromClient={getWorldPointFromClient}
           onInteractionEnd={() => setInteractionActive(false)}
           onInteractionStart={() => setInteractionActive(true)}
