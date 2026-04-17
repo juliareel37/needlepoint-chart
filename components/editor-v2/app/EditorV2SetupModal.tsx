@@ -19,6 +19,15 @@ import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "./editorV2ServerPersistence";
 import styles from "./EditorV2SetupModal.module.css";
 
+const LARGE_GRID_PRESETS = [
+  { label: "120 x 120", width: 120, height: 120 },
+  { label: "160 x 160", width: 160, height: 160 },
+  { label: "200 x 200", width: 200, height: 200 },
+  { label: "240 x 240", width: 240, height: 240 },
+  { label: "300 x 300", width: 300, height: 300 },
+  { label: "400 x 400", width: 400, height: 400 },
+] as const;
+
 export interface EditorV2DesignConfigNew {
   kind: "new";
   width: number;
@@ -186,26 +195,51 @@ export function EditorV2SetupModal({
             </Field>
 
             {draftSizingMode === "stitches" ? (
-              <div className={styles.fieldGrid}>
-                <Field label="Grid width">
-                  <FieldInput
-                    type="number"
-                    min={EDITOR_V2_MIN_GRID_SIZE}
-                    max={EDITOR_V2_MAX_GRID_SIZE}
-                    value={draftWidth}
-                    onChange={(event) => onDraftWidthChange(event.target.value)}
-                  />
-                </Field>
-                <Field label="Grid height">
-                  <FieldInput
-                    type="number"
-                    min={EDITOR_V2_MIN_GRID_SIZE}
-                    max={EDITOR_V2_MAX_GRID_SIZE}
-                    value={draftHeight}
-                    onChange={(event) => onDraftHeightChange(event.target.value)}
-                  />
-                </Field>
-              </div>
+              <>
+                <div className={styles.fieldGrid}>
+                  <Field label="Grid width">
+                    <FieldInput
+                      type="number"
+                      min={EDITOR_V2_MIN_GRID_SIZE}
+                      max={EDITOR_V2_MAX_GRID_SIZE}
+                      value={draftWidth}
+                      onChange={(event) => onDraftWidthChange(event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Grid height">
+                    <FieldInput
+                      type="number"
+                      min={EDITOR_V2_MIN_GRID_SIZE}
+                      max={EDITOR_V2_MAX_GRID_SIZE}
+                      value={draftHeight}
+                      onChange={(event) => onDraftHeightChange(event.target.value)}
+                    />
+                  </Field>
+                </div>
+
+                <div className={styles.presetBlock}>
+                  <p className={styles.presetLabel} style={typographyStyles.p2}>
+                    Large canvas presets
+                  </p>
+                  <div className={styles.presetGrid}>
+                    {LARGE_GRID_PRESETS.map((preset) => (
+                      <Button
+                        key={preset.label}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={styles.presetButton}
+                        onClick={() => {
+                          onDraftWidthChange(String(preset.width));
+                          onDraftHeightChange(String(preset.height));
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </>
             ) : (
               <>
                 <div className={styles.fieldGrid}>
