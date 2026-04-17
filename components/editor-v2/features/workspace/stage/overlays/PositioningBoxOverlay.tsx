@@ -28,6 +28,7 @@ interface PositioningBoxOverlayProps {
   ) => void;
   onTransformPreview?: (transform: PositioningTransform) => void;
   interactive?: boolean;
+  previewBoundsStrategy?: "live" | "none";
   showHandles?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
@@ -60,6 +61,7 @@ export function PositioningBoxOverlay({
   onTransformCommit,
   onTransformPreview,
   interactive = true,
+  previewBoundsStrategy = "live",
   showHandles = true,
   transform,
   transactionKeyPrefix,
@@ -171,11 +173,13 @@ export function PositioningBoxOverlay({
       worldPoint,
       latestBaseRectRef.current,
     );
-    const nextBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
 
     latestTransformRef.current = nextTransform;
-    latestBoundsRef.current = nextBounds;
-    applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    if (previewBoundsStrategy === "live") {
+      const nextBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      latestBoundsRef.current = nextBounds;
+      applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    }
     latestOnTransformPreviewRef.current?.(nextTransform);
 
     return nextTransform;

@@ -13,6 +13,7 @@ import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
+const TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -38,8 +39,10 @@ export function TraceImageLayer({
   zoom,
 }: TraceImageLayerProps) {
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
+  const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const traceBaseRect = useMemo(
     () =>
@@ -94,6 +97,8 @@ export function TraceImageLayer({
       desktopCanvas.style.transform = getPositioningTransformCss(traceTransform);
     }
     applyMobileWrapperTransform(mobileWrapperRef.current, traceTransform);
+    applyDesktopProxyTransform(desktopProxyRef.current, traceTransform);
+    applyMobileWrapperTransform(mobileProxyRef.current, traceTransform);
   }, [traceTransform]);
 
   useEffect(() => {
@@ -130,30 +135,57 @@ export function TraceImageLayer({
   }, [traceAsset, coarsePointer]);
 
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
-    const canvas = desktopCanvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    canvas.style.transform = getPositioningTransformCss(nextTrace);
+    applyDesktopDragTransform(
+      desktopCanvasRef.current,
+      desktopProxyRef.current,
+      nextTrace,
+      TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   const handleDesktopTransformCommit = useCallback(
     (nextTrace: typeof traceTransform) => {
+      applyDesktopTransform(desktopCanvasRef.current, nextTrace);
+      applyDesktopProxyTransform(desktopProxyRef.current, nextTrace);
+      setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     },
     [dispatch],
   );
   const handleMobileTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
-    applyMobileWrapperTransform(mobileWrapperRef.current, nextTrace);
+    applyMobileDragTransform(
+      mobileWrapperRef.current,
+      mobileProxyRef.current,
+      nextTrace,
+      TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   const handleMobileTransformCommit = useCallback(
     (nextTrace: typeof traceTransform) => {
+      applyMobileWrapperTransform(mobileWrapperRef.current, nextTrace);
+      applyMobileWrapperTransform(mobileProxyRef.current, nextTrace);
+      setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     },
     [dispatch],
   );
+
+  const handleDesktopInteractionStart = useCallback(() => {
+    setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, true);
+  }, []);
+
+  const handleDesktopInteractionEnd = useCallback(() => {
+    setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
+  }, []);
+
+  const handleMobileInteractionStart = useCallback(() => {
+    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, true);
+  }, []);
+
+  const handleMobileInteractionEnd = useCallback(() => {
+    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+  }, []);
 
   return (
     <div
@@ -168,40 +200,64 @@ export function TraceImageLayer({
       }}
     >
       {coarsePointer && positioningEnabled && traceBaseRect ? (
+        <>
           <div
             ref={mobileWrapperRef}
             aria-label="Trace image controls"
             role="presentation"
-          style={{
-            position: "absolute",
-            top: `${traceBaseRect.top}px`,
-            left: `${traceBaseRect.left}px`,
-            width: `${traceBaseRect.width}px`,
-            height: `${traceBaseRect.height}px`,
-            transform: getMobileWrapperTransformCss(traceTransform),
-            transformOrigin: "top left",
-            willChange: "transform",
-            touchAction: "none",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-            pointerEvents: "none",
-          }}
-        >
-          <canvas
-            ref={mobileCanvasRef}
-            aria-label="Trace reference"
-            role="img"
             style={{
-              display: "block",
-              width: "100%",
-              height: "100%",
-              opacity: imageOpacity,
+              position: "absolute",
+              top: `${traceBaseRect.top}px`,
+              left: `${traceBaseRect.left}px`,
+              width: `${traceBaseRect.width}px`,
+              height: `${traceBaseRect.height}px`,
+              transform: getMobileWrapperTransformCss(traceTransform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
               pointerEvents: "none",
-              backfaceVisibility: "hidden",
-              imageRendering: "auto",
+            }}
+          >
+            <canvas
+              ref={mobileCanvasRef}
+              aria-label="Trace reference"
+              role="img"
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                opacity: imageOpacity,
+                pointerEvents: "none",
+                backfaceVisibility: "hidden",
+                imageRendering: "auto",
+              }}
+            />
+          </div>
+          <div
+            ref={mobileProxyRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: `${traceBaseRect.top}px`,
+              left: `${traceBaseRect.left}px`,
+              width: `${traceBaseRect.width}px`,
+              height: `${traceBaseRect.height}px`,
+              display: "none",
+              transform: getMobileWrapperTransformCss(traceTransform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              pointerEvents: "none",
+              background: "rgba(37, 99, 235, 0.18)",
+              border: "1px solid rgba(37, 99, 235, 0.9)",
+              boxSizing: "border-box",
             }}
           />
-        </div>
+        </>
       ) : null}
 
       {coarsePointer && positioningEnabled && traceBaseRect && traceBounds ? (
@@ -210,8 +266,12 @@ export function TraceImageLayer({
           baseRect={traceBaseRect}
           bounds={traceBounds}
           getWorldPointFromClient={getWorldPointFromClient}
+          onInteractionEnd={handleMobileInteractionEnd}
+          onInteractionStart={handleMobileInteractionStart}
           onTransformCommit={handleMobileTransformCommit}
           onTransformPreview={handleMobileTransformPreview}
+          previewBoundsStrategy="none"
+          showHandles={false}
           transactionKeyPrefix="trace-drag"
           transform={traceTransform}
           zoom={zoom}
@@ -239,6 +299,25 @@ export function TraceImageLayer({
               imageRendering: "auto",
             }}
           />
+          <div
+            ref={desktopProxyRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: `${traceBaseRect?.top ?? 0}px`,
+              left: `${traceBaseRect?.left ?? 0}px`,
+              width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
+              height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
+              display: "none",
+              transform: getPositioningTransformCss(traceTransform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              pointerEvents: "none",
+              background: "rgba(37, 99, 235, 0.18)",
+              border: "1px solid rgba(37, 99, 235, 0.9)",
+              boxSizing: "border-box",
+            }}
+          />
 
           {positioningEnabled && traceBaseRect && traceBounds ? (
             <PositioningBoxOverlay
@@ -246,8 +325,12 @@ export function TraceImageLayer({
               baseRect={traceBaseRect}
               bounds={traceBounds}
               getWorldPointFromClient={getWorldPointFromClient}
+              onInteractionEnd={handleDesktopInteractionEnd}
+              onInteractionStart={handleDesktopInteractionStart}
               onTransformCommit={handleDesktopTransformCommit}
               onTransformPreview={handleDesktopTransformPreview}
+              previewBoundsStrategy="none"
+              showHandles={false}
               transactionKeyPrefix="trace-drag"
               transform={traceTransform}
               zoom={zoom}
@@ -268,6 +351,84 @@ function applyMobileWrapperTransform(
   }
 
   element.style.transform = getMobileWrapperTransformCss(transform);
+}
+
+function applyDesktopTransform(
+  element: HTMLCanvasElement | null,
+  transform: { offsetX: number; offsetY: number; scale: number },
+): void {
+  if (!element) {
+    return;
+  }
+
+  element.style.transform = getPositioningTransformCss(transform);
+}
+
+function applyDesktopProxyTransform(
+  element: HTMLDivElement | null,
+  transform: { offsetX: number; offsetY: number; scale: number },
+): void {
+  if (!element) {
+    return;
+  }
+
+  element.style.transform = getPositioningTransformCss(transform);
+}
+
+function applyDesktopDragTransform(
+  canvas: HTMLCanvasElement | null,
+  proxy: HTMLDivElement | null,
+  transform: { offsetX: number; offsetY: number; scale: number },
+  proxyMode: "off" | "solid-rect",
+): void {
+  if (proxyMode === "solid-rect") {
+    applyDesktopProxyTransform(proxy, transform);
+    return;
+  }
+
+  applyDesktopTransform(canvas, transform);
+}
+
+function applyMobileDragTransform(
+  wrapper: HTMLDivElement | null,
+  proxy: HTMLDivElement | null,
+  transform: { offsetX: number; offsetY: number; scale: number },
+  proxyMode: "off" | "solid-rect",
+): void {
+  if (proxyMode === "solid-rect") {
+    applyMobileWrapperTransform(proxy, transform);
+    return;
+  }
+
+  applyMobileWrapperTransform(wrapper, transform);
+}
+
+function setDesktopProxyActive(
+  canvas: HTMLCanvasElement | null,
+  proxy: HTMLDivElement | null,
+  dragging: boolean,
+): void {
+  if (!canvas || !proxy) {
+    return;
+  }
+
+  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  canvas.style.visibility = showProxy ? "hidden" : "visible";
+  proxy.style.display = showProxy ? "block" : "none";
+}
+
+function setMobileProxyActive(
+  wrapper: HTMLDivElement | null,
+  proxy: HTMLDivElement | null,
+  dragging: boolean,
+): void {
+  if (!wrapper || !proxy) {
+    return;
+  }
+
+  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  wrapper.style.visibility = showProxy ? "hidden" : "visible";
+  proxy.style.display = showProxy ? "block" : "none";
 }
 
 function getMobileWrapperTransformCss(transform: {
