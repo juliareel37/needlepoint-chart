@@ -21,14 +21,8 @@ import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
-
-interface LoadedTraceAsset {
-  assetUrl: string;
-  height: number;
-  image: HTMLImageElement | null;
-  ready: boolean;
-  width: number;
-}
+import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
+import { rasterizeTraceImageToSafeSize } from "../trace/traceAssetSizing";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -272,18 +266,36 @@ export function GridWorldSurface({
     const assetUrl = trace.assetUrl;
     const image = new Image();
     image.decoding = "async";
+    let rasterizedCanvas: HTMLCanvasElement | null = null;
 
     const commitLoadedState = (ready: boolean) => {
       if (cancelled) {
         return;
       }
 
+      const rasterized = ready ? rasterizeTraceImageToSafeSize(image) : null;
+
+      if (ready && !rasterized) {
+        setLoadedTraceAsset({
+          assetUrl,
+          height: 0,
+          image: null,
+          ready: false,
+          width: 0,
+        });
+        return;
+      }
+
+      if (rasterized?.imageSource instanceof HTMLCanvasElement) {
+        rasterizedCanvas = rasterized.imageSource;
+      }
+
       setLoadedTraceAsset({
         assetUrl,
-        height: ready ? image.naturalHeight : 0,
-        image: ready ? image : null,
-        ready,
-        width: ready ? image.naturalWidth : 0,
+        height: rasterized?.height ?? 0,
+        image: rasterized?.imageSource ?? null,
+        ready: Boolean(ready && rasterized),
+        width: rasterized?.width ?? 0,
       });
     };
 
@@ -297,6 +309,10 @@ export function GridWorldSurface({
 
     return () => {
       cancelled = true;
+      if (rasterizedCanvas) {
+        rasterizedCanvas.width = 0;
+        rasterizedCanvas.height = 0;
+      }
     };
   }, [trace?.assetUrl]);
 

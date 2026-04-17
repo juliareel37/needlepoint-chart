@@ -20,6 +20,10 @@ import type {
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import {
+  MAX_TRACE_IMAGE_DIMENSION_PX,
+  MAX_TRACE_IMAGE_PIXELS,
+} from "../trace/traceAssetSizing";
+import {
   createAttachTraceCommand,
   createBeginTraceRepositionCommand,
   createCancelTraceRepositionCommand,
@@ -30,8 +34,6 @@ import {
 import styles from "./EditorV2Shell.module.css";
 
 const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
-const MAX_TRACE_IMAGE_DIMENSION_PX = 2048;
-const MAX_TRACE_IMAGE_PIXELS = 4_000_000;
 
 interface TraceControlsProps {
   trace: TraceDocument | null;
