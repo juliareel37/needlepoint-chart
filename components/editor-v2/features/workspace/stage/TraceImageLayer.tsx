@@ -58,6 +58,27 @@ export function TraceImageLayer({
   );
   const previewTransformRef = useRef(traceTransform);
   const [interactionActive, setInteractionActive] = useState(false);
+  const [coarsePointer, setCoarsePointer] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
+
   useEffect(() => {
     previewTransformRef.current = traceTransform;
     const canvas = canvasRef.current;
@@ -145,7 +166,7 @@ export function TraceImageLayer({
           left: `${traceBaseRect?.left ?? 0}px`,
           width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
           height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-          opacity: interactionActive ? 0 : imageOpacity,
+          opacity: coarsePointer && interactionActive ? 0 : imageOpacity,
           pointerEvents: "none",
           transform: getPositioningTransformCss(traceTransform),
           transformOrigin: "top left",
@@ -162,7 +183,6 @@ export function TraceImageLayer({
           ariaLabel="Trace image controls"
           baseRect={traceBaseRect}
           bounds={traceBounds}
-          disableLivePreview
           getWorldPointFromClient={getWorldPointFromClient}
           onInteractionEnd={() => setInteractionActive(false)}
           onInteractionStart={() => setInteractionActive(true)}
