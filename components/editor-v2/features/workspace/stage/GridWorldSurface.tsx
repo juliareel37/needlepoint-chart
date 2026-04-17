@@ -207,7 +207,6 @@ export function GridWorldSurface({
     stageRef,
     stageSize,
     viewport,
-    viewportZoom: viewport.zoom,
     zoomAnchor,
   });
 
@@ -332,6 +331,7 @@ export function GridWorldSurface({
         height: "100%",
         overflow: "hidden",
         cursor,
+        touchAction: "none",
       }}
     >
       <div

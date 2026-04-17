@@ -28,7 +28,6 @@ interface UseStagePanInteractionsOptions {
   stageRef: RefObject<HTMLDivElement | null>;
   stageSize: StageSize;
   viewport: ViewportState;
-  viewportZoom: number;
   zoomAnchor: { x: number; y: number } | null;
 }
 
@@ -40,13 +39,20 @@ export function useStagePanInteractions({
   stageRef,
   stageSize,
   viewport,
-  viewportZoom,
   zoomAnchor,
 }: UseStagePanInteractionsOptions) {
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanDragging, setIsPanDragging] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const touchGestureRef = useRef<{
+    centerX: number;
+    centerY: number;
+    distance: number;
+    zoom: number;
+  } | null>(null);
+  const viewportRef = useRef(viewport);
+  const zoomAnchorRef = useRef(zoomAnchor);
   const panToolActive = activeTool === "pan" && !dragPanningDisabled;
   const cursor = isPanDragging
     ? "grabbing"
@@ -56,18 +62,27 @@ export function useStagePanInteractions({
       ? "grab"
       : "default";
 
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  useEffect(() => {
+    zoomAnchorRef.current = zoomAnchor;
+  }, [zoomAnchor]);
+
   const handleWheel = useCallback(
     (event: WheelEvent) => {
       event.preventDefault();
 
+      const currentViewport = viewportRef.current;
       const { deltaX, deltaY } = normalizeWheelDelta(event, stageSize);
 
       if (event.ctrlKey || event.metaKey) {
         const isTrackpadPinch = event.ctrlKey && !event.metaKey;
         const zoomSensitivity = isTrackpadPinch ? 0.006 : 0.0009;
         const zoomFactor = Math.exp(-deltaY * zoomSensitivity);
-        const nextZoom = viewportZoom * zoomFactor;
-        const anchor = zoomAnchor ?? undefined;
+        const nextZoom = currentViewport.zoom * zoomFactor;
+        const anchor = zoomAnchorRef.current ?? undefined;
 
         dispatch(createSetViewportZoomCommand(nextZoom, anchor));
         return;
@@ -75,15 +90,15 @@ export function useStagePanInteractions({
 
       const clampedViewport = clampViewportOffsets(
         {
-          ...viewport,
-          offsetX: viewport.offsetX - deltaX,
-          offsetY: viewport.offsetY - deltaY,
+          ...currentViewport,
+          offsetX: currentViewport.offsetX - deltaX,
+          offsetY: currentViewport.offsetY - deltaY,
         },
         stageSize,
         metrics,
       );
-      const panDeltaX = clampedViewport.offsetX - viewport.offsetX;
-      const panDeltaY = clampedViewport.offsetY - viewport.offsetY;
+      const panDeltaX = clampedViewport.offsetX - currentViewport.offsetX;
+      const panDeltaY = clampedViewport.offsetY - currentViewport.offsetY;
 
       if (panDeltaX === 0 && panDeltaY === 0) {
         return;
@@ -91,11 +106,12 @@ export function useStagePanInteractions({
 
       dispatch(createPanViewportCommand(panDeltaX, panDeltaY));
     },
-    [dispatch, metrics, stageSize, viewport, viewportZoom, zoomAnchor],
+    [dispatch, metrics, stageSize],
   );
 
   const stopPanDragging = useEffectEvent(() => {
     panDragRef.current = null;
+    touchGestureRef.current = null;
     setIsPanDragging(false);
   });
   const startPanDragging = useEffectEvent((clientX: number, clientY: number) => {
@@ -141,10 +157,96 @@ export function useStagePanInteractions({
       event.preventDefault();
       event.stopPropagation();
     };
+    const getTouchGeometry = (touches: TouchList) => {
+      if (touches.length < 2) {
+        return null;
+      }
+
+      const first = touches[0];
+      const second = touches[1];
+      const centerX = (first.clientX + second.clientX) / 2;
+      const centerY = (first.clientY + second.clientY) / 2;
+      const distance = Math.hypot(
+        second.clientX - first.clientX,
+        second.clientY - first.clientY,
+      );
+
+      if (distance <= 0) {
+        return null;
+      }
+
+      return { centerX, centerY, distance };
+    };
+    const getTouchZoomAnchor = (clientX: number, clientY: number) => {
+      const rect = stageElement.getBoundingClientRect();
+      const frameOriginX = (stageSize.width - metrics.surfaceWidth) / 2;
+      const frameOriginY = (stageSize.height - metrics.surfaceHeight) / 2;
+
+      return {
+        x: clientX - rect.left - frameOriginX,
+        y: clientY - rect.top - frameOriginY,
+      };
+    };
+    const startTouchGesture = (event: TouchEvent) => {
+      if (dragPanningDisabled || event.touches.length !== 2) {
+        return;
+      }
+
+      const geometry = getTouchGeometry(event.touches);
+
+      if (!geometry) {
+        return;
+      }
+
+      event.preventDefault();
+      touchGestureRef.current = {
+        ...geometry,
+        zoom: viewportRef.current.zoom,
+      };
+    };
+    const updateTouchGesture = (event: TouchEvent) => {
+      const gesture = touchGestureRef.current;
+
+      if (!gesture || event.touches.length < 2) {
+        return;
+      }
+
+      const geometry = getTouchGeometry(event.touches);
+
+      if (!geometry) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const anchor = getTouchZoomAnchor(geometry.centerX, geometry.centerY);
+      const nextZoom = gesture.zoom * (geometry.distance / gesture.distance);
+      const panDeltaX = geometry.centerX - gesture.centerX;
+      const panDeltaY = geometry.centerY - gesture.centerY;
+
+      dispatch(createSetViewportZoomCommand(nextZoom, anchor));
+
+      if (panDeltaX !== 0 || panDeltaY !== 0) {
+        dispatch(createPanViewportCommand(panDeltaX, panDeltaY));
+      }
+
+      touchGestureRef.current = {
+        ...geometry,
+        zoom: nextZoom,
+      };
+    };
+    const endTouchGesture = () => {
+      if (!touchGestureRef.current) {
+        return;
+      }
+
+      touchGestureRef.current = null;
+    };
 
     stageElement.addEventListener("wheel", handleWheel, { passive: false });
     stageElement.addEventListener("gesturestart", handleGestureEvent);
     stageElement.addEventListener("gesturechange", handleGestureEvent);
+    stageElement.addEventListener("gestureend", handleGestureEvent);
     stageElement.addEventListener("mousedown", startNativeMiddlePanCapture, {
       capture: true,
       passive: false,
@@ -153,15 +255,38 @@ export function useStagePanInteractions({
       capture: true,
       passive: false,
     });
+    stageElement.addEventListener("touchstart", startTouchGesture, {
+      passive: false,
+    });
+    stageElement.addEventListener("touchmove", updateTouchGesture, {
+      passive: false,
+    });
+    stageElement.addEventListener("touchend", endTouchGesture);
+    stageElement.addEventListener("touchcancel", endTouchGesture);
 
     return () => {
       stageElement.removeEventListener("wheel", handleWheel);
       stageElement.removeEventListener("gesturestart", handleGestureEvent);
       stageElement.removeEventListener("gesturechange", handleGestureEvent);
+      stageElement.removeEventListener("gestureend", handleGestureEvent);
       stageElement.removeEventListener("mousedown", startNativeMiddlePanCapture, true);
       stageElement.removeEventListener("auxclick", preventNativeMiddleAuxClick, true);
+      stageElement.removeEventListener("touchstart", startTouchGesture);
+      stageElement.removeEventListener("touchmove", updateTouchGesture);
+      stageElement.removeEventListener("touchend", endTouchGesture);
+      stageElement.removeEventListener("touchcancel", endTouchGesture);
     };
-  }, [handleWheel, stageRef, startPanDragging]);
+  }, [
+    dispatch,
+    dragPanningDisabled,
+    handleWheel,
+    metrics.surfaceHeight,
+    metrics.surfaceWidth,
+    stageRef,
+    stageSize.height,
+    stageSize.width,
+    startPanDragging,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -205,6 +330,7 @@ export function useStagePanInteractions({
   useEffect(() => {
     const handleWindowMouseMove = (event: MouseEvent) => {
       const dragState = panDragRef.current;
+      const currentViewport = viewportRef.current;
 
       if (!dragState) {
         return;
@@ -224,15 +350,15 @@ export function useStagePanInteractions({
 
       const clampedViewport = clampViewportOffsets(
         {
-          ...viewport,
-          offsetX: viewport.offsetX + deltaX,
-          offsetY: viewport.offsetY + deltaY,
+          ...currentViewport,
+          offsetX: currentViewport.offsetX + deltaX,
+          offsetY: currentViewport.offsetY + deltaY,
         },
         stageSize,
         metrics,
       );
-      const clampedDeltaX = clampedViewport.offsetX - viewport.offsetX;
-      const clampedDeltaY = clampedViewport.offsetY - viewport.offsetY;
+      const clampedDeltaX = clampedViewport.offsetX - currentViewport.offsetX;
+      const clampedDeltaY = clampedViewport.offsetY - currentViewport.offsetY;
 
       if (clampedDeltaX === 0 && clampedDeltaY === 0) {
         return;
@@ -256,7 +382,7 @@ export function useStagePanInteractions({
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [dispatch, metrics, stageSize, viewport]);
+  }, [dispatch, metrics, stageSize, stopPanDragging]);
 
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
     const isMiddleMouseButton = event.button === 1;
