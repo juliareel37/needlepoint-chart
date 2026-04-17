@@ -552,11 +552,14 @@ export function EditorV2Shell({
         </section>
       </div>
 
-      {setupModalOpen ? (
-        <div className={styles.modalOverlay}>
-          {setupModal}
-        </div>
-      ) : null}
+      {setupModalOpen
+        ? createPortal(
+            <div className={styles.modalOverlay}>
+              {setupModal}
+            </div>,
+            window.document.body,
+          )
+        : null}
     </main>
   );
 }

@@ -22,12 +22,18 @@
 }
 
 .modalOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
+  position: fixed;
+  top: var(--app-header-height, 52px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 150;
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.24), transparent 38%),
     rgba(10, 15, 26, 0.42);
@@ -1483,7 +1489,7 @@
 
 
 @media (max-width: 768px) {
-      .floatingToolbar {
+  .floatingToolbar {
     max-width: min-content;
     width: 90%;
   }
@@ -1547,5 +1553,6 @@
 
   .modalOverlay {
     padding: 12px;
+    place-items: start center;
   }
 }
