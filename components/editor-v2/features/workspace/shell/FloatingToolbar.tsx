@@ -380,23 +380,24 @@ export function FloatingToolbar({
       <ToolbarDivider />
 
       <ToolbarGroup>
-        <ToolbarButton
-          type="button"
-          active={!touchPrimaryInput && activeTool === "pan"}
-          disabled={touchPrimaryInput}
-          inertWhenActive
-          aria-pressed={!touchPrimaryInput && activeTool === "pan"}
-          aria-label={touchPrimaryInput ? "Pan unavailable on touch devices" : "Pan"}
-          title={touchPrimaryInput ? "Pan is available with a mouse or trackpad" : "Pan"}
-          onClick={() => {
-            closeColorLibrary();
-            setDrawOpen(false);
-            closeImageMenu();
-            dispatch(createSetToolCommand("pan"));
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/pan.svg" />
-        </ToolbarButton>
+        {touchPrimaryInput ? null : (
+          <ToolbarButton
+            type="button"
+            active={activeTool === "pan"}
+            inertWhenActive
+            aria-pressed={activeTool === "pan"}
+            aria-label="Pan"
+            title="Pan"
+            onClick={() => {
+              closeColorLibrary();
+              setDrawOpen(false);
+              closeImageMenu();
+              dispatch(createSetToolCommand("pan"));
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/pan.svg" />
+          </ToolbarButton>
+        )}
 
         <ToolbarButton
           type="button"
