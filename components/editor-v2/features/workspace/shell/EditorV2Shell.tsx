@@ -120,7 +120,10 @@ export function EditorV2Shell({
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
+  const hasAppliedMobileLayoutRef = useRef(false);
   const [mounted, setMounted] = useState(false);
+  const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
+  const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
@@ -141,7 +144,7 @@ export function EditorV2Shell({
     }
 
     const availableWidth = Math.max(
-      canvasWorldSize.width - EXPANDED_SIDEBAR_WIDTH,
+      canvasWorldSize.width - (sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH),
       1,
     );
     const availableHeight = Math.max(canvasWorldSize.height, 1);
@@ -161,7 +164,8 @@ export function EditorV2Shell({
       return null;
     }
 
-    const visibleLeftInset = sidebarCollapsed ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
     const visibleCenterX =
       visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
     const visibleCenterY = canvasWorldSize.height / 2;
@@ -179,6 +183,7 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
+    isBottomPanelLayout,
     sidebarCollapsed,
   ]);
   const textViewportCenter = useMemo(() => {
@@ -200,7 +205,8 @@ export function EditorV2Shell({
       return;
     }
 
-    const visibleLeftInset = sidebarCollapsed ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
     const renderedWidth = gridMetrics.surfaceWidth * fitZoom;
     const renderedHeight = gridMetrics.surfaceHeight * fitZoom;
     const targetOffsetX =
@@ -221,10 +227,34 @@ export function EditorV2Shell({
     fitZoom,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
+    isBottomPanelLayout,
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
   ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      setLayoutModeResolved(true);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const update = () => {
+      setIsBottomPanelLayout(mediaQuery.matches);
+      setLayoutModeResolved(true);
+    };
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
 
   useEffect(() => {
     const element = canvasWorldRef.current;
@@ -257,6 +287,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     if (
+      !layoutModeResolved ||
       hasAppliedInitialFitRef.current ||
       fitZoom <= 0 ||
       canvasWorldSize.width <= 0 ||
@@ -272,6 +303,53 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     fitZoom,
     fitToGrid,
+    layoutModeResolved,
+  ]);
+
+  useEffect(() => {
+    if (!isBottomPanelLayout) {
+      hasAppliedMobileLayoutRef.current = false;
+      return;
+    }
+
+    if (
+      !layoutModeResolved ||
+      hasAppliedMobileLayoutRef.current ||
+      fitZoom <= 0 ||
+      canvasWorldSize.width <= 0 ||
+      canvasWorldSize.height <= 0
+    ) {
+      return;
+    }
+
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+      return;
+    }
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      fitToGrid();
+      hasAppliedMobileLayoutRef.current = true;
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    dispatch,
+    fitToGrid,
+    fitZoom,
+    isBottomPanelLayout,
+    layoutModeResolved,
+    sidebarCollapsed,
   ]);
 
   useEffect(() => {
@@ -474,7 +552,7 @@ export function EditorV2Shell({
               <div
                 className={styles.stageToolbarTop}
                 style={{
-                  left: sidebarCollapsed
+                  left: sidebarCollapsed || isBottomPanelLayout
                     ? "50%"
                     : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
                 }}

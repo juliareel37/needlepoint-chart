@@ -196,6 +196,7 @@ export function FloatingToolbar({
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const drawAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -233,6 +234,60 @@ export function FloatingToolbar({
     mediaQuery.addListener(update);
     return () => mediaQuery.removeListener(update);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(any-pointer: coarse)");
+    const hoverPointerQuery = window.matchMedia("(any-hover: hover)");
+    const primaryCoarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const primaryHoverQuery = window.matchMedia("(hover: hover)");
+
+    const update = () => {
+      const hasTouchPoints =
+        typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+      const hasCoarsePointer =
+        coarsePointerQuery.matches || primaryCoarsePointerQuery.matches || hasTouchPoints;
+      const hasHoverPointer =
+        hoverPointerQuery.matches || primaryHoverQuery.matches;
+
+      setTouchPrimaryInput(hasCoarsePointer && !hasHoverPointer);
+    };
+
+    update();
+
+    const queries = [
+      coarsePointerQuery,
+      hoverPointerQuery,
+      primaryCoarsePointerQuery,
+      primaryHoverQuery,
+    ];
+
+    const addListener = (query: MediaQueryList) => {
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+      }
+
+      query.addListener(update);
+      return () => query.removeListener(update);
+    };
+
+    const cleanups = queries.map(addListener);
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!touchPrimaryInput || activeTool !== "pan") {
+      return;
+    }
+
+    dispatch(createSetToolCommand("paint"));
+  }, [activeTool, dispatch, touchPrimaryInput]);
 
   useEffect(() => {
     if (!brushSizeTooltipVisible) {
@@ -327,11 +382,12 @@ export function FloatingToolbar({
       <ToolbarGroup>
         <ToolbarButton
           type="button"
-          active={activeTool === "pan"}
+          active={!touchPrimaryInput && activeTool === "pan"}
+          disabled={touchPrimaryInput}
           inertWhenActive
-          aria-pressed={activeTool === "pan"}
-          aria-label="Pan"
-          title="Pan"
+          aria-pressed={!touchPrimaryInput && activeTool === "pan"}
+          aria-label={touchPrimaryInput ? "Pan unavailable on touch devices" : "Pan"}
+          title={touchPrimaryInput ? "Pan is available with a mouse or trackpad" : "Pan"}
           onClick={() => {
             closeColorLibrary();
             setDrawOpen(false);
