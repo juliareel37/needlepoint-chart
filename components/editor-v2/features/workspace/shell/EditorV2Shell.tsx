@@ -120,6 +120,7 @@ export function EditorV2Shell({
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
@@ -288,6 +289,10 @@ export function EditorV2Shell({
   }, [activeSidebarSection, dispatch, sidebarCollapsed, traceRepositionActive]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
       setSaveNotificationVisible(false);
       return;
@@ -358,7 +363,7 @@ export function EditorV2Shell({
             headerHistoryTarget,
           )
         : null}
-      {saveNotificationVisible
+      {mounted && saveNotificationVisible
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
               <div className={styles.editorNotificationStack} 
@@ -374,7 +379,7 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
-      {errorNotification
+      {mounted && errorNotification
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
               <div
@@ -552,7 +557,7 @@ export function EditorV2Shell({
         </section>
       </div>
 
-      {setupModalOpen
+      {mounted && setupModalOpen
         ? createPortal(
             <div className={styles.modalOverlay}>
               {setupModal}

@@ -9,7 +9,9 @@
   column-gap: 0;
   align-items: stretch;
   height: calc(100vh - 52px);
+  height: calc(100dvh - 52px);
   min-height: calc(100vh - 52px);
+  min-height: calc(100dvh - 52px);
   transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
 
@@ -1520,17 +1522,21 @@
   }
   .railSurface {
     flex-direction: row;
-    padding: 0px 10px;
+    padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    min-height: calc(56px + env(safe-area-inset-bottom, 0px));
     border-right: none;
     border-top: 1px solid var(--ui-border-reg);
-
-  };
+  }
   .shell {
     position: relative;
   }
   .shellContent {
     grid-template-columns: auto;
-    grid-template-rows: 1fr .15fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: calc(100vh - 52px);
+    height: calc(100dvh - 52px);
+    min-height: calc(100vh - 52px);
+    min-height: calc(100dvh - 52px);
   }
 
 

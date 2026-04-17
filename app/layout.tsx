@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
@@ -29,6 +29,12 @@ export const metadata: Metadata = {
     shortcut: assetPath("/wippa_logo_icon.png"),
     apple: assetPath("/wippa_logo_icon.png"),
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 const appShellStyle: CSSProperties & Record<"--app-header-height", string> = {
