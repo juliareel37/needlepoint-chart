@@ -28,7 +28,7 @@ interface TraceImageLayerProps {
 
 interface MobileDragState {
   moved: boolean;
-  pointerId: number;
+  touchId: number;
   startClientX: number;
   startClientY: number;
   startTransform: {
@@ -53,6 +53,12 @@ export function TraceImageLayer({
   const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileDragStateRef = useRef<MobileDragState | null>(null);
+  const mobilePendingTransformRef = useRef<{
+    offsetX: number;
+    offsetY: number;
+    scale: number;
+  } | null>(null);
+  const mobileAnimationFrameRef = useRef<number | null>(null);
   const mobilePreviewTransformRef = useRef({
     offsetX: trace.offsetX,
     offsetY: trace.offsetY,
@@ -120,6 +126,14 @@ export function TraceImageLayer({
   }, [traceTransform]);
 
   useEffect(() => {
+    return () => {
+      if (mobileAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(mobileAnimationFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const imageSource = traceAsset?.image;
     const desktopCanvas = desktopCanvasRef.current;
     const mobileCanvas = mobileCanvasRef.current;
@@ -152,6 +166,126 @@ export function TraceImageLayer({
     }
   }, [traceAsset, coarsePointer]);
 
+  useEffect(() => {
+    const wrapper = mobileWrapperRef.current;
+
+    if (!wrapper || !coarsePointer || !positioningEnabled) {
+      mobileDragStateRef.current = null;
+      return;
+    }
+
+    const flushMobilePreviewTransform = () => {
+      mobileAnimationFrameRef.current = null;
+      const pending = mobilePendingTransformRef.current;
+      mobilePendingTransformRef.current = null;
+
+      if (!pending) {
+        return;
+      }
+
+      mobilePreviewTransformRef.current = pending;
+      applyMobileWrapperTransform(wrapper, pending);
+    };
+
+    const scheduleMobilePreviewTransform = (nextTransform: {
+      offsetX: number;
+      offsetY: number;
+      scale: number;
+    }) => {
+      mobilePendingTransformRef.current = nextTransform;
+
+      if (mobileAnimationFrameRef.current !== null) {
+        return;
+      }
+
+      mobileAnimationFrameRef.current = window.requestAnimationFrame(
+        flushMobilePreviewTransform,
+      );
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      mobileDragStateRef.current = {
+        moved: false,
+        touchId: touch.identifier,
+        startClientX: touch.clientX,
+        startClientY: touch.clientY,
+        startTransform: mobilePreviewTransformRef.current,
+      };
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const dragState = mobileDragStateRef.current;
+
+      if (!dragState) {
+        return;
+      }
+
+      const touch = Array.from(event.touches).find(
+        (candidate) => candidate.identifier === dragState.touchId,
+      );
+
+      if (!touch) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const deltaClientX = touch.clientX - dragState.startClientX;
+      const deltaClientY = touch.clientY - dragState.startClientY;
+      const viewportScale = Math.max(zoom, 0.001);
+      const deltaX = deltaClientX / viewportScale;
+      const deltaY = deltaClientY / viewportScale;
+
+      dragState.moved = dragState.moved || Math.hypot(deltaClientX, deltaClientY) >= 3;
+
+      scheduleMobilePreviewTransform({
+        offsetX: dragState.startTransform.offsetX + deltaX,
+        offsetY: dragState.startTransform.offsetY + deltaY,
+        scale: dragState.startTransform.scale,
+      });
+    };
+
+    const handleTouchEnd = () => {
+      const dragState = mobileDragStateRef.current;
+
+      if (!dragState) {
+        return;
+      }
+
+      if (mobileAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(mobileAnimationFrameRef.current);
+        flushMobilePreviewTransform();
+      }
+
+      if (dragState.moved) {
+        dispatch(
+          createPreviewTraceRepositionCommand(mobilePreviewTransformRef.current),
+        );
+      } else {
+        applyMobileWrapperTransform(wrapper, traceTransform);
+      }
+
+      mobileDragStateRef.current = null;
+    };
+
+    wrapper.addEventListener("touchstart", handleTouchStart, { passive: true });
+    wrapper.addEventListener("touchmove", handleTouchMove, { passive: false });
+    wrapper.addEventListener("touchend", handleTouchEnd);
+    wrapper.addEventListener("touchcancel", handleTouchEnd);
+
+    return () => {
+      wrapper.removeEventListener("touchstart", handleTouchStart);
+      wrapper.removeEventListener("touchmove", handleTouchMove);
+      wrapper.removeEventListener("touchend", handleTouchEnd);
+      wrapper.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, [coarsePointer, dispatch, positioningEnabled, traceTransform, zoom]);
+
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
     const canvas = desktopCanvasRef.current;
     if (!canvas) {
@@ -168,83 +302,6 @@ export function TraceImageLayer({
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     },
     [dispatch],
-  );
-
-  const handleMobilePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!coarsePointer || !positioningEnabled) {
-        return;
-      }
-
-      if (event.pointerType === "mouse" && event.button !== 0) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      mobileDragStateRef.current = {
-        moved: false,
-        pointerId: event.pointerId,
-        startClientX: event.clientX,
-        startClientY: event.clientY,
-        startTransform: mobilePreviewTransformRef.current,
-      };
-    },
-    [coarsePointer, positioningEnabled],
-  );
-
-  const handleMobilePointerMove = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      const dragState = mobileDragStateRef.current;
-
-      if (!coarsePointer || !dragState || event.pointerId !== dragState.pointerId) {
-        return;
-      }
-
-      const deltaClientX = event.clientX - dragState.startClientX;
-      const deltaClientY = event.clientY - dragState.startClientY;
-      const viewportScale = Math.max(zoom, 0.001);
-      const deltaX = deltaClientX / viewportScale;
-      const deltaY = deltaClientY / viewportScale;
-
-      dragState.moved = dragState.moved || Math.hypot(deltaClientX, deltaClientY) >= 3;
-
-      const nextTransform = {
-        offsetX: dragState.startTransform.offsetX + deltaX,
-        offsetY: dragState.startTransform.offsetY + deltaY,
-        scale: dragState.startTransform.scale,
-      };
-
-      mobilePreviewTransformRef.current = nextTransform;
-      applyMobileWrapperTransform(mobileWrapperRef.current, nextTransform);
-    },
-    [coarsePointer, zoom],
-  );
-
-  const handleMobilePointerEnd = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      const dragState = mobileDragStateRef.current;
-
-      if (!coarsePointer || !dragState || event.pointerId !== dragState.pointerId) {
-        return;
-      }
-
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-
-      if (dragState.moved) {
-        dispatch(
-          createPreviewTraceRepositionCommand(mobilePreviewTransformRef.current),
-        );
-      } else {
-        applyMobileWrapperTransform(event.currentTarget, traceTransform);
-      }
-
-      mobileDragStateRef.current = null;
-    },
-    [coarsePointer, dispatch, traceTransform],
   );
 
   return (
@@ -264,10 +321,6 @@ export function TraceImageLayer({
           ref={mobileWrapperRef}
           aria-label="Trace image controls"
           role="presentation"
-          onPointerDown={handleMobilePointerDown}
-          onPointerMove={handleMobilePointerMove}
-          onPointerUp={handleMobilePointerEnd}
-          onPointerCancel={handleMobilePointerEnd}
           style={{
             position: "absolute",
             top: `${traceBaseRect.top}px`,
