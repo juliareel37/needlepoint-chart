@@ -111,7 +111,7 @@ export function SelectionSessionToolbar({
 
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           disabled={!canPaintSelection}
           onClick={handleNewSelection}
         >

@@ -20,8 +20,8 @@ export function MirrorSessionToolbar({
 }: MirrorSessionToolbarProps) {
   const hasCommittedSelection = Boolean(session?.sourceRect && !session?.dragAnchor);
   const instruction = !hasCommittedSelection
-    ? "Drag to select mirror area"
-    : "Select a region to mirror";
+    ? "Drag to select mirror area."
+    : "Select a region to mirror.";
 
   return (
     <Toolbar className={styles.floatingToolbar}>
@@ -50,7 +50,7 @@ export function MirrorSessionToolbar({
 
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
