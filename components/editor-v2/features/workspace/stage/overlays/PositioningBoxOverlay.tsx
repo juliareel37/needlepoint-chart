@@ -20,6 +20,7 @@ interface PositioningBoxOverlayProps {
   ariaLabel: string;
   baseRect: PositioningRect;
   bounds: PositioningRect;
+  disableLivePreview?: boolean;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   onClick?: () => void;
   onInteractionEnd?: () => void;
@@ -41,6 +42,7 @@ export function PositioningBoxOverlay({
   ariaLabel,
   baseRect,
   bounds,
+  disableLivePreview = false,
   getWorldPointFromClient,
   onClick,
   onInteractionEnd,
@@ -140,8 +142,10 @@ export function PositioningBoxOverlay({
   const scheduleTransformChange = useCallback(
     (nextTransform: PositioningTransform, transactionKey: string) => {
       latestTransformRef.current = nextTransform;
-      setPreviewBounds(getPositionedBounds(latestBaseRectRef.current, nextTransform));
-      latestOnTransformPreviewRef.current?.(nextTransform);
+      if (!disableLivePreview) {
+        setPreviewBounds(getPositionedBounds(latestBaseRectRef.current, nextTransform));
+        latestOnTransformPreviewRef.current?.(nextTransform);
+      }
       pendingTransformRef.current = {
         transactionKey,
         transform: nextTransform,
@@ -163,7 +167,7 @@ export function PositioningBoxOverlay({
         onTransformChange(pending.transform, pending.transactionKey);
       });
     },
-    [onTransformChange],
+    [disableLivePreview, onTransformChange],
   );
 
   useEffect(() => {
