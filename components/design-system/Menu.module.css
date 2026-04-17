@@ -1,0 +1,207 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  filter: none;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
+}
+
+.triggerDefault {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--ui-border-subtle);
+  background: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.triggerUpward {
+  min-width: 146px;
+  padding: 8px 12px;
+  border: none;
+  background: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.triggerSelection {
+  width: fit-content;
+  min-width: 176px;
+  padding: 8px 12px;
+  border: 1px solid var(--ui-border-subtle);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.triggerSelection[data-open="true"],
+.triggerSelection:hover {
+  border-color: var(--brand-primary);
+}
+
+.triggerSelection[data-open="true"] {
+  box-shadow: var(--ui-shadow-sm), 0 0 0 2px var(--brand-200);
+}
+
+.triggerGhost {
+  width: fit-content;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.triggerGhost:hover,
+.triggerGhost[data-open="true"] {
+  background: var(--toolbar-button-hover);
+}
+
+.surface {
+  width: max-content;
+  min-width: 100px;
+  max-width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--ui-border-reg);
+  background: var(--surface-card-alt);
+  box-shadow: var(--ui-shadow-lg);
+  backdrop-filter: blur(10px);
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-height: 32px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  filter: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.item:hover {
+  background: var(--menu-item-hover-bg);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
+}
+
+.item[data-active="true"] {
+  background: var(--menu-item-hover-bg);
+}
+
+.itemLeading {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.itemTrailing {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.itemContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.itemLabel {
+  min-width: 0;
+}
+
+.divider {
+  height: 1px;
+  margin: 0 4px;
+  background: var(--ui-border-subtle);
+  opacity: 0.6;
+}
+
+.selectionIcon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+}
+
+.radioIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border-reg);
+  background: var(--surface-card);
+}
+
+.radioIcon[data-checked="true"] {
+  border-color: var(--brand-primary);
+}
+
+.radioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.radioDot[data-checked="true"] {
+  background: var(--brand-primary);
+}
+
+.checkboxIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--ui-border-reg);
+  background: var(--surface-card);
+  color: var(--neutral-0);
+}
+
+.checkboxIcon[data-checked="true"] {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+}
+
+.checkmark {
+  opacity: 0;
+}
+
+.checkmark[data-checked="true"] {
+  opacity: 1;
+}
+
+.chevronIcon,
+.caretIcon,
+.leadingIcon {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+}
+
+.trailingCheck {
+  opacity: 0;
+}
+
+.trailingCheck[data-active="true"] {
+  opacity: 0.9;
+}
+
+.placeholder {
+  color: var(--text-secondary);
+  opacity: 0.72;
+}

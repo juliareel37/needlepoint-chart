@@ -1,6 +1,7 @@
 "use client";
 
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { Button } from "@/components/design-system";
 
 export default function AuthButtons() {
   return (
@@ -10,21 +11,9 @@ export default function AuthButtons() {
       </SignedIn>
       <SignedOut>
         <SignInButton mode="modal">
-          <button
-            type="button"
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--panel-border)",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
+          <Button type="button" variant="secondary" size="md">
             Sign in
-          </button>
+          </Button>
         </SignInButton>
       </SignedOut>
     </>

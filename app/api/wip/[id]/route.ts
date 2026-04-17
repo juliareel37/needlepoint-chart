@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
+import { SaveSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { deleteBlobIfExists, extractBlobUrl } from "@/lib/blob";
+import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
+const SAVE_LOG_ENABLED = process.env.NODE_ENV !== "production";
 
 type DraftPayload = {
   version: number;
@@ -22,12 +25,27 @@ type DraftPayload = {
     scale: number;
     offsetX: number;
     offsetY: number;
+    cellSizeBasis?: number;
     locked: boolean;
   };
 };
 
 function hashDraft(draft: DraftPayload) {
   return createHash("sha256").update(JSON.stringify(draft)).digest("hex");
+}
+
+type SaveSourceInput = "manual" | "autosave";
+
+function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
+  return value === "autosave" ? SaveSource.AUTOSAVE : SaveSource.MANUAL;
+}
+
+function isUnknownPrismaArgumentError(error: unknown, argumentName: string) {
+  return (
+    error instanceof Error &&
+    error.message.includes("Unknown argument") &&
+    error.message.includes(`\`${argumentName}\``)
+  );
 }
 
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
@@ -72,13 +90,15 @@ export async function PUT(req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
   const body = (await req.json().catch(() => null)) as
-    | { draft?: DraftPayload; title?: string }
+    | { draft?: DraftPayload; title?: string; forceVersion?: boolean; saveSource?: SaveSourceInput }
     | null;
 
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
   const draft = body.draft;
+  const forceVersion = body?.forceVersion === true;
+  const saveSource = toPrismaSaveSource(body?.saveSource);
 
   const existing = await prisma.patternDraft.findFirst({
     where: { id, userId },
@@ -90,41 +110,84 @@ export async function PUT(req: Request, context: RouteContext) {
 
   const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
 
+  if (SAVE_LOG_ENABLED) {
+    console.info("[wippa save][update] request", {
+      userId,
+      draftId: id,
+      title,
+      saveSource,
+      forceVersion,
+      gridW: draft.gridW,
+      gridH: draft.gridH,
+    });
+  }
+
   const dataHash = hashDraft(draft);
   const now = new Date();
+  const versioningEnabled = isWipVersioningEnabled();
   const lastVersionAt = existing.lastVersionAt ? new Date(existing.lastVersionAt) : null;
   const VERSION_INTERVAL_MS = 3 * 60 * 1000;
   const shouldVersion =
-    !lastVersionAt ||
-    (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
-      dataHash !== existing.lastVersionHash);
+    (forceVersion && dataHash !== existing.lastVersionHash) ||
+    (versioningEnabled &&
+      (!lastVersionAt ||
+        (now.getTime() - lastVersionAt.getTime() >= VERSION_INTERVAL_MS &&
+          dataHash !== existing.lastVersionHash)));
 
-  const saved = await prisma.$transaction(async (tx) => {
-    const updated = await tx.patternDraft.update({
-      where: { id },
-      data: {
-        title,
-        data: draft,
-        ...(shouldVersion
-          ? {
-              lastVersionAt: now,
-              lastVersionHash: dataHash,
-            }
-          : {}),
-      },
-    });
+  const persistDraft = async (includeSaveSourceFields: boolean) => {
+    const updateData = {
+      title,
+      data: draft,
+      ...(includeSaveSourceFields ? { lastSaveSource: saveSource } : {}),
+      ...(shouldVersion
+        ? {
+            lastVersionAt: now,
+            lastVersionHash: dataHash,
+          }
+        : {}),
+    };
 
-    if (shouldVersion) {
-      await tx.patternVersion.create({
+    if (!shouldVersion) {
+      return prisma.patternDraft.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+
+    const [updated] = await prisma.$transaction([
+      prisma.patternDraft.update({
+        where: { id },
+        data: updateData,
+      }),
+      prisma.patternVersion.create({
         data: {
           draftId: id,
           data: draft,
           dataHash,
+          ...(includeSaveSourceFields ? { saveSource } : {}),
         },
-      });
-    }
+      }),
+    ]);
+
     return updated;
-  });
+  };
+
+  let saved: Awaited<ReturnType<typeof persistDraft>>;
+  try {
+    saved = await persistDraft(true);
+  } catch (error) {
+    if (
+      isUnknownPrismaArgumentError(error, "lastSaveSource") ||
+      isUnknownPrismaArgumentError(error, "saveSource")
+    ) {
+      console.warn(
+        "Prisma client/schema is missing save source fields; retrying WIP save without saveSource metadata."
+      );
+      saved = await persistDraft(false);
+    } else {
+      throw error;
+    }
+  }
 
   return NextResponse.json({
     ok: true,

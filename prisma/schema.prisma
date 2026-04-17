@@ -8,11 +8,18 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum SaveSource {
+  MANUAL
+  AUTOSAVE
+  RESTORE
+}
+
 model PatternDraft {
   id              String           @id @default(cuid())
   userId          String
   title           String
   data            Json
+  lastSaveSource  SaveSource?
   lastVersionAt   DateTime?
   lastVersionHash String?
   createdAt       DateTime         @default(now())
@@ -27,9 +34,24 @@ model PatternVersion {
   draftId   String
   data      Json
   dataHash  String
+  saveSource SaveSource?
   createdAt DateTime     @default(now())
 
   draft PatternDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
 
   @@index([draftId])
+}
+
+model EditorDesign {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  data       Json
+  gridWidth  Int
+  gridHeight Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([updatedAt])
 }

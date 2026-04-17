@@ -1,0 +1,54 @@
+.library {
+  display: flex;
+  flex-wrap: wrap;
+  /* gap: 4px; */
+  height: 250px;
+  overflow: auto;
+  padding: 8px;
+  background: var(--surface-card);
+  border-radius: 16px;
+  justify-content: space-evenly;
+}
+
+.colorButton {
+  justify-content: flex-start;
+  padding: 4px !important;
+}
+
+.colorButton:hover:not(:disabled),
+.colorButton[data-active="true"],
+.colorButton[data-active="true"]:hover:not(:disabled),
+.colorButton[data-inert-active="true"]:hover:not(:disabled) {
+  background: transparent;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 25%;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+  transform: scale(1);
+}
+
+.colorButton:hover:not(:disabled) .swatch,
+.colorButton:focus-visible .swatch {
+  transform: scale(1.14);
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 0 0 3px rgba(15, 23, 42, 0.14);
+}
+
+.swatchCheck {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}

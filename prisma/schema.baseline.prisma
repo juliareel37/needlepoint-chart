@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SaveSource {
+  MANUAL
+  AUTOSAVE
+  RESTORE
+}
+
+model PatternDraft {
+  id              String           @id @default(cuid())
+  userId          String
+  title           String
+  data            Json
+  lastSaveSource  SaveSource?
+  lastVersionAt   DateTime?
+  lastVersionHash String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  versions        PatternVersion[]
+
+  @@index([userId])
+}
+
+model PatternVersion {
+  id         String      @id @default(cuid())
+  draftId    String
+  data       Json
+  dataHash   String
+  saveSource SaveSource?
+  createdAt  DateTime    @default(now())
+
+  draft PatternDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([draftId])
+}

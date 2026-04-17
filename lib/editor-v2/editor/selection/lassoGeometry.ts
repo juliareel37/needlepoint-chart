@@ -1,0 +1,121 @@
+import type {
+  EditorStoreState,
+  GridPoint,
+  GridRect,
+  SelectionPoint,
+} from "../store/state";
+
+const LASSO_CELL_SAMPLE_OFFSETS = [1 / 6, 0.5, 5 / 6] as const;
+const LASSO_MIN_SAMPLES_INSIDE = 5;
+
+export function getLassoBounds(points: SelectionPoint[]): GridRect | null {
+  if (points.length === 0) {
+    return null;
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  const x = Math.max(0, Math.floor(minX));
+  const y = Math.max(0, Math.floor(minY));
+  const width = Math.max(1, Math.ceil(maxX) - x);
+  const height = Math.max(1, Math.ceil(maxY) - y);
+
+  return { x, y, width, height };
+}
+
+export function isCellSelectedByLasso(
+  points: SelectionPoint[],
+  cellX: number,
+  cellY: number,
+): boolean {
+  if (points.length < 3) {
+    return false;
+  }
+
+  let insideSamples = 0;
+
+  for (const offsetY of LASSO_CELL_SAMPLE_OFFSETS) {
+    for (const offsetX of LASSO_CELL_SAMPLE_OFFSETS) {
+      const samplePoint = {
+        x: cellX + offsetX,
+        y: cellY + offsetY,
+      };
+
+      if (pointInPolygon(samplePoint, points)) {
+        insideSamples += 1;
+      }
+    }
+  }
+
+  return insideSamples >= LASSO_MIN_SAMPLES_INSIDE;
+}
+
+export function isCellInSelection(
+  state: EditorStoreState,
+  cell: GridPoint,
+): boolean {
+  const selection = state.session.selection;
+
+  if (selection.mode === "lasso") {
+    const bounds = selection.rect;
+
+    if (!bounds) {
+      return false;
+    }
+
+    if (
+      cell.x < bounds.x ||
+      cell.y < bounds.y ||
+      cell.x >= bounds.x + bounds.width ||
+      cell.y >= bounds.y + bounds.height
+    ) {
+      return false;
+    }
+
+    return isCellSelectedByLasso(selection.lassoPoints, cell.x, cell.y);
+  }
+
+  if (!selection.rect) {
+    return false;
+  }
+
+  return (
+    cell.x >= selection.rect.x &&
+    cell.y >= selection.rect.y &&
+    cell.x < selection.rect.x + selection.rect.width &&
+    cell.y < selection.rect.y + selection.rect.height
+  );
+}
+
+export function pointInPolygon(
+  point: SelectionPoint,
+  polygon: SelectionPoint[],
+): boolean {
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const intersect =
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+
+    if (intersect) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}

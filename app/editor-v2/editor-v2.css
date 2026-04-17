@@ -1,0 +1,6 @@
+.editor-v2-route-shell {
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  background: #f8fafc;
+}

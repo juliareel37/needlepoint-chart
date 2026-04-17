@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { auth } from "@clerk/nextjs/server";
+import { SaveSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { isWipVersioningEnabled } from "@/lib/wipVersioning";
 
 export const runtime = "nodejs";
+const SAVE_LOG_ENABLED = process.env.NODE_ENV !== "production";
 
 type DraftPayload = {
   version: number;
@@ -21,12 +24,27 @@ type DraftPayload = {
     scale: number;
     offsetX: number;
     offsetY: number;
+    cellSizeBasis?: number;
     locked: boolean;
   };
 };
 
 function hashDraft(draft: DraftPayload) {
   return createHash("sha256").update(JSON.stringify(draft)).digest("hex");
+}
+
+type SaveSourceInput = "manual" | "autosave";
+
+function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
+  return value === "autosave" ? SaveSource.AUTOSAVE : SaveSource.MANUAL;
+}
+
+function isUnknownPrismaArgumentError(error: unknown, argumentName: string) {
+  return (
+    error instanceof Error &&
+    error.message.includes("Unknown argument") &&
+    error.message.includes(`\`${argumentName}\``)
+  );
 }
 
 export async function GET() {
@@ -56,39 +74,91 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { draft?: DraftPayload; title?: string }
+    | { draft?: DraftPayload; title?: string; forceVersion?: boolean; saveSource?: SaveSourceInput }
     | null;
 
   if (!body?.draft || typeof body.draft !== "object") {
     return NextResponse.json({ error: "Missing draft" }, { status: 400 });
   }
   const draft = body.draft;
+  const forceVersion = body?.forceVersion === true;
+  const saveSource = toPrismaSaveSource(body?.saveSource);
 
   const title =
     typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled Pattern";
 
+  if (SAVE_LOG_ENABLED) {
+    console.info("[wippa save][create] request", {
+      userId,
+      title,
+      saveSource,
+      forceVersion,
+      gridW: draft.gridW,
+      gridH: draft.gridH,
+    });
+  }
+
   const now = new Date();
   const dataHash = hashDraft(draft);
+  const versioningEnabled = isWipVersioningEnabled();
+  const shouldVersion = versioningEnabled || forceVersion;
 
-  const saved = await prisma.$transaction(async (tx) => {
-    const created = await tx.patternDraft.create({
-      data: {
-        userId,
-        title,
-        data: draft,
-        lastVersionAt: now,
-        lastVersionHash: dataHash,
-      },
+  const persistDraft = async (includeSaveSourceFields: boolean) => {
+    const createData = {
+      userId,
+      title,
+      data: draft,
+      ...(includeSaveSourceFields ? { lastSaveSource: saveSource } : {}),
+      ...(shouldVersion
+        ? {
+            lastVersionAt: now,
+            lastVersionHash: dataHash,
+          }
+        : {}),
+    };
+
+    if (!shouldVersion) {
+      return prisma.patternDraft.create({
+        data: createData,
+      });
+    }
+
+    const created = await prisma.patternDraft.create({
+      data: createData,
     });
-    await tx.patternVersion.create({
-      data: {
-        draftId: created.id,
-        data: draft,
-        dataHash,
-      },
-    });
-    return created;
-  });
+
+    try {
+      await prisma.patternVersion.create({
+        data: {
+          draftId: created.id,
+          data: draft,
+          dataHash,
+          ...(includeSaveSourceFields ? { saveSource } : {}),
+        },
+      });
+      return created;
+    } catch (error) {
+      await prisma.patternDraft.delete({ where: { id: created.id } }).catch(() => null);
+      throw error;
+    }
+  };
+
+  let saved: Awaited<ReturnType<typeof persistDraft>>;
+  try {
+    saved = await persistDraft(true);
+  } catch (error) {
+    if (
+      isUnknownPrismaArgumentError(error, "lastSaveSource") ||
+      isUnknownPrismaArgumentError(error, "saveSource")
+    ) {
+      console.warn(
+        "Prisma client/schema is missing save source fields; retrying WIP create without saveSource metadata."
+      );
+      saved = await persistDraft(false);
+    } else {
+      throw error;
+    }
+  }
 
   return NextResponse.json({
     ok: true,
@@ -96,5 +166,6 @@ export async function POST(req: Request) {
     title: saved.title,
     createdAt: saved.createdAt,
     updatedAt: saved.updatedAt,
+    versioned: shouldVersion,
   });
 }
