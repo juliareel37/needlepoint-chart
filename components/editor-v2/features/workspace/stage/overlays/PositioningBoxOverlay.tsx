@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getHandleLeft,
@@ -67,10 +67,50 @@ export function PositioningBoxOverlay({
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
   const dragThreshold = 4;
   const latestTransformRef = useRef(transform);
+  const pendingTransformRef = useRef<{
+    transactionKey: string;
+    transform: PositioningTransform;
+  } | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     latestTransformRef.current = transform;
   }, [transform]);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleTransformChange = useCallback(
+    (nextTransform: PositioningTransform, transactionKey: string) => {
+      latestTransformRef.current = nextTransform;
+      pendingTransformRef.current = {
+        transactionKey,
+        transform: nextTransform,
+      };
+
+      if (animationFrameRef.current !== null) {
+        return;
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(() => {
+        animationFrameRef.current = null;
+        const pending = pendingTransformRef.current;
+        pendingTransformRef.current = null;
+
+        if (!pending) {
+          return;
+        }
+
+        onTransformChange(pending.transform, pending.transactionKey);
+      });
+    },
+    [onTransformChange],
+  );
 
   useEffect(() => {
     const handleWindowPointerMove = (event: PointerEvent) => {
@@ -101,8 +141,7 @@ export function PositioningBoxOverlay({
       }
 
       const nextTransform = getTransformFromDrag(dragState, worldPoint, baseRect);
-      latestTransformRef.current = nextTransform;
-      onTransformChange(nextTransform, dragState.transactionKey);
+      scheduleTransformChange(nextTransform, dragState.transactionKey);
     };
 
     const handleWindowPointerUp = () => {
@@ -142,8 +181,8 @@ export function PositioningBoxOverlay({
     getWorldPointFromClient,
     interactive,
     onClick,
-    onTransformChange,
     onTransformCommit,
+    scheduleTransformChange,
   ]);
 
   useEffect(() => {
@@ -249,8 +288,7 @@ export function PositioningBoxOverlay({
         geometry.distance,
         baseRect,
       );
-      latestTransformRef.current = nextTransform;
-      onTransformChange(nextTransform, pinch.transactionKey);
+      scheduleTransformChange(nextTransform, pinch.transactionKey);
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
@@ -291,8 +329,8 @@ export function PositioningBoxOverlay({
     bounds,
     getWorldPointFromClient,
     interactive,
-    onTransformChange,
     onTransformCommit,
+    scheduleTransformChange,
     transactionKeyPrefix,
     transform,
   ]);
@@ -358,8 +396,7 @@ export function PositioningBoxOverlay({
           position: "absolute",
           inset: 0,
           border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
-          boxShadow: "0 0 0 9999px rgba(37, 99, 235, 0.06)",
-          background: "rgba(37, 99, 235, 0.04)",
+          background: "transparent",
         }}
       />
 
@@ -390,7 +427,6 @@ export function PositioningBoxOverlay({
               borderRadius: handle.kind === "edge" ? `${4 * controlScale}px` : "999px",
               background: "#ffffff",
               border: `${handleBorderWidth}px solid #2563eb`,
-              boxShadow: "0 4px 10px rgba(15, 23, 42, 0.18)",
               cursor: handle.cursor,
             }}
           />
