@@ -56,10 +56,14 @@ export function TraceImageLayer({
     }),
     [trace.offsetX, trace.offsetY, trace.scale],
   );
-  const [draftTransform, setDraftTransform] = useState(traceTransform);
-
+  const previewTransformRef = useRef(traceTransform);
+  const [interactionActive, setInteractionActive] = useState(false);
   useEffect(() => {
-    setDraftTransform(traceTransform);
+    previewTransformRef.current = traceTransform;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.style.transform = getPositioningTransformCss(traceTransform);
+    }
   }, [traceTransform]);
 
   useEffect(() => {
@@ -95,18 +99,23 @@ export function TraceImageLayer({
   const traceBounds = useMemo(
     () =>
       traceBaseRect
-        ? getPositionedBounds(traceBaseRect, draftTransform)
+        ? getPositionedBounds(traceBaseRect, traceTransform)
         : null,
-    [draftTransform, traceBaseRect],
+    [traceBaseRect, traceTransform],
   );
-  const handleTraceTransformChange = useCallback(
-    (nextTrace: typeof traceTransform) => {
-      setDraftTransform(nextTrace);
-    },
-    [],
-  );
+  const handleTraceTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
+    previewTransformRef.current = nextTrace;
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    canvas.style.transform = getPositioningTransformCss(nextTrace);
+  }, []);
+  const handleTraceTransformChange = useCallback(() => {}, []);
   const handleTraceTransformCommit = useCallback(
     (nextTrace: typeof traceTransform) => {
+      previewTransformRef.current = nextTrace;
       dispatch(
         createPreviewTraceRepositionCommand(nextTrace),
       );
@@ -136,9 +145,9 @@ export function TraceImageLayer({
           left: `${traceBaseRect?.left ?? 0}px`,
           width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
           height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-          opacity: imageOpacity,
+          opacity: interactionActive ? 0 : imageOpacity,
           pointerEvents: "none",
-          transform: getPositioningTransformCss(draftTransform),
+          transform: getPositioningTransformCss(traceTransform),
           transformOrigin: "top left",
           willChange: "transform",
           backfaceVisibility: "hidden",
@@ -154,10 +163,13 @@ export function TraceImageLayer({
           baseRect={traceBaseRect}
           bounds={traceBounds}
           getWorldPointFromClient={getWorldPointFromClient}
+          onInteractionEnd={() => setInteractionActive(false)}
+          onInteractionStart={() => setInteractionActive(true)}
           onTransformChange={handleTraceTransformChange}
           onTransformCommit={handleTraceTransformCommit}
+          onTransformPreview={handleTraceTransformPreview}
           transactionKeyPrefix="trace-drag"
-          transform={draftTransform}
+          transform={traceTransform}
           zoom={zoom}
         />
       ) : null}

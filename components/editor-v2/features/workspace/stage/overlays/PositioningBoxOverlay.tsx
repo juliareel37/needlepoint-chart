@@ -5,6 +5,7 @@ import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getHandleLeft,
   getHandleTop,
+  getPositionedBounds,
   getTransformFromDrag,
   getTransformFromPinch,
   POSITIONING_HANDLES,
@@ -21,10 +22,13 @@ interface PositioningBoxOverlayProps {
   bounds: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   onClick?: () => void;
+  onInteractionEnd?: () => void;
+  onInteractionStart?: () => void;
   onTransformCommit?: (
     transform: PositioningTransform,
     transactionKey: string,
   ) => void;
+  onTransformPreview?: (transform: PositioningTransform) => void;
   interactive?: boolean;
   onTransformChange: (transform: PositioningTransform, transactionKey: string) => void;
   showHandles?: boolean;
@@ -39,7 +43,10 @@ export function PositioningBoxOverlay({
   bounds,
   getWorldPointFromClient,
   onClick,
+  onInteractionEnd,
+  onInteractionStart,
   onTransformCommit,
+  onTransformPreview,
   interactive = true,
   onTransformChange,
   showHandles = true,
@@ -72,18 +79,22 @@ export function PositioningBoxOverlay({
   const latestGetWorldPointFromClientRef = useRef(getWorldPointFromClient);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestOnClickRef = useRef(onClick);
+  const latestOnInteractionEndRef = useRef(onInteractionEnd);
+  const latestOnInteractionStartRef = useRef(onInteractionStart);
+  const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const pendingTransformRef = useRef<{
     transactionKey: string;
     transform: PositioningTransform;
   } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const [previewBounds, setPreviewBounds] = useState(bounds);
 
   useEffect(() => {
     latestTransformRef.current = transform;
   }, [transform]);
 
   useEffect(() => {
-    latestBoundsRef.current = bounds;
+    setPreviewBounds(bounds);
   }, [bounds]);
 
   useEffect(() => {
@@ -103,6 +114,22 @@ export function PositioningBoxOverlay({
   }, [onClick]);
 
   useEffect(() => {
+    latestOnInteractionEndRef.current = onInteractionEnd;
+  }, [onInteractionEnd]);
+
+  useEffect(() => {
+    latestOnInteractionStartRef.current = onInteractionStart;
+  }, [onInteractionStart]);
+
+  useEffect(() => {
+    latestOnTransformPreviewRef.current = onTransformPreview;
+  }, [onTransformPreview]);
+
+  useEffect(() => {
+    latestBoundsRef.current = previewBounds;
+  }, [previewBounds]);
+
+  useEffect(() => {
     return () => {
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
@@ -113,6 +140,8 @@ export function PositioningBoxOverlay({
   const scheduleTransformChange = useCallback(
     (nextTransform: PositioningTransform, transactionKey: string) => {
       latestTransformRef.current = nextTransform;
+      setPreviewBounds(getPositionedBounds(latestBaseRectRef.current, nextTransform));
+      latestOnTransformPreviewRef.current?.(nextTransform);
       pendingTransformRef.current = {
         transactionKey,
         transform: nextTransform,
@@ -192,6 +221,10 @@ export function PositioningBoxOverlay({
           latestTransformRef.current,
           dragRef.current.transactionKey,
         );
+      }
+
+      if (pointerDown) {
+        latestOnInteractionEndRef.current?.();
       }
 
       pointerDownRef.current = null;
@@ -345,6 +378,7 @@ export function PositioningBoxOverlay({
         latestTransformRef.current,
         pinchRef.current.transactionKey,
       );
+      latestOnInteractionEndRef.current?.();
       pinchRef.current = null;
     };
 
@@ -385,6 +419,7 @@ export function PositioningBoxOverlay({
       transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
     };
     pendingTransformRef.current = null;
+    latestOnInteractionStartRef.current?.();
     pointerDownRef.current = {
       clientX,
       clientY,
@@ -401,10 +436,10 @@ export function PositioningBoxOverlay({
       role="presentation"
       style={{
         position: "absolute",
-        left: `${bounds.left}px`,
-        top: `${bounds.top}px`,
-        width: `${bounds.width}px`,
-        height: `${bounds.height}px`,
+        left: `${previewBounds.left}px`,
+        top: `${previewBounds.top}px`,
+        width: `${previewBounds.width}px`,
+        height: `${previewBounds.height}px`,
         cursor: interactive ? (dragMode === "move" ? "grabbing" : "grab") : "default",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -435,8 +470,8 @@ export function PositioningBoxOverlay({
       />
 
       {showHandles ? POSITIONING_HANDLES.map((handle) => {
-        const handleLeft = getHandleLeft(handle.id, bounds.width, handleSize);
-        const handleTop = getHandleTop(handle.id, bounds.height, handleSize);
+        const handleLeft = getHandleLeft(handle.id, previewBounds.width, handleSize);
+        const handleTop = getHandleTop(handle.id, previewBounds.height, handleSize);
 
         return (
           <div
