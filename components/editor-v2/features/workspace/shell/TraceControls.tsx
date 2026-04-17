@@ -30,6 +30,8 @@ import {
 import styles from "./EditorV2Shell.module.css";
 
 const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
+const MAX_TRACE_IMAGE_DIMENSION_PX = 2048;
+const MAX_TRACE_IMAGE_PIXELS = 4_000_000;
 
 interface TraceControlsProps {
   trace: TraceDocument | null;
@@ -597,25 +599,67 @@ async function uploadTraceFile(file: File): Promise<{
   imageHeight: number | null;
 }> {
   const { upload } = await import("@vercel/blob/client");
+  const preparedFile = await prepareTraceUploadFile(file);
   const [uploaded, dimensions] = await Promise.all([
     upload(
-      `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`,
-      file,
+      `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${preparedFile.file.name}`,
+      preparedFile.file,
       {
         access: "public",
         handleUploadUrl: "/api/upload-trace",
       },
     ),
-    getImageDimensions(file),
+    Promise.resolve(preparedFile.dimensions),
   ]);
 
   return {
     assetUrl: uploaded.url,
-    fileName: file.name,
-    byteSize: file.size,
-    mimeType: file.type,
+    fileName: preparedFile.file.name,
+    byteSize: preparedFile.file.size,
+    mimeType: preparedFile.file.type,
     imageWidth: dimensions?.width ?? null,
     imageHeight: dimensions?.height ?? null,
+  };
+}
+
+async function prepareTraceUploadFile(file: File): Promise<{
+  file: File;
+  dimensions: { width: number; height: number } | null;
+}> {
+  const dimensions = await getImageDimensions(file);
+
+  if (
+    !dimensions ||
+    file.type === "image/gif" ||
+    !file.type.startsWith("image/")
+  ) {
+    return { file, dimensions };
+  }
+
+  const scaleByDimension =
+    MAX_TRACE_IMAGE_DIMENSION_PX /
+    Math.max(dimensions.width, dimensions.height);
+  const scaleByPixels = Math.sqrt(
+    MAX_TRACE_IMAGE_PIXELS / (dimensions.width * dimensions.height),
+  );
+  const scale = Math.min(1, scaleByDimension, scaleByPixels);
+
+  if (scale >= 0.999) {
+    return { file, dimensions };
+  }
+
+  const normalizedFile = await resizeImageFile(file, {
+    height: Math.max(1, Math.round(dimensions.height * scale)),
+    width: Math.max(1, Math.round(dimensions.width * scale)),
+  });
+
+  if (!normalizedFile) {
+    return { file, dimensions };
+  }
+
+  return {
+    file: normalizedFile,
+    dimensions: await getImageDimensions(normalizedFile),
   };
 }
 
@@ -644,6 +688,69 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     image.onerror = () => reject(new Error("Failed to load image"));
     image.src = src;
   });
+}
+
+async function resizeImageFile(
+  file: File,
+  targetSize: { width: number; height: number },
+): Promise<File | null> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = targetSize.width;
+    canvas.height = targetSize.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return null;
+    }
+
+    // Keep trace uploads bounded on mobile Safari, which is sensitive to
+    // multiple full-resolution image decodes/canvas copies at once.
+    context.drawImage(image, 0, 0, targetSize.width, targetSize.height);
+
+    const blob = await canvasToBlob(canvas, "image/webp", 0.9);
+    canvas.width = 0;
+    canvas.height = 0;
+
+    if (!blob) {
+      return null;
+    }
+
+    return new File(
+      [blob],
+      replaceFileExtension(file.name, "webp"),
+      {
+        type: blob.type || "image/webp",
+        lastModified: file.lastModified,
+      },
+    );
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number,
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), type, quality);
+  });
+}
+
+function replaceFileExtension(fileName: string, nextExtension: string): string {
+  const lastDotIndex = fileName.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    return `${fileName}.${nextExtension}`;
+  }
+
+  return `${fileName.slice(0, lastDotIndex)}.${nextExtension}`;
 }
 
 function getTraceDisplayName(trace: TraceDocument): string {
