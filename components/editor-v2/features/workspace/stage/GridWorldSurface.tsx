@@ -184,7 +184,7 @@ export function GridWorldSurface({
     },
     [getSelectionPointFromClient],
   );
-  const { handlePointerDown, handlePointerEnter } = useGridInteractions({
+  const { cancelPaintStroke, handlePointerDown, handlePointerEnter } = useGridInteractions({
     activeColorId,
     activeTool,
     brushSize,
@@ -422,6 +422,7 @@ export function GridWorldSurface({
               gridWidth={grid.width}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
+              cancelPaintStroke={cancelPaintStroke}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}
               showGridlines={effectiveShowGridlines}

@@ -55,9 +55,16 @@ export function usePaintStroke({
   }, [paintStrokeId]);
 
   return {
+    cancelStroke,
     handlePointerDown,
     handlePointerEnter,
   };
+
+  function cancelStroke(): void {
+    paintedCellKeysRef.current.clear();
+    lastStrokePointRef.current = null;
+    setPaintStrokeId(null);
+  }
 
   function handlePointerDown(point: GridPoint): boolean {
     if (activeTool === "paint") {

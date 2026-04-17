@@ -26,6 +26,7 @@ import {
 } from "./GridCanvasStage.source";
 
 interface GridCanvasStageProps {
+  cancelPaintStroke: () => void;
   cells: GridCellValue[];
   colorsById: Record<string, PaletteColor>;
   deferPaintUntilTraceReady?: boolean;
@@ -51,6 +52,7 @@ interface GridCanvasStageProps {
 }
 
 export function GridCanvasStage({
+  cancelPaintStroke,
   cells,
   colorsById,
   deferPaintUntilTraceReady = false,
@@ -84,6 +86,8 @@ export function GridCanvasStage({
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const activeTouchPointerIdsRef = useRef<Set<number>>(new Set());
+  const touchGestureLockedRef = useRef(false);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
 
   useEffect(() => {
@@ -309,6 +313,30 @@ export function GridCanvasStage({
       <div
         aria-label="Grid canvas"
         onPointerDown={(event) => {
+          if (event.pointerType === "touch") {
+            activeTouchPointerIdsRef.current.add(event.pointerId);
+
+            if (activeTouchPointerIdsRef.current.size > 1) {
+              touchGestureLockedRef.current = true;
+              cancelPaintStroke();
+
+              const activePointerId = activePointerIdRef.current;
+              if (
+                activePointerId !== null &&
+                event.currentTarget.hasPointerCapture(activePointerId)
+              ) {
+                event.currentTarget.releasePointerCapture(activePointerId);
+              }
+
+              activePointerIdRef.current = null;
+              return;
+            }
+
+            if (touchGestureLockedRef.current) {
+              return;
+            }
+          }
+
           if (event.pointerType === "mouse" && event.button !== 0) {
             return;
           }
@@ -329,6 +357,13 @@ export function GridCanvasStage({
           handlePointerDown(point, selectionPoint);
         }}
         onPointerMove={(event) => {
+          if (
+            event.pointerType === "touch" &&
+            (touchGestureLockedRef.current || activeTouchPointerIdsRef.current.size > 1)
+          ) {
+            return;
+          }
+
           const isActivePointer = activePointerIdRef.current === event.pointerId;
           const isPressed =
             event.pointerType === "mouse" ? (event.buttons & 1) !== 0 : isActivePointer;
@@ -349,6 +384,14 @@ export function GridCanvasStage({
           handlePointerEnter(point);
         }}
         onPointerUp={(event) => {
+          if (event.pointerType === "touch") {
+            activeTouchPointerIdsRef.current.delete(event.pointerId);
+
+            if (activeTouchPointerIdsRef.current.size === 0) {
+              touchGestureLockedRef.current = false;
+            }
+          }
+
           if (activePointerIdRef.current !== event.pointerId) {
             return;
           }
@@ -359,6 +402,14 @@ export function GridCanvasStage({
           }
         }}
         onPointerCancel={(event) => {
+          if (event.pointerType === "touch") {
+            activeTouchPointerIdsRef.current.delete(event.pointerId);
+
+            if (activeTouchPointerIdsRef.current.size === 0) {
+              touchGestureLockedRef.current = false;
+            }
+          }
+
           if (activePointerIdRef.current !== event.pointerId) {
             return;
           }

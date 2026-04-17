@@ -72,6 +72,7 @@ export function useGridInteractions({
   });
 
   return {
+    cancelPaintStroke: paintStroke.cancelStroke,
     handlePointerDown,
     handlePointerEnter,
   };
