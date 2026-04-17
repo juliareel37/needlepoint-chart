@@ -115,7 +115,7 @@ export function SelectionSessionToolbar({
           disabled={!canPaintSelection}
           onClick={handleNewSelection}
         >
-          Clear selection
+          Clear
         </Button>
 
         <ToolbarDivider />

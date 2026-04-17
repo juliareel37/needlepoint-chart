@@ -121,6 +121,8 @@ export function EditorV2Shell({
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
+  const mobileTraceRepositionWasActiveRef = useRef(false);
+  const mobileTextPlacementWasActiveRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
@@ -354,17 +356,49 @@ export function EditorV2Shell({
 
   useEffect(() => {
     if (!traceRepositionActive) {
+      mobileTraceRepositionWasActiveRef.current = false;
       return;
     }
 
-    if (activeSidebarSection !== "trace") {
+    if (!isBottomPanelLayout && activeSidebarSection !== "trace") {
       dispatch(createSetActiveSidebarSectionCommand("trace"));
+    }
+
+    if (isBottomPanelLayout) {
+      if (!mobileTraceRepositionWasActiveRef.current && !sidebarCollapsed) {
+        dispatch(createSetSidebarCollapsedCommand(true));
+      }
+      mobileTraceRepositionWasActiveRef.current = true;
+      return;
     }
 
     if (sidebarCollapsed) {
       dispatch(createSetSidebarCollapsedCommand(false));
     }
-  }, [activeSidebarSection, dispatch, sidebarCollapsed, traceRepositionActive]);
+  }, [
+    activeSidebarSection,
+    dispatch,
+    isBottomPanelLayout,
+    sidebarCollapsed,
+    traceRepositionActive,
+  ]);
+
+  useEffect(() => {
+    if (!textPlacement) {
+      mobileTextPlacementWasActiveRef.current = false;
+      return;
+    }
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    if (!mobileTextPlacementWasActiveRef.current && !sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+
+    mobileTextPlacementWasActiveRef.current = true;
+  }, [dispatch, isBottomPanelLayout, sidebarCollapsed, textPlacement]);
 
   useEffect(() => {
     setMounted(true);

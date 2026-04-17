@@ -54,7 +54,7 @@ export function MirrorSessionToolbar({
           disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
-          Clear selection
+          Clear
            {/* <ToolbarIcon icon="/icons/lucide/trash.svg" /> */}
         </Button>
 
