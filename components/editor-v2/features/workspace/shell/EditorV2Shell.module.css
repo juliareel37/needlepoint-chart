@@ -1515,6 +1515,9 @@
   .railSurface {
     flex-direction: row;
     padding: 0px 10px;
+    border-right: none;
+    border-top: 1px solid var(--ui-border-reg);
+
   };
   .shell {
     position: relative;
