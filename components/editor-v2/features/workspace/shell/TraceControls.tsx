@@ -329,6 +329,22 @@ export function TraceControls({
               <span className={styles.traceAttachmentThumbFrame}>
                 {traceUploadStatus === "uploading" ? (
                   <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                ) : positioningEnabled ? (
+                  <span
+                    aria-hidden="true"
+                    className={styles.traceAttachmentThumbOverlay}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "var(--surface-subtle, rgba(148, 163, 184, 0.14))",
+                      opacity: 1,
+                    }}
+                  >
+                    <ButtonIcon icon="/icons/lucide/image.svg" />
+                  </span>
                 ) : (
                   <>
                     <img
@@ -628,46 +644,69 @@ async function prepareTraceUploadFile(file: File): Promise<{
   file: File;
   dimensions: { width: number; height: number } | null;
 }> {
-  const dimensions = await getImageDimensions(file);
-
   if (
-    !dimensions ||
     file.type === "image/gif" ||
     !file.type.startsWith("image/")
   ) {
-    return { file, dimensions };
+    return { file, dimensions: null };
+  }
+
+  const prepared = await decodeAndPrepareTraceImage(file);
+
+  if (!prepared) {
+    return { file, dimensions: null };
   }
 
   const scaleByDimension =
     MAX_TRACE_IMAGE_DIMENSION_PX /
-    Math.max(dimensions.width, dimensions.height);
+    Math.max(prepared.width, prepared.height);
   const scaleByPixels = Math.sqrt(
-    MAX_TRACE_IMAGE_PIXELS / (dimensions.width * dimensions.height),
+    MAX_TRACE_IMAGE_PIXELS / (prepared.width * prepared.height),
   );
   const scale = Math.min(1, scaleByDimension, scaleByPixels);
 
   if (scale >= 0.999) {
-    return { file, dimensions };
+    prepared.release();
+    return {
+      file,
+      dimensions: {
+        width: prepared.width,
+        height: prepared.height,
+      },
+    };
   }
 
-  const normalizedFile = await resizeImageFile(file, {
-    height: Math.max(1, Math.round(dimensions.height * scale)),
-    width: Math.max(1, Math.round(dimensions.width * scale)),
-  });
+  const targetSize = {
+    height: Math.max(1, Math.round(prepared.height * scale)),
+    width: Math.max(1, Math.round(prepared.width * scale)),
+  };
+  const normalizedFile = await createResizedTraceFile(file, prepared.image, targetSize);
+  prepared.release();
 
   if (!normalizedFile) {
-    return { file, dimensions };
+    return {
+      file,
+      dimensions: {
+        width: prepared.width,
+        height: prepared.height,
+      },
+    };
   }
 
   return {
     file: normalizedFile,
-    dimensions: await getImageDimensions(normalizedFile),
+    dimensions: targetSize,
   };
 }
 
-async function getImageDimensions(
+async function decodeAndPrepareTraceImage(
   file: File,
-): Promise<{ width: number; height: number } | null> {
+): Promise<{
+  height: number;
+  image: HTMLImageElement;
+  release: () => void;
+  width: number;
+} | null> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
@@ -675,11 +714,15 @@ async function getImageDimensions(
     return {
       width: image.naturalWidth,
       height: image.naturalHeight,
+      image,
+      release: () => {
+        image.src = "";
+        URL.revokeObjectURL(objectUrl);
+      },
     };
   } catch {
-    return null;
-  } finally {
     URL.revokeObjectURL(objectUrl);
+    return null;
   }
 }
 
@@ -692,14 +735,12 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function resizeImageFile(
+async function createResizedTraceFile(
   file: File,
+  image: CanvasImageSource,
   targetSize: { width: number; height: number },
 ): Promise<File | null> {
-  const objectUrl = URL.createObjectURL(file);
-
   try {
-    const image = await loadImage(objectUrl);
     const canvas = document.createElement("canvas");
     canvas.width = targetSize.width;
     canvas.height = targetSize.height;
@@ -731,8 +772,6 @@ async function resizeImageFile(
     );
   } catch {
     return null;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
   }
 }
 
