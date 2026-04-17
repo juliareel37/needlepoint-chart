@@ -6,9 +6,11 @@ import {
   getHandleLeft,
   getHandleTop,
   getTransformFromDrag,
+  getTransformFromPinch,
   POSITIONING_HANDLES,
   type PositioningDragMode,
   type PositioningDragState,
+  type PositioningPinchState,
   type PositioningRect,
   type PositioningTransform,
 } from "@/lib/editor-v2/editor/positioning";
@@ -40,7 +42,12 @@ export function PositioningBoxOverlay({
   transactionKeyPrefix,
   zoom,
 }: PositioningBoxOverlayProps) {
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<PositioningDragState | null>(null);
+  const pinchRef = useRef<{
+    gesture: PositioningPinchState;
+    transactionKey: string;
+  } | null>(null);
   const dragSequenceRef = useRef(0);
   const [dragMode, setDragMode] = useState<PositioningDragMode | null>(null);
   const pointerDownRef = useRef<{
@@ -60,7 +67,7 @@ export function PositioningBoxOverlay({
       const dragState = dragRef.current;
       const pointerDown = pointerDownRef.current;
 
-      if (!dragState || !pointerDown) {
+      if (pinchRef.current || !dragState || !pointerDown) {
         return;
       }
 
@@ -88,6 +95,10 @@ export function PositioningBoxOverlay({
     };
 
     const handleWindowPointerUp = () => {
+      if (pinchRef.current) {
+        return;
+      }
+
       const pointerDown = pointerDownRef.current;
 
       if (interactive && pointerDown && !pointerDown.dragged && pointerDown.mode === "move") {
@@ -109,6 +120,150 @@ export function PositioningBoxOverlay({
       window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [baseRect, getWorldPointFromClient, interactive, onClick, onTransformChange]);
+
+  useEffect(() => {
+    const overlayElement = overlayRef.current;
+
+    if (!overlayElement || !interactive) {
+      return;
+    }
+
+    const getTouchGeometry = (touches: TouchList) => {
+      if (touches.length < 2) {
+        return null;
+      }
+
+      const first = touches[0];
+      const second = touches[1];
+      const centerClientX = (first.clientX + second.clientX) / 2;
+      const centerClientY = (first.clientY + second.clientY) / 2;
+      const centerWorld = getWorldPointFromClient(centerClientX, centerClientY);
+
+      if (!centerWorld) {
+        return null;
+      }
+
+      const distance = Math.hypot(
+        second.clientX - first.clientX,
+        second.clientY - first.clientY,
+      );
+
+      if (distance <= 0) {
+        return null;
+      }
+
+      return { centerWorld, distance };
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      event.stopPropagation();
+
+      if (event.touches.length !== 2) {
+        return;
+      }
+
+      const geometry = getTouchGeometry(event.touches);
+
+      if (!geometry) {
+        return;
+      }
+
+      event.preventDefault();
+      dragRef.current = null;
+      pointerDownRef.current = null;
+      setDragMode(null);
+      dragSequenceRef.current += 1;
+      pinchRef.current = {
+        gesture: {
+          anchorX:
+            bounds.width > 0
+              ? Math.min(
+                  1,
+                  Math.max(0, (geometry.centerWorld.x - bounds.left) / bounds.width),
+                )
+              : 0.5,
+          anchorY:
+            bounds.height > 0
+              ? Math.min(
+                  1,
+                  Math.max(0, (geometry.centerWorld.y - bounds.top) / bounds.height),
+                )
+              : 0.5,
+          startDistance: geometry.distance,
+          startTransform: transform,
+        },
+        transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
+      };
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const pinch = pinchRef.current;
+
+      if (!pinch) {
+        return;
+      }
+
+      if (event.touches.length < 2) {
+        pinchRef.current = null;
+        return;
+      }
+
+      const geometry = getTouchGeometry(event.touches);
+
+      if (!geometry) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const nextTransform = getTransformFromPinch(
+        pinch.gesture,
+        geometry.centerWorld,
+        geometry.distance,
+        baseRect,
+      );
+      onTransformChange(nextTransform, pinch.transactionKey);
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (!pinchRef.current) {
+        return;
+      }
+
+      event.stopPropagation();
+
+      if (event.touches.length >= 2) {
+        return;
+      }
+
+      pinchRef.current = null;
+    };
+
+    overlayElement.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    overlayElement.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    overlayElement.addEventListener("touchend", handleTouchEnd);
+    overlayElement.addEventListener("touchcancel", handleTouchEnd);
+
+    return () => {
+      overlayElement.removeEventListener("touchstart", handleTouchStart);
+      overlayElement.removeEventListener("touchmove", handleTouchMove);
+      overlayElement.removeEventListener("touchend", handleTouchEnd);
+      overlayElement.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, [
+    baseRect,
+    bounds,
+    getWorldPointFromClient,
+    interactive,
+    onTransformChange,
+    transactionKeyPrefix,
+    transform,
+  ]);
 
   function beginDrag(mode: PositioningDragMode, clientX: number, clientY: number) {
     const worldPoint = getWorldPointFromClient(clientX, clientY);
@@ -136,6 +291,7 @@ export function PositioningBoxOverlay({
 
   return (
     <div
+      ref={overlayRef}
       aria-label={ariaLabel}
       role="presentation"
       style={{
