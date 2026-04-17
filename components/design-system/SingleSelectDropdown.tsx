@@ -64,7 +64,7 @@ export function SingleSelectDropdown<TItem>({
   menuPlacement = "bottom-start",
   menuStyle,
   menuWidth = "max-content",
-  minWidth = 240,
+  minWidth = 200,
   onValueChange,
   placeholder,
   showChevron = true,

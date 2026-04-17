@@ -322,7 +322,7 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
-      {headerAutosaveTarget
+      {!setupModalOpen && headerAutosaveTarget
         ? createPortal(
             <HeaderSaveStatus
               hasSavedDesignAccess={hasSavedDesignAccess}
@@ -331,7 +331,7 @@ export function EditorV2Shell({
             headerAutosaveTarget,
           )
         : null}
-      {headerHistoryTarget
+      {!setupModalOpen && headerHistoryTarget
         ? createPortal(
             <div className={styles.headerHistoryControls}>
               <ToolbarButton

@@ -66,6 +66,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
+  justify-content: center;
 }
 
 .section {
@@ -128,12 +129,12 @@
 
   .header,
   .content {
-    grid-template-columns: 1fr;
+    grid-template-columns: 99%;
   }
 
-  .header {
+  /* .header {
     flex-direction: column;
-  }
+  } */
 }
 
 @media (max-width: 560px) {

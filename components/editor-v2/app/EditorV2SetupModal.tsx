@@ -1,6 +1,7 @@
 "use client";
 
 import { SignInButton } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
@@ -93,6 +94,21 @@ export function EditorV2SetupModal({
   setSelectedStorageId,
   setupErrorMessage,
 }: EditorV2SetupModalProps) {
+  const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 799px)");
+
+    const updatePlacement = () => {
+      setUseTopDropdownPlacement(mediaQuery.matches);
+    };
+
+    updatePlacement();
+    mediaQuery.addEventListener("change", updatePlacement);
+
+    return () => mediaQuery.removeEventListener("change", updatePlacement);
+  }, []);
+
   const inchSizing = resolveInchSizing({
     widthInches: draftWidthInches,
     heightInches: draftHeightInches,
@@ -336,6 +352,7 @@ export function EditorV2SetupModal({
                   getItemValue={(record) => record.storageId}
                   items={savedDocuments}
                   label="Choose a design"
+                  menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
                   onValueChange={setSelectedStorageId}
                   placeholder="Load saved design"
                   value={selectedStorageId}

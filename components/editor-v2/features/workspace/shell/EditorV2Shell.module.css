@@ -1503,9 +1503,9 @@
     display: none;
   }
 
-  .headerSaveStatus {
+  /* .headerSaveStatus {
     display: none;
-  }
+  } */
 
   .viewportToolbar {
     display: none;
