@@ -21,6 +21,10 @@ interface PositioningBoxOverlayProps {
   bounds: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   onClick?: () => void;
+  onTransformCommit?: (
+    transform: PositioningTransform,
+    transactionKey: string,
+  ) => void;
   interactive?: boolean;
   onTransformChange: (transform: PositioningTransform, transactionKey: string) => void;
   showHandles?: boolean;
@@ -35,6 +39,7 @@ export function PositioningBoxOverlay({
   bounds,
   getWorldPointFromClient,
   onClick,
+  onTransformCommit,
   interactive = true,
   onTransformChange,
   showHandles = true,
@@ -61,6 +66,11 @@ export function PositioningBoxOverlay({
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
   const dragThreshold = 4;
+  const latestTransformRef = useRef(transform);
+
+  useEffect(() => {
+    latestTransformRef.current = transform;
+  }, [transform]);
 
   useEffect(() => {
     const handleWindowPointerMove = (event: PointerEvent) => {
@@ -91,6 +101,7 @@ export function PositioningBoxOverlay({
       }
 
       const nextTransform = getTransformFromDrag(dragState, worldPoint, baseRect);
+      latestTransformRef.current = nextTransform;
       onTransformChange(nextTransform, dragState.transactionKey);
     };
 
@@ -103,6 +114,13 @@ export function PositioningBoxOverlay({
 
       if (interactive && pointerDown && !pointerDown.dragged && pointerDown.mode === "move") {
         onClick?.();
+      }
+
+      if (pointerDown?.dragged && dragRef.current) {
+        onTransformCommit?.(
+          latestTransformRef.current,
+          dragRef.current.transactionKey,
+        );
       }
 
       pointerDownRef.current = null;
@@ -119,7 +137,14 @@ export function PositioningBoxOverlay({
       window.removeEventListener("pointerup", handleWindowPointerUp);
       window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
-  }, [baseRect, getWorldPointFromClient, interactive, onClick, onTransformChange]);
+  }, [
+    baseRect,
+    getWorldPointFromClient,
+    interactive,
+    onClick,
+    onTransformChange,
+    onTransformCommit,
+  ]);
 
   useEffect(() => {
     const overlayElement = overlayRef.current;
@@ -194,6 +219,7 @@ export function PositioningBoxOverlay({
         },
         transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
       };
+      latestTransformRef.current = transform;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
@@ -223,6 +249,7 @@ export function PositioningBoxOverlay({
         geometry.distance,
         baseRect,
       );
+      latestTransformRef.current = nextTransform;
       onTransformChange(nextTransform, pinch.transactionKey);
     };
 
@@ -237,6 +264,10 @@ export function PositioningBoxOverlay({
         return;
       }
 
+      onTransformCommit?.(
+        latestTransformRef.current,
+        pinchRef.current.transactionKey,
+      );
       pinchRef.current = null;
     };
 
@@ -261,6 +292,7 @@ export function PositioningBoxOverlay({
     getWorldPointFromClient,
     interactive,
     onTransformChange,
+    onTransformCommit,
     transactionKeyPrefix,
     transform,
   ]);
@@ -280,6 +312,7 @@ export function PositioningBoxOverlay({
       startBounds: bounds,
       transactionKey: `${transactionKeyPrefix}-${dragSequenceRef.current}`,
     };
+    latestTransformRef.current = transform;
     pointerDownRef.current = {
       clientX,
       clientY,

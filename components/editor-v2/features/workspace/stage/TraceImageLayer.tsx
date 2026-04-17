@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
@@ -56,14 +56,26 @@ export function TraceImageLayer({
     }),
     [trace.offsetX, trace.offsetY, trace.scale],
   );
+  const [draftTransform, setDraftTransform] = useState(traceTransform);
+
+  useEffect(() => {
+    setDraftTransform(traceTransform);
+  }, [traceTransform]);
+
   const traceBounds = useMemo(
     () =>
       traceBaseRect
-        ? getPositionedBounds(traceBaseRect, traceTransform)
+        ? getPositionedBounds(traceBaseRect, draftTransform)
         : null,
-    [traceBaseRect, traceTransform],
+    [draftTransform, traceBaseRect],
   );
   const handleTraceTransformChange = useCallback(
+    (nextTrace: typeof traceTransform) => {
+      setDraftTransform(nextTrace);
+    },
+    [],
+  );
+  const handleTraceTransformCommit = useCallback(
     (nextTrace: typeof traceTransform) => {
       dispatch(
         createPreviewTraceRepositionCommand(nextTrace),
@@ -98,7 +110,7 @@ export function TraceImageLayer({
           objectFit: "contain",
           opacity: imageOpacity,
           pointerEvents: "none",
-          transform: getPositioningTransformCss(traceTransform),
+          transform: getPositioningTransformCss(draftTransform),
           transformOrigin: "top left",
           willChange: "opacity, transform",
           backfaceVisibility: "hidden",
@@ -114,8 +126,9 @@ export function TraceImageLayer({
           bounds={traceBounds}
           getWorldPointFromClient={getWorldPointFromClient}
           onTransformChange={handleTraceTransformChange}
+          onTransformCommit={handleTraceTransformCommit}
           transactionKeyPrefix="trace-drag"
-          transform={traceTransform}
+          transform={draftTransform}
           zoom={zoom}
         />
       ) : null}
