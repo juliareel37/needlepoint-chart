@@ -76,6 +76,7 @@ export function GridCanvasStage({
   threadView,
   viewport,
 }: GridCanvasStageProps) {
+  const TOUCH_PAINT_ACTIVATION_DISTANCE_PX = 8;
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sourceCanvasSizingRef = useRef<CanvasSizing | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -88,6 +89,13 @@ export function GridCanvasStage({
   const activePointerIdRef = useRef<number | null>(null);
   const activeTouchPointerIdsRef = useRef<Set<number>>(new Set());
   const touchGestureLockedRef = useRef(false);
+  const pendingTouchPaintRef = useRef<{
+    clientX: number;
+    clientY: number;
+    point: GridPoint;
+    pointerId: number;
+    selectionPoint: SelectionPoint;
+  } | null>(null);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
 
   useEffect(() => {
@@ -291,6 +299,22 @@ export function GridCanvasStage({
     viewport.zoom,
   ]);
 
+  const clearPendingTouchPaint = () => {
+    pendingTouchPaintRef.current = null;
+  };
+
+  const activatePendingTouchPaint = () => {
+    const pendingTouchPaint = pendingTouchPaintRef.current;
+
+    if (!pendingTouchPaint) {
+      return false;
+    }
+
+    handlePointerDown(pendingTouchPaint.point, pendingTouchPaint.selectionPoint);
+    pendingTouchPaintRef.current = null;
+    return true;
+  };
+
   return (
     <>
       {displayHost
@@ -318,6 +342,7 @@ export function GridCanvasStage({
 
             if (activeTouchPointerIdsRef.current.size > 1) {
               touchGestureLockedRef.current = true;
+              clearPendingTouchPaint();
               cancelPaintStroke();
 
               const activePointerId = activePointerIdRef.current;
@@ -354,6 +379,18 @@ export function GridCanvasStage({
           activePointerIdRef.current = event.pointerId;
           event.currentTarget.setPointerCapture(event.pointerId);
           event.preventDefault();
+
+          if (event.pointerType === "touch") {
+            pendingTouchPaintRef.current = {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              point,
+              pointerId: event.pointerId,
+              selectionPoint,
+            };
+            return;
+          }
+
           handlePointerDown(point, selectionPoint);
         }}
         onPointerMove={(event) => {
@@ -361,6 +398,7 @@ export function GridCanvasStage({
             event.pointerType === "touch" &&
             (touchGestureLockedRef.current || activeTouchPointerIdsRef.current.size > 1)
           ) {
+            clearPendingTouchPaint();
             return;
           }
 
@@ -381,6 +419,24 @@ export function GridCanvasStage({
           if (isActivePointer) {
             event.preventDefault();
           }
+
+          if (event.pointerType === "touch") {
+            const pendingTouchPaint = pendingTouchPaintRef.current;
+
+            if (pendingTouchPaint?.pointerId === event.pointerId) {
+              const distance = Math.hypot(
+                event.clientX - pendingTouchPaint.clientX,
+                event.clientY - pendingTouchPaint.clientY,
+              );
+
+              if (distance < TOUCH_PAINT_ACTIVATION_DISTANCE_PX) {
+                return;
+              }
+
+              activatePendingTouchPaint();
+            }
+          }
+
           handlePointerEnter(point);
         }}
         onPointerUp={(event) => {
@@ -392,11 +448,20 @@ export function GridCanvasStage({
             }
           }
 
+          if (
+            event.pointerType === "touch" &&
+            pendingTouchPaintRef.current?.pointerId === event.pointerId &&
+            !touchGestureLockedRef.current
+          ) {
+            activatePendingTouchPaint();
+          }
+
           if (activePointerIdRef.current !== event.pointerId) {
             return;
           }
 
           activePointerIdRef.current = null;
+          clearPendingTouchPaint();
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
@@ -410,11 +475,16 @@ export function GridCanvasStage({
             }
           }
 
+          if (pendingTouchPaintRef.current?.pointerId === event.pointerId) {
+            clearPendingTouchPaint();
+          }
+
           if (activePointerIdRef.current !== event.pointerId) {
             return;
           }
 
           activePointerIdRef.current = null;
+          clearPendingTouchPaint();
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
