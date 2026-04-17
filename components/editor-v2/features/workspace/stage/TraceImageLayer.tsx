@@ -57,7 +57,6 @@ export function TraceImageLayer({
     [trace.offsetX, trace.offsetY, trace.scale],
   );
   const previewTransformRef = useRef(traceTransform);
-  const [interactionActive, setInteractionActive] = useState(false);
   const [coarsePointer, setCoarsePointer] = useState(false);
 
   useEffect(() => {
@@ -166,7 +165,7 @@ export function TraceImageLayer({
           left: `${traceBaseRect?.left ?? 0}px`,
           width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
           height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-          opacity: coarsePointer && interactionActive ? 0 : imageOpacity,
+          opacity: imageOpacity,
           pointerEvents: "none",
           transform: getPositioningTransformCss(traceTransform),
           transformOrigin: "top left",
@@ -183,10 +182,8 @@ export function TraceImageLayer({
           ariaLabel="Trace image controls"
           baseRect={traceBaseRect}
           bounds={traceBounds}
-          disableLivePreview={coarsePointer}
+          useImperativePreview={coarsePointer}
           getWorldPointFromClient={getWorldPointFromClient}
-          onInteractionEnd={() => setInteractionActive(false)}
-          onInteractionStart={() => setInteractionActive(true)}
           onTransformChange={handleTraceTransformChange}
           onTransformCommit={handleTraceTransformCommit}
           onTransformPreview={handleTraceTransformPreview}

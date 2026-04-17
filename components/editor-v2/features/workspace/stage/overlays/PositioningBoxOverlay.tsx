@@ -35,6 +35,7 @@ interface PositioningBoxOverlayProps {
   showHandles?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
+  useImperativePreview?: boolean;
   zoom: number;
 }
 
@@ -54,9 +55,11 @@ export function PositioningBoxOverlay({
   showHandles = true,
   transform,
   transactionKeyPrefix,
+  useImperativePreview = false,
   zoom,
 }: PositioningBoxOverlayProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragRef = useRef<PositioningDragState | null>(null);
   const pinchRef = useRef<{
     gesture: PositioningPinchState;
@@ -91,6 +94,33 @@ export function PositioningBoxOverlay({
   const animationFrameRef = useRef<number | null>(null);
   const [previewBounds, setPreviewBounds] = useState(bounds);
 
+  const applyPreviewBounds = useCallback(
+    (nextBounds: PositioningRect) => {
+      const overlayElement = overlayRef.current;
+
+      if (!overlayElement) {
+        return;
+      }
+
+      overlayElement.style.left = `${nextBounds.left}px`;
+      overlayElement.style.top = `${nextBounds.top}px`;
+      overlayElement.style.width = `${nextBounds.width}px`;
+      overlayElement.style.height = `${nextBounds.height}px`;
+
+      for (const handle of POSITIONING_HANDLES) {
+        const handleElement = handleRefs.current[handle.id];
+
+        if (!handleElement) {
+          continue;
+        }
+
+        handleElement.style.left = `${getHandleLeft(handle.id, nextBounds.width, handleSize)}px`;
+        handleElement.style.top = `${getHandleTop(handle.id, nextBounds.height, handleSize)}px`;
+      }
+    },
+    [handleSize],
+  );
+
   useEffect(() => {
     latestTransformRef.current = transform;
   }, [transform]);
@@ -98,6 +128,12 @@ export function PositioningBoxOverlay({
   useEffect(() => {
     setPreviewBounds(bounds);
   }, [bounds]);
+
+  useEffect(() => {
+    if (useImperativePreview) {
+      applyPreviewBounds(bounds);
+    }
+  }, [applyPreviewBounds, bounds, useImperativePreview]);
 
   useEffect(() => {
     latestBaseRectRef.current = baseRect;
@@ -143,7 +179,15 @@ export function PositioningBoxOverlay({
     (nextTransform: PositioningTransform, transactionKey: string) => {
       latestTransformRef.current = nextTransform;
       if (!disableLivePreview) {
-        setPreviewBounds(getPositionedBounds(latestBaseRectRef.current, nextTransform));
+        const nextBounds = getPositionedBounds(
+          latestBaseRectRef.current,
+          nextTransform,
+        );
+        if (useImperativePreview) {
+          applyPreviewBounds(nextBounds);
+        } else {
+          setPreviewBounds(nextBounds);
+        }
         latestOnTransformPreviewRef.current?.(nextTransform);
       }
       pendingTransformRef.current = {
@@ -162,12 +206,12 @@ export function PositioningBoxOverlay({
 
         if (!pending) {
           return;
-        }
+      }
 
-        onTransformChange(pending.transform, pending.transactionKey);
-      });
-    },
-    [disableLivePreview, onTransformChange],
+      onTransformChange(pending.transform, pending.transactionKey);
+    });
+  },
+    [applyPreviewBounds, disableLivePreview, onTransformChange, useImperativePreview],
   );
 
   useEffect(() => {
@@ -480,6 +524,9 @@ export function PositioningBoxOverlay({
         return (
           <div
             key={handle.id}
+            ref={(node) => {
+              handleRefs.current[handle.id] = node;
+            }}
             role="presentation"
             aria-hidden="true"
             onPointerDown={(event) => {
