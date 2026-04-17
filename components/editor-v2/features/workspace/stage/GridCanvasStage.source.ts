@@ -9,6 +9,37 @@ import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 import type { CanvasSizing } from "./GridCanvasStage.shared";
 
 const MAX_CANVAS_BACKING_DIMENSION = 16384;
+const MAX_CANVAS_BACKING_AREA = 16_777_216;
+const MIN_CANVAS_PIXEL_RATIO = 0.125;
+
+export function getEffectiveSourceCanvasPixelRatio(
+  width: number,
+  height: number,
+  devicePixelRatio: number,
+): number {
+  const safeWidth = Math.max(width, 1);
+  const safeHeight = Math.max(height, 1);
+  const safeDevicePixelRatio = Number.isFinite(devicePixelRatio)
+    ? Math.max(devicePixelRatio, 1)
+    : 1;
+  const maxDimensionScale = Math.min(
+    MAX_CANVAS_BACKING_DIMENSION / safeWidth,
+    MAX_CANVAS_BACKING_DIMENSION / safeHeight,
+  );
+  const maxAreaScale = Math.sqrt(
+    MAX_CANVAS_BACKING_AREA / Math.max(safeWidth * safeHeight, 1),
+  );
+  const limitedPixelRatio = Math.min(
+    safeDevicePixelRatio,
+    maxDimensionScale,
+    maxAreaScale,
+  );
+
+  return Math.max(
+    MIN_CANVAS_PIXEL_RATIO,
+    Number.isFinite(limitedPixelRatio) ? limitedPixelRatio : 1,
+  );
+}
 
 export function configureSourceCanvas(
   canvas: HTMLCanvasElement,
@@ -18,14 +49,10 @@ export function configureSourceCanvas(
 ): { sizingChanged: boolean; sizing: CanvasSizing } {
   const width = metrics.surfaceWidth;
   const height = metrics.surfaceHeight;
-  const devicePixelRatio = window.devicePixelRatio || 1;
-  const maxRenderableScale = Math.min(
-    MAX_CANVAS_BACKING_DIMENSION / Math.max(width, 1),
-    MAX_CANVAS_BACKING_DIMENSION / Math.max(height, 1),
-  );
-  const effectivePixelRatio = Math.max(
-    1,
-    Math.floor(Math.min(devicePixelRatio, maxRenderableScale)),
+  const effectivePixelRatio = getEffectiveSourceCanvasPixelRatio(
+    width,
+    height,
+    window.devicePixelRatio || 1,
   );
 
   const nextCanvasWidth = Math.max(1, Math.round(width * effectivePixelRatio));
