@@ -13,7 +13,8 @@ import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
-const TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
@@ -143,7 +144,7 @@ export function TraceImageLayer({
       desktopCanvasRef.current,
       desktopProxyRef.current,
       clampedTrace,
-      TRACE_DRAG_PROXY_MODE,
+      DESKTOP_TRACE_DRAG_PROXY_MODE,
     );
   }, [metrics, traceBaseRect]);
 
@@ -167,7 +168,7 @@ export function TraceImageLayer({
       mobileWrapperRef.current,
       mobileProxyRef.current,
       clampedTrace,
-      TRACE_DRAG_PROXY_MODE,
+      MOBILE_TRACE_DRAG_PROXY_MODE,
     );
   }, [metrics, traceBaseRect]);
 
@@ -425,7 +426,7 @@ function setDesktopProxyActive(
     return;
   }
 
-  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  const showProxy = dragging && DESKTOP_TRACE_DRAG_PROXY_MODE === "solid-rect";
   canvas.style.visibility = showProxy ? "hidden" : "visible";
   proxy.style.display = showProxy ? "block" : "none";
 }
@@ -439,7 +440,7 @@ function setMobileProxyActive(
     return;
   }
 
-  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  const showProxy = dragging && MOBILE_TRACE_DRAG_PROXY_MODE === "solid-rect";
   wrapper.style.visibility = showProxy ? "hidden" : "visible";
   proxy.style.display = showProxy ? "block" : "none";
 }
