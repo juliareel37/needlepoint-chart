@@ -60,6 +60,7 @@ export function GridWorldSurface({
   const viewport = state.session.viewport;
   const selection = state.session.selection;
   const mirrorInteraction = state.session.mirrorInteraction;
+  const [coarsePointer, setCoarsePointer] = useState(false);
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
@@ -67,7 +68,11 @@ export function GridWorldSurface({
   const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
   const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
   const showTraceOverlay = Boolean(trace && traceVisible && tracePositioningEnabled);
-  const showDisplayTrace = Boolean(trace && traceVisible && !tracePositioningEnabled);
+  const showDisplayTrace = Boolean(
+    trace &&
+      traceVisible &&
+      (!tracePositioningEnabled || coarsePointer),
+  );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
       ? trace.opacity
@@ -92,6 +97,25 @@ export function GridWorldSurface({
   const textPlacementActive = Boolean(textPlacement);
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;

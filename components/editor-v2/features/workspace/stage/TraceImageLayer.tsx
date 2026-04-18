@@ -324,67 +324,6 @@ export function TraceImageLayer({
         WebkitUserSelect: "none",
       }}
     >
-      {coarsePointer && positioningEnabled && traceBaseRect ? (
-        <>
-          <div
-            ref={mobileWrapperRef}
-            aria-label="Trace image controls"
-            role="presentation"
-            style={{
-              position: "absolute",
-              top: `${traceBaseRect.top}px`,
-              left: `${traceBaseRect.left}px`,
-              width: `${traceBaseRect.width}px`,
-              height: `${traceBaseRect.height}px`,
-              transform: getMobileWrapperTransformCss(traceTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
-              touchAction: "none",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-              pointerEvents: "none",
-            }}
-          >
-            <canvas
-              ref={mobileCanvasRef}
-              aria-label="Trace reference"
-              role="img"
-              style={{
-                display: "block",
-                width: "100%",
-                height: "100%",
-                opacity: imageOpacity,
-                pointerEvents: "none",
-                backfaceVisibility: "hidden",
-                imageRendering: "auto",
-              }}
-            />
-          </div>
-          <div
-            ref={mobileProxyRef}
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: `${traceBaseRect.top}px`,
-              left: `${traceBaseRect.left}px`,
-              width: `${traceBaseRect.width}px`,
-              height: `${traceBaseRect.height}px`,
-              display: "none",
-              transform: getMobileWrapperTransformCss(traceTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
-              touchAction: "none",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-              pointerEvents: "none",
-              background: "rgba(37, 99, 235, 0.18)",
-              border: "1px solid rgba(37, 99, 235, 0.9)",
-              boxSizing: "border-box",
-            }}
-          />
-        </>
-      ) : null}
-
       {coarsePointer && positioningEnabled && traceBounds ? (
         <div
           aria-label="Trace image controls"
