@@ -97,19 +97,6 @@ export function clientToWorldPoint(
   };
 }
 
-export function clampWorldPointToSurface(
-  point: WorldPoint,
-  metrics: Pick<GridWorldMetrics, "surfaceWidth" | "surfaceHeight">,
-): WorldPoint {
-  const maxX = Math.max(metrics.surfaceWidth, 0);
-  const maxY = Math.max(metrics.surfaceHeight, 0);
-
-  return {
-    x: Math.min(Math.max(point.x, 0), maxX),
-    y: Math.min(Math.max(point.y, 0), maxY),
-  };
-}
-
 export function getGridCellFromWorldPoint(
   point: WorldPoint,
   metrics: GridWorldMetrics,
