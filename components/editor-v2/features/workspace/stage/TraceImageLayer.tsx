@@ -74,6 +74,7 @@ export function TraceImageLayer({
   const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
     typeof traceTransform | null
   >(null);
+  const [mobileDragging, setMobileDragging] = useState(false);
   const traceBaseRect = useMemo(
     () =>
       traceAsset?.width && traceAsset?.height
@@ -248,6 +249,7 @@ export function TraceImageLayer({
         startPoint: worldPoint,
         startTransform: traceTransform,
       };
+      setMobileDragging(true);
       setMobilePreviewTransform(traceTransform);
 
       event.preventDefault();
@@ -323,6 +325,7 @@ export function TraceImageLayer({
       const deltaX = event.clientX - session.startClientX;
       const deltaY = event.clientY - session.startClientY;
       if (Math.hypot(deltaX, deltaY) < MOBILE_DRAG_THRESHOLD) {
+        setMobileDragging(false);
         setMobilePreviewTransform(null);
         return;
       }
@@ -344,6 +347,7 @@ export function TraceImageLayer({
         metrics,
       );
 
+      setMobileDragging(false);
       setMobilePreviewTransform(null);
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     };
@@ -357,6 +361,8 @@ export function TraceImageLayer({
         window.cancelAnimationFrame(mobileDragRafRef.current);
         mobileDragRafRef.current = null;
       }
+      setMobileDragging(false);
+      setMobilePreviewTransform(null);
       window.removeEventListener("pointermove", handleWindowPointerMove);
       window.removeEventListener("pointerup", handleWindowPointerEnd);
       window.removeEventListener("pointercancel", handleWindowPointerEnd);
@@ -393,14 +399,41 @@ export function TraceImageLayer({
             top: `${mobileDisplayBounds.top}px`,
             width: `${mobileDisplayBounds.width}px`,
             height: `${mobileDisplayBounds.height}px`,
-            border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid rgba(37, 99, 235, 0.95)`,
+            border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid ${
+              mobileDragging ? "rgba(37, 99, 235, 1)" : "rgba(37, 99, 235, 0.95)"
+            }`,
             background:
-              mobilePreviewTransform ? "rgba(37, 99, 235, 0.08)" : "transparent",
+              mobilePreviewTransform ? "rgba(37, 99, 235, 0.1)" : "transparent",
             boxSizing: "border-box",
+            boxShadow: mobileDragging
+              ? "0 0 0 2px rgba(37, 99, 235, 0.14)"
+              : "0 0 0 1px rgba(255, 255, 255, 0.2)",
+            borderRadius: `${Math.max(4, 8 * (zoom > 0 ? 1 / zoom : 1))}px`,
             touchAction: "none",
             cursor: "grab",
           }}
-        />
+        >
+          {MOBILE_TRACE_VISUAL_HANDLES.map((handle) => (
+            <div
+              key={handle.key}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                width: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
+                height: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
+                borderRadius: "999px",
+                background: "#ffffff",
+                border: `${Math.max(1, 1.25 * (zoom > 0 ? 1 / zoom : 1))}px solid #2563eb`,
+                boxShadow: mobileDragging
+                  ? "0 2px 8px rgba(37, 99, 235, 0.22)"
+                  : "0 1px 4px rgba(15, 23, 42, 0.18)",
+                left: handle.left,
+                top: handle.top,
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          ))}
+        </div>
       ) : (
         <>
           <canvas
@@ -620,3 +653,10 @@ function clampTraceTransformToSurface(
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+
+const MOBILE_TRACE_VISUAL_HANDLES = [
+  { key: "nw", left: "0%", top: "0%" },
+  { key: "ne", left: "100%", top: "0%" },
+  { key: "sw", left: "0%", top: "100%" },
+  { key: "se", left: "100%", top: "100%" },
+];
