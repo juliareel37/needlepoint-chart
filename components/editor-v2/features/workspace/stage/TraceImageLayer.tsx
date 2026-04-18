@@ -13,7 +13,11 @@ import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
-const TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+
+// Dragging the full trace canvas at high zoom can push a very large composited
+// layer outside the viewport and has been the most reliable crash trigger.
+// Keep the real image static during drag and move a lightweight proxy instead.
+const TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -41,6 +45,7 @@ export function TraceImageLayer({
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mobileProxyCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
@@ -105,6 +110,7 @@ export function TraceImageLayer({
     const imageSource = traceAsset?.image;
     const desktopCanvas = desktopCanvasRef.current;
     const mobileCanvas = mobileCanvasRef.current;
+    const mobileProxyCanvas = mobileProxyCanvasRef.current;
 
     if (!traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
       if (desktopCanvas) {
@@ -114,6 +120,10 @@ export function TraceImageLayer({
       if (mobileCanvas) {
         mobileCanvas.width = 0;
         mobileCanvas.height = 0;
+      }
+      if (mobileProxyCanvas) {
+        mobileProxyCanvas.width = 0;
+        mobileProxyCanvas.height = 0;
       }
       return;
     }
@@ -125,11 +135,25 @@ export function TraceImageLayer({
       });
     }
 
+    const previewSize = getTracePreviewSize(
+      traceAsset.width,
+      traceAsset.height,
+      MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION,
+    );
+
     if (mobileCanvas) {
       drawTraceSourceToCanvas(
         mobileCanvas,
         imageSource as CanvasImageSource,
-        getMobileTracePreviewSize(traceAsset.width, traceAsset.height),
+        previewSize,
+      );
+    }
+
+    if (mobileProxyCanvas) {
+      drawTraceSourceToCanvas(
+        mobileProxyCanvas,
+        imageSource as CanvasImageSource,
+        previewSize,
       );
     }
   }, [traceAsset, coarsePointer]);
@@ -193,7 +217,7 @@ export function TraceImageLayer({
         position: "absolute",
         inset: 0,
         zIndex,
-        overflow: positioningEnabled ? "visible" : "hidden",
+        overflow: "hidden",
         pointerEvents: positioningEnabled ? "auto" : "none",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -252,11 +276,25 @@ export function TraceImageLayer({
               userSelect: "none",
               WebkitUserSelect: "none",
               pointerEvents: "none",
-              background: "rgba(37, 99, 235, 0.18)",
-              border: "1px solid rgba(37, 99, 235, 0.9)",
+              overflow: "hidden",
+              border: "1px solid rgba(37, 99, 235, 0.5)",
               boxSizing: "border-box",
             }}
-          />
+          >
+            <canvas
+              ref={mobileProxyCanvasRef}
+              aria-hidden="true"
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                opacity: imageOpacity,
+                pointerEvents: "none",
+                backfaceVisibility: "hidden",
+                imageRendering: "auto",
+              }}
+            />
+          </div>
         </>
       ) : null}
 
@@ -439,13 +477,17 @@ function getMobileWrapperTransformCss(transform: {
   return `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0) scale(${transform.scale})`;
 }
 
-function getMobileTracePreviewSize(width: number, height: number): {
+function getTracePreviewSize(
+  width: number,
+  height: number,
+  maxDimension: number,
+): {
   width: number;
   height: number;
 } {
   const scale = Math.min(
     1,
-    MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION / Math.max(width, height),
+    maxDimension / Math.max(width, height),
   );
 
   return {
