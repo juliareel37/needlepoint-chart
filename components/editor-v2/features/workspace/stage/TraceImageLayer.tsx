@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
@@ -29,6 +36,22 @@ interface TraceImageLayerProps {
   zoom: number;
 }
 
+interface MobileTraceDragSession {
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  pendingClientX: number;
+  pendingClientY: number;
+  startPoint: WorldPoint;
+  startTransform: {
+    offsetX: number;
+    offsetY: number;
+    scale: number;
+  };
+}
+
+const MOBILE_DRAG_THRESHOLD = 4;
+
 export function TraceImageLayer({
   dispatch,
   getWorldPointFromClient,
@@ -45,6 +68,7 @@ export function TraceImageLayer({
   const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileProxyRef = useRef<HTMLDivElement | null>(null);
+  const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const traceBaseRect = useMemo(
     () =>
@@ -189,6 +213,105 @@ export function TraceImageLayer({
     setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
   }, []);
 
+  const handleMobileDragStart = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!traceBaseRect) {
+        return;
+      }
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+
+      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
+      if (!worldPoint) {
+        return;
+      }
+
+      mobileDragSessionRef.current = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        pendingClientX: event.clientX,
+        pendingClientY: event.clientY,
+        startPoint: worldPoint,
+        startTransform: traceTransform,
+      };
+
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [getWorldPointFromClient, traceBaseRect, traceTransform],
+  );
+
+  useEffect(() => {
+    if (!coarsePointer || !positioningEnabled || !traceBaseRect) {
+      return;
+    }
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      const session = mobileDragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      session.pendingClientX = event.clientX;
+      session.pendingClientY = event.clientY;
+    };
+
+    const handleWindowPointerEnd = (event: PointerEvent) => {
+      const session = mobileDragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      mobileDragSessionRef.current = null;
+
+      const deltaX = event.clientX - session.startClientX;
+      const deltaY = event.clientY - session.startClientY;
+      if (Math.hypot(deltaX, deltaY) < MOBILE_DRAG_THRESHOLD) {
+        return;
+      }
+
+      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
+      if (!worldPoint) {
+        return;
+      }
+
+      const nextTrace = clampTraceTransformToSurface(
+        {
+          offsetX:
+            session.startTransform.offsetX + (worldPoint.x - session.startPoint.x),
+          offsetY:
+            session.startTransform.offsetY + (worldPoint.y - session.startPoint.y),
+          scale: session.startTransform.scale,
+        },
+        traceBaseRect,
+        metrics,
+      );
+
+      applyMobileWrapperTransform(mobileWrapperRef.current, nextTrace);
+      applyMobileWrapperTransform(mobileProxyRef.current, nextTrace);
+      dispatch(createPreviewTraceRepositionCommand(nextTrace));
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerEnd);
+    window.addEventListener("pointercancel", handleWindowPointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerEnd);
+      window.removeEventListener("pointercancel", handleWindowPointerEnd);
+    };
+  }, [
+    coarsePointer,
+    dispatch,
+    getWorldPointFromClient,
+    metrics,
+    positioningEnabled,
+    traceBaseRect,
+  ]);
+
   return (
     <div
       style={{
@@ -262,19 +385,23 @@ export function TraceImageLayer({
         </>
       ) : null}
 
-      {coarsePointer && positioningEnabled && traceBaseRect && traceBounds ? (
-        <PositioningBoxOverlay
-          ariaLabel="Trace image controls"
-          baseRect={traceBaseRect}
-          bounds={traceBounds}
-          getWorldPointFromClient={getWorldPointFromClient}
-          onTransformCommit={handleMobileTransformCommit}
-          previewBoundsStrategy="none"
-          showHandles={false}
-          transactionKeyPrefix="trace-drag"
-          transform={traceTransform}
-          usePointerCapture={false}
-          zoom={zoom}
+      {coarsePointer && positioningEnabled && traceBounds ? (
+        <div
+          aria-label="Trace image controls"
+          role="presentation"
+          onPointerDown={handleMobileDragStart}
+          style={{
+            position: "absolute",
+            left: `${traceBounds.left}px`,
+            top: `${traceBounds.top}px`,
+            width: `${traceBounds.width}px`,
+            height: `${traceBounds.height}px`,
+            border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid rgba(37, 99, 235, 0.95)`,
+            background: "transparent",
+            boxSizing: "border-box",
+            touchAction: "none",
+            cursor: "grab",
+          }}
         />
       ) : (
         <>
