@@ -16,7 +16,6 @@ const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 const MIN_VISIBLE_TRACE_PX = 24;
-const MOBILE_TRACE_PREVIEW_THROTTLE_MS = 80;
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -161,18 +160,6 @@ export function TraceImageLayer({
     },
     [dispatch, metrics, traceBaseRect],
   );
-  const handleMobileTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
-    const clampedTrace = traceBaseRect
-      ? clampTraceTransformToSurface(nextTrace, traceBaseRect, metrics)
-      : nextTrace;
-    applyMobileDragTransform(
-      mobileWrapperRef.current,
-      mobileProxyRef.current,
-      clampedTrace,
-      MOBILE_TRACE_DRAG_PROXY_MODE,
-    );
-  }, [metrics, traceBaseRect]);
-
   const handleMobileTransformCommit = useCallback(
     (nextTrace: typeof traceTransform) => {
       const clampedTrace = traceBaseRect
@@ -281,11 +268,7 @@ export function TraceImageLayer({
           baseRect={traceBaseRect}
           bounds={traceBounds}
           getWorldPointFromClient={getWorldPointFromClient}
-          onInteractionEnd={handleMobileInteractionEnd}
-          onInteractionStart={handleMobileInteractionStart}
           onTransformCommit={handleMobileTransformCommit}
-          onTransformPreview={handleMobileTransformPreview}
-          previewThrottleMs={MOBILE_TRACE_PREVIEW_THROTTLE_MS}
           previewBoundsStrategy="none"
           showHandles={false}
           transactionKeyPrefix="trace-drag"

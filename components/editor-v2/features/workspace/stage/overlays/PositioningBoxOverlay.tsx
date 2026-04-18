@@ -246,6 +246,12 @@ export function PositioningBoxOverlay({
     session.pendingClientX = event.clientX;
     session.pendingClientY = event.clientY;
 
+    const hasLivePreview =
+      previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
+    if (!hasLivePreview) {
+      return;
+    }
+
     if (
       previewThrottleMs > 0 &&
       session.lastPreviewAt > 0 &&
