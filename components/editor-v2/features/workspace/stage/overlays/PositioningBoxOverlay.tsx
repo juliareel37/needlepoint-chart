@@ -28,6 +28,7 @@ interface PositioningBoxOverlayProps {
   ) => void;
   onTransformPreview?: (transform: PositioningTransform) => void;
   interactive?: boolean;
+  previewThrottleMs?: number;
   previewBoundsStrategy?: "live" | "none";
   showHandles?: boolean;
   transform: PositioningTransform;
@@ -46,6 +47,7 @@ interface DragSession {
   pendingClientX: number;
   pendingClientY: number;
   rafId: number | null;
+  lastPreviewAt: number;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -61,6 +63,7 @@ export function PositioningBoxOverlay({
   onTransformCommit,
   onTransformPreview,
   interactive = true,
+  previewThrottleMs = 0,
   previewBoundsStrategy = "live",
   showHandles = true,
   transform,
@@ -181,6 +184,7 @@ export function PositioningBoxOverlay({
       applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
     }
     latestOnTransformPreviewRef.current?.(nextTransform);
+    session.lastPreviewAt = performance.now();
 
     return nextTransform;
   }
@@ -224,6 +228,7 @@ export function PositioningBoxOverlay({
       pendingClientX: event.clientX,
       pendingClientY: event.clientY,
       rafId: null,
+      lastPreviewAt: 0,
     };
 
     overlayElement.setPointerCapture(event.pointerId);
@@ -240,6 +245,15 @@ export function PositioningBoxOverlay({
 
     session.pendingClientX = event.clientX;
     session.pendingClientY = event.clientY;
+
+    if (
+      previewThrottleMs > 0 &&
+      session.lastPreviewAt > 0 &&
+      performance.now() - session.lastPreviewAt < previewThrottleMs
+    ) {
+      return;
+    }
+
     scheduleFrame();
   }
 

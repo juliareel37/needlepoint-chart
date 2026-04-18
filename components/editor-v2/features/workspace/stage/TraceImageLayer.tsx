@@ -16,6 +16,7 @@ const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 const MIN_VISIBLE_TRACE_PX = 24;
+const MOBILE_TRACE_PREVIEW_THROTTLE_MS = 80;
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -284,6 +285,7 @@ export function TraceImageLayer({
           onInteractionStart={handleMobileInteractionStart}
           onTransformCommit={handleMobileTransformCommit}
           onTransformPreview={handleMobileTransformPreview}
+          previewThrottleMs={MOBILE_TRACE_PREVIEW_THROTTLE_MS}
           previewBoundsStrategy="none"
           showHandles={false}
           transactionKeyPrefix="trace-drag"
@@ -441,7 +443,7 @@ function setMobileProxyActive(
   }
 
   const showProxy = dragging && MOBILE_TRACE_DRAG_PROXY_MODE === "solid-rect";
-  wrapper.style.visibility = showProxy ? "hidden" : "visible";
+  wrapper.style.display = showProxy ? "none" : "block";
   proxy.style.display = showProxy ? "block" : "none";
 }
 
