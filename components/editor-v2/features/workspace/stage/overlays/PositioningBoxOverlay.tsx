@@ -30,6 +30,7 @@ interface PositioningBoxOverlayProps {
   interactive?: boolean;
   previewThrottleMs?: number;
   previewBoundsStrategy?: "live" | "none";
+  usePointerCapture?: boolean;
   showHandles?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
@@ -65,6 +66,7 @@ export function PositioningBoxOverlay({
   interactive = true,
   previewThrottleMs = 0,
   previewBoundsStrategy = "live",
+  usePointerCapture = true,
   showHandles = true,
   transform,
   transactionKeyPrefix,
@@ -136,6 +138,52 @@ export function PositioningBoxOverlay({
     };
   }, []);
 
+  useEffect(() => {
+    if (usePointerCapture) {
+      return;
+    }
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      const session = dragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      session.pendingClientX = event.clientX;
+      session.pendingClientY = event.clientY;
+
+      const hasLivePreview =
+        previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
+      if (!hasLivePreview) {
+        return;
+      }
+
+      if (
+        previewThrottleMs > 0 &&
+        session.lastPreviewAt > 0 &&
+        performance.now() - session.lastPreviewAt < previewThrottleMs
+      ) {
+        return;
+      }
+
+      scheduleFrame();
+    };
+
+    const handleWindowPointerEnd = (event: PointerEvent) => {
+      finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerEnd);
+    window.addEventListener("pointercancel", handleWindowPointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerEnd);
+      window.removeEventListener("pointercancel", handleWindowPointerEnd);
+    };
+  }, [previewBoundsStrategy, previewThrottleMs, usePointerCapture]);
+
   function scheduleFrame() {
     const session = dragSessionRef.current;
     if (!session || session.rafId !== null) {
@@ -189,10 +237,7 @@ export function PositioningBoxOverlay({
     return nextTransform;
   }
 
-  function beginDrag(
-    event: ReactPointerEvent<HTMLDivElement>,
-    mode: PositioningDragMode,
-  ) {
+  function beginDrag(event: ReactPointerEvent<HTMLDivElement>, mode: PositioningDragMode) {
     if (!interactive) {
       return;
     }
@@ -231,13 +276,19 @@ export function PositioningBoxOverlay({
       lastPreviewAt: 0,
     };
 
-    overlayElement.setPointerCapture(event.pointerId);
+    if (usePointerCapture) {
+      overlayElement.setPointerCapture(event.pointerId);
+    }
     event.preventDefault();
     event.stopPropagation();
     latestOnInteractionStartRef.current?.();
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!usePointerCapture) {
+      return;
+    }
+
     const session = dragSessionRef.current;
     if (!session || event.pointerId !== session.pointerId) {
       return;
@@ -263,9 +314,9 @@ export function PositioningBoxOverlay({
     scheduleFrame();
   }
 
-  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+  function finalizePointerEnd(pointerId: number, clientX: number, clientY: number) {
     const session = dragSessionRef.current;
-    if (!session || event.pointerId !== session.pointerId) {
+    if (!session || pointerId !== session.pointerId) {
       return;
     }
 
@@ -274,17 +325,9 @@ export function PositioningBoxOverlay({
       session.rafId = null;
     }
 
-    session.pendingClientX = event.clientX;
-    session.pendingClientY = event.clientY;
+    session.pendingClientX = clientX;
+    session.pendingClientY = clientY;
     const committedTransform = flushPreview(session);
-
-    try {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      // Ignore release errors during teardown.
-    }
 
     if (session.mode === "move" && !session.dragged) {
       latestOnClickRef.current?.();
@@ -298,6 +341,22 @@ export function PositioningBoxOverlay({
 
     latestOnInteractionEndRef.current?.();
     dragSessionRef.current = null;
+  }
+
+  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!usePointerCapture) {
+      return;
+    }
+
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Ignore release errors during teardown.
+    }
+
+    finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
   }
 
   return (

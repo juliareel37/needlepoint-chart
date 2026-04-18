@@ -273,6 +273,7 @@ export function TraceImageLayer({
           showHandles={false}
           transactionKeyPrefix="trace-drag"
           transform={traceTransform}
+          usePointerCapture={false}
           zoom={zoom}
         />
       ) : (
