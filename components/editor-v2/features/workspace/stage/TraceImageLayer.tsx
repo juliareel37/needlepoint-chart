@@ -13,7 +13,8 @@ import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
-const TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -139,7 +140,7 @@ export function TraceImageLayer({
       desktopCanvasRef.current,
       desktopProxyRef.current,
       nextTrace,
-      TRACE_DRAG_PROXY_MODE,
+      DESKTOP_TRACE_DRAG_PROXY_MODE,
     );
   }, []);
 
@@ -147,7 +148,12 @@ export function TraceImageLayer({
     (nextTrace: typeof traceTransform) => {
       applyDesktopTransform(desktopCanvasRef.current, nextTrace);
       applyDesktopProxyTransform(desktopProxyRef.current, nextTrace);
-      setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
+      setDesktopProxyActive(
+        desktopCanvasRef.current,
+        desktopProxyRef.current,
+        false,
+        DESKTOP_TRACE_DRAG_PROXY_MODE,
+      );
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     },
     [dispatch],
@@ -157,7 +163,7 @@ export function TraceImageLayer({
       mobileWrapperRef.current,
       mobileProxyRef.current,
       nextTrace,
-      TRACE_DRAG_PROXY_MODE,
+      MOBILE_TRACE_DRAG_PROXY_MODE,
     );
   }, []);
 
@@ -165,26 +171,51 @@ export function TraceImageLayer({
     (nextTrace: typeof traceTransform) => {
       applyMobileWrapperTransform(mobileWrapperRef.current, nextTrace);
       applyMobileWrapperTransform(mobileProxyRef.current, nextTrace);
-      setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+      setMobileProxyActive(
+        mobileWrapperRef.current,
+        mobileProxyRef.current,
+        false,
+        MOBILE_TRACE_DRAG_PROXY_MODE,
+      );
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     },
     [dispatch],
   );
 
   const handleDesktopInteractionStart = useCallback(() => {
-    setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, true);
+    setDesktopProxyActive(
+      desktopCanvasRef.current,
+      desktopProxyRef.current,
+      true,
+      DESKTOP_TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   const handleDesktopInteractionEnd = useCallback(() => {
-    setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
+    setDesktopProxyActive(
+      desktopCanvasRef.current,
+      desktopProxyRef.current,
+      false,
+      DESKTOP_TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   const handleMobileInteractionStart = useCallback(() => {
-    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, true);
+    setMobileProxyActive(
+      mobileWrapperRef.current,
+      mobileProxyRef.current,
+      true,
+      MOBILE_TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   const handleMobileInteractionEnd = useCallback(() => {
-    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+    setMobileProxyActive(
+      mobileWrapperRef.current,
+      mobileProxyRef.current,
+      false,
+      MOBILE_TRACE_DRAG_PROXY_MODE,
+    );
   }, []);
 
   return (
@@ -407,12 +438,13 @@ function setDesktopProxyActive(
   canvas: HTMLCanvasElement | null,
   proxy: HTMLDivElement | null,
   dragging: boolean,
+  proxyMode: "off" | "solid-rect",
 ): void {
   if (!canvas || !proxy) {
     return;
   }
 
-  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  const showProxy = dragging && proxyMode === "solid-rect";
   canvas.style.visibility = showProxy ? "hidden" : "visible";
   proxy.style.display = showProxy ? "block" : "none";
 }
@@ -421,12 +453,13 @@ function setMobileProxyActive(
   wrapper: HTMLDivElement | null,
   proxy: HTMLDivElement | null,
   dragging: boolean,
+  proxyMode: "off" | "solid-rect",
 ): void {
   if (!wrapper || !proxy) {
     return;
   }
 
-  const showProxy = dragging && TRACE_DRAG_PROXY_MODE === "solid-rect";
+  const showProxy = dragging && proxyMode === "solid-rect";
   wrapper.style.visibility = showProxy ? "hidden" : "visible";
   proxy.style.display = showProxy ? "block" : "none";
 }
