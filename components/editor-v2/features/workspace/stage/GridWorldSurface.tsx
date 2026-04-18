@@ -8,6 +8,7 @@ import type {
   PaletteColor,
 } from "@/lib/editor-v2/editor/store";
 import {
+  clampWorldPointToSurface,
   clampViewportOffsets,
   createGridWorldMetrics,
   clientToWorldPoint,
@@ -138,6 +139,18 @@ export function GridWorldSurface({
       );
     },
     [viewport],
+  );
+  const getClampedWorldPointFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const worldPoint = getWorldPointFromClient(clientX, clientY);
+
+      if (!worldPoint) {
+        return null;
+      }
+
+      return clampWorldPointToSurface(worldPoint, metrics);
+    },
+    [getWorldPointFromClient, metrics],
   );
   const getClampedSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -399,7 +412,7 @@ export function GridWorldSurface({
           {showTraceOverlay && trace ? (
             <TraceImageLayer
               dispatch={dispatch}
-              getWorldPointFromClient={getWorldPointFromClient}
+              getWorldPointFromClient={getClampedWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
