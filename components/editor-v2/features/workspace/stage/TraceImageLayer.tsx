@@ -110,13 +110,6 @@ export function TraceImageLayer({
         : null,
     [mobileDisplayTransform, traceBaseRect],
   );
-  const showMobileImagePreview = Boolean(
-    coarsePointer &&
-      positioningEnabled &&
-      mobileDragging &&
-      mobilePreviewTransform &&
-      traceBaseRect,
-  );
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -395,37 +388,6 @@ export function TraceImageLayer({
         WebkitUserSelect: "none",
       }}
     >
-      {showMobileImagePreview && traceBaseRect && mobilePreviewTransform ? (
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: `${traceBaseRect.top}px`,
-            left: `${traceBaseRect.left}px`,
-            width: `${traceBaseRect.width}px`,
-            height: `${traceBaseRect.height}px`,
-            transform: getMobileWrapperTransformCss(mobilePreviewTransform),
-            transformOrigin: "top left",
-            willChange: "transform",
-            pointerEvents: "none",
-            opacity: Math.min(0.78, Math.max(imageOpacity * 0.8, 0.42)),
-            filter: "drop-shadow(0 6px 16px rgba(15, 23, 42, 0.18))",
-          }}
-        >
-          <canvas
-            ref={mobileCanvasRef}
-            aria-hidden="true"
-            style={{
-              display: "block",
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-              imageRendering: "auto",
-            }}
-          />
-        </div>
-      ) : null}
-
       {coarsePointer && positioningEnabled && mobileDisplayBounds ? (
         <div
           aria-label="Trace image controls"
