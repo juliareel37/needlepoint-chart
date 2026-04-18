@@ -69,7 +69,11 @@ export function TraceImageLayer({
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
+  const mobileDragRafRef = useRef<number | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
+  const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
+    typeof traceTransform | null
+  >(null);
   const traceBaseRect = useMemo(
     () =>
       traceAsset?.width && traceAsset?.height
@@ -96,6 +100,14 @@ export function TraceImageLayer({
         ? getPositionedBounds(traceBaseRect, traceTransform)
         : null,
     [traceBaseRect, traceTransform],
+  );
+  const mobileDisplayTransform = mobilePreviewTransform ?? traceTransform;
+  const mobileDisplayBounds = useMemo(
+    () =>
+      traceBaseRect
+        ? getPositionedBounds(traceBaseRect, mobileDisplayTransform)
+        : null,
+    [mobileDisplayTransform, traceBaseRect],
   );
 
   useEffect(() => {
@@ -236,6 +248,7 @@ export function TraceImageLayer({
         startPoint: worldPoint,
         startTransform: traceTransform,
       };
+      setMobilePreviewTransform(traceTransform);
 
       event.preventDefault();
       event.stopPropagation();
@@ -248,6 +261,38 @@ export function TraceImageLayer({
       return;
     }
 
+    const baseRect = traceBaseRect;
+
+    function flushMobilePreview() {
+      mobileDragRafRef.current = null;
+      const session = mobileDragSessionRef.current;
+      if (!session) {
+        return;
+      }
+
+      const worldPoint = getWorldPointFromClient(
+        session.pendingClientX,
+        session.pendingClientY,
+      );
+      if (!worldPoint) {
+        return;
+      }
+
+      const nextTrace = clampTraceTransformToSurface(
+        {
+          offsetX:
+            session.startTransform.offsetX + (worldPoint.x - session.startPoint.x),
+          offsetY:
+            session.startTransform.offsetY + (worldPoint.y - session.startPoint.y),
+          scale: session.startTransform.scale,
+        },
+        baseRect,
+        metrics,
+      );
+
+      setMobilePreviewTransform(nextTrace);
+    }
+
     const handleWindowPointerMove = (event: PointerEvent) => {
       const session = mobileDragSessionRef.current;
       if (!session || event.pointerId !== session.pointerId) {
@@ -256,6 +301,10 @@ export function TraceImageLayer({
 
       session.pendingClientX = event.clientX;
       session.pendingClientY = event.clientY;
+
+      if (mobileDragRafRef.current === null) {
+        mobileDragRafRef.current = window.requestAnimationFrame(flushMobilePreview);
+      }
     };
 
     const handleWindowPointerEnd = (event: PointerEvent) => {
@@ -264,11 +313,17 @@ export function TraceImageLayer({
         return;
       }
 
+      if (mobileDragRafRef.current !== null) {
+        window.cancelAnimationFrame(mobileDragRafRef.current);
+        mobileDragRafRef.current = null;
+      }
+
       mobileDragSessionRef.current = null;
 
       const deltaX = event.clientX - session.startClientX;
       const deltaY = event.clientY - session.startClientY;
       if (Math.hypot(deltaX, deltaY) < MOBILE_DRAG_THRESHOLD) {
+        setMobilePreviewTransform(null);
         return;
       }
 
@@ -285,12 +340,11 @@ export function TraceImageLayer({
             session.startTransform.offsetY + (worldPoint.y - session.startPoint.y),
           scale: session.startTransform.scale,
         },
-        traceBaseRect,
+        baseRect,
         metrics,
       );
 
-      applyMobileWrapperTransform(mobileWrapperRef.current, nextTrace);
-      applyMobileWrapperTransform(mobileProxyRef.current, nextTrace);
+      setMobilePreviewTransform(null);
       dispatch(createPreviewTraceRepositionCommand(nextTrace));
     };
 
@@ -299,6 +353,10 @@ export function TraceImageLayer({
     window.addEventListener("pointercancel", handleWindowPointerEnd);
 
     return () => {
+      if (mobileDragRafRef.current !== null) {
+        window.cancelAnimationFrame(mobileDragRafRef.current);
+        mobileDragRafRef.current = null;
+      }
       window.removeEventListener("pointermove", handleWindowPointerMove);
       window.removeEventListener("pointerup", handleWindowPointerEnd);
       window.removeEventListener("pointercancel", handleWindowPointerEnd);
@@ -324,19 +382,20 @@ export function TraceImageLayer({
         WebkitUserSelect: "none",
       }}
     >
-      {coarsePointer && positioningEnabled && traceBounds ? (
+      {coarsePointer && positioningEnabled && mobileDisplayBounds ? (
         <div
           aria-label="Trace image controls"
           role="presentation"
           onPointerDown={handleMobileDragStart}
           style={{
             position: "absolute",
-            left: `${traceBounds.left}px`,
-            top: `${traceBounds.top}px`,
-            width: `${traceBounds.width}px`,
-            height: `${traceBounds.height}px`,
+            left: `${mobileDisplayBounds.left}px`,
+            top: `${mobileDisplayBounds.top}px`,
+            width: `${mobileDisplayBounds.width}px`,
+            height: `${mobileDisplayBounds.height}px`,
             border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid rgba(37, 99, 235, 0.95)`,
-            background: "transparent",
+            background:
+              mobilePreviewTransform ? "rgba(37, 99, 235, 0.08)" : "transparent",
             boxSizing: "border-box",
             touchAction: "none",
             cursor: "grab",
