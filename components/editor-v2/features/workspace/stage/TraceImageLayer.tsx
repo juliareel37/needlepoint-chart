@@ -193,7 +193,7 @@ export function TraceImageLayer({
         position: "absolute",
         inset: 0,
         zIndex,
-        overflow: positioningEnabled ? "visible" : "hidden",
+        overflow: "hidden",
         pointerEvents: positioningEnabled ? "auto" : "none",
         userSelect: "none",
         WebkitUserSelect: "none",

@@ -412,7 +412,7 @@ export function GridWorldSurface({
           {showTraceOverlay && trace ? (
             <TraceImageLayer
               dispatch={dispatch}
-              getWorldPointFromClient={getClampedWorldPointFromClient}
+              getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
