@@ -24,6 +24,11 @@ import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 import { rasterizeTraceImageToSafeSize } from "../trace/traceAssetSizing";
+import {
+  estimateTraceSurface,
+  formatTraceSurfaceForLog,
+  TRACE_MEMORY_DEBUG_ENABLED,
+} from "./traceMemoryDebug";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -71,7 +76,7 @@ export function GridWorldSurface({
   const showDisplayTrace = Boolean(
     trace &&
       traceVisible &&
-      (!tracePositioningEnabled || coarsePointer),
+      !tracePositioningEnabled,
   );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
@@ -90,6 +95,7 @@ export function GridWorldSurface({
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
+  const lastTraceAssetMemoryLogKeyRef = useRef<string | null>(null);
   const frameOrigin = {
     x: (stageSize.width - metrics.surfaceWidth) / 2,
     y: (stageSize.height - metrics.surfaceHeight) / 2,
@@ -325,6 +331,52 @@ export function GridWorldSurface({
 
       if (rasterized?.imageSource instanceof HTMLCanvasElement) {
         rasterizedCanvas = rasterized.imageSource;
+      }
+
+      if (ready && rasterized && TRACE_MEMORY_DEBUG_ENABLED) {
+        const decodedSurface = estimateTraceSurface(
+          image.naturalWidth,
+          image.naturalHeight,
+        );
+        const preparedSurface = estimateTraceSurface(
+          rasterized.width,
+          rasterized.height,
+        );
+        const preparedSourceKind =
+          rasterized.imageSource instanceof HTMLCanvasElement
+            ? "rasterized-canvas"
+            : "decoded-image";
+        const estimatedPeakPreparedMiB =
+          decodedSurface.mebibytes +
+          (preparedSourceKind === "rasterized-canvas" ? preparedSurface.mebibytes : 0);
+        const logKey = [
+          assetUrl,
+          decodedSurface.width,
+          decodedSurface.height,
+          preparedSourceKind,
+          preparedSurface.width,
+          preparedSurface.height,
+        ].join(":");
+
+        if (lastTraceAssetMemoryLogKeyRef.current !== logKey) {
+          lastTraceAssetMemoryLogKeyRef.current = logKey;
+          console.groupCollapsed("[trace-memory] prepared trace asset");
+          console.log({
+            assetUrl,
+            preparedSourceKind,
+            estimatedPeakPreparedMiB: Number(
+              estimatedPeakPreparedMiB.toFixed(2),
+            ),
+          });
+          console.table([
+            formatTraceSurfaceForLog("decoded image", decodedSurface),
+            formatTraceSurfaceForLog("prepared source", preparedSurface),
+          ]);
+          console.log(
+            "Estimated peak prepared overlap counts decoded image memory, plus the rasterized canvas when a second surface is created.",
+          );
+          console.groupEnd();
+        }
       }
 
       setLoadedTraceAsset({
