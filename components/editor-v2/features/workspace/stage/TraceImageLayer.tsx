@@ -28,7 +28,7 @@ import {
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 512;
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
-const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
+const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
