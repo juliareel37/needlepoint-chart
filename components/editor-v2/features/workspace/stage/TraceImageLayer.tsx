@@ -21,6 +21,7 @@ import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 import {
   estimateTraceSurface,
   formatTraceSurfaceForLog,
+  getUsedJsHeapMiB,
   TRACE_MEMORY_DEBUG_ENABLED,
 } from "./traceMemoryDebug";
 
@@ -47,7 +48,12 @@ interface MobileTraceDragSession {
   startClientY: number;
   pendingClientX: number;
   pendingClientY: number;
+  peakKnownOverlapMiB: number;
+  peakUsedJsHeapMiB: number | null;
   rafId: number | null;
+  sampleCount: number;
+  startKnownOverlapMiB: number;
+  startUsedJsHeapMiB: number | null;
   startPoint: WorldPoint;
   startTransform: {
     offsetX: number;
@@ -104,6 +110,27 @@ export function TraceImageLayer({
         : null,
     [traceBaseRect, traceTransform],
   );
+
+  const captureCurrentMobileDragMemory = useCallback(() => {
+    const preparedSource =
+      traceAsset?.width && traceAsset.height
+        ? estimateTraceSurface(traceAsset.width, traceAsset.height)
+        : null;
+    const mobileCanvas = mobileCanvasRef.current;
+    const mobileSurface =
+      mobileCanvas && mobileCanvas.width > 0 && mobileCanvas.height > 0
+        ? estimateTraceSurface(mobileCanvas.width, mobileCanvas.height)
+        : null;
+    const knownOverlapMiB =
+      (preparedSource?.mebibytes ?? 0) + (mobileSurface?.mebibytes ?? 0);
+
+    return {
+      knownOverlapMiB,
+      mobileSurface,
+      preparedSource,
+      usedJsHeapMiB: getUsedJsHeapMiB(),
+    };
+  }, [traceAsset]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -288,13 +315,25 @@ export function TraceImageLayer({
         return;
       }
 
+      const memorySnapshot = TRACE_MEMORY_DEBUG_ENABLED
+        ? captureCurrentMobileDragMemory()
+        : {
+            knownOverlapMiB: 0,
+            usedJsHeapMiB: null,
+          };
+
       mobileDragSessionRef.current = {
         pointerId: event.pointerId,
         startClientX: event.clientX,
         startClientY: event.clientY,
         pendingClientX: event.clientX,
         pendingClientY: event.clientY,
+        peakKnownOverlapMiB: memorySnapshot.knownOverlapMiB,
+        peakUsedJsHeapMiB: memorySnapshot.usedJsHeapMiB,
         rafId: null,
+        sampleCount: 1,
+        startKnownOverlapMiB: memorySnapshot.knownOverlapMiB,
+        startUsedJsHeapMiB: memorySnapshot.usedJsHeapMiB,
         startPoint: worldPoint,
         startTransform: traceTransform,
       };
@@ -317,6 +356,21 @@ export function TraceImageLayer({
     }
 
     const flushMobilePreview = (session: MobileTraceDragSession) => {
+      if (TRACE_MEMORY_DEBUG_ENABLED) {
+        const memorySnapshot = captureCurrentMobileDragMemory();
+        session.sampleCount += 1;
+        session.peakKnownOverlapMiB = Math.max(
+          session.peakKnownOverlapMiB,
+          memorySnapshot.knownOverlapMiB,
+        );
+        if (memorySnapshot.usedJsHeapMiB !== null) {
+          session.peakUsedJsHeapMiB =
+            session.peakUsedJsHeapMiB === null
+              ? memorySnapshot.usedJsHeapMiB
+              : Math.max(session.peakUsedJsHeapMiB, memorySnapshot.usedJsHeapMiB);
+        }
+      }
+
       const deltaX = session.pendingClientX - session.startClientX;
       const deltaY = session.pendingClientY - session.startClientY;
       if (Math.hypot(deltaX, deltaY) < MOBILE_DRAG_THRESHOLD) {
@@ -396,6 +450,68 @@ export function TraceImageLayer({
       const nextTrace = flushMobilePreview(session);
       mobileDragSessionRef.current = null;
 
+      if (TRACE_MEMORY_DEBUG_ENABLED) {
+        const finalMemorySnapshot = captureCurrentMobileDragMemory();
+        const peakKnownOverlapMiB = Math.max(
+          session.peakKnownOverlapMiB,
+          finalMemorySnapshot.knownOverlapMiB,
+        );
+        const peakUsedJsHeapMiB =
+          finalMemorySnapshot.usedJsHeapMiB === null
+            ? session.peakUsedJsHeapMiB
+            : session.peakUsedJsHeapMiB === null
+              ? finalMemorySnapshot.usedJsHeapMiB
+              : Math.max(session.peakUsedJsHeapMiB, finalMemorySnapshot.usedJsHeapMiB);
+
+        console.groupCollapsed("[trace-memory] mobile drag peak");
+        console.log({
+          assetUrl: trace.assetUrl,
+          dragCommitted: Boolean(nextTrace),
+          samples: session.sampleCount,
+          startKnownOverlapMiB: Number(session.startKnownOverlapMiB.toFixed(2)),
+          peakKnownOverlapMiB: Number(peakKnownOverlapMiB.toFixed(2)),
+          peakKnownOverlapDeltaMiB: Number(
+            (peakKnownOverlapMiB - session.startKnownOverlapMiB).toFixed(2),
+          ),
+          startUsedJsHeapMiB:
+            session.startUsedJsHeapMiB === null
+              ? null
+              : Number(session.startUsedJsHeapMiB.toFixed(2)),
+          peakUsedJsHeapMiB:
+            peakUsedJsHeapMiB === null
+              ? null
+              : Number(peakUsedJsHeapMiB.toFixed(2)),
+          peakUsedJsHeapDeltaMiB:
+            peakUsedJsHeapMiB === null || session.startUsedJsHeapMiB === null
+              ? null
+              : Number(
+                  (peakUsedJsHeapMiB - session.startUsedJsHeapMiB).toFixed(2),
+                ),
+        });
+
+        if (finalMemorySnapshot.preparedSource) {
+          console.table([
+            formatTraceSurfaceForLog(
+              "prepared trace source",
+              finalMemorySnapshot.preparedSource,
+            ),
+            ...(finalMemorySnapshot.mobileSurface
+              ? [
+                  formatTraceSurfaceForLog(
+                    "mobile preview canvas",
+                    finalMemorySnapshot.mobileSurface,
+                  ),
+                ]
+              : []),
+          ]);
+        }
+
+        console.log(
+          "Known overlap is a lower bound based on the prepared source plus the mobile preview canvas. JS heap is only included when the browser exposes performance.memory.",
+        );
+        console.groupEnd();
+      }
+
       if (nextTrace) {
         handleMobileTransformCommit(nextTrace);
       } else {
@@ -417,12 +533,14 @@ export function TraceImageLayer({
     };
   }, [
     coarsePointer,
+    captureCurrentMobileDragMemory,
     getWorldPointFromClient,
     handleMobileInteractionEnd,
     handleMobileTransformCommit,
     metrics,
     positioningEnabled,
     traceBaseRect,
+    trace.assetUrl,
     traceTransform,
   ]);
 

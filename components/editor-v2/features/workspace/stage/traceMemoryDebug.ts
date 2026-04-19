@@ -9,6 +9,14 @@ export interface TraceSurfaceEstimate {
   width: number;
 }
 
+interface PerformanceWithMemory extends Performance {
+  memory?: {
+    jsHeapSizeLimit: number;
+    totalJSHeapSize: number;
+    usedJSHeapSize: number;
+  };
+}
+
 export function estimateTraceSurface(
   width: number,
   height: number,
@@ -36,4 +44,18 @@ export function formatTraceSurfaceForLog(
     bytes: estimate.bytes,
     mebibytes: Number(estimate.mebibytes.toFixed(2)),
   };
+}
+
+export function getUsedJsHeapMiB(): number | null {
+  if (typeof performance === "undefined") {
+    return null;
+  }
+
+  const performanceWithMemory = performance as PerformanceWithMemory;
+  const usedJsHeapSize = performanceWithMemory.memory?.usedJSHeapSize;
+  if (typeof usedJsHeapSize !== "number" || !Number.isFinite(usedJsHeapSize)) {
+    return null;
+  }
+
+  return usedJsHeapSize / (1024 * 1024);
 }
