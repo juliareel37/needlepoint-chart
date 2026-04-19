@@ -22,6 +22,7 @@ import {
   estimateTraceSurface,
   formatTraceSurfaceForLog,
   getUsedJsHeapMiB,
+  measureTotalPageMemory,
   TRACE_MEMORY_DEBUG_ENABLED,
 } from "./traceMemoryDebug";
 
@@ -43,6 +44,7 @@ interface TraceImageLayerProps {
 }
 
 interface MobileTraceDragSession {
+  debugId: string;
   pointerId: number;
   startClientX: number;
   startClientY: number;
@@ -81,6 +83,12 @@ export function TraceImageLayer({
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
+  const mobileDragSettleTimeoutRef = useRef<number | null>(null);
+  const lastAppliedMobilePreviewTransformRef = useRef<{
+    offsetX: number;
+    offsetY: number;
+    scale: number;
+  } | null>(null);
   const lastSurfaceMemoryLogKeyRef = useRef<string | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const traceBaseRect = useMemo(
@@ -132,6 +140,42 @@ export function TraceImageLayer({
     };
   }, [traceAsset]);
 
+  const logMobileTotalMemorySample = useCallback(
+    async (
+      phase: "start" | "end" | "settled",
+      debugId: string,
+      knownOverlapMiB: number,
+    ) => {
+      if (!TRACE_MEMORY_DEBUG_ENABLED) {
+        return;
+      }
+
+      const totalMemory = await measureTotalPageMemory();
+
+      if (mobileDragSessionRef.current?.debugId !== debugId && phase === "start") {
+        return;
+      }
+
+      console.groupCollapsed(`[trace-memory] mobile drag total (${phase})`);
+      console.log({
+        assetUrl: trace.assetUrl,
+        debugId,
+        phase,
+        knownOverlapMiB: Number(knownOverlapMiB.toFixed(2)),
+        totalMemoryMiB:
+          totalMemory.mebibytes === null
+            ? null
+            : Number(totalMemory.mebibytes.toFixed(2)),
+        totalMemorySource: totalMemory.source,
+      });
+      console.log(
+        "Total memory is best-effort: it uses measureUserAgentSpecificMemory when available, otherwise falls back to JS heap only.",
+      );
+      console.groupEnd();
+    },
+    [trace.assetUrl],
+  );
+
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return;
@@ -159,6 +203,7 @@ export function TraceImageLayer({
     applyMobileWrapperTransform(mobileWrapperRef.current, traceTransform);
     applyDesktopProxyTransform(desktopProxyRef.current, traceTransform);
     applyMobileWrapperTransform(mobileProxyRef.current, traceTransform);
+    lastAppliedMobilePreviewTransformRef.current = traceTransform;
   }, [traceTransform]);
 
   useEffect(() => {
@@ -277,12 +322,22 @@ export function TraceImageLayer({
       const clampedTrace = traceBaseRect
         ? clampTraceTransformToSurface(nextTrace, traceBaseRect, metrics)
         : nextTrace;
+
+      if (areTransformsEqual(clampedTrace, traceTransform)) {
+        applyMobileWrapperTransform(mobileWrapperRef.current, clampedTrace);
+        applyMobileWrapperTransform(mobileProxyRef.current, clampedTrace);
+        setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+        lastAppliedMobilePreviewTransformRef.current = clampedTrace;
+        return;
+      }
+
       applyMobileWrapperTransform(mobileWrapperRef.current, clampedTrace);
       applyMobileWrapperTransform(mobileProxyRef.current, clampedTrace);
       setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+      lastAppliedMobilePreviewTransformRef.current = clampedTrace;
       dispatch(createPreviewTraceRepositionCommand(clampedTrace));
     },
-    [dispatch, metrics, traceBaseRect],
+    [dispatch, metrics, traceBaseRect, traceTransform],
   );
 
   const handleDesktopInteractionStart = useCallback(() => {
@@ -323,6 +378,7 @@ export function TraceImageLayer({
           };
 
       mobileDragSessionRef.current = {
+        debugId: `${event.pointerId}-${Date.now()}`,
         pointerId: event.pointerId,
         startClientX: event.clientX,
         startClientY: event.clientY,
@@ -337,6 +393,12 @@ export function TraceImageLayer({
         startPoint: worldPoint,
         startTransform: traceTransform,
       };
+
+      void logMobileTotalMemorySample(
+        "start",
+        mobileDragSessionRef.current.debugId,
+        memorySnapshot.knownOverlapMiB,
+      );
 
       handleMobileInteractionStart();
       event.preventDefault();
@@ -397,12 +459,23 @@ export function TraceImageLayer({
         metrics,
       );
 
+      if (
+        lastAppliedMobilePreviewTransformRef.current &&
+        areTransformsEqual(
+          lastAppliedMobilePreviewTransformRef.current,
+          nextTrace,
+        )
+      ) {
+        return nextTrace;
+      }
+
       applyMobileDragTransform(
         mobileWrapperRef.current,
         mobileProxyRef.current,
         nextTrace,
         MOBILE_TRACE_DRAG_PROXY_MODE,
       );
+      lastAppliedMobilePreviewTransformRef.current = nextTrace;
       return nextTrace;
     };
 
@@ -510,6 +583,24 @@ export function TraceImageLayer({
           "Known overlap is a lower bound based on the prepared source plus the mobile preview canvas. JS heap is only included when the browser exposes performance.memory.",
         );
         console.groupEnd();
+
+        void logMobileTotalMemorySample(
+          "end",
+          session.debugId,
+          peakKnownOverlapMiB,
+        );
+
+        if (mobileDragSettleTimeoutRef.current !== null) {
+          window.clearTimeout(mobileDragSettleTimeoutRef.current);
+        }
+        mobileDragSettleTimeoutRef.current = window.setTimeout(() => {
+          void logMobileTotalMemorySample(
+            "settled",
+            session.debugId,
+            finalMemorySnapshot.knownOverlapMiB,
+          );
+          mobileDragSettleTimeoutRef.current = null;
+        }, 350);
       }
 
       if (nextTrace) {
@@ -517,6 +608,7 @@ export function TraceImageLayer({
       } else {
         applyMobileWrapperTransform(mobileWrapperRef.current, traceTransform);
         setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
+        lastAppliedMobilePreviewTransformRef.current = traceTransform;
       }
 
       handleMobileInteractionEnd();
@@ -527,6 +619,10 @@ export function TraceImageLayer({
     window.addEventListener("pointercancel", handleWindowPointerEnd);
 
     return () => {
+      if (mobileDragSettleTimeoutRef.current !== null) {
+        window.clearTimeout(mobileDragSettleTimeoutRef.current);
+        mobileDragSettleTimeoutRef.current = null;
+      }
       window.removeEventListener("pointermove", handleWindowPointerMove);
       window.removeEventListener("pointerup", handleWindowPointerEnd);
       window.removeEventListener("pointercancel", handleWindowPointerEnd);
@@ -537,6 +633,7 @@ export function TraceImageLayer({
     getWorldPointFromClient,
     handleMobileInteractionEnd,
     handleMobileTransformCommit,
+    logMobileTotalMemorySample,
     metrics,
     positioningEnabled,
     traceBaseRect,
@@ -846,4 +943,15 @@ function clampTraceTransformToSurface(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function areTransformsEqual(
+  left: { offsetX: number; offsetY: number; scale: number },
+  right: { offsetX: number; offsetY: number; scale: number },
+): boolean {
+  return (
+    left.offsetX === right.offsetX &&
+    left.offsetY === right.offsetY &&
+    left.scale === right.scale
+  );
 }

@@ -15,6 +15,23 @@ interface PerformanceWithMemory extends Performance {
     totalJSHeapSize: number;
     usedJSHeapSize: number;
   };
+  measureUserAgentSpecificMemory?: () => Promise<{
+    bytes: number;
+    breakdown?: Array<{
+      attribution?: Array<{
+        scope?: string;
+        url?: string;
+      }>;
+      bytes: number;
+      types?: string[];
+    }>;
+  }>;
+}
+
+export interface TraceTotalMemorySample {
+  bytes: number | null;
+  mebibytes: number | null;
+  source: "js-heap" | "user-agent-specific-memory" | "unavailable";
 }
 
 export function estimateTraceSurface(
@@ -58,4 +75,50 @@ export function getUsedJsHeapMiB(): number | null {
   }
 
   return usedJsHeapSize / (1024 * 1024);
+}
+
+export async function measureTotalPageMemory(): Promise<TraceTotalMemorySample> {
+  if (typeof performance === "undefined") {
+    return {
+      bytes: null,
+      mebibytes: null,
+      source: "unavailable",
+    };
+  }
+
+  const performanceWithMemory = performance as PerformanceWithMemory;
+
+  if (
+    typeof performanceWithMemory.measureUserAgentSpecificMemory === "function" &&
+    typeof window !== "undefined" &&
+    window.crossOriginIsolated
+  ) {
+    try {
+      const measurement =
+        await performanceWithMemory.measureUserAgentSpecificMemory();
+
+      return {
+        bytes: measurement.bytes,
+        mebibytes: measurement.bytes / (1024 * 1024),
+        source: "user-agent-specific-memory",
+      };
+    } catch {
+      // Fall back to the legacy heap-only sample if the broader measurement fails.
+    }
+  }
+
+  const usedJsHeapMiB = getUsedJsHeapMiB();
+  if (usedJsHeapMiB !== null) {
+    return {
+      bytes: Math.round(usedJsHeapMiB * 1024 * 1024),
+      mebibytes: usedJsHeapMiB,
+      source: "js-heap",
+    };
+  }
+
+  return {
+    bytes: null,
+    mebibytes: null,
+    source: "unavailable",
+  };
 }
