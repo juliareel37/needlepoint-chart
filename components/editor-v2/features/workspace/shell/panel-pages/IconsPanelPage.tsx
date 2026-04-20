@@ -19,6 +19,7 @@ const ICON_COLUMNS = 3;
 const ICON_PREVIEW_LIMIT = ICON_PREVIEW_ROWS * ICON_COLUMNS;
 const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
 const ICON_PREVIEW_SIZE = 72;
+const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
 
 export type IconsPanelView =
   | { type: "overview" }
@@ -152,10 +153,10 @@ export function IconsPanelPage({
         accumulator[icon.id] = icon.primitiveKind
           ? buildPrimitiveIconDataUrl({
               kind: icon.primitiveKind,
-              width: ICON_PREVIEW_SIZE,
-              height: ICON_PREVIEW_SIZE,
+              width: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
+              height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeColor: "#121923",
-              strokeReferenceSize: ICON_PREVIEW_SIZE,
+              strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeWidthScale: 1,
             })
           : icon.src;
@@ -196,6 +197,7 @@ export function IconsPanelPage({
               intrinsicHeight: item.intrinsicHeight,
               colorSlots: item.colorSlots,
               primitiveKind: item.primitiveKind,
+              lockAspectRatio: item.lockAspectRatio,
               primitiveStrokeReferenceSize: item.primitiveKind
                 ? Math.min(baseRect.width, baseRect.height) * initialTransform.scale
                 : null,
@@ -207,7 +209,15 @@ export function IconsPanelPage({
           );
         }}
       >
-        <span className={styles.iconLibraryPreview} aria-hidden="true">
+        <span
+          className={[
+            styles.iconLibraryPreview,
+            item.primitiveKind ? styles.iconLibraryPreviewPrimitive : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-hidden="true"
+        >
           <img
             src={iconPreviewSrcById[item.id] ?? item.src}
             alt=""

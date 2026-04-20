@@ -14,6 +14,7 @@ import {
 import {
   getIconPlacementBounds,
   getIconPlacementTransformCss,
+  type IconPlacementTransform,
 } from "@/lib/editor-v2/editor/icons/iconPlacementGeometry";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
 import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
@@ -52,14 +53,21 @@ export function IconPlacementLayer({
       placement.intrinsicWidth,
     ],
   );
-  const transform = useMemo(
+  const transform = useMemo<IconPlacementTransform>(
     () => ({
       offsetX: placement.offsetX,
       offsetY: placement.offsetY,
       scaleX: placement.scaleX,
       scaleY: placement.scaleY,
+      lockAspectRatio: placement.lockAspectRatio,
     }),
-    [placement.offsetX, placement.offsetY, placement.scaleX, placement.scaleY],
+    [
+      placement.lockAspectRatio,
+      placement.offsetX,
+      placement.offsetY,
+      placement.scaleX,
+      placement.scaleY,
+    ],
   );
   const bounds = useMemo(
     () => getIconPlacementBounds(baseRect, transform),

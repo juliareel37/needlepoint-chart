@@ -24,6 +24,7 @@ export const beginIconPlacementCommandHandler: EditorCommandHandler<BeginIconPla
             intrinsicHeight: command.payload.intrinsicHeight,
             colorSlots: command.payload.colorSlots,
             primitiveKind: command.payload.primitiveKind,
+            lockAspectRatio: command.payload.lockAspectRatio,
             primitiveStrokeReferenceSize: command.payload.primitiveStrokeReferenceSize,
             supportsStrokeWidth: command.payload.supportsStrokeWidth,
             strokeWidthScale: command.payload.strokeWidthScale,
@@ -107,6 +108,7 @@ export const updateIconPlacementCommandHandler: EditorCommandHandler<UpdateIconP
             intrinsicHeight: command.payload.intrinsicHeight ?? placement.intrinsicHeight,
             colorSlots: command.payload.colorSlots ?? placement.colorSlots,
             primitiveKind: command.payload.primitiveKind ?? placement.primitiveKind,
+            lockAspectRatio: command.payload.lockAspectRatio ?? placement.lockAspectRatio,
             primitiveStrokeReferenceSize:
               command.payload.primitiveStrokeReferenceSize ??
               placement.primitiveStrokeReferenceSize,

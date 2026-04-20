@@ -10,6 +10,7 @@ export interface ShapeIconLibraryItem {
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
   primitiveKind: PrimitiveIconKind | null;
+  lockAspectRatio: boolean;
   supportsStrokeWidth: boolean;
   searchKeywords: string[];
 }

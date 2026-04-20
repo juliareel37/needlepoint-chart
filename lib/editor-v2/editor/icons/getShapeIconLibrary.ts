@@ -8,6 +8,13 @@ import { getPrimitiveIconKind } from "./primitiveIcon";
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
 const iconSearchKeywordMap = iconSearchKeywords as Record<string, string[]>;
+const SHAPES_CATEGORY = "Shapes";
+const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
+  Square: 0,
+  Rectangle: 0,
+  Circle: 1,
+  Triangle: 2,
+};
 
 export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
   const files = await collectIconFiles(SHAPES_ROOT);
@@ -17,7 +24,7 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
       const extension = path.extname(relativePath).toLowerCase();
       const fileContents = await fs.readFile(absolutePath);
       const normalizedRelativePath = relativePath.split(path.sep).join("/");
-      const { src, width, height, colorSlots, primitiveKind, supportsStrokeWidth } = buildIconAsset(
+      const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } = buildIconAsset(
         fileContents,
         absolutePath,
         extension,
@@ -35,6 +42,7 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
         intrinsicHeight: height,
         colorSlots,
         primitiveKind,
+        lockAspectRatio,
         supportsStrokeWidth,
         searchKeywords: normalizeSearchKeywords(iconSearchKeywordMap[path.basename(relativePath)]),
       };
@@ -45,6 +53,15 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
     const categorySort = compareCategories(left.category, right.category);
     if (categorySort !== 0) {
       return categorySort;
+    }
+
+    if (left.category === SHAPES_CATEGORY && right.category === SHAPES_CATEGORY) {
+      const leftPriority = SHAPES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
+      const rightPriority = SHAPES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
     }
 
     return left.name.localeCompare(right.name);
@@ -82,9 +99,11 @@ function buildIconAsset(
   height: number;
   colorSlots: ShapeIconLibraryItem["colorSlots"];
   primitiveKind: ShapeIconLibraryItem["primitiveKind"];
+  lockAspectRatio: boolean;
   supportsStrokeWidth: boolean;
 } {
   const primitiveKind = getPrimitiveIconKind(normalizedRelativePath);
+  const lockAspectRatio = primitiveKind === "star";
   if (extension === ".svg") {
     const svg = extractSvgMarkup(fileContents, absolutePath);
     const { width, height } = getSvgDimensions(svg);
@@ -94,6 +113,7 @@ function buildIconAsset(
       height,
       colorSlots: extractIconColorSlotsFromSvg(svg),
       primitiveKind,
+      lockAspectRatio,
       supportsStrokeWidth: primitiveKind
         ? true
         : supportsStrokeWidthControl(normalizedRelativePath, svg),
@@ -108,6 +128,7 @@ function buildIconAsset(
       height,
       colorSlots: [],
       primitiveKind,
+      lockAspectRatio,
       supportsStrokeWidth: false,
     };
   }

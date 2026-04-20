@@ -10,6 +10,7 @@ export interface IconPlacementTransform {
   offsetY: number;
   scaleX: number;
   scaleY: number;
+  lockAspectRatio?: boolean;
 }
 
 export interface IconPlacementDragState {
@@ -59,6 +60,7 @@ export function getIconPlacementTransformFromDrag(
     dragState.mode,
     point,
     baseRect,
+    dragState.startTransform.lockAspectRatio ?? false,
   );
 
   return {
@@ -74,6 +76,7 @@ function getIconPlacementBoundsFromHandleDrag(
   handle: PositioningHandleId,
   point: WorldPoint,
   baseRect: PositioningRect,
+  lockAspectRatio: boolean,
 ): PositioningRect {
   const minWidth = Math.max(baseRect.width * MIN_SCALE, 1);
   const minHeight = Math.max(baseRect.height * MIN_SCALE, 1);
@@ -82,6 +85,7 @@ function getIconPlacementBoundsFromHandleDrag(
   const startTop = startBounds.top;
   const startBottom = startBounds.top + startBounds.height;
   const preserveAspectRatio =
+    lockAspectRatio ||
     handle === "nw" || handle === "ne" || handle === "se" || handle === "sw";
 
   if (preserveAspectRatio) {

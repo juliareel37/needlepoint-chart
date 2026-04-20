@@ -1,7 +1,7 @@
 import type { PaletteColor } from "../store/state";
 import type { IconColorSlot } from "./iconColorSlots";
 
-export type PrimitiveIconKind = "circle" | "rectangle" | "triangle" | "heart";
+export type PrimitiveIconKind = "circle" | "rectangle" | "triangle" | "heart" | "star";
 
 interface PrimitiveIconSvgOptions {
   kind: PrimitiveIconKind;
@@ -14,6 +14,7 @@ interface PrimitiveIconSvgOptions {
 
 const DEFAULT_STROKE_COLOR = "#121923";
 const HEART_PARAMETRIC_SAMPLE_COUNT = 240;
+const DEFAULT_PRIMITIVE_STROKE_RATIO = 2 / 24;
 
 export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | null {
   switch (relativePath) {
@@ -21,6 +22,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "circle";
     case "shapes/heart.svg":
       return "heart";
+    case "shapes/star.svg":
+      return "star";
     case "shapes/square.svg":
       return "rectangle";
     case "shapes/triangle.svg":
@@ -89,6 +92,23 @@ export function buildPrimitiveIconDataUrl({
       )}" vector-effect="non-scaling-stroke"/>`;
       break;
     }
+    case "star": {
+      const centerX = normalizedWidth / 2;
+      const centerY = normalizedHeight / 2;
+      const outerRadius = Math.max(0, Math.min(normalizedWidth, normalizedHeight) / 2 - halfStroke);
+      const innerRadius = outerRadius * 0.45;
+      const starPoints = Array.from({ length: 10 }, (_, index) => {
+        const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+        const radius = index % 2 === 0 ? outerRadius : innerRadius;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        return `${x.toFixed(3)},${y.toFixed(3)}`;
+      }).join(" ");
+      shapeMarkup = `<polygon points="${starPoints}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        3,
+      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      break;
+    }
     case "heart": {
       const pathData = buildHeartParametricPathData(
         normalizedWidth,
@@ -133,7 +153,7 @@ function getPrimitiveStrokeWidth(
   strokeReferenceSize: number | null | undefined,
   strokeWidthScale: number,
 ): number {
-  const baseStrokeRatio = kind === "circle" ? 2 / 24 : kind === "heart" ? 20.525 / 297 : 1.2 / 25;
+  const baseStrokeRatio = DEFAULT_PRIMITIVE_STROKE_RATIO;
   const referenceSize =
     typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
       ? Math.max(strokeReferenceSize, 1)

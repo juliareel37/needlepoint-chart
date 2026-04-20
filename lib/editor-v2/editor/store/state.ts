@@ -279,6 +279,7 @@ export interface IconPlacementSession {
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
   primitiveKind: PrimitiveIconKind | null;
+  lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
   strokeWidthScale: number;

@@ -370,6 +370,7 @@ export function createBeginIconPlacementCommand(payload: {
   intrinsicHeight: number;
   colorSlots: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
   strokeWidthScale: number;
@@ -411,6 +412,7 @@ export function createUpdateIconPlacementCommand(payload: {
   intrinsicHeight?: number;
   colorSlots?: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind?: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  lockAspectRatio?: boolean;
   primitiveStrokeReferenceSize?: number | null;
   supportsStrokeWidth?: boolean;
   strokeWidthScale?: number;
