@@ -7,6 +7,7 @@ export type PrimitiveIconKind =
   | "triangle"
   | "heart"
   | "star"
+  | "double-rectangle-frame"
   | "scalloped-frame"
   | "greek-key-frame"
   | "greek-key-frame-shadow";
@@ -20,6 +21,7 @@ interface PrimitiveIconSvgOptions {
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
   patternScale?: number;
+  spacingScale?: number;
 }
 
 const DEFAULT_STROKE_COLOR = "#121923";
@@ -33,6 +35,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "circle";
     case "shapes/heart.svg":
       return "heart";
+    case "frames/double-rectangle-frame.svg":
+      return "double-rectangle-frame";
     case "frames/scalloped-frame.svg":
       return "scalloped-frame";
     case "frames/greek-key-frame.svg":
@@ -59,6 +63,7 @@ export function buildPrimitiveIconDataUrl({
   strokeReferenceSize,
   strokeWidthScale = 1,
   patternScale = 1,
+  spacingScale = 1,
 }: PrimitiveIconSvgOptions): string {
   const normalizedWidth = Math.max(1, width);
   const normalizedHeight = Math.max(1, height);
@@ -138,6 +143,39 @@ export function buildPrimitiveIconDataUrl({
       shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      break;
+    }
+    case "double-rectangle-frame": {
+      const referenceSize =
+        typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
+          ? Math.max(strokeReferenceSize, 1)
+          : Math.min(normalizedWidth, normalizedHeight);
+      const normalizedSpacingScale =
+        Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
+      const innerStrokeWidth = Math.max(1, strokeWidth * 0.58);
+      const innerGap = Math.max(referenceSize * 0.08 * normalizedSpacingScale, 6);
+      const innerHalfStroke = innerStrokeWidth / 2;
+      const innerOffset = strokeWidth + innerGap + innerHalfStroke;
+
+      shapeMarkup = [
+        `<rect x="${halfStroke.toFixed(3)}" y="${halfStroke.toFixed(3)}" width="${Math.max(
+          0,
+          normalizedWidth - strokeWidth,
+        ).toFixed(3)}" height="${Math.max(0, normalizedHeight - strokeWidth).toFixed(
+          3,
+        )}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+          3,
+        )}" vector-effect="non-scaling-stroke"/>`,
+        `<rect x="${innerOffset.toFixed(3)}" y="${innerOffset.toFixed(3)}" width="${Math.max(
+          0,
+          normalizedWidth - innerOffset * 2,
+        ).toFixed(3)}" height="${Math.max(
+          0,
+          normalizedHeight - innerOffset * 2,
+        ).toFixed(3)}" fill="none" stroke="${escapedStroke}" stroke-width="${innerStrokeWidth.toFixed(
+          3,
+        )}" vector-effect="non-scaling-stroke"/>`,
+      ].join("");
       break;
     }
     case "scalloped-frame": {
@@ -255,6 +293,7 @@ function getPrimitiveStrokeWidth(
   strokeWidthScale: number,
 ): number {
   const baseStrokeRatio =
+    kind === "double-rectangle-frame" ||
     kind === "scalloped-frame" ||
     kind === "greek-key-frame" ||
     kind === "greek-key-frame-shadow"

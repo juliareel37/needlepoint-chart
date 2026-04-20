@@ -204,6 +204,7 @@ export function IconsPanelPage({
               supportsStrokeWidth: item.supportsStrokeWidth,
               strokeWidthScale: 1,
               primitivePatternScale: 1,
+              primitiveSpacingScale: 1,
               selectedColorSlotId: item.colorSlots[0]?.id ?? null,
               ...initialTransform,
             }),

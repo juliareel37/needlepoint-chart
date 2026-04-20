@@ -284,6 +284,7 @@ export interface IconPlacementSession {
   supportsStrokeWidth: boolean;
   strokeWidthScale: number;
   primitivePatternScale: number;
+  primitiveSpacingScale: number;
   selectedColorSlotId: string | null;
   offsetX: number;
   offsetY: number;

@@ -95,6 +95,7 @@ export function IconPlacementLayer({
             strokeReferenceSize: placement.primitiveStrokeReferenceSize,
             strokeWidthScale: placement.strokeWidthScale,
             patternScale: placement.primitivePatternScale,
+            spacingScale: placement.primitiveSpacingScale,
           })
         : null,
     [
@@ -104,6 +105,7 @@ export function IconPlacementLayer({
       placement.primitiveStrokeReferenceSize,
       placement.strokeWidthScale,
       placement.primitivePatternScale,
+      placement.primitiveSpacingScale,
       previewColor,
       primitiveColors,
     ],
@@ -130,6 +132,7 @@ export function IconPlacementLayer({
           strokeReferenceSize: placement.primitiveStrokeReferenceSize,
           strokeWidthScale: placement.strokeWidthScale,
           patternScale: placement.primitivePatternScale,
+          spacingScale: placement.primitiveSpacingScale,
         });
       }
       return;
@@ -141,6 +144,7 @@ export function IconPlacementLayer({
     placement.primitiveKind,
     placement.strokeWidthScale,
     placement.primitivePatternScale,
+    placement.primitiveSpacingScale,
     previewColor,
     primitiveColors,
   ]);
@@ -212,6 +216,7 @@ export function IconPlacementLayer({
     placement.src,
     placement.strokeWidthScale,
     placement.primitivePatternScale,
+    placement.primitiveSpacingScale,
     placement.supportsStrokeWidth,
     primitivePreviewSrc,
     previewColor,

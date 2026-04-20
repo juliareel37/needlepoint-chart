@@ -146,9 +146,12 @@ export function IconPlacementToolbar({
   const [strokeWidthTooltipVisible, setStrokeWidthTooltipVisible] = useState(false);
   const [patternOpen, setPatternOpen] = useState(false);
   const [patternTooltipVisible, setPatternTooltipVisible] = useState(false);
+  const [spacingOpen, setSpacingOpen] = useState(false);
+  const [spacingTooltipVisible, setSpacingTooltipVisible] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const strokeWidthAnchorRef = useRef<HTMLDivElement | null>(null);
   const patternAnchorRef = useRef<HTMLDivElement | null>(null);
+  const spacingAnchorRef = useRef<HTMLDivElement | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const paletteById = useMemo(
     () =>
@@ -176,9 +179,15 @@ export function IconPlacementToolbar({
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
       : Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
+  const strokeWidthMin = 0.5;
+  const strokeWidthMax =
+    placement.primitiveKind === "double-rectangle-frame" ? 2 : 3;
   const strokeWidthTooltipPercent = Math.max(
     0,
-    Math.min(100, ((normalizedStrokeWidth - 0.5) / (3 - 0.5)) * 100),
+    Math.min(
+      100,
+      ((normalizedStrokeWidth - strokeWidthMin) / (strokeWidthMax - strokeWidthMin)) * 100,
+    ),
   );
   const strokeWidthLabel = `${normalizedStrokeWidth.toFixed(1)}x`;
   const supportsPatternScale = placement.primitiveKind === "scalloped-frame";
@@ -188,6 +197,13 @@ export function IconPlacementToolbar({
     Math.min(100, ((normalizedPatternScale - 0.5) / (2.5 - 0.5)) * 100),
   );
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
+  const supportsSpacingScale = placement.primitiveKind === "double-rectangle-frame";
+  const normalizedSpacingScale = placement.primitiveSpacingScale;
+  const spacingTooltipPercent = Math.max(
+    0,
+    Math.min(100, ((normalizedSpacingScale - 0.5) / (2 - 0.5)) * 100),
+  );
+  const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
 
   async function handleConvert() {
     if (isConverting) {
@@ -335,8 +351,8 @@ export function IconPlacementToolbar({
                         {strokeWidthLabel}
                       </div>
                       <Slider
-                        min={0.5}
-                        max={3}
+                        min={strokeWidthMin}
+                        max={strokeWidthMax}
                         step={0.1}
                         value={normalizedStrokeWidth}
                         aria-label="Icon thickness"
@@ -425,6 +441,84 @@ export function IconPlacementToolbar({
                           dispatch(
                             createUpdateIconPlacementCommand({
                               primitivePatternScale: Number(event.currentTarget.value),
+                            }),
+                          );
+                        }}
+                        style={{ width: "100%", maxWidth: "none" }}
+                      />
+                    </div>
+                  </div>
+                </IconToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+          <ToolbarDivider />
+        </>
+      ) : null}
+
+      {supportsSpacingScale ? (
+        <>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={spacingAnchorRef}>
+              <ToolbarButton
+                type="button"
+                active={spacingOpen}
+                aria-pressed={spacingOpen}
+                aria-label="Frame spacing"
+                title="Frame spacing"
+                onClick={() => setSpacingOpen((current) => !current)}
+              >
+                <ToolbarLabel>Gap</ToolbarLabel>
+              </ToolbarButton>
+
+              {spacingOpen ? (
+                <IconToolbarPortalPopover
+                  anchorRef={spacingAnchorRef}
+                  onRequestClose={() => setSpacingOpen(false)}
+                  role="dialog"
+                  aria-label="Frame spacing"
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 15,
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <ToolbarLabel>Spacing</ToolbarLabel>
+                    <div
+                      className={styles.traceSliderTooltipWrap}
+                      style={{ width: 96, flexShrink: 0 }}
+                    >
+                      <div
+                        className={[
+                          styles.traceSliderTooltip,
+                          spacingTooltipVisible
+                            ? styles.traceSliderTooltipVisible
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden="true"
+                        style={{ left: `${spacingTooltipPercent}%` }}
+                      >
+                        {spacingLabel}
+                      </div>
+                      <Slider
+                        min={0.5}
+                        max={2}
+                        step={0.1}
+                        value={normalizedSpacingScale}
+                        aria-label="Frame spacing"
+                        aria-valuetext={`${spacingLabel} frame spacing`}
+                        onPointerDown={() => setSpacingTooltipVisible(true)}
+                        onBlur={() => setSpacingTooltipVisible(false)}
+                        onChange={(event) => {
+                          dispatch(
+                            createUpdateIconPlacementCommand({
+                              primitiveSpacingScale: Number(event.currentTarget.value),
                             }),
                           );
                         }}

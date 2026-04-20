@@ -60,6 +60,7 @@ export async function convertIconPlacementToPaintGroups(
           strokeReferenceSize: placement.primitiveStrokeReferenceSize,
           strokeWidthScale: placement.strokeWidthScale,
           patternScale: placement.primitivePatternScale,
+          spacingScale: placement.primitiveSpacingScale,
         });
       })()
     : await renderIconPlacementPreview(

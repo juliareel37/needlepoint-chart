@@ -29,6 +29,7 @@ export const beginIconPlacementCommandHandler: EditorCommandHandler<BeginIconPla
             supportsStrokeWidth: command.payload.supportsStrokeWidth,
             strokeWidthScale: command.payload.strokeWidthScale,
             primitivePatternScale: command.payload.primitivePatternScale,
+            primitiveSpacingScale: command.payload.primitiveSpacingScale,
             selectedColorSlotId: command.payload.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? 0,
             offsetY: command.payload.offsetY ?? 0,
@@ -119,6 +120,8 @@ export const updateIconPlacementCommandHandler: EditorCommandHandler<UpdateIconP
               command.payload.strokeWidthScale ?? placement.strokeWidthScale,
             primitivePatternScale:
               command.payload.primitivePatternScale ?? placement.primitivePatternScale,
+            primitiveSpacingScale:
+              command.payload.primitiveSpacingScale ?? placement.primitiveSpacingScale,
             selectedColorSlotId:
               command.payload.selectedColorSlotId ?? placement.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? placement.offsetX,
