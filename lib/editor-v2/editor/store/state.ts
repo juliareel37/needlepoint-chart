@@ -277,7 +277,8 @@ export interface IconPlacementSession {
   intrinsicHeight: number;
   offsetX: number;
   offsetY: number;
-  scale: number;
+  scaleX: number;
+  scaleY: number;
 }
 
 export interface InFlightCommandState {

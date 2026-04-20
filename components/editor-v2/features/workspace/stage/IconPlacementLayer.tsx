@@ -5,11 +5,13 @@ import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/s
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
-  getPositionedBounds,
-  getPositioningTransformCss,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  getIconPlacementBounds,
+  getIconPlacementTransformCss,
+} from "@/lib/editor-v2/editor/icons/iconPlacementGeometry";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
-import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
+import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
 
 interface IconPlacementLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -47,18 +49,19 @@ export function IconPlacementLayer({
     () => ({
       offsetX: placement.offsetX,
       offsetY: placement.offsetY,
-      scale: placement.scale,
+      scaleX: placement.scaleX,
+      scaleY: placement.scaleY,
     }),
-    [placement.offsetX, placement.offsetY, placement.scale],
+    [placement.offsetX, placement.offsetY, placement.scaleX, placement.scaleY],
   );
   const bounds = useMemo(
-    () => getPositionedBounds(baseRect, transform),
+    () => getIconPlacementBounds(baseRect, transform),
     [baseRect, transform],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (previewIconRef.current) {
-      previewIconRef.current.style.transform = getPositioningTransformCss(nextTransform);
+      previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
     }
   }, []);
   const handleTransformCommit = useCallback(
@@ -67,7 +70,8 @@ export function IconPlacementLayer({
         createUpdateIconPlacementCommand({
           offsetX: nextTransform.offsetX,
           offsetY: nextTransform.offsetY,
-          scale: nextTransform.scale,
+          scaleX: nextTransform.scaleX,
+          scaleY: nextTransform.scaleY,
         }),
       );
     },
@@ -94,7 +98,7 @@ export function IconPlacementLayer({
           left: `${baseRect.left}px`,
           width: `${baseRect.width}px`,
           height: `${baseRect.height}px`,
-          transform: getPositioningTransformCss(transform),
+          transform: getIconPlacementTransformCss(transform),
           transformOrigin: "top left",
           willChange: "transform",
           pointerEvents: "none",
@@ -112,16 +116,16 @@ export function IconPlacementLayer({
             WebkitMaskImage: `url(${placement.src})`,
             WebkitMaskRepeat: "no-repeat",
             WebkitMaskPosition: "center",
-            WebkitMaskSize: "contain",
+            WebkitMaskSize: "100% 100%",
             maskImage: `url(${placement.src})`,
             maskRepeat: "no-repeat",
             maskPosition: "center",
-            maskSize: "contain",
+            maskSize: "100% 100%",
           }}
         />
       </div>
 
-      <PositioningBoxOverlay
+      <IconPlacementBoxOverlay
         ariaLabel="Icon placement controls"
         baseRect={baseRect}
         bounds={bounds}

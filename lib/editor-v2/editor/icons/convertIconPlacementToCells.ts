@@ -1,6 +1,7 @@
 import type { GridPoint, IconPlacementSession } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
-import { getContainedRect, getPositionedBounds } from "../positioning";
+import { getContainedRect } from "../positioning";
+import { getIconPlacementBounds } from "./iconPlacementGeometry";
 
 export async function convertIconPlacementToCells(
   placement: IconPlacementSession,
@@ -12,10 +13,11 @@ export async function convertIconPlacementToCells(
     metrics.surfaceWidth,
     metrics.surfaceHeight,
   );
-  const bounds = getPositionedBounds(baseRect, {
+  const bounds = getIconPlacementBounds(baseRect, {
     offsetX: placement.offsetX,
     offsetY: placement.offsetY,
-    scale: placement.scale,
+    scaleX: placement.scaleX,
+    scaleY: placement.scaleY,
   });
   const canvasWidth = Math.max(1, Math.ceil(bounds.width));
   const canvasHeight = Math.max(1, Math.ceil(bounds.height));

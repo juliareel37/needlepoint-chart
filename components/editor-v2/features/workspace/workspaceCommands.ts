@@ -371,6 +371,8 @@ export function createBeginIconPlacementCommand(payload: {
   offsetX?: number;
   offsetY?: number;
   scale?: number;
+  scaleX?: number;
+  scaleY?: number;
 }): EditorCommand {
   return createCommand(
     "icon.beginPlacement",
@@ -383,7 +385,9 @@ export function createBeginIconPlacementCommand(payload: {
 export function createPreviewIconPlacementCommand(payload: {
   offsetX: number;
   offsetY: number;
-  scale: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
 }): EditorCommand {
   return createCommand(
     "icon.previewPlacement",
@@ -402,6 +406,8 @@ export function createUpdateIconPlacementCommand(payload: {
   offsetX?: number;
   offsetY?: number;
   scale?: number;
+  scaleX?: number;
+  scaleY?: number;
 }): EditorCommand {
   return createCommand(
     "icon.updatePlacement",

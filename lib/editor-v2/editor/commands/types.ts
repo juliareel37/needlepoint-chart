@@ -238,12 +238,20 @@ export type BeginIconPlacementCommand = BaseEditorCommand<
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    scaleX?: number;
+    scaleY?: number;
   }
 >;
 
 export type PreviewIconPlacementCommand = BaseEditorCommand<
   "icon.previewPlacement",
-  { offsetX: number; offsetY: number; scale: number }
+  {
+    offsetX: number;
+    offsetY: number;
+    scale?: number;
+    scaleX?: number;
+    scaleY?: number;
+  }
 >;
 
 export type UpdateIconPlacementCommand = BaseEditorCommand<
@@ -257,6 +265,8 @@ export type UpdateIconPlacementCommand = BaseEditorCommand<
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    scaleX?: number;
+    scaleY?: number;
   }
 >;
 
