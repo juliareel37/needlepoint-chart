@@ -162,6 +162,7 @@
   "mouth.svg": ["mouth", "lips"],
   "teddy-bear.svg": ["teddy bear", "toy"],
   "greek-key-frame.svg": ["frame", "border", "greek key", "meander", "ornamental frame"],
+  "greek-key-frame-shadow.svg": ["frame", "border", "greek key", "meander", "shadow frame", "ornamental frame"],
   "gift.svg": ["gift", "present"],
   "jack-o-lantern-pumpkin.svg": ["pumpkin", "halloween"],
   "menorah.svg": ["menorah", "hanukkah"],

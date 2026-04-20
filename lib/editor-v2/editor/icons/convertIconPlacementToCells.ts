@@ -1,11 +1,12 @@
 import type { GridPoint, IconPlacementSession, PaletteColor } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
 import { findNearestIconColorSlot } from "./iconColorSlots";
+import { hexToRgb } from "../color-utils";
 import { getContainedRect } from "../positioning";
 import { getIconPlacementBounds } from "./iconPlacementGeometry";
 import {
   buildPrimitiveIconDataUrl,
-  resolveIconPreviewStrokeColor,
+  resolvePrimitiveColorSlots,
 } from "./primitiveIcon";
 import { renderIconPlacementPreview } from "./renderIconPlacementPreview";
 
@@ -44,18 +45,22 @@ export async function convertIconPlacementToPaintGroups(
   }
 
   const renderSrc = placement.primitiveKind
-    ? buildPrimitiveIconDataUrl({
-        kind: placement.primitiveKind,
-        width: canvasWidth,
-        height: canvasHeight,
-        strokeColor: resolveIconPreviewStrokeColor(
+    ? (() => {
+        const primitiveColors = resolvePrimitiveColorSlots(
           placement.colorSlots,
           paletteById,
           null,
-        ),
-        strokeReferenceSize: placement.primitiveStrokeReferenceSize,
-        strokeWidthScale: placement.strokeWidthScale,
-      })
+        );
+        return buildPrimitiveIconDataUrl({
+          kind: placement.primitiveKind,
+          width: canvasWidth,
+          height: canvasHeight,
+          strokeColor: primitiveColors.primary,
+          secondaryStrokeColor: primitiveColors.secondary,
+          strokeReferenceSize: placement.primitiveStrokeReferenceSize,
+          strokeWidthScale: placement.strokeWidthScale,
+        });
+      })()
     : await renderIconPlacementPreview(
         placement.src,
         placement.intrinsicWidth,
@@ -127,6 +132,7 @@ export async function convertIconPlacementToPaintGroups(
           b: pixel[2] ?? 0,
         },
         fallbackColorId,
+        paletteById,
       );
       if (!colorId) {
         continue;
@@ -161,9 +167,37 @@ function resolvePlacementColorId(
   placement: IconPlacementSession,
   pixel: { r: number; g: number; b: number },
   fallbackColorId: string | null,
+  paletteById: Record<string, PaletteColor>,
 ): string | null {
   if (placement.colorSlots.length === 0) {
     return fallbackColorId;
+  }
+
+  if (placement.primitiveKind) {
+    let bestSlot = placement.colorSlots[0] ?? null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const slot of placement.colorSlots) {
+      const resolvedHex = slot.paletteColorId
+        ? paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex
+        : slot.sourceHex;
+      const resolvedRgb = hexToRgb(resolvedHex);
+      if (!resolvedRgb) {
+        continue;
+      }
+
+      const dr = resolvedRgb.r - pixel.r;
+      const dg = resolvedRgb.g - pixel.g;
+      const db = resolvedRgb.b - pixel.b;
+      const distance = dr * dr + dg * dg + db * db;
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestSlot = slot;
+      }
+    }
+
+    return bestSlot?.paletteColorId ?? fallbackColorId;
   }
 
   const slot = findNearestIconColorSlot(placement.colorSlots, pixel);

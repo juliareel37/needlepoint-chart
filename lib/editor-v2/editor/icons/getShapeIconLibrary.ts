@@ -3,7 +3,7 @@ import path from "path";
 import type { ShapeIconLibraryItem } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
 import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
 import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
-import { getPrimitiveIconKind } from "./primitiveIcon";
+import { getPrimitiveDefaultColorSlots, getPrimitiveIconKind } from "./primitiveIcon";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
@@ -104,6 +104,9 @@ function buildIconAsset(
 } {
   const primitiveKind = getPrimitiveIconKind(normalizedRelativePath);
   const lockAspectRatio = primitiveKind === "star";
+  const primitiveColorSlots = primitiveKind
+    ? getPrimitiveDefaultColorSlots(primitiveKind)
+    : [];
   if (extension === ".svg") {
     const svg = extractSvgMarkup(fileContents, absolutePath);
     const { width, height } = getSvgDimensions(svg);
@@ -111,7 +114,10 @@ function buildIconAsset(
       src: buildSvgDataUrl(svg),
       width,
       height,
-      colorSlots: extractIconColorSlotsFromSvg(svg),
+      colorSlots:
+        primitiveColorSlots.length > 0
+          ? primitiveColorSlots
+          : extractIconColorSlotsFromSvg(svg),
       primitiveKind,
       lockAspectRatio,
       supportsStrokeWidth: primitiveKind

@@ -7,13 +7,15 @@ export type PrimitiveIconKind =
   | "triangle"
   | "heart"
   | "star"
-  | "greek-key-frame";
+  | "greek-key-frame"
+  | "greek-key-frame-shadow";
 
 interface PrimitiveIconSvgOptions {
   kind: PrimitiveIconKind;
   width: number;
   height: number;
   strokeColor: string;
+  secondaryStrokeColor?: string | null;
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
 }
@@ -31,6 +33,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "heart";
     case "frames/greek-key-frame.svg":
       return "greek-key-frame";
+    case "frames/greek-key-frame-shadow.svg":
+      return "greek-key-frame-shadow";
     case "shapes/star.svg":
       return "star";
     case "shapes/square.svg":
@@ -47,6 +51,7 @@ export function buildPrimitiveIconDataUrl({
   width,
   height,
   strokeColor,
+  secondaryStrokeColor,
   strokeReferenceSize,
   strokeWidthScale = 1,
 }: PrimitiveIconSvgOptions): string {
@@ -141,6 +146,35 @@ export function buildPrimitiveIconDataUrl({
       )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`;
       break;
     }
+    case "greek-key-frame-shadow": {
+      const shadowStrokeWidth = Math.max(1, strokeWidth * 0.5);
+      const shadowHalfStroke = shadowStrokeWidth / 2;
+      // Place the lighter stroke directly against the inside edge of the main border.
+      const shadowInset = strokeWidth + shadowHalfStroke;
+      const basePathData = buildGreekKeyFramePathData(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+      );
+      const shadowPathData = buildGreekKeyFramePathData(
+        normalizedWidth,
+        normalizedHeight,
+        shadowInset,
+      );
+      const shadowStroke = escapeXmlAttribute(
+        secondaryStrokeColor || mixHexWithWhite(strokeColor, 0.45),
+      );
+
+      shapeMarkup = [
+        `<path d="${shadowPathData}" fill="none" stroke="${shadowStroke}" stroke-width="${shadowStrokeWidth.toFixed(
+          3,
+        )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`,
+        `<path d="${basePathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+          3,
+        )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`,
+      ].join("");
+      break;
+    }
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" fill="none">${shapeMarkup}</svg>`;
@@ -152,18 +186,48 @@ export function resolveIconPreviewStrokeColor(
   paletteById: Record<string, PaletteColor>,
   fallbackColor: string | null,
 ): string {
-  for (const slot of slots) {
+  return resolvePrimitiveColorSlots(slots, paletteById, fallbackColor).primary;
+}
+
+export function resolvePrimitiveColorSlots(
+  slots: IconColorSlot[],
+  paletteById: Record<string, PaletteColor>,
+  fallbackColor: string | null,
+): { primary: string; secondary: string | null } {
+  const resolvedColors = slots.map((slot) => {
     if (!slot.paletteColorId) {
-      continue;
+      return slot.sourceHex;
     }
 
-    const paletteColor = paletteById[slot.paletteColorId];
-    if (paletteColor?.hex) {
-      return paletteColor.hex;
-    }
+    return paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex;
+  });
+
+  const primary = resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
+  const secondary = resolvedColors[1] ?? null;
+
+  return {
+    primary,
+    secondary,
+  };
+}
+
+export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColorSlot[] {
+  if (kind === "greek-key-frame-shadow") {
+    return [
+      {
+        id: "slot-1",
+        sourceHex: "#121923",
+        paletteColorId: null,
+      },
+      {
+        id: "slot-2",
+        sourceHex: "#8e99ab",
+        paletteColorId: null,
+      },
+    ];
   }
 
-  return fallbackColor ?? slots[0]?.sourceHex ?? DEFAULT_STROKE_COLOR;
+  return [];
 }
 
 function getPrimitiveStrokeWidth(
@@ -174,7 +238,9 @@ function getPrimitiveStrokeWidth(
   strokeWidthScale: number,
 ): number {
   const baseStrokeRatio =
-    kind === "greek-key-frame" ? FRAME_PRIMITIVE_STROKE_RATIO : DEFAULT_PRIMITIVE_STROKE_RATIO;
+    kind === "greek-key-frame" || kind === "greek-key-frame-shadow"
+      ? FRAME_PRIMITIVE_STROKE_RATIO
+      : DEFAULT_PRIMITIVE_STROKE_RATIO;
   const referenceSize =
     typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
       ? Math.max(strokeReferenceSize, 1)
@@ -290,6 +356,37 @@ function buildGreekKeyFramePathData(
     `L ${topLeftExitX.toFixed(3)} ${topLeftInsetY.toFixed(3)}`,
     `L ${topLeftExitX.toFixed(3)} ${top.toFixed(3)}`,
   ].join(" ");
+}
+
+function mixHexWithWhite(hex: string, whiteMix: number): string {
+  const normalizedHex = normalizeHexColor(hex);
+  if (!normalizedHex) {
+    return DEFAULT_STROKE_COLOR;
+  }
+
+  const mix = Math.max(0, Math.min(1, whiteMix));
+  const r = Number.parseInt(normalizedHex.slice(1, 3), 16);
+  const g = Number.parseInt(normalizedHex.slice(3, 5), 16);
+  const b = Number.parseInt(normalizedHex.slice(5, 7), 16);
+  const blend = (channel: number) =>
+    Math.round(channel + (255 - channel) * mix)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${blend(r)}${blend(g)}${blend(b)}`;
+}
+
+function normalizeHexColor(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+    return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
+  }
+
+  return null;
 }
 
 function escapeXmlAttribute(value: string): string {

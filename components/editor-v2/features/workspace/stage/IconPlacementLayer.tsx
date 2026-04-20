@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildPrimitiveIconDataUrl,
-  resolveIconPreviewStrokeColor,
+  resolvePrimitiveColorSlots,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
@@ -76,12 +76,35 @@ export function IconPlacementLayer({
   const previewIconRef = useRef<HTMLDivElement | null>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
   const [previewSrc, setPreviewSrc] = useState(placement.src);
-  const primitiveStrokeColor = useMemo(
+  const primitiveColors = useMemo(
     () =>
       placement.primitiveKind
-        ? resolveIconPreviewStrokeColor(placement.colorSlots, paletteById, previewColor)
+        ? resolvePrimitiveColorSlots(placement.colorSlots, paletteById, previewColor)
         : null,
     [paletteById, placement.colorSlots, placement.primitiveKind, previewColor],
+  );
+  const primitivePreviewSrc = useMemo(
+    () =>
+      placement.primitiveKind
+        ? buildPrimitiveIconDataUrl({
+            kind: placement.primitiveKind,
+            width: bounds.width,
+            height: bounds.height,
+            strokeColor: primitiveColors?.primary ?? previewColor,
+            secondaryStrokeColor: primitiveColors?.secondary,
+            strokeReferenceSize: placement.primitiveStrokeReferenceSize,
+            strokeWidthScale: placement.strokeWidthScale,
+          })
+        : null,
+    [
+      bounds.height,
+      bounds.width,
+      placement.primitiveKind,
+      placement.primitiveStrokeReferenceSize,
+      placement.strokeWidthScale,
+      previewColor,
+      primitiveColors,
+    ],
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (!previewIconRef.current) {
@@ -100,7 +123,8 @@ export function IconPlacementLayer({
           kind: placement.primitiveKind,
           width: nextBounds.width,
           height: nextBounds.height,
-          strokeColor: primitiveStrokeColor ?? previewColor,
+          strokeColor: primitiveColors?.primary ?? previewColor,
+          secondaryStrokeColor: primitiveColors?.secondary,
           strokeReferenceSize: placement.primitiveStrokeReferenceSize,
           strokeWidthScale: placement.strokeWidthScale,
         });
@@ -114,7 +138,7 @@ export function IconPlacementLayer({
     placement.primitiveKind,
     placement.strokeWidthScale,
     previewColor,
-    primitiveStrokeColor,
+    primitiveColors,
   ]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform, _transactionKey?: string) => {
@@ -135,16 +159,7 @@ export function IconPlacementLayer({
 
     async function buildPreview() {
       if (placement.primitiveKind) {
-        setPreviewSrc(
-          buildPrimitiveIconDataUrl({
-            kind: placement.primitiveKind,
-            width: bounds.width,
-            height: bounds.height,
-            strokeColor: primitiveStrokeColor ?? previewColor,
-            strokeReferenceSize: placement.primitiveStrokeReferenceSize,
-            strokeWidthScale: placement.strokeWidthScale,
-          }),
-        );
+        setPreviewSrc(primitivePreviewSrc ?? placement.src);
         return;
       }
 
@@ -193,8 +208,9 @@ export function IconPlacementLayer({
     placement.src,
     placement.strokeWidthScale,
     placement.supportsStrokeWidth,
+    primitivePreviewSrc,
     previewColor,
-    primitiveStrokeColor,
+    primitiveColors,
   ]);
 
   return (
@@ -229,10 +245,10 @@ export function IconPlacementLayer({
           filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
         }}
         >
-        {placement.colorSlots.length > 0 ? (
+        {placement.primitiveKind || placement.colorSlots.length > 0 ? (
           <img
             ref={previewImageRef}
-            src={previewSrc}
+            src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
             alt=""
             aria-hidden="true"
             style={{
