@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type { ShapeIconLibraryItem } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
+import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
@@ -12,7 +13,7 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
       const relativePath = path.relative(SHAPES_ROOT, absolutePath);
       const extension = path.extname(relativePath).toLowerCase();
       const fileContents = await fs.readFile(absolutePath);
-      const { src, width, height } = buildIconAsset(fileContents, absolutePath, extension);
+      const { src, width, height, colorSlots } = buildIconAsset(fileContents, absolutePath, extension);
       const normalizedRelativePath = relativePath.split(path.sep).join("/");
       const fileName = path.basename(relativePath, extension);
       const categoryPath = path.dirname(relativePath);
@@ -24,6 +25,7 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
         src,
         intrinsicWidth: width,
         intrinsicHeight: height,
+        colorSlots,
       };
     }),
   );
@@ -66,6 +68,7 @@ function buildIconAsset(
   src: string;
   width: number;
   height: number;
+  colorSlots: ShapeIconLibraryItem["colorSlots"];
 } {
   if (extension === ".svg") {
     const svg = extractSvgMarkup(fileContents, absolutePath);
@@ -74,6 +77,7 @@ function buildIconAsset(
       src: buildSvgDataUrl(svg),
       width,
       height,
+      colorSlots: extractIconColorSlotsFromSvg(svg),
     };
   }
 
@@ -83,6 +87,7 @@ function buildIconAsset(
       src: buildBinaryDataUrl(fileContents, "image/png"),
       width,
       height,
+      colorSlots: [],
     };
   }
 

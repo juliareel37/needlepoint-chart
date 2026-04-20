@@ -22,6 +22,8 @@ export const beginIconPlacementCommandHandler: EditorCommandHandler<BeginIconPla
             src: command.payload.src,
             intrinsicWidth: command.payload.intrinsicWidth,
             intrinsicHeight: command.payload.intrinsicHeight,
+            colorSlots: command.payload.colorSlots,
+            selectedColorSlotId: command.payload.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? 0,
             offsetY: command.payload.offsetY ?? 0,
             scaleX: command.payload.scaleX ?? command.payload.scale ?? 1,
@@ -99,6 +101,9 @@ export const updateIconPlacementCommandHandler: EditorCommandHandler<UpdateIconP
             src: command.payload.src ?? placement.src,
             intrinsicWidth: command.payload.intrinsicWidth ?? placement.intrinsicWidth,
             intrinsicHeight: command.payload.intrinsicHeight ?? placement.intrinsicHeight,
+            colorSlots: command.payload.colorSlots ?? placement.colorSlots,
+            selectedColorSlotId:
+              command.payload.selectedColorSlotId ?? placement.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? placement.offsetX,
             offsetY: command.payload.offsetY ?? placement.offsetY,
             scaleX: command.payload.scaleX ?? command.payload.scale ?? placement.scaleX,

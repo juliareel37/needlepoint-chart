@@ -368,6 +368,8 @@ export function createBeginIconPlacementCommand(payload: {
   src: string;
   intrinsicWidth: number;
   intrinsicHeight: number;
+  colorSlots: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
+  selectedColorSlotId: string | null;
   offsetX?: number;
   offsetY?: number;
   scale?: number;
@@ -403,6 +405,8 @@ export function createUpdateIconPlacementCommand(payload: {
   src?: string;
   intrinsicWidth?: number;
   intrinsicHeight?: number;
+  colorSlots?: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
+  selectedColorSlotId?: string | null;
   offsetX?: number;
   offsetY?: number;
   scale?: number;

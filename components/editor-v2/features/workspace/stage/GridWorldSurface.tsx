@@ -517,6 +517,7 @@ export function GridWorldSurface({
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
+              paletteById={colorsById}
               placement={iconPlacement}
               previewColor={textPreviewColor}
               zoom={viewport.zoom}

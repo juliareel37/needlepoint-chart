@@ -134,6 +134,8 @@ export function IconsPanelPage({
                           src: item.src,
                           intrinsicWidth: item.intrinsicWidth,
                           intrinsicHeight: item.intrinsicHeight,
+                          colorSlots: item.colorSlots,
+                          selectedColorSlotId: item.colorSlots[0]?.id ?? null,
                           ...getInitialPlacementTransform({
                             intrinsicWidth: item.intrinsicWidth,
                             intrinsicHeight: item.intrinsicHeight,

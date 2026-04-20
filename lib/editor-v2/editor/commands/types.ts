@@ -2,6 +2,7 @@ import type {
   ActiveTool,
   EditorSidebarSection,
   GridPoint,
+  IconPlacementSession,
   MirrorDirection,
   PanelUiState,
   SelectionState,
@@ -229,12 +230,16 @@ export type CancelTextPlacementCommand = BaseEditorCommand<
 
 export type BeginIconPlacementCommand = BaseEditorCommand<
   "icon.beginPlacement",
-  {
-    iconId: string;
-    name: string;
-    src: string;
-    intrinsicWidth: number;
-    intrinsicHeight: number;
+  Pick<
+    IconPlacementSession,
+    | "iconId"
+    | "name"
+    | "src"
+    | "intrinsicWidth"
+    | "intrinsicHeight"
+    | "colorSlots"
+    | "selectedColorSlotId"
+  > & {
     offsetX?: number;
     offsetY?: number;
     scale?: number;
@@ -256,17 +261,23 @@ export type PreviewIconPlacementCommand = BaseEditorCommand<
 
 export type UpdateIconPlacementCommand = BaseEditorCommand<
   "icon.updatePlacement",
-  {
-    iconId?: string;
-    name?: string;
-    src?: string;
-    intrinsicWidth?: number;
-    intrinsicHeight?: number;
-    offsetX?: number;
-    offsetY?: number;
+  Partial<
+    Pick<
+      IconPlacementSession,
+      | "iconId"
+      | "name"
+      | "src"
+      | "intrinsicWidth"
+      | "intrinsicHeight"
+      | "colorSlots"
+      | "selectedColorSlotId"
+      | "offsetX"
+      | "offsetY"
+      | "scaleX"
+      | "scaleY"
+    >
+  > & {
     scale?: number;
-    scaleX?: number;
-    scaleY?: number;
   }
 >;
 

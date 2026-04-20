@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
@@ -13,7 +13,7 @@ import {
   ToolbarSwatch,
   ToolbarPopover,
 } from "@/components/design-system";
-import { convertIconPlacementToCells } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
+import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import type {
   EditorStore,
   IconPlacementSession,
@@ -24,6 +24,7 @@ import {
   createCancelIconPlacementCommand,
   createPaintCellsCommand,
   createSetActiveColorCommand,
+  createUpdateIconPlacementCommand,
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
 
@@ -140,21 +141,54 @@ export function IconPlacementToolbar({
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const [isConverting, setIsConverting] = useState(false);
-  const canConvert = Boolean(activeColorId) && !isConverting;
+  const selectedSlot = useMemo(
+    () =>
+      placement.selectedColorSlotId
+        ? placement.colorSlots.find((slot) => slot.id === placement.selectedColorSlotId) ?? null
+        : null,
+    [placement.colorSlots, placement.selectedColorSlotId],
+  );
+  const selectedSlotColor = selectedSlot?.paletteColorId
+    ? palette.find((color) => color.id === selectedSlot.paletteColorId) ?? null
+    : null;
+  const triggerColorHex =
+    selectedSlotColor?.hex ?? activeColorHex ?? "var(--neutral-400)";
+  const canConvert =
+    !isConverting &&
+    (placement.colorSlots.length > 0
+      ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
+      : Boolean(activeColorId));
 
   async function handleConvert() {
-    if (!activeColorId || isConverting) {
+    if (isConverting) {
       return;
     }
 
     setIsConverting(true);
     try {
-      const cells = await convertIconPlacementToCells(placement, gridMetrics);
-      if (cells.length === 0) {
+      const conversionTransactionKey = `icon-convert-${placement.iconId}-${Date.now()}`;
+      const groups = await convertIconPlacementToPaintGroups(
+        placement,
+        gridMetrics,
+        activeColorId,
+      );
+      if (groups.length === 0) {
         return;
       }
 
-      dispatch(createPaintCellsCommand(activeColorId, cells));
+      for (const group of groups) {
+        if (group.cells.length === 0) {
+          continue;
+        }
+
+        dispatch(
+          createPaintCellsCommand(
+            group.colorId,
+            group.cells,
+            conversionTransactionKey,
+          ),
+        );
+      }
       dispatch(createCancelIconPlacementCommand());
     } finally {
       setIsConverting(false);
@@ -173,10 +207,11 @@ export function IconPlacementToolbar({
             aria-label="Open color library"
             title="Open color library"
             className={styles.libraryPopoverSwatchTrigger}
+            disabled={placement.colorSlots.length > 0 && !selectedSlot}
             onClick={() => setColorLibraryOpen((current) => !current)}
           >
             <ToolbarSwatch
-              color={activeColorHex ?? "var(--neutral-400)"}
+              color={triggerColorHex}
               className={styles.libraryPopoverSwatch}
             />
           </ToolbarButton>
@@ -191,11 +226,23 @@ export function IconPlacementToolbar({
               style={{ whiteSpace: "normal" }}
             >
               <ColorLibrary
-                activeColorId={activeColorId}
+                activeColorId={selectedSlot?.paletteColorId ?? activeColorId}
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 onColorSelect={(colorId) => {
-                  dispatch(createSetActiveColorCommand(colorId));
+                  if (selectedSlot) {
+                    dispatch(
+                      createUpdateIconPlacementCommand({
+                        colorSlots: placement.colorSlots.map((slot) =>
+                          slot.id === selectedSlot.id
+                            ? { ...slot, paletteColorId: colorId }
+                            : slot,
+                        ),
+                      }),
+                    );
+                  } else {
+                    dispatch(createSetActiveColorCommand(colorId));
+                  }
                   setColorLibraryOpen(false);
                 }}
               />
@@ -205,6 +252,46 @@ export function IconPlacementToolbar({
       </ToolbarGroup>
 
       <ToolbarDivider />
+
+      {placement.colorSlots.length > 0 ? (
+        <>
+          <ToolbarGroup>
+            <div className={styles.iconPlacementSwatchList} role="list" aria-label="Icon colors">
+              {placement.colorSlots.map((slot) => {
+                const assignedColor = slot.paletteColorId
+                  ? palette.find((color) => color.id === slot.paletteColorId) ?? null
+                  : null;
+                const isSelected = slot.id === placement.selectedColorSlotId;
+
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    role="listitem"
+                    className={styles.iconPlacementSwatchButton}
+                    data-selected={isSelected ? "true" : "false"}
+                    aria-pressed={isSelected}
+                    title={`Edit icon color ${slot.sourceHex}`}
+                    onClick={() =>
+                      dispatch(
+                        createUpdateIconPlacementCommand({
+                          selectedColorSlotId: slot.id,
+                        }),
+                      )
+                    }
+                  >
+                    <ToolbarSwatch
+                      color={assignedColor?.hex ?? slot.sourceHex}
+                      className={styles.libraryPopoverSwatch}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </ToolbarGroup>
+          <ToolbarDivider />
+        </>
+      ) : null}
 
       <ToolbarGroup>
         <Button

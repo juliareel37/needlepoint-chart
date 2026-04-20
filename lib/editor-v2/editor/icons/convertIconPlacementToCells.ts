@@ -1,12 +1,19 @@
 import type { GridPoint, IconPlacementSession } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
+import { findNearestIconColorSlot } from "./iconColorSlots";
 import { getContainedRect } from "../positioning";
 import { getIconPlacementBounds } from "./iconPlacementGeometry";
 
-export async function convertIconPlacementToCells(
+export interface IconPlacementPaintGroup {
+  colorId: string;
+  cells: GridPoint[];
+}
+
+export async function convertIconPlacementToPaintGroups(
   placement: IconPlacementSession,
   metrics: GridWorldMetrics,
-): Promise<GridPoint[]> {
+  fallbackColorId: string | null,
+): Promise<IconPlacementPaintGroup[]> {
   const baseRect = getContainedRect(
     placement.intrinsicWidth,
     placement.intrinsicHeight,
@@ -46,7 +53,7 @@ export async function convertIconPlacementToCells(
     Math.ceil((bounds.top + bounds.height) / pitch),
   );
 
-  const cells: GridPoint[] = [];
+  const groups = new Map<string, GridPoint[]>();
   const seen = new Set<string>();
 
   for (let y = minCellY; y <= maxCellY; y += 1) {
@@ -70,7 +77,8 @@ export async function convertIconPlacementToCells(
         continue;
       }
 
-      const alpha = context.getImageData(sampleX, sampleY, 1, 1).data[3] ?? 0;
+      const pixel = context.getImageData(sampleX, sampleY, 1, 1).data;
+      const alpha = pixel[3] ?? 0;
       if (alpha <= 1) {
         continue;
       }
@@ -81,11 +89,32 @@ export async function convertIconPlacementToCells(
       }
 
       seen.add(key);
-      cells.push({ x, y });
+      const colorId = resolvePlacementColorId(
+        placement,
+        {
+          r: pixel[0] ?? 0,
+          g: pixel[1] ?? 0,
+          b: pixel[2] ?? 0,
+        },
+        fallbackColorId,
+      );
+      if (!colorId) {
+        continue;
+      }
+
+      const group = groups.get(colorId);
+      if (group) {
+        group.push({ x, y });
+      } else {
+        groups.set(colorId, [{ x, y }]);
+      }
     }
   }
 
-  return cells;
+  return Array.from(groups.entries()).map(([colorId, cells]) => ({
+    colorId,
+    cells,
+  }));
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -96,4 +125,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     image.onerror = () => reject(new Error(`Unable to load icon asset: ${src}`));
     image.src = src;
   });
+}
+
+function resolvePlacementColorId(
+  placement: IconPlacementSession,
+  pixel: { r: number; g: number; b: number },
+  fallbackColorId: string | null,
+): string | null {
+  if (placement.colorSlots.length === 0) {
+    return fallbackColorId;
+  }
+
+  const slot = findNearestIconColorSlot(placement.colorSlots, pixel);
+  return slot?.paletteColorId ?? fallbackColorId;
 }

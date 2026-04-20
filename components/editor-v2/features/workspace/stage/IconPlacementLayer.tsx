@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
-import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
+import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
@@ -17,6 +18,7 @@ interface IconPlacementLayerProps {
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   metrics: GridWorldMetrics;
+  paletteById: Record<string, PaletteColor>;
   placement: IconPlacementSession;
   previewColor: string;
   zoom: number;
@@ -26,6 +28,7 @@ export function IconPlacementLayer({
   dispatch,
   getWorldPointFromClient,
   metrics,
+  paletteById,
   placement,
   previewColor,
   zoom,
@@ -59,6 +62,7 @@ export function IconPlacementLayer({
     [baseRect, transform],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
+  const [previewSrc, setPreviewSrc] = useState(placement.src);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (previewIconRef.current) {
       previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
@@ -77,6 +81,47 @@ export function IconPlacementLayer({
     },
     [dispatch],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function buildPreview() {
+      if (placement.colorSlots.length === 0) {
+        setPreviewSrc(placement.src);
+        return;
+      }
+
+      try {
+        const nextPreviewSrc = await renderIconPlacementPreview(
+          placement.src,
+          placement.intrinsicWidth,
+          placement.intrinsicHeight,
+          placement.colorSlots,
+          paletteById,
+        );
+
+        if (!cancelled) {
+          setPreviewSrc(nextPreviewSrc);
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewSrc(placement.src);
+        }
+      }
+    }
+
+    void buildPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    paletteById,
+    placement.colorSlots,
+    placement.intrinsicHeight,
+    placement.intrinsicWidth,
+    placement.src,
+  ]);
 
   return (
     <div
@@ -107,22 +152,35 @@ export function IconPlacementLayer({
           justifyContent: "center",
           filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
         }}
-      >
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            backgroundColor: previewColor,
-            WebkitMaskImage: `url(${placement.src})`,
-            WebkitMaskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            WebkitMaskSize: "100% 100%",
-            maskImage: `url(${placement.src})`,
-            maskRepeat: "no-repeat",
-            maskPosition: "center",
-            maskSize: "100% 100%",
-          }}
-        />
+        >
+        {placement.colorSlots.length > 0 ? (
+          <img
+            src={previewSrc}
+            alt=""
+            aria-hidden="true"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: previewColor,
+              WebkitMaskImage: `url(${placement.src})`,
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskPosition: "center",
+              WebkitMaskSize: "100% 100%",
+              maskImage: `url(${placement.src})`,
+              maskRepeat: "no-repeat",
+              maskPosition: "center",
+              maskSize: "100% 100%",
+            }}
+          />
+        )}
       </div>
 
       <IconPlacementBoxOverlay

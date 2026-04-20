@@ -1,5 +1,6 @@
 import type { EditorCommandKind, EditorCommandSource } from "../commands/types";
 import type { DocumentPatch } from "./patches";
+import type { IconColorSlot } from "../icons/iconColorSlots";
 
 export type GridCellValue = string | null;
 
@@ -275,6 +276,8 @@ export interface IconPlacementSession {
   src: string;
   intrinsicWidth: number;
   intrinsicHeight: number;
+  colorSlots: IconColorSlot[];
+  selectedColorSlotId: string | null;
   offsetX: number;
   offsetY: number;
   scaleX: number;

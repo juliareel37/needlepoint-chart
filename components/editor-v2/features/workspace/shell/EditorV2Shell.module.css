@@ -636,6 +636,33 @@
     0 0 0 3px rgba(15, 23, 42, 0.14);
 }
 
+.iconPlacementSwatchList {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconPlacementSwatchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.iconPlacementSwatchButton[data-selected="true"] .libraryPopoverSwatch,
+.iconPlacementSwatchButton:hover .libraryPopoverSwatch,
+.iconPlacementSwatchButton:focus-visible .libraryPopoverSwatch {
+  transform: scale(1.14);
+  border-color: rgba(15, 23, 42, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 0 0 3px rgba(15, 23, 42, 0.14);
+}
+
 .historyButton {
   min-width: 36px;
   min-height: 28px;
