@@ -1,15 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { createBeginIconPlacementCommand } from "../../workspaceCommands";
 import { getInitialPlacementTransform } from "./getInitialPlacementTransform";
-import { SHAPE_ICON_LIBRARY, type ShapeIconLibraryItem } from "./iconLibrary";
+import type { ShapeIconLibraryItem } from "./iconLibrary";
 import styles from "../EditorV2Shell.module.css";
 
-const CATEGORY_ORDER: ShapeIconLibraryItem["category"][] = ["Shapes", "Frames"];
 const DEFAULT_INITIAL_WIDTH_RATIO = 0.42;
 
 interface IconsPanelPageProps {
@@ -25,13 +24,65 @@ export function IconsPanelPage({
   placement,
   viewportCenter,
 }: IconsPanelPageProps) {
+  const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLibrary() {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const response = await fetch("/api/editor-v2/icon-library");
+        if (!response.ok) {
+          throw new Error(`Icon library request failed with ${response.status}`);
+        }
+
+        const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
+        if (!cancelled) {
+          setIcons(Array.isArray(payload.icons) ? payload.icons : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setIcons([]);
+          setLoadError(error instanceof Error ? error.message : "Unable to load icons.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadLibrary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const iconGroups = useMemo(
-    () =>
-      CATEGORY_ORDER.map((category) => ({
+    () => {
+      const groups = new Map<string, ShapeIconLibraryItem[]>();
+
+      for (const icon of icons) {
+        const group = groups.get(icon.category);
+        if (group) {
+          group.push(icon);
+        } else {
+          groups.set(icon.category, [icon]);
+        }
+      }
+
+      return Array.from(groups.entries()).map(([category, items]) => ({
         category,
-        items: SHAPE_ICON_LIBRARY.filter((item) => item.category === category),
-      })).filter((group) => group.items.length > 0),
-    [],
+        items,
+      }));
+    },
+    [icons],
   );
   const placementActive = Boolean(placement);
 
@@ -46,6 +97,18 @@ export function IconsPanelPage({
             Click any icon to place it on the canvas, then size, color, and convert it.
           </p>
         </div>
+
+        {loading ? (
+          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            Loading icons...
+          </p>
+        ) : null}
+
+        {!loading && loadError ? (
+          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            {loadError}
+          </p>
+        ) : null}
 
         {iconGroups.map((group) => (
           <div key={group.category} className={styles.sidebarSubsection}>
