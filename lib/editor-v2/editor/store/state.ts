@@ -109,6 +109,7 @@ export interface EditorSessionState {
   persistence: PersistenceSessionState;
   traceInteraction: TraceInteractionState;
   textInteraction: TextInteractionState;
+  iconInteraction: IconInteractionState;
   inFlightCommand: InFlightCommandState | null;
 }
 
@@ -250,6 +251,10 @@ export interface TextInteractionState {
   placement: TextPlacementSession | null;
 }
 
+export interface IconInteractionState {
+  placement: IconPlacementSession | null;
+}
+
 export interface TextPlacementSession {
   text: string;
   intrinsicWidth: number;
@@ -259,6 +264,17 @@ export interface TextPlacementSession {
   fontStyle: "normal" | "italic";
   fontWeight: number;
   underline: boolean;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
+export interface IconPlacementSession {
+  iconId: string;
+  name: string;
+  src: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
   offsetX: number;
   offsetY: number;
   scale: number;
@@ -279,7 +295,13 @@ export interface EditorUiState {
   preferences: UiPreferenceState;
 }
 
-export type EditorSidebarSection = "document" | "color" | "trace" | "text" | "settings";
+export type EditorSidebarSection =
+  | "document"
+  | "color"
+  | "trace"
+  | "text"
+  | "icons"
+  | "settings";
 
 export interface ShellUiState {
   sidebarCollapsed: boolean;
@@ -421,6 +443,9 @@ export function createInitialEditorStoreState(): EditorStoreState {
         draftFontStyle: "normal",
         draftFontWeight: 400,
         previewPosition: null,
+        placement: null,
+      },
+      iconInteraction: {
         placement: null,
       },
       inFlightCommand: null,

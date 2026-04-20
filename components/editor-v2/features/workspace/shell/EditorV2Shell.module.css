@@ -366,6 +366,129 @@
   color: var(--text-secondary);
 }
 
+.iconSelectionSummary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-card) 90%, white);
+}
+
+.iconSelectionPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  flex: 0 0 104px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.58)),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.1));
+  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 84%, white);
+}
+
+.iconSelectionPreviewImage {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.iconSelectionDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.iconSelectionLabel,
+.iconSelectionTitle,
+.iconSelectionHint {
+  margin: 0;
+}
+
+.iconSelectionLabel {
+  color: var(--text-secondary);
+}
+
+.iconSelectionHint {
+  color: var(--text-secondary);
+}
+
+.iconSelectionAction {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.iconLibraryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.iconLibraryCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 252, 0.84)),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.02), rgba(15, 23, 42, 0.08));
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.iconLibraryCard:hover,
+.iconLibraryCard:focus-visible {
+  border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
+  background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+  box-shadow: var(--ui-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.iconLibraryCard:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+  outline-offset: 2px;
+}
+
+.iconLibraryCard[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--brand-400) 64%, var(--ui-border-subtle));
+  background: color-mix(in srgb, var(--surface-card) 76%, var(--brand-100));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-400) 40%, transparent),
+    var(--ui-shadow-sm);
+}
+
+.iconLibraryPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.iconLibraryPreviewImage {
+  width: 100%;
+  height: 100%;
+  max-width: 88px;
+  max-height: 88px;
+  object-fit: contain;
+}
+
 .sidebarDivider {
   height: 1px;
   background: var(--ui-border-subtle);
@@ -1495,6 +1618,31 @@
     max-width: min-content;
     width: 90%;
   }
+
+  .iconSelectionSummary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .iconSelectionPreview {
+    width: 88px;
+    height: 88px;
+    flex-basis: 88px;
+  }
+
+  .iconSelectionPreviewImage {
+    width: 72px;
+    height: 72px;
+  }
+
+  .iconLibraryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .iconSelectionAction {
+    align-self: stretch;
+  }
+
   .headerHistoryControls {
     display: inline-flex;
     gap: 6px;

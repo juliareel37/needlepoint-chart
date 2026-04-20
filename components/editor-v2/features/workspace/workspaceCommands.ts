@@ -362,6 +362,64 @@ export function createCancelTextPlacementCommand(): EditorCommand {
   );
 }
 
+export function createBeginIconPlacementCommand(payload: {
+  iconId: string;
+  name: string;
+  src: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.beginPlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createPreviewIconPlacementCommand(payload: {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.previewPlacement",
+    payload,
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createUpdateIconPlacementCommand(payload: {
+  iconId?: string;
+  name?: string;
+  src?: string;
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.updatePlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelIconPlacementCommand(): EditorCommand {
+  return createCommand(
+    "icon.cancelPlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createBeginTraceRepositionCommand(
   origin: "panel" | "toolbar",
 ): EditorCommand {

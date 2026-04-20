@@ -43,6 +43,12 @@ import {
   updateTraceCommandHandler,
 } from "./handlers/trace";
 import {
+  beginIconPlacementCommandHandler,
+  cancelIconPlacementCommandHandler,
+  previewIconPlacementCommandHandler,
+  updateIconPlacementCommandHandler,
+} from "./handlers/iconPlacement";
+import {
   beginTextPlacementCommandHandler,
   cancelTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,
@@ -74,6 +80,10 @@ export const commandHandlers: EditorCommandHandler[] = [
   paletteSwapColorCommandHandler,
   paletteDeleteUsedColorsCommandHandler,
   paletteMergeUsedColorsCommandHandler,
+  beginIconPlacementCommandHandler,
+  updateIconPlacementCommandHandler,
+  previewIconPlacementCommandHandler,
+  cancelIconPlacementCommandHandler,
   beginTextPlacementCommandHandler,
   updateTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,

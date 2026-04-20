@@ -43,6 +43,7 @@ import { ButtonIcon, Notification } from "@/components/design-system";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
 import { SelectionSessionToolbar } from "./SelectionSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
+import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -117,6 +118,7 @@ export function EditorV2Shell({
   const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
   const selectionActive = activeTool === "lasso";
   const textPlacement = state.session.textInteraction.placement;
+  const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
@@ -401,6 +403,20 @@ export function EditorV2Shell({
   }, [dispatch, isBottomPanelLayout, sidebarCollapsed, textPlacement]);
 
   useEffect(() => {
+    if (!iconPlacement) {
+      return;
+    }
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+  }, [dispatch, iconPlacement, isBottomPanelLayout, sidebarCollapsed]);
+
+  useEffect(() => {
     setMounted(true);
   }, []);
 
@@ -573,6 +589,7 @@ export function EditorV2Shell({
                 traceRepositionActive={traceRepositionActive}
                 traceRepositionOrigin={traceRepositionOrigin}
                 textPlacement={textPlacement}
+                iconPlacement={iconPlacement}
                 usedColors={usedColors}
                 document={document}
                 dispatch={dispatch}
@@ -617,6 +634,15 @@ export function EditorV2Shell({
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={textPlacement}
+                  />
+                ) : iconPlacement ? (
+                  <IconPlacementToolbar
+                    activeColorHex={activeColor?.hex ?? null}
+                    activeColorId={activeColorId}
+                    dispatch={dispatch}
+                    gridMetrics={gridMetrics}
+                    palette={palette}
+                    placement={iconPlacement}
                   />
                 ) : (
                   <FloatingToolbar

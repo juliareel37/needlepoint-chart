@@ -47,6 +47,10 @@ export type EditorCommandKind =
   | "text.updatePlacement"
   | "text.previewPlacement"
   | "text.cancelPlacement"
+  | "icon.beginPlacement"
+  | "icon.updatePlacement"
+  | "icon.previewPlacement"
+  | "icon.cancelPlacement"
   | "trace.attach"
   | "trace.remove"
   | "trace.update"
@@ -223,6 +227,44 @@ export type CancelTextPlacementCommand = BaseEditorCommand<
   object
 >;
 
+export type BeginIconPlacementCommand = BaseEditorCommand<
+  "icon.beginPlacement",
+  {
+    iconId: string;
+    name: string;
+    src: string;
+    intrinsicWidth: number;
+    intrinsicHeight: number;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
+  }
+>;
+
+export type PreviewIconPlacementCommand = BaseEditorCommand<
+  "icon.previewPlacement",
+  { offsetX: number; offsetY: number; scale: number }
+>;
+
+export type UpdateIconPlacementCommand = BaseEditorCommand<
+  "icon.updatePlacement",
+  {
+    iconId?: string;
+    name?: string;
+    src?: string;
+    intrinsicWidth?: number;
+    intrinsicHeight?: number;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
+  }
+>;
+
+export type CancelIconPlacementCommand = BaseEditorCommand<
+  "icon.cancelPlacement",
+  object
+>;
+
 export type BeginTraceRepositionCommand = BaseEditorCommand<
   "trace.beginReposition",
   { origin: "panel" | "toolbar" }
@@ -343,6 +385,10 @@ export type EditorCommand =
   | UpdateTextPlacementCommand
   | PreviewTextPlacementCommand
   | CancelTextPlacementCommand
+  | BeginIconPlacementCommand
+  | UpdateIconPlacementCommand
+  | PreviewIconPlacementCommand
+  | CancelIconPlacementCommand
   | BeginTraceRepositionCommand
   | PreviewTraceRepositionCommand
   | CancelTraceRepositionCommand

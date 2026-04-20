@@ -165,6 +165,9 @@ function createDeleteTestState(): EditorStoreState {
         previewPosition: null,
         placement: null,
       },
+      iconInteraction: {
+        placement: null,
+      },
       inFlightCommand: null,
     },
     ui: {

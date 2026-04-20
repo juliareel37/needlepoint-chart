@@ -7,6 +7,7 @@ import type {
   EditorSidebarSection,
   EditorStore,
   EditorDocumentState,
+  IconPlacementSession,
   PaletteColor,
   TextPlacementSession,
   TraceDocument,
@@ -17,6 +18,7 @@ import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPer
 import type { SaveButtonState } from "../../../app/EditorV2Workspace";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
+import { IconsPanelPage } from "./panel-pages/IconsPanelPage";
 import { TextPanelPage } from "./panel-pages/TextPanelPage";
 import { TracePanelPage } from "./panel-pages/TracePanelPage";
 import { SettingsPanelPage } from "./panel-pages/SettingsPanelPage";
@@ -50,6 +52,7 @@ interface EditorSidebarProps {
   gridMetrics: GridWorldMetrics;
   dispatch: EditorStore["dispatch"];
   textPlacement: TextPlacementSession | null;
+  iconPlacement: IconPlacementSession | null;
   textViewportCenter: WorldPoint | null;
 }
 
@@ -81,6 +84,7 @@ export function EditorSidebar({
   gridMetrics,
   dispatch,
   textPlacement,
+  iconPlacement,
   textViewportCenter,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
@@ -120,6 +124,8 @@ export function EditorSidebar({
                     ? "Image Reference"
                     : activeSection === "text"
                       ? "Text"
+                      : activeSection === "icons"
+                        ? "Icons"
                         : "Settings"}
             </h2>
           )}
@@ -184,6 +190,15 @@ export function EditorSidebar({
             gridMetrics={gridMetrics}
             palette={palette}
             placement={textPlacement}
+            viewportCenter={textViewportCenter}
+          />
+        ) : null}
+
+        {activeSection === "icons" ? (
+          <IconsPanelPage
+            dispatch={dispatch}
+            gridMetrics={gridMetrics}
+            placement={iconPlacement}
             viewportCenter={textViewportCenter}
           />
         ) : null}

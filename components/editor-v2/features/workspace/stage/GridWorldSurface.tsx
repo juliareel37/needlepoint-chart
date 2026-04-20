@@ -18,6 +18,7 @@ import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./overlays/GridRulerOverlay";
 import { SelectionOverlay } from "./overlays/SelectionOverlay";
 import { TextPlacementLayer } from "./TextPlacementLayer";
+import { IconPlacementLayer } from "./IconPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
@@ -57,6 +58,7 @@ export function GridWorldSurface({
   const grid = state.document.grid;
   const trace = state.document.trace;
   const textPlacement = state.session.textInteraction.placement;
+  const iconPlacement = state.session.iconInteraction.placement;
   const viewport = state.session.viewport;
   const selection = state.session.selection;
   const mirrorInteraction = state.session.mirrorInteraction;
@@ -95,6 +97,7 @@ export function GridWorldSurface({
     y: (stageSize.height - metrics.surfaceHeight) / 2,
   };
   const textPlacementActive = Boolean(textPlacement);
+  const iconPlacementActive = Boolean(iconPlacement);
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -234,7 +237,8 @@ export function GridWorldSurface({
   } = useStagePanInteractions({
     activeTool,
     dispatch,
-    dragPanningDisabled: tracePositioningEnabled || textPlacementActive,
+    dragPanningDisabled:
+      tracePositioningEnabled || textPlacementActive || iconPlacementActive,
     metrics,
     stageRef,
     stageSize,
@@ -503,6 +507,17 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
               placement={textPlacement}
+              previewColor={textPreviewColor}
+              zoom={viewport.zoom}
+            />
+          ) : null}
+
+          {iconPlacement ? (
+            <IconPlacementLayer
+              dispatch={dispatch}
+              getWorldPointFromClient={getWorldPointFromClient}
+              metrics={metrics}
+              placement={iconPlacement}
               previewColor={textPreviewColor}
               zoom={viewport.zoom}
             />

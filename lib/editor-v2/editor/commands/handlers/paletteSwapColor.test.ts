@@ -155,6 +155,9 @@ function createSwapTestState(): EditorStoreState {
         previewPosition: null,
         placement: null,
       },
+      iconInteraction: {
+        placement: null,
+      },
       inFlightCommand: null,
     },
     ui: {
