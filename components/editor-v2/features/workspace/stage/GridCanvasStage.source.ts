@@ -127,23 +127,56 @@ export function drawChangedSourceCells(options: {
   const {
     context,
     cells,
-    previousCells,
     colorsById,
     gridWidth,
     cellSize,
     threadView,
     stitchCanvasCache,
   } = options;
+  const gridHeight = Math.ceil(cells.length / Math.max(gridWidth, 1));
+  const changedIndices: number[] = [];
 
   for (let index = 0; index < cells.length; index += 1) {
-    if (previousCells[index] === cells[index]) {
-      continue;
+    if (options.previousCells[index] !== cells[index]) {
+      changedIndices.push(index);
     }
+  }
 
-    clearCell(context, index, gridWidth, cellSize);
+  if (changedIndices.length === 0) {
+    return;
+  }
+
+  const affectedIndices = new Set<number>();
+
+  for (const index of changedIndices) {
+    clearCell(context, index, gridWidth, cellSize, 1);
+
+    const cellX = index % gridWidth;
+    const cellY = Math.floor(index / gridWidth);
+
+    for (let deltaY = -1; deltaY <= 1; deltaY += 1) {
+      for (let deltaX = -1; deltaX <= 1; deltaX += 1) {
+        const neighborX = cellX + deltaX;
+        const neighborY = cellY + deltaY;
+
+        if (
+          neighborX < 0 ||
+          neighborY < 0 ||
+          neighborX >= gridWidth ||
+          neighborY >= gridHeight
+        ) {
+          continue;
+        }
+
+        affectedIndices.add(neighborY * gridWidth + neighborX);
+      }
+    }
+  }
+
+  for (const index of affectedIndices) {
     drawCell(context, {
       cellSize,
-      colorId: cells[index],
+      colorId: cells[index] ?? null,
       colorsById,
       gridWidth,
       index,
@@ -158,10 +191,11 @@ function clearCell(
   index: number,
   gridWidth: number,
   cellSize: number,
+  bleed = 0,
 ): void {
   const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
 
-  context.clearRect(x0, y0, width, height);
+  context.clearRect(x0 - bleed, y0 - bleed, width + bleed * 2, height + bleed * 2);
 }
 
 function drawCell(

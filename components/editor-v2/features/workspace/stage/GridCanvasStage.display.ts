@@ -158,17 +158,14 @@ export function renderDisplayCanvas(options: {
         stitchCanvasCache,
       });
     } else {
-      context.drawImage(
-        sourceCanvas,
-        0,
-        0,
-        sourceCanvas.width,
-        sourceCanvas.height,
+      drawFlatPaintOverlay(context, {
+        cells,
+        colorsById,
         drawX,
         drawY,
-        drawWidth,
-        drawHeight,
-      );
+        gridWidth,
+        renderedCellSize: metrics.cellSize * viewport.zoom,
+      });
     }
     context.restore();
   }
@@ -204,4 +201,49 @@ export function renderDisplayCanvas(options: {
   }
 
   context.restore();
+}
+
+function drawFlatPaintOverlay(
+  context: CanvasRenderingContext2D,
+  options: {
+    cells: GridCellValue[];
+    colorsById: Record<string, PaletteColor>;
+    drawX: number;
+    drawY: number;
+    gridWidth: number;
+    renderedCellSize: number;
+  },
+) {
+  const {
+    cells,
+    colorsById,
+    drawX,
+    drawY,
+    gridWidth,
+    renderedCellSize,
+  } = options;
+
+  for (let index = 0; index < cells.length; index += 1) {
+    const colorId = cells[index];
+
+    if (!colorId) {
+      continue;
+    }
+
+    const color = colorsById[colorId];
+
+    if (!color) {
+      continue;
+    }
+
+    const x = index % gridWidth;
+    const y = Math.floor(index / gridWidth);
+    const x0 = Math.round(drawX + x * renderedCellSize);
+    const y0 = Math.round(drawY + y * renderedCellSize);
+    const x1 = Math.round(drawX + (x + 1) * renderedCellSize);
+    const y1 = Math.round(drawY + (y + 1) * renderedCellSize);
+
+    context.fillStyle = color.hex;
+    context.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+  }
 }
