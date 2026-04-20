@@ -374,6 +374,7 @@ export function createBeginIconPlacementCommand(payload: {
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
   strokeWidthScale: number;
+  primitivePatternScale: number;
   selectedColorSlotId: string | null;
   offsetX?: number;
   offsetY?: number;
@@ -416,6 +417,7 @@ export function createUpdateIconPlacementCommand(payload: {
   primitiveStrokeReferenceSize?: number | null;
   supportsStrokeWidth?: boolean;
   strokeWidthScale?: number;
+  primitivePatternScale?: number;
   selectedColorSlotId?: string | null;
   offsetX?: number;
   offsetY?: number;

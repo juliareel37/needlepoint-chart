@@ -144,8 +144,11 @@ export function IconPlacementToolbar({
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [strokeWidthOpen, setStrokeWidthOpen] = useState(false);
   const [strokeWidthTooltipVisible, setStrokeWidthTooltipVisible] = useState(false);
+  const [patternOpen, setPatternOpen] = useState(false);
+  const [patternTooltipVisible, setPatternTooltipVisible] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const strokeWidthAnchorRef = useRef<HTMLDivElement | null>(null);
+  const patternAnchorRef = useRef<HTMLDivElement | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const paletteById = useMemo(
     () =>
@@ -178,6 +181,13 @@ export function IconPlacementToolbar({
     Math.min(100, ((normalizedStrokeWidth - 0.5) / (3 - 0.5)) * 100),
   );
   const strokeWidthLabel = `${normalizedStrokeWidth.toFixed(1)}x`;
+  const supportsPatternScale = placement.primitiveKind === "scalloped-frame";
+  const normalizedPatternScale = placement.primitivePatternScale;
+  const patternTooltipPercent = Math.max(
+    0,
+    Math.min(100, ((normalizedPatternScale - 0.5) / (2.5 - 0.5)) * 100),
+  );
+  const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
 
   async function handleConvert() {
     if (isConverting) {
@@ -337,6 +347,84 @@ export function IconPlacementToolbar({
                           dispatch(
                             createUpdateIconPlacementCommand({
                               strokeWidthScale: Number(event.currentTarget.value),
+                            }),
+                          );
+                        }}
+                        style={{ width: "100%", maxWidth: "none" }}
+                      />
+                    </div>
+                  </div>
+                </IconToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+          <ToolbarDivider />
+        </>
+      ) : null}
+
+      {supportsPatternScale ? (
+        <>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={patternAnchorRef}>
+              <ToolbarButton
+                type="button"
+                active={patternOpen}
+                aria-pressed={patternOpen}
+                aria-label="Scallop spacing"
+                title="Scallop spacing"
+                onClick={() => setPatternOpen((current) => !current)}
+              >
+                <ToolbarLabel>Wave</ToolbarLabel>
+              </ToolbarButton>
+
+              {patternOpen ? (
+                <IconToolbarPortalPopover
+                  anchorRef={patternAnchorRef}
+                  onRequestClose={() => setPatternOpen(false)}
+                  role="dialog"
+                  aria-label="Scallop spacing"
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 15,
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <ToolbarLabel>Spacing</ToolbarLabel>
+                    <div
+                      className={styles.traceSliderTooltipWrap}
+                      style={{ width: 96, flexShrink: 0 }}
+                    >
+                      <div
+                        className={[
+                          styles.traceSliderTooltip,
+                          patternTooltipVisible
+                            ? styles.traceSliderTooltipVisible
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden="true"
+                        style={{ left: `${patternTooltipPercent}%` }}
+                      >
+                        {patternLabel}
+                      </div>
+                      <Slider
+                        min={0.5}
+                        max={2.5}
+                        step={0.1}
+                        value={normalizedPatternScale}
+                        aria-label="Scallop spacing"
+                        aria-valuetext={`${patternLabel} scallop spacing`}
+                        onPointerDown={() => setPatternTooltipVisible(true)}
+                        onBlur={() => setPatternTooltipVisible(false)}
+                        onChange={(event) => {
+                          dispatch(
+                            createUpdateIconPlacementCommand({
+                              primitivePatternScale: Number(event.currentTarget.value),
                             }),
                           );
                         }}

@@ -59,6 +59,7 @@ export async function convertIconPlacementToPaintGroups(
           secondaryStrokeColor: primitiveColors.secondary,
           strokeReferenceSize: placement.primitiveStrokeReferenceSize,
           strokeWidthScale: placement.strokeWidthScale,
+          patternScale: placement.primitivePatternScale,
         });
       })()
     : await renderIconPlacementPreview(

@@ -7,6 +7,7 @@ export type PrimitiveIconKind =
   | "triangle"
   | "heart"
   | "star"
+  | "scalloped-frame"
   | "greek-key-frame"
   | "greek-key-frame-shadow";
 
@@ -18,6 +19,7 @@ interface PrimitiveIconSvgOptions {
   secondaryStrokeColor?: string | null;
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
+  patternScale?: number;
 }
 
 const DEFAULT_STROKE_COLOR = "#121923";
@@ -31,6 +33,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "circle";
     case "shapes/heart.svg":
       return "heart";
+    case "frames/scalloped-frame.svg":
+      return "scalloped-frame";
     case "frames/greek-key-frame.svg":
       return "greek-key-frame";
     case "frames/greek-key-frame-shadow.svg":
@@ -54,6 +58,7 @@ export function buildPrimitiveIconDataUrl({
   secondaryStrokeColor,
   strokeReferenceSize,
   strokeWidthScale = 1,
+  patternScale = 1,
 }: PrimitiveIconSvgOptions): string {
   const normalizedWidth = Math.max(1, width);
   const normalizedHeight = Math.max(1, height);
@@ -130,6 +135,18 @@ export function buildPrimitiveIconDataUrl({
         halfStroke,
       );
 
+      shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        3,
+      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      break;
+    }
+    case "scalloped-frame": {
+      const pathData = buildScallopedFramePathData(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+        patternScale,
+      );
       shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -238,7 +255,9 @@ function getPrimitiveStrokeWidth(
   strokeWidthScale: number,
 ): number {
   const baseStrokeRatio =
-    kind === "greek-key-frame" || kind === "greek-key-frame-shadow"
+    kind === "scalloped-frame" ||
+    kind === "greek-key-frame" ||
+    kind === "greek-key-frame-shadow"
       ? FRAME_PRIMITIVE_STROKE_RATIO
       : DEFAULT_PRIMITIVE_STROKE_RATIO;
   const referenceSize =
@@ -356,6 +375,206 @@ function buildGreekKeyFramePathData(
     `L ${topLeftExitX.toFixed(3)} ${topLeftInsetY.toFixed(3)}`,
     `L ${topLeftExitX.toFixed(3)} ${top.toFixed(3)}`,
   ].join(" ");
+}
+
+function buildScallopedFramePathData(
+  width: number,
+  height: number,
+  inset: number,
+  patternScale: number,
+): string {
+  const safeWidth = Math.max(1, width - inset * 2);
+  const safeHeight = Math.max(1, height - inset * 2);
+  const minDimension = Math.max(1, Math.min(safeWidth, safeHeight));
+  const scallopAmplitude = Math.max(minDimension * 0.028, 2);
+  const baseInset = inset + scallopAmplitude;
+  const left = baseInset;
+  const top = baseInset;
+  const right = Math.max(left, width - baseInset);
+  const bottom = Math.max(top, height - baseInset);
+  const baseWidth = Math.max(1, right - left);
+  const baseHeight = Math.max(1, bottom - top);
+  const cornerRadius = Math.min(
+    Math.max(minDimension * 0.06, scallopAmplitude * 1.8),
+    Math.min(baseWidth, baseHeight) / 2,
+  );
+  const straightWidth = Math.max(0, baseWidth - cornerRadius * 2);
+  const straightHeight = Math.max(0, baseHeight - cornerRadius * 2);
+  const cornerArcLength = (Math.PI / 2) * cornerRadius;
+  const perimeter = straightWidth * 2 + straightHeight * 2 + cornerArcLength * 4;
+  const normalizedPatternScale =
+    Number.isFinite(patternScale) && patternScale > 0 ? patternScale : 1;
+  const targetScallopWavelength = Math.max(
+    minDimension * 0.14 * normalizedPatternScale,
+    10 * normalizedPatternScale,
+  );
+  const waveCount = Math.max(12, Math.round(perimeter / targetScallopWavelength));
+  const sampleCount = Math.max(180, waveCount * 24);
+
+  const points = Array.from({ length: sampleCount }, (_, index) => {
+    const distance = (index / sampleCount) * perimeter;
+    const basePoint = getRoundedRectPerimeterPoint(
+      left,
+      top,
+      right,
+      bottom,
+      cornerRadius,
+      distance,
+    );
+    const waveOffset =
+      scallopAmplitude *
+      Math.sin((distance / perimeter) * waveCount * Math.PI * 2 - Math.PI / 2);
+
+    return {
+      x: basePoint.x + basePoint.normalX * waveOffset,
+      y: basePoint.y + basePoint.normalY * waveOffset,
+    };
+  });
+
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`)
+    .concat("Z")
+    .join(" ");
+}
+
+function getRoundedRectPerimeterPoint(
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+  radius: number,
+  distance: number,
+): { x: number; y: number; normalX: number; normalY: number } {
+  const straightWidth = Math.max(0, right - left - radius * 2);
+  const straightHeight = Math.max(0, bottom - top - radius * 2);
+  const cornerArcLength = (Math.PI / 2) * radius;
+  const segments = [
+    { kind: "line-top", length: straightWidth },
+    { kind: "arc-tr", length: cornerArcLength },
+    { kind: "line-right", length: straightHeight },
+    { kind: "arc-br", length: cornerArcLength },
+    { kind: "line-bottom", length: straightWidth },
+    { kind: "arc-bl", length: cornerArcLength },
+    { kind: "line-left", length: straightHeight },
+    { kind: "arc-tl", length: cornerArcLength },
+  ] as const;
+  const perimeter = segments.reduce((sum, segment) => sum + segment.length, 0);
+  let remaining = ((distance % perimeter) + perimeter) % perimeter;
+
+  for (const segment of segments) {
+    if (remaining > segment.length && segment.length > 0) {
+      remaining -= segment.length;
+      continue;
+    }
+
+    switch (segment.kind) {
+      case "line-top": {
+        const t = straightWidth === 0 ? 0 : remaining / straightWidth;
+        return {
+          x: left + radius + straightWidth * t,
+          y: top,
+          normalX: 0,
+          normalY: -1,
+        };
+      }
+      case "arc-tr":
+        return getCornerArcPoint(
+          right - radius,
+          top + radius,
+          radius,
+          -Math.PI / 2,
+          0,
+          remaining,
+          cornerArcLength,
+        );
+      case "line-right": {
+        const t = straightHeight === 0 ? 0 : remaining / straightHeight;
+        return {
+          x: right,
+          y: top + radius + straightHeight * t,
+          normalX: 1,
+          normalY: 0,
+        };
+      }
+      case "arc-br":
+        return getCornerArcPoint(
+          right - radius,
+          bottom - radius,
+          radius,
+          0,
+          Math.PI / 2,
+          remaining,
+          cornerArcLength,
+        );
+      case "line-bottom": {
+        const t = straightWidth === 0 ? 0 : remaining / straightWidth;
+        return {
+          x: right - radius - straightWidth * t,
+          y: bottom,
+          normalX: 0,
+          normalY: 1,
+        };
+      }
+      case "arc-bl":
+        return getCornerArcPoint(
+          left + radius,
+          bottom - radius,
+          radius,
+          Math.PI / 2,
+          Math.PI,
+          remaining,
+          cornerArcLength,
+        );
+      case "line-left": {
+        const t = straightHeight === 0 ? 0 : remaining / straightHeight;
+        return {
+          x: left,
+          y: bottom - radius - straightHeight * t,
+          normalX: -1,
+          normalY: 0,
+        };
+      }
+      case "arc-tl":
+        return getCornerArcPoint(
+          left + radius,
+          top + radius,
+          radius,
+          Math.PI,
+          (Math.PI * 3) / 2,
+          remaining,
+          cornerArcLength,
+        );
+    }
+  }
+
+  return {
+    x: left + radius,
+    y: top,
+    normalX: 0,
+    normalY: -1,
+  };
+}
+
+function getCornerArcPoint(
+  centerX: number,
+  centerY: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  distance: number,
+  arcLength: number,
+): { x: number; y: number; normalX: number; normalY: number } {
+  const t = arcLength === 0 ? 0 : distance / arcLength;
+  const angle = startAngle + (endAngle - startAngle) * t;
+  const normalX = Math.cos(angle);
+  const normalY = Math.sin(angle);
+
+  return {
+    x: centerX + normalX * radius,
+    y: centerY + normalY * radius,
+    normalX,
+    normalY,
+  };
 }
 
 function mixHexWithWhite(hex: string, whiteMix: number): string {
