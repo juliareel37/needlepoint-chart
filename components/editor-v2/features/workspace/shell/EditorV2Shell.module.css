@@ -366,6 +366,25 @@
   color: var(--text-secondary);
 }
 
+.sidebarSearchField {
+  position: relative;
+}
+
+.sidebarSearchIcon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  opacity: 0.64;
+  pointer-events: none;
+}
+
+.sidebarSearchInput {
+  padding-left: 38px;
+}
+
 .iconSelectionSummary {
   display: flex;
   align-items: center;

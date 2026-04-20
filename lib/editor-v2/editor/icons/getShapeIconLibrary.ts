@@ -1,10 +1,12 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type { ShapeIconLibraryItem } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
+import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
 import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
+const iconSearchKeywordMap = iconSearchKeywords as Record<string, string[]>;
 
 export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
   const files = await collectIconFiles(SHAPES_ROOT);
@@ -26,6 +28,7 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
         intrinsicWidth: width,
         intrinsicHeight: height,
         colorSlots,
+        searchKeywords: normalizeSearchKeywords(iconSearchKeywordMap[path.basename(relativePath)]),
       };
     }),
   );
@@ -201,4 +204,29 @@ function compareCategories(left: string, right: string): number {
   }
 
   return left.localeCompare(right);
+}
+
+function normalizeSearchKeywords(keywords: unknown): string[] {
+  if (!Array.isArray(keywords)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const normalizedKeywords: string[] = [];
+
+  for (const keyword of keywords) {
+    if (typeof keyword !== "string") {
+      continue;
+    }
+
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    if (!normalizedKeyword || seen.has(normalizedKeyword)) {
+      continue;
+    }
+
+    seen.add(normalizedKeyword);
+    normalizedKeywords.push(normalizedKeyword);
+  }
+
+  return normalizedKeywords;
 }

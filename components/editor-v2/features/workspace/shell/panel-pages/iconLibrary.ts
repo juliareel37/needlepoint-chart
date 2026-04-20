@@ -8,4 +8,5 @@ export interface ShapeIconLibraryItem {
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
+  searchKeywords: string[];
 }

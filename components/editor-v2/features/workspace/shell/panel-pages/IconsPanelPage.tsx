@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
+import { FieldInput } from "@/components/design-system/Field";
 import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { createBeginIconPlacementCommand } from "../../workspaceCommands";
@@ -27,6 +28,7 @@ export function IconsPanelPage({
   const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,11 +66,27 @@ export function IconsPanelPage({
     };
   }, []);
 
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+  const filteredIcons = useMemo(
+    () =>
+      normalizedSearchQuery
+        ? icons.filter((icon) => {
+            if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
+              return true;
+            }
+
+            return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
+          })
+        : icons,
+    [icons, normalizedSearchQuery],
+  );
+
   const iconGroups = useMemo(
     () => {
       const groups = new Map<string, ShapeIconLibraryItem[]>();
 
-      for (const icon of icons) {
+      for (const icon of filteredIcons) {
         const group = groups.get(icon.category);
         if (group) {
           group.push(icon);
@@ -82,9 +100,10 @@ export function IconsPanelPage({
         items,
       }));
     },
-    [icons],
+    [filteredIcons],
   );
   const placementActive = Boolean(placement);
+  const hasSearchResults = iconGroups.length > 0;
 
   return (
     <section className={styles.sidebarSection}>
@@ -98,6 +117,27 @@ export function IconsPanelPage({
           </p>
         </div>
 
+        <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSearchField}>
+            <img
+              src="/icons/lucide/search.svg"
+              alt=""
+              aria-hidden="true"
+              width="16"
+              height="16"
+              className={styles.sidebarSearchIcon}
+            />
+            <FieldInput
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search icons"
+              aria-label="Search icons"
+              className={styles.sidebarSearchInput}
+            />
+          </div>
+        </div>
+
         {loading ? (
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             Loading icons...
@@ -107,6 +147,12 @@ export function IconsPanelPage({
         {!loading && loadError ? (
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             {loadError}
+          </p>
+        ) : null}
+
+        {!loading && !loadError && !hasSearchResults ? (
+          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            No icons found for "{searchQuery.trim()}".
           </p>
         ) : null}
 
