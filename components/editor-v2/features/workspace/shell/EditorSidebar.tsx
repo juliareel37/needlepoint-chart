@@ -18,7 +18,7 @@ import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPer
 import type { SaveButtonState } from "../../../app/EditorV2Workspace";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
-import { IconsPanelPage } from "./panel-pages/IconsPanelPage";
+import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
 import { TextPanelPage } from "./panel-pages/TextPanelPage";
 import { TracePanelPage } from "./panel-pages/TracePanelPage";
 import { SettingsPanelPage } from "./panel-pages/SettingsPanelPage";
@@ -88,10 +88,17 @@ export function EditorSidebar({
   textViewportCenter,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
+  const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
 
   useEffect(() => {
     if (activeSection !== "color") {
       setColorPanelView("overview");
+    }
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (activeSection !== "icons") {
+      setIconsPanelView({ type: "overview" });
     }
   }, [activeSection]);
 
@@ -112,6 +119,21 @@ export function EditorSidebar({
               </button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
                 Design Colors
+              </span>
+            </div>
+          ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
+            <div className={styles.sidebarPanelBackRow}>
+              <button
+                type="button"
+                className={styles.sidebarPanelBackButton}
+                aria-label="Back to icon categories"
+                title="Back to icon categories"
+                onClick={() => setIconsPanelView({ type: "overview" })}
+              >
+                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+              </button>
+              <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                {iconsPanelView.category}
               </span>
             </div>
           ) : (
@@ -198,7 +220,9 @@ export function EditorSidebar({
           <IconsPanelPage
             dispatch={dispatch}
             gridMetrics={gridMetrics}
+            onViewChange={setIconsPanelView}
             placement={iconPlacement}
+            view={iconsPanelView}
             viewportCenter={textViewportCenter}
           />
         ) : null}

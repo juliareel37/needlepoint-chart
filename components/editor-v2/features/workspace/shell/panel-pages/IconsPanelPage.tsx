@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
+import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
 import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -11,18 +12,30 @@ import type { ShapeIconLibraryItem } from "./iconLibrary";
 import styles from "../EditorV2Shell.module.css";
 
 const DEFAULT_INITIAL_WIDTH_RATIO = 0.42;
+const ICON_PREVIEW_ROWS = 2;
+const ICON_COLUMNS = 3;
+const ICON_PREVIEW_LIMIT = ICON_PREVIEW_ROWS * ICON_COLUMNS;
+const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
+
+export type IconsPanelView =
+  | { type: "overview" }
+  | { type: "category"; category: string };
 
 interface IconsPanelPageProps {
   dispatch: EditorStore["dispatch"];
   gridMetrics: GridWorldMetrics;
+  onViewChange: (view: IconsPanelView) => void;
   placement: IconPlacementSession | null;
+  view: IconsPanelView;
   viewportCenter: WorldPoint | null;
 }
 
 export function IconsPanelPage({
   dispatch,
   gridMetrics,
+  onViewChange,
   placement,
+  view,
   viewportCenter,
 }: IconsPanelPageProps) {
   const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
@@ -67,6 +80,11 @@ export function IconsPanelPage({
   }, []);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const selectedCategory = view.type === "category" ? view.category : null;
+
+  useEffect(() => {
+    setSearchQuery("");
+  }, [selectedCategory]);
 
   const filteredIcons = useMemo(
     () =>
@@ -102,20 +120,84 @@ export function IconsPanelPage({
     },
     [filteredIcons],
   );
+  const categoryIcons = useMemo(
+    () =>
+      selectedCategory
+        ? icons.filter((icon) => icon.category === selectedCategory)
+        : [],
+    [icons, selectedCategory],
+  );
+  const filteredCategoryIcons = useMemo(
+    () =>
+      normalizedSearchQuery
+        ? categoryIcons.filter((icon) => {
+            if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
+              return true;
+            }
+
+            return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
+          })
+        : categoryIcons,
+    [categoryIcons, normalizedSearchQuery],
+  );
   const placementActive = Boolean(placement);
   const hasSearchResults = iconGroups.length > 0;
+  const hasCategorySearchResults = filteredCategoryIcons.length > 0;
+
+  function renderIconButton(item: ShapeIconLibraryItem) {
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={styles.iconLibraryCard}
+        aria-label={item.name}
+        title={item.name}
+        disabled={placementActive}
+        onClick={() => {
+          dispatch(
+            createBeginIconPlacementCommand({
+              iconId: item.id,
+              name: item.name,
+              src: item.src,
+              intrinsicWidth: item.intrinsicWidth,
+              intrinsicHeight: item.intrinsicHeight,
+              colorSlots: item.colorSlots,
+              selectedColorSlotId: item.colorSlots[0]?.id ?? null,
+              ...getInitialPlacementTransform({
+                intrinsicWidth: item.intrinsicWidth,
+                intrinsicHeight: item.intrinsicHeight,
+                metrics: gridMetrics,
+                viewportCenter,
+                widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+              }),
+            }),
+          );
+        }}
+      >
+        <span className={styles.iconLibraryPreview} aria-hidden="true">
+          <img
+            src={item.src}
+            alt=""
+            width="72"
+            height="72"
+            className={styles.iconLibraryPreviewImage}
+          />
+        </span>
+      </button>
+    );
+  }
 
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        <div className={styles.sidebarSubsection}>
+        {/* <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Icon library</h3>
           </div>
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             Click any icon to place it on the canvas, then size, color, and convert it.
           </p>
-        </div>
+        </div> */}
 
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>
@@ -138,6 +220,24 @@ export function IconsPanelPage({
           </div>
         </div>
 
+        {view.type === "category" ? (
+          <>
+            {!loading && !loadError && !hasCategorySearchResults ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                No icons found in {selectedCategory} for "{searchQuery.trim()}".
+              </p>
+            ) : null}
+
+            {!loading && !loadError && hasCategorySearchResults ? (
+              <div className={styles.sidebarSubsection}>
+                <div className={styles.iconLibraryGrid}>
+                  {filteredCategoryIcons.map((item) => renderIconButton(item))}
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
         {loading ? (
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             Loading icons...
@@ -150,64 +250,70 @@ export function IconsPanelPage({
           </p>
         ) : null}
 
-        {!loading && !loadError && !hasSearchResults ? (
+        {!loading && !loadError && view.type === "overview" && !hasSearchResults ? (
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             No icons found for "{searchQuery.trim()}".
           </p>
         ) : null}
 
-        {iconGroups.map((group) => (
-          <div key={group.category} className={styles.sidebarSubsection}>
-            <div className={styles.sidebarSubsectionHeader}>
-              <h3 style={typographyStyles.h5}>{group.category}</h3>
-            </div>
+        {view.type === "overview"
+          ? iconGroups.map((group) => {
+              const previewItems = normalizedSearchQuery
+                ? group.items
+                : group.items.slice(
+                    0,
+                    group.items.length > ICON_PREVIEW_VISIBLE_ICONS
+                      ? ICON_PREVIEW_VISIBLE_ICONS
+                      : ICON_PREVIEW_LIMIT,
+                  );
+              const hiddenCount = normalizedSearchQuery
+                ? 0
+                : Math.max(group.items.length - ICON_PREVIEW_VISIBLE_ICONS, 0);
 
-            <div className={styles.iconLibraryGrid}>
-              {group.items.map((item) => {
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={styles.iconLibraryCard}
-                    aria-label={item.name}
-                    title={item.name}
-                    disabled={placementActive}
-                    onClick={() => {
-                      dispatch(
-                        createBeginIconPlacementCommand({
-                          iconId: item.id,
-                          name: item.name,
-                          src: item.src,
-                          intrinsicWidth: item.intrinsicWidth,
-                          intrinsicHeight: item.intrinsicHeight,
-                          colorSlots: item.colorSlots,
-                          selectedColorSlotId: item.colorSlots[0]?.id ?? null,
-                          ...getInitialPlacementTransform({
-                            intrinsicWidth: item.intrinsicWidth,
-                            intrinsicHeight: item.intrinsicHeight,
-                            metrics: gridMetrics,
-                            viewportCenter,
-                            widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
-                          }),
-                        }),
-                      );
-                    }}
-                  >
-                    <span className={styles.iconLibraryPreview} aria-hidden="true">
-                      <img
-                        src={item.src}
-                        alt=""
-                        width="72"
-                        height="72"
-                        className={styles.iconLibraryPreviewImage}
-                      />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+              return (
+                <div key={group.category} className={styles.sidebarSubsection}>
+                  <div className={styles.sidebarSubsectionHeaderRow}>
+                    <div className={styles.sidebarSubsectionHeader}>
+                      <h3 style={typographyStyles.h5}>{group.category}</h3>
+                      {!normalizedSearchQuery && hiddenCount > 0 ? (
+                        <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                          {group.items.length} icons
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghostV2"
+                      size="sm"
+                      className={styles.sidebarHeaderAction}
+                      aria-label={`View all icons in ${group.category}`}
+                      title={`View all icons in ${group.category}`}
+                      onClick={() => onViewChange({ type: "category", category: group.category })}
+                    >
+                      <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                    </Button>
+                  </div>
+
+                  <div className={styles.iconLibraryGrid}>
+                    {previewItems.map((item) => renderIconButton(item))}
+                    {!normalizedSearchQuery && hiddenCount > 0 ? (
+                      <Button
+                        type="button"
+                        variant="ghostV2"
+                        size="sm"
+                        className={styles.iconLibraryMoreButton}
+                        aria-label={`View ${hiddenCount} more icons in ${group.category}`}
+                        title={`View ${hiddenCount} more icons in ${group.category}`}
+                        onClick={() => onViewChange({ type: "category", category: group.category })}
+                      >
+                        + {hiddenCount} more
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          : null}
       </div>
     </section>
   );
