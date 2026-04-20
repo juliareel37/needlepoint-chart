@@ -1,4 +1,5 @@
 import type { IconColorSlot } from "@/lib/editor-v2/editor/icons/iconColorSlots";
+import type { PrimitiveIconKind } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 
 export interface ShapeIconLibraryItem {
   id: string;
@@ -8,5 +9,7 @@ export interface ShapeIconLibraryItem {
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
+  primitiveKind: PrimitiveIconKind | null;
+  supportsStrokeWidth: boolean;
   searchKeywords: string[];
 }

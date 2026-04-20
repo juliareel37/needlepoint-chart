@@ -3,6 +3,7 @@ import path from "path";
 import type { ShapeIconLibraryItem } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
 import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
 import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
+import { getPrimitiveIconKind } from "./primitiveIcon";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
@@ -15,8 +16,13 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
       const relativePath = path.relative(SHAPES_ROOT, absolutePath);
       const extension = path.extname(relativePath).toLowerCase();
       const fileContents = await fs.readFile(absolutePath);
-      const { src, width, height, colorSlots } = buildIconAsset(fileContents, absolutePath, extension);
       const normalizedRelativePath = relativePath.split(path.sep).join("/");
+      const { src, width, height, colorSlots, primitiveKind, supportsStrokeWidth } = buildIconAsset(
+        fileContents,
+        absolutePath,
+        extension,
+        normalizedRelativePath,
+      );
       const fileName = path.basename(relativePath, extension);
       const categoryPath = path.dirname(relativePath);
 
@@ -28,6 +34,8 @@ export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
         intrinsicWidth: width,
         intrinsicHeight: height,
         colorSlots,
+        primitiveKind,
+        supportsStrokeWidth,
         searchKeywords: normalizeSearchKeywords(iconSearchKeywordMap[path.basename(relativePath)]),
       };
     }),
@@ -67,12 +75,16 @@ function buildIconAsset(
   fileContents: Buffer,
   absolutePath: string,
   extension: string,
+  normalizedRelativePath: string,
 ): {
   src: string;
   width: number;
   height: number;
   colorSlots: ShapeIconLibraryItem["colorSlots"];
+  primitiveKind: ShapeIconLibraryItem["primitiveKind"];
+  supportsStrokeWidth: boolean;
 } {
+  const primitiveKind = getPrimitiveIconKind(normalizedRelativePath);
   if (extension === ".svg") {
     const svg = extractSvgMarkup(fileContents, absolutePath);
     const { width, height } = getSvgDimensions(svg);
@@ -81,6 +93,10 @@ function buildIconAsset(
       width,
       height,
       colorSlots: extractIconColorSlotsFromSvg(svg),
+      primitiveKind,
+      supportsStrokeWidth: primitiveKind
+        ? true
+        : supportsStrokeWidthControl(normalizedRelativePath, svg),
     };
   }
 
@@ -91,10 +107,20 @@ function buildIconAsset(
       width,
       height,
       colorSlots: [],
+      primitiveKind,
+      supportsStrokeWidth: false,
     };
   }
 
   throw new Error(`Unsupported icon file extension: ${absolutePath}`);
+}
+
+function supportsStrokeWidthControl(relativePath: string, svg: string): boolean {
+  if (!relativePath.startsWith("shapes/shapes/")) {
+    return false;
+  }
+
+  return /\bstroke(?:-width)?=["'][^"']+["']/i.test(svg) || /\bstroke\s*:/i.test(svg);
 }
 
 function extractSvgMarkup(fileContents: Buffer, absolutePath: string): string {

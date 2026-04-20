@@ -238,6 +238,10 @@ export type BeginIconPlacementCommand = BaseEditorCommand<
     | "intrinsicWidth"
     | "intrinsicHeight"
     | "colorSlots"
+    | "primitiveKind"
+    | "primitiveStrokeReferenceSize"
+    | "supportsStrokeWidth"
+    | "strokeWidthScale"
     | "selectedColorSlotId"
   > & {
     offsetX?: number;
@@ -270,6 +274,10 @@ export type UpdateIconPlacementCommand = BaseEditorCommand<
       | "intrinsicWidth"
       | "intrinsicHeight"
       | "colorSlots"
+      | "primitiveKind"
+      | "primitiveStrokeReferenceSize"
+      | "supportsStrokeWidth"
+      | "strokeWidthScale"
       | "selectedColorSlotId"
       | "offsetX"
       | "offsetY"

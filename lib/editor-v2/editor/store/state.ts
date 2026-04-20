@@ -1,6 +1,7 @@
 import type { EditorCommandKind, EditorCommandSource } from "../commands/types";
 import type { DocumentPatch } from "./patches";
 import type { IconColorSlot } from "../icons/iconColorSlots";
+import type { PrimitiveIconKind } from "../icons/primitiveIcon";
 
 export type GridCellValue = string | null;
 
@@ -277,6 +278,10 @@ export interface IconPlacementSession {
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
+  primitiveKind: PrimitiveIconKind | null;
+  primitiveStrokeReferenceSize: number | null;
+  supportsStrokeWidth: boolean;
+  strokeWidthScale: number;
   selectedColorSlotId: string | null;
   offsetX: number;
   offsetY: number;

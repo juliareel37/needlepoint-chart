@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildPrimitiveIconDataUrl,
+  resolveIconPreviewStrokeColor,
+} from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -62,12 +66,48 @@ export function IconPlacementLayer({
     [baseRect, transform],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
+  const previewImageRef = useRef<HTMLImageElement | null>(null);
   const [previewSrc, setPreviewSrc] = useState(placement.src);
+  const primitiveStrokeColor = useMemo(
+    () =>
+      placement.primitiveKind
+        ? resolveIconPreviewStrokeColor(placement.colorSlots, paletteById, previewColor)
+        : null,
+    [paletteById, placement.colorSlots, placement.primitiveKind, previewColor],
+  );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
-    if (previewIconRef.current) {
-      previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
+    if (!previewIconRef.current) {
+      return;
     }
-  }, []);
+
+    if (placement.primitiveKind) {
+      const nextBounds = getIconPlacementBounds(baseRect, nextTransform);
+      previewIconRef.current.style.left = `${nextBounds.left}px`;
+      previewIconRef.current.style.top = `${nextBounds.top}px`;
+      previewIconRef.current.style.width = `${nextBounds.width}px`;
+      previewIconRef.current.style.height = `${nextBounds.height}px`;
+      previewIconRef.current.style.transform = "none";
+      if (previewImageRef.current) {
+        previewImageRef.current.src = buildPrimitiveIconDataUrl({
+          kind: placement.primitiveKind,
+          width: nextBounds.width,
+          height: nextBounds.height,
+          strokeColor: primitiveStrokeColor ?? previewColor,
+          strokeReferenceSize: placement.primitiveStrokeReferenceSize,
+          strokeWidthScale: placement.strokeWidthScale,
+        });
+      }
+      return;
+    }
+
+    previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
+  }, [
+    baseRect,
+    placement.primitiveKind,
+    placement.strokeWidthScale,
+    previewColor,
+    primitiveStrokeColor,
+  ]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform, _transactionKey?: string) => {
       dispatch(
@@ -86,6 +126,20 @@ export function IconPlacementLayer({
     let cancelled = false;
 
     async function buildPreview() {
+      if (placement.primitiveKind) {
+        setPreviewSrc(
+          buildPrimitiveIconDataUrl({
+            kind: placement.primitiveKind,
+            width: bounds.width,
+            height: bounds.height,
+            strokeColor: primitiveStrokeColor ?? previewColor,
+            strokeReferenceSize: placement.primitiveStrokeReferenceSize,
+            strokeWidthScale: placement.strokeWidthScale,
+          }),
+        );
+        return;
+      }
+
       if (placement.colorSlots.length === 0) {
         setPreviewSrc(placement.src);
         return;
@@ -98,6 +152,10 @@ export function IconPlacementLayer({
           placement.intrinsicHeight,
           placement.colorSlots,
           paletteById,
+          {
+            strokeWidthScale: placement.strokeWidthScale,
+            supportsStrokeWidth: placement.supportsStrokeWidth,
+          },
         );
 
         if (!cancelled) {
@@ -116,11 +174,19 @@ export function IconPlacementLayer({
       cancelled = true;
     };
   }, [
+    bounds.height,
+    bounds.width,
     paletteById,
     placement.colorSlots,
     placement.intrinsicHeight,
     placement.intrinsicWidth,
+    placement.primitiveKind,
+    placement.primitiveStrokeReferenceSize,
     placement.src,
+    placement.strokeWidthScale,
+    placement.supportsStrokeWidth,
+    previewColor,
+    primitiveStrokeColor,
   ]);
 
   return (
@@ -139,11 +205,13 @@ export function IconPlacementLayer({
         ref={previewIconRef}
         style={{
           position: "absolute",
-          top: `${baseRect.top}px`,
-          left: `${baseRect.left}px`,
-          width: `${baseRect.width}px`,
-          height: `${baseRect.height}px`,
-          transform: getIconPlacementTransformCss(transform),
+          top: `${placement.primitiveKind ? bounds.top : baseRect.top}px`,
+          left: `${placement.primitiveKind ? bounds.left : baseRect.left}px`,
+          width: `${placement.primitiveKind ? bounds.width : baseRect.width}px`,
+          height: `${placement.primitiveKind ? bounds.height : baseRect.height}px`,
+          transform: placement.primitiveKind
+            ? "none"
+            : getIconPlacementTransformCss(transform),
           transformOrigin: "top left",
           willChange: "transform",
           pointerEvents: "none",
@@ -155,6 +223,7 @@ export function IconPlacementLayer({
         >
         {placement.colorSlots.length > 0 ? (
           <img
+            ref={previewImageRef}
             src={previewSrc}
             alt=""
             aria-hidden="true"

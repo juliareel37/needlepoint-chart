@@ -5,11 +5,14 @@ import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
   Button,
+  Slider,
   Toolbar,
   ToolbarAnchor,
   ToolbarButton,
   ToolbarDivider,
   ToolbarGroup,
+  ToolbarIcon,
+  ToolbarLabel,
   ToolbarSwatch,
   ToolbarPopover,
 } from "@/components/design-system";
@@ -139,8 +142,19 @@ export function IconPlacementToolbar({
   placement,
 }: IconPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
+  const [strokeWidthOpen, setStrokeWidthOpen] = useState(false);
+  const [strokeWidthTooltipVisible, setStrokeWidthTooltipVisible] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
+  const strokeWidthAnchorRef = useRef<HTMLDivElement | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const paletteById = useMemo(
+    () =>
+      palette.reduce<Record<string, PaletteColor>>((accumulator, color) => {
+        accumulator[color.id] = color;
+        return accumulator;
+      }, {}),
+    [palette],
+  );
   const selectedSlot = useMemo(
     () =>
       placement.selectedColorSlotId
@@ -158,6 +172,12 @@ export function IconPlacementToolbar({
     (placement.colorSlots.length > 0
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
       : Boolean(activeColorId));
+  const normalizedStrokeWidth = placement.strokeWidthScale;
+  const strokeWidthTooltipPercent = Math.max(
+    0,
+    Math.min(100, ((normalizedStrokeWidth - 0.5) / (3 - 0.5)) * 100),
+  );
+  const strokeWidthLabel = `${normalizedStrokeWidth.toFixed(1)}x`;
 
   async function handleConvert() {
     if (isConverting) {
@@ -171,6 +191,7 @@ export function IconPlacementToolbar({
         placement,
         gridMetrics,
         activeColorId,
+        paletteById,
       );
       if (groups.length === 0) {
         return;
@@ -252,6 +273,84 @@ export function IconPlacementToolbar({
       </ToolbarGroup>
 
       <ToolbarDivider />
+
+      {placement.supportsStrokeWidth ? (
+        <>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={strokeWidthAnchorRef}>
+              <ToolbarButton
+                type="button"
+                active={strokeWidthOpen}
+                aria-pressed={strokeWidthOpen}
+                aria-label="Icon thickness"
+                title="Icon thickness"
+                onClick={() => setStrokeWidthOpen((current) => !current)}
+              >
+                <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+              </ToolbarButton>
+
+              {strokeWidthOpen ? (
+                <IconToolbarPortalPopover
+                  anchorRef={strokeWidthAnchorRef}
+                  onRequestClose={() => setStrokeWidthOpen(false)}
+                  role="dialog"
+                  aria-label="Icon thickness"
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 15,
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <ToolbarLabel>Thickness</ToolbarLabel>
+                    <div
+                      className={styles.traceSliderTooltipWrap}
+                      style={{ width: 96, flexShrink: 0 }}
+                    >
+                      <div
+                        className={[
+                          styles.traceSliderTooltip,
+                          strokeWidthTooltipVisible
+                            ? styles.traceSliderTooltipVisible
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-hidden="true"
+                        style={{ left: `${strokeWidthTooltipPercent}%` }}
+                      >
+                        {strokeWidthLabel}
+                      </div>
+                      <Slider
+                        min={0.5}
+                        max={3}
+                        step={0.1}
+                        value={normalizedStrokeWidth}
+                        aria-label="Icon thickness"
+                        aria-valuetext={`${strokeWidthLabel} line thickness`}
+                        onPointerDown={() => setStrokeWidthTooltipVisible(true)}
+                        onBlur={() => setStrokeWidthTooltipVisible(false)}
+                        onChange={(event) => {
+                          dispatch(
+                            createUpdateIconPlacementCommand({
+                              strokeWidthScale: Number(event.currentTarget.value),
+                            }),
+                          );
+                        }}
+                        style={{ width: "100%", maxWidth: "none" }}
+                      />
+                    </div>
+                  </div>
+                </IconToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+          <ToolbarDivider />
+        </>
+      ) : null}
 
       {placement.colorSlots.length > 0 ? (
         <>

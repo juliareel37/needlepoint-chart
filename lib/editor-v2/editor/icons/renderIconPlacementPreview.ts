@@ -9,14 +9,24 @@ export async function renderIconPlacementPreview(
   height: number,
   slots: IconColorSlot[],
   paletteById: Record<string, PaletteColor>,
+  options?: {
+    strokeWidthScale?: number;
+    supportsStrokeWidth?: boolean;
+  },
 ): Promise<string> {
-  if (slots.length === 0) {
-    return src;
-  }
-
-  const recoloredSvgSrc = renderRecoloredSvgPreview(src, slots, paletteById);
+  const recoloredSvgSrc = renderRecoloredSvgPreview(
+    src,
+    slots,
+    paletteById,
+    options?.strokeWidthScale ?? 1,
+    options?.supportsStrokeWidth ?? false,
+  );
   if (recoloredSvgSrc) {
     return recoloredSvgSrc;
+  }
+
+  if (slots.length === 0) {
+    return src;
   }
 
   const canvas = document.createElement("canvas");
@@ -68,6 +78,8 @@ function renderRecoloredSvgPreview(
   src: string,
   slots: IconColorSlot[],
   paletteById: Record<string, PaletteColor>,
+  strokeWidthScale: number,
+  supportsStrokeWidth: boolean,
 ): string | null {
   const svg = decodeSvgDataUrl(src);
   if (!svg) {
@@ -88,12 +100,16 @@ function renderRecoloredSvgPreview(
     replacements.set(slot.sourceHex.toLowerCase(), paletteColor.hex.toLowerCase());
   }
 
-  if (replacements.size === 0) {
+  if (replacements.size === 0 && (!supportsStrokeWidth || Math.abs(strokeWidthScale - 1) < 0.001)) {
     return src;
   }
 
-  const recolored = recolorSvgPaints(svg, replacements);
-  return buildSvgDataUrl(recolored);
+  let nextSvg = replacements.size > 0 ? recolorSvgPaints(svg, replacements) : svg;
+  if (supportsStrokeWidth) {
+    nextSvg = scaleSvgStrokeWidths(nextSvg, strokeWidthScale);
+  }
+
+  return buildSvgDataUrl(nextSvg);
 }
 
 function recolorSvgPaints(svg: string, replacements: Map<string, string>): string {
@@ -150,6 +166,49 @@ function replacePaintValue(value: string, replacements: Map<string, string>): st
   }
 
   return replacement;
+}
+
+function scaleSvgStrokeWidths(svg: string, strokeWidthScale: number): string {
+  if (!Number.isFinite(strokeWidthScale) || strokeWidthScale <= 0) {
+    return svg;
+  }
+
+  let nextSvg = svg.replace(
+    /\bstroke-width=["']([^"']+)["']/gi,
+    (fullMatch, value: string) => {
+      const scaled = scaleStrokeWidthValue(value, strokeWidthScale);
+      return scaled ? `stroke-width="${scaled}"` : fullMatch;
+    },
+  );
+
+  nextSvg = nextSvg.replace(/\bstyle=["']([^"']*)["']/gi, (fullMatch, styleValue: string) => {
+    const nextStyle = styleValue.replace(
+      /\bstroke-width\s*:\s*([^;"']+)/gi,
+      (styleMatch, value: string) => {
+        const scaled = scaleStrokeWidthValue(value, strokeWidthScale);
+        return scaled ? `stroke-width: ${scaled}` : styleMatch;
+      },
+    );
+
+    return `style="${nextStyle}"`;
+  });
+
+  return nextSvg;
+}
+
+function scaleStrokeWidthValue(value: string, strokeWidthScale: number): string | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(-?\d*\.?\d+)([a-z%]*)$/i);
+  if (!match) {
+    return null;
+  }
+
+  const numericValue = Number.parseFloat(match[1] ?? "");
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  return `${Number.parseFloat((numericValue * strokeWidthScale).toFixed(3)).toString()}${match[2] ?? ""}`;
 }
 
 function normalizeSvgPaintValue(

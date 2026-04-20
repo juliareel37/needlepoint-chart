@@ -1,8 +1,13 @@
-import type { GridPoint, IconPlacementSession } from "../store/state";
+import type { GridPoint, IconPlacementSession, PaletteColor } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
 import { findNearestIconColorSlot } from "./iconColorSlots";
 import { getContainedRect } from "../positioning";
 import { getIconPlacementBounds } from "./iconPlacementGeometry";
+import {
+  buildPrimitiveIconDataUrl,
+  resolveIconPreviewStrokeColor,
+} from "./primitiveIcon";
+import { renderIconPlacementPreview } from "./renderIconPlacementPreview";
 
 export interface IconPlacementPaintGroup {
   colorId: string;
@@ -13,6 +18,7 @@ export async function convertIconPlacementToPaintGroups(
   placement: IconPlacementSession,
   metrics: GridWorldMetrics,
   fallbackColorId: string | null,
+  paletteById: Record<string, PaletteColor>,
 ): Promise<IconPlacementPaintGroup[]> {
   const baseRect = getContainedRect(
     placement.intrinsicWidth,
@@ -37,7 +43,31 @@ export async function convertIconPlacementToPaintGroups(
     return [];
   }
 
-  const image = await loadImage(placement.src);
+  const renderSrc = placement.primitiveKind
+    ? buildPrimitiveIconDataUrl({
+        kind: placement.primitiveKind,
+        width: canvasWidth,
+        height: canvasHeight,
+        strokeColor: resolveIconPreviewStrokeColor(
+          placement.colorSlots,
+          paletteById,
+          null,
+        ),
+        strokeReferenceSize: placement.primitiveStrokeReferenceSize,
+        strokeWidthScale: placement.strokeWidthScale,
+      })
+    : await renderIconPlacementPreview(
+        placement.src,
+        placement.intrinsicWidth,
+        placement.intrinsicHeight,
+        placement.colorSlots,
+        paletteById,
+        {
+          strokeWidthScale: placement.strokeWidthScale,
+          supportsStrokeWidth: placement.supportsStrokeWidth,
+        },
+      );
+  const image = await loadImage(renderSrc);
   context.clearRect(0, 0, canvasWidth, canvasHeight);
   context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
 

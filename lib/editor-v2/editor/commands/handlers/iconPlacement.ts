@@ -23,6 +23,10 @@ export const beginIconPlacementCommandHandler: EditorCommandHandler<BeginIconPla
             intrinsicWidth: command.payload.intrinsicWidth,
             intrinsicHeight: command.payload.intrinsicHeight,
             colorSlots: command.payload.colorSlots,
+            primitiveKind: command.payload.primitiveKind,
+            primitiveStrokeReferenceSize: command.payload.primitiveStrokeReferenceSize,
+            supportsStrokeWidth: command.payload.supportsStrokeWidth,
+            strokeWidthScale: command.payload.strokeWidthScale,
             selectedColorSlotId: command.payload.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? 0,
             offsetY: command.payload.offsetY ?? 0,
@@ -102,6 +106,14 @@ export const updateIconPlacementCommandHandler: EditorCommandHandler<UpdateIconP
             intrinsicWidth: command.payload.intrinsicWidth ?? placement.intrinsicWidth,
             intrinsicHeight: command.payload.intrinsicHeight ?? placement.intrinsicHeight,
             colorSlots: command.payload.colorSlots ?? placement.colorSlots,
+            primitiveKind: command.payload.primitiveKind ?? placement.primitiveKind,
+            primitiveStrokeReferenceSize:
+              command.payload.primitiveStrokeReferenceSize ??
+              placement.primitiveStrokeReferenceSize,
+            supportsStrokeWidth:
+              command.payload.supportsStrokeWidth ?? placement.supportsStrokeWidth,
+            strokeWidthScale:
+              command.payload.strokeWidthScale ?? placement.strokeWidthScale,
             selectedColorSlotId:
               command.payload.selectedColorSlotId ?? placement.selectedColorSlotId,
             offsetX: command.payload.offsetX ?? placement.offsetX,
