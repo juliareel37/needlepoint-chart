@@ -1,7 +1,13 @@
 import type { PaletteColor } from "../store/state";
 import type { IconColorSlot } from "./iconColorSlots";
 
-export type PrimitiveIconKind = "circle" | "rectangle" | "triangle" | "heart" | "star";
+export type PrimitiveIconKind =
+  | "circle"
+  | "rectangle"
+  | "triangle"
+  | "heart"
+  | "star"
+  | "greek-key-frame";
 
 interface PrimitiveIconSvgOptions {
   kind: PrimitiveIconKind;
@@ -15,6 +21,7 @@ interface PrimitiveIconSvgOptions {
 const DEFAULT_STROKE_COLOR = "#121923";
 const HEART_PARAMETRIC_SAMPLE_COUNT = 240;
 const DEFAULT_PRIMITIVE_STROKE_RATIO = 2 / 24;
+const FRAME_PRIMITIVE_STROKE_RATIO = 1.2 / 24;
 
 export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | null {
   switch (relativePath) {
@@ -22,6 +29,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "circle";
     case "shapes/heart.svg":
       return "heart";
+    case "frames/greek-key-frame.svg":
+      return "greek-key-frame";
     case "shapes/star.svg":
       return "star";
     case "shapes/square.svg":
@@ -121,6 +130,17 @@ export function buildPrimitiveIconDataUrl({
       )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
+    case "greek-key-frame": {
+      const pathData = buildGreekKeyFramePathData(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+      );
+      shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        3,
+      )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`;
+      break;
+    }
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" fill="none">${shapeMarkup}</svg>`;
@@ -153,7 +173,8 @@ function getPrimitiveStrokeWidth(
   strokeReferenceSize: number | null | undefined,
   strokeWidthScale: number,
 ): number {
-  const baseStrokeRatio = DEFAULT_PRIMITIVE_STROKE_RATIO;
+  const baseStrokeRatio =
+    kind === "greek-key-frame" ? FRAME_PRIMITIVE_STROKE_RATIO : DEFAULT_PRIMITIVE_STROKE_RATIO;
   const referenceSize =
     typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
       ? Math.max(strokeReferenceSize, 1)
@@ -213,6 +234,62 @@ function buildHeartParametricPathData(
   return sampledPoints
     .map((point, index) => `${index === 0 ? "M" : "L"} ${mapPoint(point)}`)
     .join(" ");
+}
+
+function buildGreekKeyFramePathData(
+  width: number,
+  height: number,
+  inset: number,
+): string {
+  const left = inset;
+  const top = inset;
+  const right = Math.max(left, width - inset);
+  const bottom = Math.max(top, height - inset);
+  const cornerUnit = Math.max(1, Math.min(right - left, bottom - top) * 0.1);
+  const shortStep = cornerUnit;
+  const longStep = shortStep * 2;
+
+  const topLeftExitX = left + longStep;
+  const topRightEntryX = right - longStep;
+  const topRightInsetX = right - shortStep;
+  const bottomRightEntryY = bottom - longStep;
+  const bottomRightInsetY = bottom - shortStep;
+  const bottomLeftExitX = left + longStep;
+  const bottomLeftInsetX = left + shortStep;
+  const topLeftEntryY = top + longStep;
+  const topLeftInsetY = top + shortStep;
+
+  return [
+    `M ${topLeftExitX.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${topRightEntryX.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${topRightEntryX.toFixed(3)} ${(top + shortStep).toFixed(3)}`,
+    `L ${right.toFixed(3)} ${(top + shortStep).toFixed(3)}`,
+    `L ${right.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${topRightInsetX.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${topRightInsetX.toFixed(3)} ${(top + longStep).toFixed(3)}`,
+    `L ${right.toFixed(3)} ${(top + longStep).toFixed(3)}`,
+    `L ${right.toFixed(3)} ${bottomRightEntryY.toFixed(3)}`,
+    `L ${topRightInsetX.toFixed(3)} ${bottomRightEntryY.toFixed(3)}`,
+    `L ${topRightInsetX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${right.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${right.toFixed(3)} ${bottomRightInsetY.toFixed(3)}`,
+    `L ${topRightEntryX.toFixed(3)} ${bottomRightInsetY.toFixed(3)}`,
+    `L ${topRightEntryX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${bottomLeftExitX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${bottomLeftExitX.toFixed(3)} ${bottomRightInsetY.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${bottomRightInsetY.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${bottomLeftInsetX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${bottomLeftInsetX.toFixed(3)} ${bottomRightEntryY.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${bottomRightEntryY.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${topLeftEntryY.toFixed(3)}`,
+    `L ${bottomLeftInsetX.toFixed(3)} ${topLeftEntryY.toFixed(3)}`,
+    `L ${bottomLeftInsetX.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${left.toFixed(3)} ${topLeftInsetY.toFixed(3)}`,
+    `L ${topLeftExitX.toFixed(3)} ${topLeftInsetY.toFixed(3)}`,
+    `L ${topLeftExitX.toFixed(3)} ${top.toFixed(3)}`,
+  ].join(" ");
 }
 
 function escapeXmlAttribute(value: string): string {
