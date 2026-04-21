@@ -72,7 +72,7 @@ export function GridWorldSurface({
   const showDisplayTrace = Boolean(
     trace &&
       traceVisible &&
-      (!tracePositioningEnabled || coarsePointer),
+      !tracePositioningEnabled,
   );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
