@@ -65,7 +65,6 @@ export function TraceImageLayer({
 }: TraceImageLayerProps) {
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
-  const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
   const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
@@ -143,16 +142,11 @@ export function TraceImageLayer({
   useEffect(() => {
     const imageSource = traceAsset?.image;
     const desktopCanvas = desktopCanvasRef.current;
-    const mobileCanvas = mobileCanvasRef.current;
 
     if (!traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
       if (desktopCanvas) {
         desktopCanvas.width = 0;
         desktopCanvas.height = 0;
-      }
-      if (mobileCanvas) {
-        mobileCanvas.width = 0;
-        mobileCanvas.height = 0;
       }
       return;
     }
@@ -167,17 +161,6 @@ export function TraceImageLayer({
         width: traceAsset.width,
         height: traceAsset.height,
       });
-    }
-
-    if (coarsePointer && mobileCanvas) {
-      drawTraceSourceToCanvas(
-        mobileCanvas,
-        imageSource as CanvasImageSource,
-        getMobileTracePreviewSize(traceAsset.width, traceAsset.height),
-      );
-    } else if (mobileCanvas) {
-      mobileCanvas.width = 0;
-      mobileCanvas.height = 0;
     }
   }, [traceAsset, coarsePointer]);
 
@@ -417,14 +400,20 @@ export function TraceImageLayer({
               WebkitUserSelect: "none",
             }}
           >
-            <canvas
-              ref={mobileCanvasRef}
+            <img
               aria-hidden="true"
+              src={trace.previewUrl}
+              alt=""
+              draggable={false}
               style={{
                 width: "100%",
                 height: "100%",
                 display: "block",
                 imageRendering: "auto",
+                objectFit: "fill",
+                pointerEvents: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
               }}
             />
           </div>
@@ -654,21 +643,6 @@ function getMobileWrapperTransformCss(transform: {
   scale: number;
 }): string {
   return `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0) scale(${transform.scale})`;
-}
-
-function getMobileTracePreviewSize(width: number, height: number): {
-  width: number;
-  height: number;
-} {
-  const scale = Math.min(
-    1,
-    MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION / Math.max(width, height),
-  );
-
-  return {
-    width: Math.max(1, Math.round(width * scale)),
-    height: Math.max(1, Math.round(height * scale)),
-  };
 }
 
 function drawTraceSourceToCanvas(
