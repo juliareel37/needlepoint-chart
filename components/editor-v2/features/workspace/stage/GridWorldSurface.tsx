@@ -90,8 +90,13 @@ export function GridWorldSurface({
   const threadView = previewMode || state.ui.preferences.threadView;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
-  const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageBounds, setStageBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -263,6 +268,12 @@ export function GridWorldSurface({
         width: rect.width,
         height: rect.height,
       });
+      setStageBounds({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
     };
 
     update();
@@ -407,18 +418,6 @@ export function GridWorldSurface({
         }}
       />
       <div
-        ref={setOverlayHost}
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          overflow: "hidden",
-          zIndex: 3,
-        }}
-      />
-
-      <div
         style={{
           position: "absolute",
           top: "50%",
@@ -458,8 +457,8 @@ export function GridWorldSurface({
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               frameOrigin={frameOrigin}
-              overlayHost={overlayHost}
               positioningEnabled={tracePositioningEnabled}
+              stageBounds={stageBounds}
               trace={trace}
               traceAsset={
                 loadedTraceAsset?.previewUrl === trace.previewUrl

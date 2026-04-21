@@ -36,8 +36,8 @@ interface TraceImageLayerProps {
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
-  overlayHost: HTMLElement | null;
   positioningEnabled: boolean;
+  stageBounds: { left: number; top: number; width: number; height: number };
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
   viewport: ViewportState;
@@ -67,8 +67,8 @@ export function TraceImageLayer({
   getWorldPointFromClient,
   imageOpacity,
   metrics,
-  overlayHost,
   positioningEnabled,
+  stageBounds,
   trace,
   traceAsset,
   viewport,
@@ -78,7 +78,6 @@ export function TraceImageLayer({
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
-  const mobileControlRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
   const mobileDragRafRef = useRef<number | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
@@ -358,7 +357,6 @@ export function TraceImageLayer({
       };
       setMobileDragging(true);
       setMobilePreviewTransform(traceTransform);
-      event.currentTarget.setPointerCapture(event.pointerId);
 
       event.preventDefault();
       event.stopPropagation();
@@ -434,12 +432,6 @@ export function TraceImageLayer({
       }
 
       mobileDragSessionRef.current = null;
-      if (
-        mobileControlRef.current?.hasPointerCapture?.(event.pointerId)
-      ) {
-        mobileControlRef.current.releasePointerCapture(event.pointerId);
-      }
-
       const deltaX = event.clientX - session.startClientX;
       const deltaY = event.clientY - session.startClientY;
       if (Math.hypot(deltaX, deltaY) < MOBILE_DRAG_THRESHOLD) {
@@ -490,12 +482,15 @@ export function TraceImageLayer({
     coarsePointer &&
     positioningEnabled &&
     mobileDisplayStageBounds &&
-    overlayHost
+    typeof document !== "undefined"
       ? createPortal(
           <div
             style={{
-              position: "absolute",
-              inset: 0,
+              position: "fixed",
+              left: `${stageBounds.left}px`,
+              top: `${stageBounds.top}px`,
+              width: `${stageBounds.width}px`,
+              height: `${stageBounds.height}px`,
               overflow: "hidden",
               pointerEvents: "none",
               zIndex,
@@ -506,8 +501,8 @@ export function TraceImageLayer({
               aria-hidden="true"
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 display: "block",
@@ -541,14 +536,13 @@ export function TraceImageLayer({
               />
             </div>
             <div
-              ref={mobileControlRef}
               aria-label="Trace image controls"
               role="presentation"
               onPointerDown={handleMobileDragStart}
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 touchAction: "none",
@@ -558,7 +552,7 @@ export function TraceImageLayer({
               }}
             />
           </div>,
-          overlayHost,
+          document.body,
         )
       : null;
 
