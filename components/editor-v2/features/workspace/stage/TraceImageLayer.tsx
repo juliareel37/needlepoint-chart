@@ -394,7 +394,7 @@ export function TraceImageLayer({
               showHandles
               transactionKeyPrefix="trace-drag-mobile"
               transform={traceTransform}
-              zoom={zoom}
+              zoom={1}
             />
           </div>,
           portalHost,
