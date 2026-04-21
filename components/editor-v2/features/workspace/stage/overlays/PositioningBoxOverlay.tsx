@@ -19,6 +19,7 @@ interface PositioningBoxOverlayProps {
   baseRect: PositioningRect;
   bounds: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
+  handleShape?: "mixed" | "circle";
   onClick?: () => void;
   onInteractionEnd?: () => void;
   onInteractionStart?: () => void;
@@ -65,6 +66,7 @@ export function PositioningBoxOverlay({
   onTransformCommit,
   onTransformPreview,
   interactive = true,
+  handleShape = "mixed",
   previewThrottleMs = 0,
   previewBoundsStrategy = "live",
   usePointerCapture = true,
@@ -411,7 +413,12 @@ export function PositioningBoxOverlay({
                 top: `${getHandleTop(handle.id, bounds.height, handleSize)}px`,
                 width: `${handleSize}px`,
                 height: `${handleSize}px`,
-                borderRadius: handle.kind === "edge" ? `${4 * controlScale}px` : "999px",
+                borderRadius:
+                  handleShape === "circle"
+                    ? "999px"
+                    : handle.kind === "edge"
+                      ? `${4 * controlScale}px`
+                      : "999px",
                 background: "#ffffff",
                 border: `${handleBorderWidth}px solid #2563eb`,
                 cursor: handle.cursor,

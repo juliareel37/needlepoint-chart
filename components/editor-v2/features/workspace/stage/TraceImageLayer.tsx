@@ -29,7 +29,6 @@ import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
-const TRACE_FRAME_COLOR = "#2563eb";
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -530,10 +529,6 @@ export function TraceImageLayer({
                   WebkitBackfaceVisibility: "hidden",
                 }}
               />
-              {renderTraceFrameDecorations({
-                zoom,
-                borderRadius: 10,
-              })}
             </div>
             <div
               aria-label="Trace image controls"
@@ -592,24 +587,6 @@ export function TraceImageLayer({
               imageRendering: "auto",
             }}
           />
-          {positioningEnabled && traceBounds ? (
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: `${traceBounds.left}px`,
-                top: `${traceBounds.top}px`,
-                width: `${traceBounds.width}px`,
-                height: `${traceBounds.height}px`,
-                pointerEvents: "none",
-              }}
-            >
-              {renderTraceFrameDecorations({
-                zoom,
-                borderRadius: 0,
-              })}
-            </div>
-          ) : null}
           <div
             ref={desktopProxyRef}
             aria-hidden="true"
@@ -636,13 +613,14 @@ export function TraceImageLayer({
               baseRect={traceBaseRect}
               bounds={traceBounds}
               getWorldPointFromClient={getWorldPointFromClient}
+              handleShape="circle"
               onInteractionEnd={handleDesktopInteractionEnd}
               onInteractionStart={handleDesktopInteractionStart}
               onTransformCommit={handleDesktopTransformCommit}
               onTransformPreview={handleDesktopTransformPreview}
-              previewBoundsStrategy="none"
-              showOutline={false}
-              showHandles={false}
+              previewBoundsStrategy="live"
+              showOutline
+              showHandles
               transactionKeyPrefix="trace-drag"
               transform={traceTransform}
               zoom={zoom}
@@ -809,54 +787,4 @@ function formatDebugNumber(value: number): string {
   }
 
   return value.toFixed(1);
-}
-
-function renderTraceFrameDecorations(options: {
-  zoom: number;
-  borderRadius: number;
-}) {
-  const controlScale = options.zoom > 0 ? 1 / options.zoom : 1;
-  const outlineWidth = Math.max(1, 1.5 * controlScale);
-  const anchorSize = Math.max(10, 14 * controlScale);
-  const anchorBorderWidth = Math.max(1, 1.25 * controlScale);
-  const anchorOffset = -anchorSize / 2;
-  const positions = [
-    { left: anchorOffset, top: anchorOffset },
-    { right: anchorOffset, top: anchorOffset },
-    { left: anchorOffset, bottom: anchorOffset },
-    { right: anchorOffset, bottom: anchorOffset },
-  ] as const;
-
-  return (
-    <>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          border: `${outlineWidth}px solid ${TRACE_FRAME_COLOR}`,
-          borderRadius: `${options.borderRadius}px`,
-          boxSizing: "border-box",
-          boxShadow: `0 0 0 ${Math.max(1, controlScale)}px rgba(255, 255, 255, 0.65) inset`,
-          pointerEvents: "none",
-        }}
-      />
-      {positions.map((position, index) => (
-        <div
-          key={index}
-          style={{
-            position: "absolute",
-            ...position,
-            width: `${anchorSize}px`,
-            height: `${anchorSize}px`,
-            borderRadius: "999px",
-            background: "#ffffff",
-            border: `${anchorBorderWidth}px solid ${TRACE_FRAME_COLOR}`,
-            boxSizing: "border-box",
-            boxShadow: "0 2px 6px rgba(15, 23, 42, 0.18)",
-            pointerEvents: "none",
-          }}
-        />
-      ))}
-    </>
-  );
 }
