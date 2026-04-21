@@ -625,20 +625,23 @@ export function TraceImageLayer({
           role="status"
           style={{
             position: "fixed",
-            top: 8,
-            left: 8,
-            padding: "8px 10px",
-            borderRadius: 8,
-            background: "rgba(15, 23, 42, 0.92)",
+            top: 20,
+            left: 20,
+            maxWidth: "min(94vw, 680px)",
+            padding: "20px 24px",
+            borderRadius: 18,
+            background: "rgba(15, 23, 42, 0.96)",
             color: "#f8fafc",
             fontFamily:
               "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
-            fontSize: 11,
+            fontSize: "clamp(26px, 4.8vw, 42px)",
             lineHeight: 1.35,
             letterSpacing: "0.01em",
             pointerEvents: "none",
             whiteSpace: "pre",
             zIndex: 999999,
+            boxShadow: "0 18px 44px rgba(15, 23, 42, 0.36)",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
           }}
         >
           {[
