@@ -154,32 +154,6 @@ export function TraceImageLayer({
         : null,
     [mobileDisplayTransform, traceBaseRect],
   );
-  const mobileDebugMetrics = useMemo(() => {
-    const sourceWidth = traceSourceSize?.width ?? null;
-    const sourceHeight = traceSourceSize?.height ?? null;
-    const baseWidth = traceBaseRect?.width ?? null;
-    const baseHeight = traceBaseRect?.height ?? null;
-    const displayWidth = mobileDisplayBounds?.width ?? null;
-    const displayHeight = mobileDisplayBounds?.height ?? null;
-    const scaleUpX =
-      sourceWidth && displayWidth ? displayWidth / sourceWidth : null;
-    const scaleUpY =
-      sourceHeight && displayHeight ? displayHeight / sourceHeight : null;
-
-    return {
-      sourceWidth,
-      sourceHeight,
-      baseWidth,
-      baseHeight,
-      displayWidth,
-      displayHeight,
-      scaleUpX,
-      scaleUpY,
-      offsetX: mobileDisplayTransform.offsetX,
-      offsetY: mobileDisplayTransform.offsetY,
-      scale: mobileDisplayTransform.scale,
-    };
-  }, [mobileDisplayBounds, mobileDisplayTransform, traceBaseRect, traceSourceSize]);
   const mobileDisplayStageBounds = useMemo(() => {
     if (!mobileDisplayBounds) {
       return null;
@@ -642,43 +616,6 @@ export function TraceImageLayer({
           ) : null}
         </div>
       ) : null}
-      {coarsePointer && positioningEnabled ? (
-        <div
-          aria-live="off"
-          role="status"
-          style={{
-            position: "fixed",
-            left: "50%",
-            bottom: 24,
-            transform: "translateX(-50%)",
-            width: "min(96vw, 920px)",
-            padding: "28px 32px",
-            borderRadius: 22,
-            background: "rgba(15, 23, 42, 0.96)",
-            color: "#f8fafc",
-            fontFamily:
-              "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
-            fontSize: "clamp(34px, 6.5vw, 56px)",
-            lineHeight: 1.28,
-            letterSpacing: "0.01em",
-            pointerEvents: "none",
-            whiteSpace: "pre",
-            zIndex: 999999,
-            boxShadow: "0 20px 56px rgba(15, 23, 42, 0.42)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-          }}
-        >
-          {[
-            `src ${formatDebugPair(mobileDebugMetrics.sourceWidth, mobileDebugMetrics.sourceHeight)}`,
-            `base ${formatDebugPair(mobileDebugMetrics.baseWidth, mobileDebugMetrics.baseHeight)}`,
-            `disp ${formatDebugPair(mobileDebugMetrics.displayWidth, mobileDebugMetrics.displayHeight)}`,
-            `mul ${formatDebugScale(mobileDebugMetrics.scaleUpX)} x ${formatDebugScale(mobileDebugMetrics.scaleUpY)}`,
-            `ofs ${formatDebugNumber(mobileDebugMetrics.offsetX)}, ${formatDebugNumber(mobileDebugMetrics.offsetY)}`,
-            `scl ${formatDebugScale(mobileDebugMetrics.scale)}`,
-            mobileDragging ? "drag yes" : "drag no",
-          ].join("\n")}
-        </div>
-      ) : null}
     </>
   );
 }
@@ -774,33 +711,6 @@ function clampTraceTransformToSurface(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
-}
-
-function formatDebugPair(
-  width: number | null,
-  height: number | null,
-): string {
-  if (!width || !height) {
-    return "-- x --";
-  }
-
-  return `${Math.round(width)} x ${Math.round(height)}`;
-}
-
-function formatDebugScale(value: number | null): string {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "--";
-  }
-
-  return `${value.toFixed(2)}x`;
-}
-
-function formatDebugNumber(value: number): string {
-  if (!Number.isFinite(value)) {
-    return "--";
-  }
-
-  return value.toFixed(1);
 }
 
 function TracePositioningChrome() {
