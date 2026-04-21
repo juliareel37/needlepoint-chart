@@ -6,6 +6,7 @@ import type {
   EditorStore,
   EditorStoreState,
   PaletteColor,
+  ViewportState,
 } from "@/lib/editor-v2/editor/store";
 import {
   clampWorldPointToSurface,
@@ -13,7 +14,6 @@ import {
   createGridWorldMetrics,
   clientToWorldPoint,
   getViewportTransform,
-  type ViewportState,
 } from "@/lib/editor-v2/editor/viewport";
 import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./overlays/GridRulerOverlay";

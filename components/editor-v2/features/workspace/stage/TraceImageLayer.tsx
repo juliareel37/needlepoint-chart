@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  createPortal,
   useCallback,
   useEffect,
   useMemo,
@@ -9,10 +8,14 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
+import { createPortal } from "react-dom";
+import type {
+  EditorStore,
+  TraceDocument,
+  ViewportState,
+} from "@/lib/editor-v2/editor/store";
 import type {
   GridWorldMetrics,
-  ViewportState,
   WorldPoint,
 } from "@/lib/editor-v2/editor/viewport";
 import {
