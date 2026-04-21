@@ -36,8 +36,8 @@ interface TraceImageLayerProps {
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
-  overlayHost: HTMLElement | null;
   positioningEnabled: boolean;
+  stageBounds: { left: number; top: number; width: number; height: number };
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
   viewport: ViewportState;
@@ -67,8 +67,8 @@ export function TraceImageLayer({
   getWorldPointFromClient,
   imageOpacity,
   metrics,
-  overlayHost,
   positioningEnabled,
+  stageBounds,
   trace,
   traceAsset,
   viewport,
@@ -183,21 +183,12 @@ export function TraceImageLayer({
     }
 
     return {
-      left:
-        frameOrigin.x + viewport.offsetX + mobileDisplayBounds.left * viewport.zoom,
-      top:
-        frameOrigin.y + viewport.offsetY + mobileDisplayBounds.top * viewport.zoom,
+      left: frameOrigin.x + viewport.offsetX + mobileDisplayBounds.left * viewport.zoom,
+      top: frameOrigin.y + viewport.offsetY + mobileDisplayBounds.top * viewport.zoom,
       width: mobileDisplayBounds.width * viewport.zoom,
       height: mobileDisplayBounds.height * viewport.zoom,
     };
-  }, [
-    frameOrigin.x,
-    frameOrigin.y,
-    mobileDisplayBounds,
-    viewport.offsetX,
-    viewport.offsetY,
-    viewport.zoom,
-  ]);
+  }, [frameOrigin.x, frameOrigin.y, mobileDisplayBounds, viewport.offsetX, viewport.offsetY, viewport.zoom]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -371,15 +362,11 @@ export function TraceImageLayer({
 
     const baseRect = traceBaseRect;
 
-    function flushMobilePreview(): {
-      offsetX: number;
-      offsetY: number;
-      scale: number;
-    } | null {
+    function flushMobilePreview() {
       mobileDragRafRef.current = null;
       const session = mobileDragSessionRef.current;
       if (!session) {
-        return null;
+        return;
       }
 
       const worldPoint = getWorldPointFromClient(
@@ -387,7 +374,7 @@ export function TraceImageLayer({
         session.pendingClientY,
       );
       if (!worldPoint) {
-        return null;
+        return;
       }
 
       const nextTrace = clampTraceTransformToSurface(
@@ -403,7 +390,6 @@ export function TraceImageLayer({
       );
 
       setMobilePreviewTransform(nextTrace);
-      return nextTrace;
     }
 
     const handleWindowPointerMove = (event: PointerEvent) => {
@@ -441,12 +427,22 @@ export function TraceImageLayer({
         return;
       }
 
-      session.pendingClientX = event.clientX;
-      session.pendingClientY = event.clientY;
-      const nextTrace =
-        flushMobilePreview() ??
-        mobilePreviewTransform ??
-        traceTransform;
+      const worldPoint = getWorldPointFromClient(event.clientX, event.clientY);
+      if (!worldPoint) {
+        return;
+      }
+
+      const nextTrace = clampTraceTransformToSurface(
+        {
+          offsetX:
+            session.startTransform.offsetX + (worldPoint.x - session.startPoint.x),
+          offsetY:
+            session.startTransform.offsetY + (worldPoint.y - session.startPoint.y),
+          scale: session.startTransform.scale,
+        },
+        baseRect,
+        metrics,
+      );
 
       setMobileDragging(false);
       setMobilePreviewTransform(null);
@@ -473,9 +469,7 @@ export function TraceImageLayer({
     dispatch,
     getWorldPointFromClient,
     metrics,
-    mobilePreviewTransform,
     positioningEnabled,
-    traceTransform,
     traceBaseRect,
   ]);
 
@@ -483,12 +477,15 @@ export function TraceImageLayer({
     coarsePointer &&
     positioningEnabled &&
     mobileDisplayStageBounds &&
-    overlayHost
+    typeof document !== "undefined"
       ? createPortal(
           <div
             style={{
-              position: "absolute",
-              inset: 0,
+              position: "fixed",
+              left: `${stageBounds.left}px`,
+              top: `${stageBounds.top}px`,
+              width: `${stageBounds.width}px`,
+              height: `${stageBounds.height}px`,
               overflow: "hidden",
               pointerEvents: "none",
               zIndex,
@@ -499,8 +496,8 @@ export function TraceImageLayer({
               aria-hidden="true"
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 display: "block",
@@ -539,8 +536,8 @@ export function TraceImageLayer({
               onPointerDown={handleMobileDragStart}
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 touchAction: "none",
@@ -550,7 +547,7 @@ export function TraceImageLayer({
               }}
             />
           </div>,
-          overlayHost,
+          document.body,
         )
       : null;
 
