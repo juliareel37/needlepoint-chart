@@ -24,6 +24,7 @@ import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
+import { clearTraceSampler } from "../trace/traceSampler";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -296,6 +297,12 @@ export function GridWorldSurface({
     stageSize.width,
     viewport,
   ]);
+
+  useEffect(() => {
+    if (trace?.previewUrl && tracePositioningEnabled) {
+      clearTraceSampler(trace.previewUrl);
+    }
+  }, [trace?.previewUrl, tracePositioningEnabled]);
 
   useEffect(() => {
     if (coarsePointer && tracePositioningEnabled) {

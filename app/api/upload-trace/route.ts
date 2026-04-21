@@ -32,8 +32,8 @@ export async function POST(req: Request) {
 
   const originalBuffer = Buffer.from(await file.arrayBuffer());
   const metadata = await sharp(originalBuffer).metadata();
-  const originalWidth = metadata.width ?? null;
-  const originalHeight = metadata.height ?? null;
+  const { width: originalWidth, height: originalHeight } =
+    getOrientedImageSize(metadata.width ?? null, metadata.height ?? null, metadata.orientation);
   const originalExtension = getFileExtension(file.name, file.type);
   const baseName = `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}`;
 
@@ -102,4 +102,20 @@ function getFileExtension(fileName: string, mimeType: string): string {
   if (mimeType === "image/gif") return "gif";
 
   return "bin";
+}
+
+function getOrientedImageSize(
+  width: number | null,
+  height: number | null,
+  orientation: number | undefined,
+): { width: number | null; height: number | null } {
+  if (!width || !height) {
+    return { width, height };
+  }
+
+  if (orientation && [5, 6, 7, 8].includes(orientation)) {
+    return { width: height, height: width };
+  }
+
+  return { width, height };
 }

@@ -66,6 +66,7 @@ describe("POST /api/upload-trace", () => {
     metadataMock.mockResolvedValue({
       width: 2400,
       height: 1800,
+      orientation: 1,
     });
     toBufferMock
       .mockResolvedValueOnce(Buffer.from("preview"))

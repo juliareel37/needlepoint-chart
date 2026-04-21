@@ -15,6 +15,26 @@ type CachedTraceSampler = {
 
 const traceSamplerCache = new Map<string, CachedTraceSampler>();
 
+export function clearTraceSampler(previewUrl?: string): void {
+  if (typeof previewUrl === "string") {
+    const sampler = traceSamplerCache.get(previewUrl);
+    if (!sampler) {
+      return;
+    }
+
+    sampler.canvas.width = 0;
+    sampler.canvas.height = 0;
+    traceSamplerCache.delete(previewUrl);
+    return;
+  }
+
+  for (const [url, sampler] of traceSamplerCache) {
+    sampler.canvas.width = 0;
+    sampler.canvas.height = 0;
+    traceSamplerCache.delete(url);
+  }
+}
+
 export function sampleTraceRgbAtWorldPoint(
   trace: TraceDocument,
   metrics: { surfaceWidth: number; surfaceHeight: number },

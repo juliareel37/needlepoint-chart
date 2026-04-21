@@ -69,6 +69,10 @@ export function TraceImageLayer({
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
   const mobileDragRafRef = useRef<number | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
+  const [mobilePreviewSize, setMobilePreviewSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
     typeof traceTransform | null
   >(null);
@@ -81,6 +85,10 @@ export function TraceImageLayer({
       };
     }
 
+    if (mobilePreviewSize?.width && mobilePreviewSize?.height) {
+      return mobilePreviewSize;
+    }
+
     if (trace.imageWidth && trace.imageHeight) {
       return {
         width: trace.imageWidth,
@@ -89,7 +97,13 @@ export function TraceImageLayer({
     }
 
     return null;
-  }, [trace.imageHeight, trace.imageWidth, traceAsset?.height, traceAsset?.width]);
+  }, [
+    mobilePreviewSize,
+    trace.imageHeight,
+    trace.imageWidth,
+    traceAsset?.height,
+    traceAsset?.width,
+  ]);
   const traceBaseRect = useMemo(
     () =>
       traceSourceSize
@@ -125,6 +139,32 @@ export function TraceImageLayer({
         : null,
     [mobileDisplayTransform, traceBaseRect],
   );
+  const mobileDebugMetrics = useMemo(() => {
+    const sourceWidth = traceSourceSize?.width ?? null;
+    const sourceHeight = traceSourceSize?.height ?? null;
+    const baseWidth = traceBaseRect?.width ?? null;
+    const baseHeight = traceBaseRect?.height ?? null;
+    const displayWidth = mobileDisplayBounds?.width ?? null;
+    const displayHeight = mobileDisplayBounds?.height ?? null;
+    const scaleUpX =
+      sourceWidth && displayWidth ? displayWidth / sourceWidth : null;
+    const scaleUpY =
+      sourceHeight && displayHeight ? displayHeight / sourceHeight : null;
+
+    return {
+      sourceWidth,
+      sourceHeight,
+      baseWidth,
+      baseHeight,
+      displayWidth,
+      displayHeight,
+      scaleUpX,
+      scaleUpY,
+      offsetX: mobileDisplayTransform.offsetX,
+      offsetY: mobileDisplayTransform.offsetY,
+      scale: mobileDisplayTransform.scale,
+    };
+  }, [mobileDisplayBounds, mobileDisplayTransform, traceBaseRect, traceSourceSize]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -144,6 +184,10 @@ export function TraceImageLayer({
     mediaQuery.addListener(update);
     return () => mediaQuery.removeListener(update);
   }, []);
+
+  useEffect(() => {
+    setMobilePreviewSize(null);
+  }, [trace.previewUrl]);
 
   useEffect(() => {
     const desktopCanvas = desktopCanvasRef.current;
@@ -424,6 +468,13 @@ export function TraceImageLayer({
               src={trace.previewUrl}
               alt=""
               draggable={false}
+              onLoad={(event) => {
+                const nextWidth = event.currentTarget.naturalWidth;
+                const nextHeight = event.currentTarget.naturalHeight;
+                if (nextWidth > 0 && nextHeight > 0) {
+                  setMobilePreviewSize({ width: nextWidth, height: nextHeight });
+                }
+              }}
               style={{
                 width: "100%",
                 height: "100%",
@@ -475,6 +526,37 @@ export function TraceImageLayer({
               background: "transparent",
             }}
           />
+          <div
+            aria-live="off"
+            role="status"
+            style={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              padding: "8px 10px",
+              borderRadius: 8,
+              background: "rgba(15, 23, 42, 0.82)",
+              color: "#f8fafc",
+              fontFamily:
+                "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
+              fontSize: 11,
+              lineHeight: 1.35,
+              letterSpacing: "0.01em",
+              pointerEvents: "none",
+              whiteSpace: "pre",
+              zIndex: zIndex + 1,
+            }}
+          >
+            {[
+              `src ${formatDebugPair(mobileDebugMetrics.sourceWidth, mobileDebugMetrics.sourceHeight)}`,
+              `base ${formatDebugPair(mobileDebugMetrics.baseWidth, mobileDebugMetrics.baseHeight)}`,
+              `disp ${formatDebugPair(mobileDebugMetrics.displayWidth, mobileDebugMetrics.displayHeight)}`,
+              `mul ${formatDebugScale(mobileDebugMetrics.scaleUpX)} x ${formatDebugScale(mobileDebugMetrics.scaleUpY)}`,
+              `ofs ${formatDebugNumber(mobileDebugMetrics.offsetX)}, ${formatDebugNumber(mobileDebugMetrics.offsetY)}`,
+              `scl ${formatDebugScale(mobileDebugMetrics.scale)}`,
+              mobileDragging ? "drag yes" : "drag no",
+            ].join("\n")}
+          </div>
         </>
       ) : (
         <>
@@ -680,4 +762,31 @@ function clampTraceTransformToSurface(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function formatDebugPair(
+  width: number | null,
+  height: number | null,
+): string {
+  if (!width || !height) {
+    return "-- x --";
+  }
+
+  return `${Math.round(width)} x ${Math.round(height)}`;
+}
+
+function formatDebugScale(value: number | null): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "--";
+  }
+
+  return `${value.toFixed(2)}x`;
+}
+
+function formatDebugNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "--";
+  }
+
+  return value.toFixed(1);
 }
