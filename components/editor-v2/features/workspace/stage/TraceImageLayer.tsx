@@ -157,19 +157,27 @@ export function TraceImageLayer({
       return;
     }
 
-    if (desktopCanvas) {
+    if (coarsePointer) {
+      if (desktopCanvas) {
+        desktopCanvas.width = 0;
+        desktopCanvas.height = 0;
+      }
+    } else if (desktopCanvas) {
       drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
         width: traceAsset.width,
         height: traceAsset.height,
       });
     }
 
-    if (mobileCanvas) {
+    if (coarsePointer && mobileCanvas) {
       drawTraceSourceToCanvas(
         mobileCanvas,
         imageSource as CanvasImageSource,
         getMobileTracePreviewSize(traceAsset.width, traceAsset.height),
       );
+    } else if (mobileCanvas) {
+      mobileCanvas.width = 0;
+      mobileCanvas.height = 0;
     }
   }, [traceAsset, coarsePointer]);
 
