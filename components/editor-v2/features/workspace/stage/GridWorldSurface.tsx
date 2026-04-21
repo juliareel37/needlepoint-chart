@@ -505,6 +505,7 @@ export function GridWorldSurface({
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
+              portalHost={stageRef.current}
               stageBounds={stageBounds}
               trace={trace}
               traceAsset={

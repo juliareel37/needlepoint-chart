@@ -37,6 +37,7 @@ interface TraceImageLayerProps {
   imageOpacity: number;
   metrics: GridWorldMetrics;
   positioningEnabled: boolean;
+  portalHost?: HTMLElement | null;
   stageBounds: { left: number; top: number; width: number; height: number };
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
@@ -68,6 +69,7 @@ export function TraceImageLayer({
   imageOpacity,
   metrics,
   positioningEnabled,
+  portalHost = null,
   stageBounds,
   trace,
   traceAsset,
@@ -478,15 +480,12 @@ export function TraceImageLayer({
     coarsePointer &&
     positioningEnabled &&
     mobileDisplayStageBounds &&
-    typeof document !== "undefined"
+    portalHost
       ? createPortal(
           <div
             style={{
-              position: "fixed",
-              left: `${stageBounds.left}px`,
-              top: `${stageBounds.top}px`,
-              width: `${stageBounds.width}px`,
-              height: `${stageBounds.height}px`,
+              position: "absolute",
+              inset: 0,
               overflow: "hidden",
               pointerEvents: "none",
               zIndex,
@@ -562,7 +561,7 @@ export function TraceImageLayer({
               }}
             />
           </div>,
-          document.body,
+          portalHost,
         )
       : null;
 
