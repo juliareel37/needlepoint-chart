@@ -90,6 +90,7 @@ export function GridWorldSurface({
   const threadView = previewMode || state.ui.preferences.threadView;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
+  const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
@@ -405,6 +406,17 @@ export function GridWorldSurface({
           overflow: "hidden",
         }}
       />
+      <div
+        ref={setOverlayHost}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+          zIndex: 3,
+        }}
+      />
 
       <div
         style={{
@@ -446,7 +458,7 @@ export function GridWorldSurface({
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               frameOrigin={frameOrigin}
-              overlayHost={displayHost}
+              overlayHost={overlayHost}
               positioningEnabled={tracePositioningEnabled}
               trace={trace}
               traceAsset={
