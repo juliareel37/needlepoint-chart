@@ -21,7 +21,7 @@ import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
-const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "solid-rect";
+const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
@@ -389,51 +389,102 @@ export function TraceImageLayer({
       }}
     >
       {coarsePointer && positioningEnabled && mobileDisplayBounds ? (
-        <div
-          aria-label="Trace image controls"
-          role="presentation"
-          onPointerDown={handleMobileDragStart}
-          style={{
-            position: "absolute",
-            left: `${mobileDisplayBounds.left}px`,
-            top: `${mobileDisplayBounds.top}px`,
-            width: `${mobileDisplayBounds.width}px`,
-            height: `${mobileDisplayBounds.height}px`,
-            border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid ${
-              mobileDragging ? "rgba(37, 99, 235, 1)" : "rgba(37, 99, 235, 0.95)"
-            }`,
-            background:
-              mobilePreviewTransform ? "rgba(37, 99, 235, 0.1)" : "transparent",
-            boxSizing: "border-box",
-            boxShadow: mobileDragging
-              ? "0 0 0 2px rgba(37, 99, 235, 0.14)"
-              : "0 0 0 1px rgba(255, 255, 255, 0.2)",
-            borderRadius: `${Math.max(4, 8 * (zoom > 0 ? 1 / zoom : 1))}px`,
-            touchAction: "none",
-            cursor: "grab",
-          }}
-        >
-          {MOBILE_TRACE_VISUAL_HANDLES.map((handle) => (
-            <div
-              key={handle.key}
+        <>
+          <div
+            ref={mobileWrapperRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: `${traceBaseRect?.top ?? 0}px`,
+              left: `${traceBaseRect?.left ?? 0}px`,
+              width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
+              height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
+              display: "block",
+              opacity: imageOpacity,
+              transform: getMobileWrapperTransformCss(mobileDisplayTransform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              pointerEvents: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+            }}
+          >
+            <canvas
+              ref={mobileCanvasRef}
               aria-hidden="true"
               style={{
-                position: "absolute",
-                width: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
-                height: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
-                borderRadius: "999px",
-                background: "#ffffff",
-                border: `${Math.max(1, 1.25 * (zoom > 0 ? 1 / zoom : 1))}px solid #2563eb`,
-                boxShadow: mobileDragging
-                  ? "0 2px 8px rgba(37, 99, 235, 0.22)"
-                  : "0 1px 4px rgba(15, 23, 42, 0.18)",
-                left: handle.left,
-                top: handle.top,
-                transform: "translate(-50%, -50%)",
+                width: "100%",
+                height: "100%",
+                display: "block",
+                imageRendering: "auto",
               }}
             />
-          ))}
-        </div>
+          </div>
+          <div
+            ref={mobileProxyRef}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: `${traceBaseRect?.top ?? 0}px`,
+              left: `${traceBaseRect?.left ?? 0}px`,
+              width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
+              height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
+              display: "none",
+              transform: getMobileWrapperTransformCss(mobileDisplayTransform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              pointerEvents: "none",
+              background: "rgba(37, 99, 235, 0.18)",
+              border: "1px solid rgba(37, 99, 235, 0.9)",
+              boxSizing: "border-box",
+            }}
+          />
+          <div
+            aria-label="Trace image controls"
+            role="presentation"
+            onPointerDown={handleMobileDragStart}
+            style={{
+              position: "absolute",
+              left: `${mobileDisplayBounds.left}px`,
+              top: `${mobileDisplayBounds.top}px`,
+              width: `${mobileDisplayBounds.width}px`,
+              height: `${mobileDisplayBounds.height}px`,
+              border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid ${
+                mobileDragging ? "rgba(37, 99, 235, 1)" : "rgba(37, 99, 235, 0.95)"
+              }`,
+              background:
+                mobilePreviewTransform ? "rgba(37, 99, 235, 0.1)" : "transparent",
+              boxSizing: "border-box",
+              boxShadow: mobileDragging
+                ? "0 0 0 2px rgba(37, 99, 235, 0.14)"
+                : "0 0 0 1px rgba(255, 255, 255, 0.2)",
+              borderRadius: `${Math.max(4, 8 * (zoom > 0 ? 1 / zoom : 1))}px`,
+              touchAction: "none",
+              cursor: "grab",
+            }}
+          >
+            {MOBILE_TRACE_VISUAL_HANDLES.map((handle) => (
+              <div
+                key={handle.key}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  width: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
+                  height: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
+                  borderRadius: "999px",
+                  background: "#ffffff",
+                  border: `${Math.max(1, 1.25 * (zoom > 0 ? 1 / zoom : 1))}px solid #2563eb`,
+                  boxShadow: mobileDragging
+                    ? "0 2px 8px rgba(37, 99, 235, 0.22)"
+                    : "0 1px 4px rgba(15, 23, 42, 0.18)",
+                  left: handle.left,
+                  top: handle.top,
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <>
           <canvas
