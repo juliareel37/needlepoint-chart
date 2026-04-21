@@ -28,7 +28,6 @@ import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
-const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
@@ -37,8 +36,8 @@ interface TraceImageLayerProps {
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
-  overlayHost: HTMLElement | null;
   positioningEnabled: boolean;
+  stageBounds: { left: number; top: number; width: number; height: number };
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
   viewport: ViewportState;
@@ -68,8 +67,8 @@ export function TraceImageLayer({
   getWorldPointFromClient,
   imageOpacity,
   metrics,
-  overlayHost,
   positioningEnabled,
+  stageBounds,
   trace,
   traceAsset,
   viewport,
@@ -79,7 +78,6 @@ export function TraceImageLayer({
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
-  const mobileProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
   const mobileDragRafRef = useRef<number | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
@@ -255,9 +253,7 @@ export function TraceImageLayer({
     if (desktopCanvas) {
       desktopCanvas.style.transform = getPositioningTransformCss(traceTransform);
     }
-    applyMobileWrapperTransform(mobileWrapperRef.current, traceTransform);
     applyDesktopProxyTransform(desktopProxyRef.current, traceTransform);
-    applyMobileWrapperTransform(mobileProxyRef.current, traceTransform);
   }, [traceTransform]);
 
   useEffect(() => {
@@ -314,9 +310,6 @@ export function TraceImageLayer({
       const clampedTrace = traceBaseRect
         ? clampTraceTransformToSurface(nextTrace, traceBaseRect, metrics)
         : nextTrace;
-      applyMobileWrapperTransform(mobileWrapperRef.current, clampedTrace);
-      applyMobileWrapperTransform(mobileProxyRef.current, clampedTrace);
-      setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
       dispatch(createPreviewTraceRepositionCommand(clampedTrace));
     },
     [dispatch, metrics, traceBaseRect],
@@ -328,14 +321,6 @@ export function TraceImageLayer({
 
   const handleDesktopInteractionEnd = useCallback(() => {
     setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
-  }, []);
-
-  const handleMobileInteractionStart = useCallback(() => {
-    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, true);
-  }, []);
-
-  const handleMobileInteractionEnd = useCallback(() => {
-    setMobileProxyActive(mobileWrapperRef.current, mobileProxyRef.current, false);
   }, []);
 
   const handleMobileDragStart = useCallback(
@@ -492,21 +477,32 @@ export function TraceImageLayer({
     coarsePointer &&
     positioningEnabled &&
     mobileDisplayStageBounds &&
-    overlayHost
+    typeof document !== "undefined"
       ? createPortal(
-          <>
+          <div
+            style={{
+              position: "fixed",
+              left: `${stageBounds.left}px`,
+              top: `${stageBounds.top}px`,
+              width: `${stageBounds.width}px`,
+              height: `${stageBounds.height}px`,
+              overflow: "hidden",
+              pointerEvents: "none",
+              zIndex,
+            }}
+          >
             <div
               ref={mobileWrapperRef}
               aria-hidden="true"
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 display: "block",
                 opacity: imageOpacity,
-                willChange: "transform",
+                willChange: "left, top, width, height",
                 contain: "layout style size",
                 isolation: "isolate",
                 overflow: "hidden",
@@ -540,8 +536,8 @@ export function TraceImageLayer({
               onPointerDown={handleMobileDragStart}
               style={{
                 position: "absolute",
-                left: `${mobileDisplayStageBounds.left}px`,
-                top: `${mobileDisplayStageBounds.top}px`,
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
                 width: `${mobileDisplayStageBounds.width}px`,
                 height: `${mobileDisplayStageBounds.height}px`,
                 touchAction: "none",
@@ -550,8 +546,8 @@ export function TraceImageLayer({
                 pointerEvents: "auto",
               }}
             />
-          </>,
-          overlayHost,
+          </div>,
+          document.body,
         )
       : null;
 
@@ -672,17 +668,6 @@ export function TraceImageLayer({
   );
 }
 
-function applyMobileWrapperTransform(
-  element: HTMLDivElement | null,
-  transform: { offsetX: number; offsetY: number; scale: number },
-): void {
-  if (!element) {
-    return;
-  }
-
-  element.style.transform = getMobileWrapperTransformCss(transform);
-}
-
 function applyDesktopTransform(
   element: HTMLCanvasElement | null,
   transform: { offsetX: number; offsetY: number; scale: number },
@@ -719,20 +704,6 @@ function applyDesktopDragTransform(
   applyDesktopTransform(canvas, transform);
 }
 
-function applyMobileDragTransform(
-  wrapper: HTMLDivElement | null,
-  proxy: HTMLDivElement | null,
-  transform: { offsetX: number; offsetY: number; scale: number },
-  proxyMode: "off" | "solid-rect",
-): void {
-  if (proxyMode === "solid-rect") {
-    applyMobileWrapperTransform(proxy, transform);
-    return;
-  }
-
-  applyMobileWrapperTransform(wrapper, transform);
-}
-
 function setDesktopProxyActive(
   canvas: HTMLCanvasElement | null,
   proxy: HTMLDivElement | null,
@@ -747,27 +718,6 @@ function setDesktopProxyActive(
   proxy.style.display = showProxy ? "block" : "none";
 }
 
-function setMobileProxyActive(
-  wrapper: HTMLDivElement | null,
-  proxy: HTMLDivElement | null,
-  dragging: boolean,
-): void {
-  if (!wrapper || !proxy) {
-    return;
-  }
-
-  const showProxy = dragging && MOBILE_TRACE_DRAG_PROXY_MODE === "solid-rect";
-  wrapper.style.display = showProxy ? "none" : "block";
-  proxy.style.display = showProxy ? "block" : "none";
-}
-
-function getMobileWrapperTransformCss(transform: {
-  offsetX: number;
-  offsetY: number;
-  scale: number;
-}): string {
-  return `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0) scale(${transform.scale})`;
-}
 
 function drawTraceSourceToCanvas(
   canvas: HTMLCanvasElement,
