@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
   EditorStore,
@@ -97,6 +97,12 @@ export function GridWorldSurface({
     width: 0,
     height: 0,
   });
+  const [worldBounds, setWorldBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -107,6 +113,55 @@ export function GridWorldSurface({
   const iconPlacementActive = Boolean(iconPlacement);
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
+
+  const syncSurfaceMeasurements = useCallback(() => {
+    const stageElement = stageRef.current;
+    const worldElement = worldRef.current;
+
+    if (stageElement) {
+      const rect = stageElement.getBoundingClientRect();
+
+      setStageSize((current) =>
+        current.width === rect.width && current.height === rect.height
+          ? current
+          : {
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+      setStageBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+
+    if (worldElement) {
+      const rect = worldElement.getBoundingClientRect();
+
+      setWorldBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -254,6 +309,10 @@ export function GridWorldSurface({
     zoomAnchor,
   });
 
+  useLayoutEffect(() => {
+    syncSurfaceMeasurements();
+  });
+
   useEffect(() => {
     const stageElement = stageRef.current;
 
@@ -261,33 +320,21 @@ export function GridWorldSurface({
       return;
     }
 
-    const update = () => {
-      const rect = stageElement.getBoundingClientRect();
-
-      setStageSize({
-        width: rect.width,
-        height: rect.height,
-      });
-      setStageBounds({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      });
-    };
-
-    update();
+    syncSurfaceMeasurements();
 
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", update);
-      return () => window.removeEventListener("resize", update);
+      window.addEventListener("resize", syncSurfaceMeasurements);
+      return () => window.removeEventListener("resize", syncSurfaceMeasurements);
     }
 
-    const observer = new ResizeObserver(update);
+    const observer = new ResizeObserver(syncSurfaceMeasurements);
     observer.observe(stageElement);
+    if (worldRef.current) {
+      observer.observe(worldRef.current);
+    }
 
     return () => observer.disconnect();
-  }, []);
+  }, [syncSurfaceMeasurements]);
 
   useEffect(() => {
     if (stageSize.width <= 0 || stageSize.height <= 0) {
@@ -457,7 +504,6 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
-              frameOrigin={frameOrigin}
               positioningEnabled={tracePositioningEnabled}
               stageBounds={stageBounds}
               trace={trace}
@@ -467,6 +513,7 @@ export function GridWorldSurface({
                   : null
               }
               viewport={viewport as ViewportState}
+              worldBounds={worldBounds}
               zIndex={3}
               zoom={viewport.zoom}
             />

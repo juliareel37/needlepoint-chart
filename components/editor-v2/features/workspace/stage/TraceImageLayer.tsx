@@ -32,7 +32,6 @@ const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
-  frameOrigin: { x: number; y: number };
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
@@ -41,6 +40,7 @@ interface TraceImageLayerProps {
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
   viewport: ViewportState;
+  worldBounds: { left: number; top: number; width: number; height: number };
   zIndex?: number;
   zoom: number;
 }
@@ -63,7 +63,6 @@ const MOBILE_DRAG_THRESHOLD = 4;
 
 export function TraceImageLayer({
   dispatch,
-  frameOrigin,
   getWorldPointFromClient,
   imageOpacity,
   metrics,
@@ -72,6 +71,7 @@ export function TraceImageLayer({
   trace,
   traceAsset,
   viewport,
+  worldBounds,
   zIndex = 3,
   zoom,
 }: TraceImageLayerProps) {
@@ -183,12 +183,12 @@ export function TraceImageLayer({
     }
 
     return {
-      left: frameOrigin.x + viewport.offsetX + mobileDisplayBounds.left * viewport.zoom,
-      top: frameOrigin.y + viewport.offsetY + mobileDisplayBounds.top * viewport.zoom,
+      left: worldBounds.left + mobileDisplayBounds.left * viewport.zoom,
+      top: worldBounds.top + mobileDisplayBounds.top * viewport.zoom,
       width: mobileDisplayBounds.width * viewport.zoom,
       height: mobileDisplayBounds.height * viewport.zoom,
     };
-  }, [frameOrigin.x, frameOrigin.y, mobileDisplayBounds, viewport.offsetX, viewport.offsetY, viewport.zoom]);
+  }, [mobileDisplayBounds, viewport.zoom, worldBounds.left, worldBounds.top]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
