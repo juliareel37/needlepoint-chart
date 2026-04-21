@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  createPortal,
   useCallback,
   useEffect,
   useMemo,
@@ -9,7 +10,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
-import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
+import type {
+  GridWorldMetrics,
+  ViewportState,
+  WorldPoint,
+} from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
   getPositionedBounds,
@@ -25,12 +30,15 @@ const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
   dispatch: EditorStore["dispatch"];
+  frameOrigin: { x: number; y: number };
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
+  overlayHost: HTMLElement | null;
   positioningEnabled: boolean;
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
+  viewport: ViewportState;
   zIndex?: number;
   zoom: number;
 }
@@ -53,12 +61,15 @@ const MOBILE_DRAG_THRESHOLD = 4;
 
 export function TraceImageLayer({
   dispatch,
+  frameOrigin,
   getWorldPointFromClient,
   imageOpacity,
   metrics,
+  overlayHost,
   positioningEnabled,
   trace,
   traceAsset,
+  viewport,
   zIndex = 3,
   zoom,
 }: TraceImageLayerProps) {
@@ -165,6 +176,18 @@ export function TraceImageLayer({
       scale: mobileDisplayTransform.scale,
     };
   }, [mobileDisplayBounds, mobileDisplayTransform, traceBaseRect, traceSourceSize]);
+  const mobileDisplayStageBounds = useMemo(() => {
+    if (!mobileDisplayBounds) {
+      return null;
+    }
+
+    return {
+      left: frameOrigin.x + viewport.offsetX + mobileDisplayBounds.left * viewport.zoom,
+      top: frameOrigin.y + viewport.offsetY + mobileDisplayBounds.top * viewport.zoom,
+      width: mobileDisplayBounds.width * viewport.zoom,
+      height: mobileDisplayBounds.height * viewport.zoom,
+    };
+  }, [frameOrigin.x, frameOrigin.y, mobileDisplayBounds, viewport.offsetX, viewport.offsetY, viewport.zoom]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -462,102 +485,88 @@ export function TraceImageLayer({
     traceBaseRect,
   ]);
 
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex,
-        overflow: "visible",
-        pointerEvents: positioningEnabled ? "auto" : "none",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-      }}
-    >
-      {coarsePointer && positioningEnabled && mobileDisplayBounds ? (
-        <>
-          <div
-            ref={mobileWrapperRef}
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: `${traceBaseRect?.top ?? 0}px`,
-              left: `${traceBaseRect?.left ?? 0}px`,
-              width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
-              height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-              display: "block",
-              opacity: imageOpacity,
-              transform: getMobileWrapperTransformCss(mobileDisplayTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
-              contain: "layout style size",
-              isolation: "isolate",
-              overflow: "visible",
-              pointerEvents: "none",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-            }}
-          >
-            <img
+  const mobileOverlay =
+    coarsePointer &&
+    positioningEnabled &&
+    mobileDisplayStageBounds &&
+    overlayHost
+      ? createPortal(
+          <>
+            <div
+              ref={mobileWrapperRef}
               aria-hidden="true"
-              src={trace.previewUrl}
-              alt=""
-              draggable={false}
               style={{
-                width: "100%",
-                height: "100%",
+                position: "absolute",
+                left: `${mobileDisplayStageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top}px`,
+                width: `${mobileDisplayStageBounds.width}px`,
+                height: `${mobileDisplayStageBounds.height}px`,
                 display: "block",
-                imageRendering: "auto",
-                objectFit: "contain",
-                objectPosition: "center",
+                opacity: imageOpacity,
+                willChange: "transform",
+                contain: "layout style size",
+                isolation: "isolate",
+                overflow: "hidden",
                 pointerEvents: "none",
                 userSelect: "none",
                 WebkitUserSelect: "none",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
+              }}
+            >
+              <img
+                aria-hidden="true"
+                src={trace.previewUrl}
+                alt=""
+                draggable={false}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                  imageRendering: "auto",
+                  objectFit: "fill",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                }}
+              />
+            </div>
+            <div
+              aria-label="Trace image controls"
+              role="presentation"
+              onPointerDown={handleMobileDragStart}
+              style={{
+                position: "absolute",
+                left: `${mobileDisplayStageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top}px`,
+                width: `${mobileDisplayStageBounds.width}px`,
+                height: `${mobileDisplayStageBounds.height}px`,
+                touchAction: "none",
+                cursor: "grab",
+                background: "transparent",
+                pointerEvents: "auto",
               }}
             />
-          </div>
-          <div
-            ref={mobileProxyRef}
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: `${traceBaseRect?.top ?? 0}px`,
-              left: `${traceBaseRect?.left ?? 0}px`,
-              width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
-              height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
-              display: "none",
-              transform: getMobileWrapperTransformCss(mobileDisplayTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
-              contain: "layout style size",
-              isolation: "isolate",
-              overflow: "visible",
-              pointerEvents: "none",
-              background: "rgba(37, 99, 235, 0.18)",
-              border: "1px solid rgba(37, 99, 235, 0.9)",
-              boxSizing: "border-box",
-            }}
-          />
-          <div
-            aria-label="Trace image controls"
-            role="presentation"
-            onPointerDown={handleMobileDragStart}
-            style={{
-              position: "absolute",
-              left: `${mobileDisplayBounds.left}px`,
-              top: `${mobileDisplayBounds.top}px`,
-              width: `${mobileDisplayBounds.width}px`,
-              height: `${mobileDisplayBounds.height}px`,
-              touchAction: "none",
-              cursor: "grab",
-              background: "transparent",
-            }}
-          />
-        </>
-      ) : (
-        <>
+          </>,
+          overlayHost,
+        )
+      : null;
+
+  return (
+    <>
+      {mobileOverlay}
+      {!coarsePointer || !positioningEnabled ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex,
+            overflow: "visible",
+            pointerEvents: positioningEnabled ? "auto" : "none",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+          }}
+        >
           <canvas
             ref={desktopCanvasRef}
             aria-label="Trace reference"
@@ -617,8 +626,8 @@ export function TraceImageLayer({
               zoom={zoom}
             />
           ) : null}
-        </>
-      )}
+        </div>
+      ) : null}
       {coarsePointer && positioningEnabled ? (
         <div
           aria-live="off"
@@ -655,7 +664,7 @@ export function TraceImageLayer({
           ].join("\n")}
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 

@@ -13,6 +13,7 @@ import {
   createGridWorldMetrics,
   clientToWorldPoint,
   getViewportTransform,
+  type ViewportState,
 } from "@/lib/editor-v2/editor/viewport";
 import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./overlays/GridRulerOverlay";
@@ -444,6 +445,8 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
+              overlayHost={displayHost}
+              frameOrigin={frameOrigin}
               positioningEnabled={tracePositioningEnabled}
               trace={trace}
               traceAsset={
@@ -451,6 +454,7 @@ export function GridWorldSurface({
                   ? loadedTraceAsset
                   : null
               }
+              viewport={viewport as ViewportState}
               zIndex={3}
               zoom={viewport.zoom}
             />
