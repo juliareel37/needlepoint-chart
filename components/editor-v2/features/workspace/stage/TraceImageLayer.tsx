@@ -70,7 +70,6 @@ export function TraceImageLayer({
   const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
     typeof traceTransform | null
   >(null);
-  const [mobileDragging, setMobileDragging] = useState(false);
   const traceSourceSize = useMemo(() => {
     if (traceAsset?.width && traceAsset?.height) {
       return {
@@ -384,6 +383,7 @@ export function TraceImageLayer({
               ariaLabel="Trace image controls"
               baseRect={traceBaseRect}
               bounds={mobileOverlayBounds}
+              interactionBounds={mobileDisplayBounds ?? traceBounds ?? traceBaseRect}
               getWorldPointFromClient={getWorldPointFromClient}
               handleShape="circle"
               onTransformCommit={handleMobileTransformCommit}

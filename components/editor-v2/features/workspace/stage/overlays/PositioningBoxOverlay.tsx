@@ -18,6 +18,7 @@ interface PositioningBoxOverlayProps {
   ariaLabel: string;
   baseRect: PositioningRect;
   bounds: PositioningRect;
+  interactionBounds?: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   handleShape?: "mixed" | "circle";
   onClick?: () => void;
@@ -63,6 +64,7 @@ export function PositioningBoxOverlay({
   ariaLabel,
   baseRect,
   bounds,
+  interactionBounds,
   getWorldPointFromClient,
   onClick,
   onInteractionEnd,
@@ -85,7 +87,7 @@ export function PositioningBoxOverlay({
   const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
-  const latestBoundsRef = useRef(bounds);
+  const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
   const latestTransformRef = useRef(transform);
   const latestGetWorldPointFromClientRef = useRef(getWorldPointFromClient);
@@ -105,11 +107,11 @@ export function PositioningBoxOverlay({
   }, [baseRect]);
 
   useEffect(() => {
-    latestBoundsRef.current = bounds;
+    latestBoundsRef.current = interactionBounds ?? bounds;
     if (!dragSessionRef.current) {
       applyPreviewBounds(overlayRef.current, handleRefs.current, bounds, handleSize);
     }
-  }, [bounds, handleSize]);
+  }, [bounds, handleSize, interactionBounds]);
 
   useEffect(() => {
     latestTransformRef.current = transform;
@@ -240,13 +242,17 @@ export function PositioningBoxOverlay({
     );
 
     latestTransformRef.current = nextTransform;
+    const nextInteractionBounds = getPositionedBounds(
+      latestBaseRectRef.current,
+      nextTransform,
+    );
+    latestBoundsRef.current = nextInteractionBounds;
     if (previewBoundsStrategy === "live") {
       const nextBounds =
         latestProjectBoundsForPreviewRef.current?.(
           nextTransform,
           latestBaseRectRef.current,
-        ) ?? getPositionedBounds(latestBaseRectRef.current, nextTransform);
-      latestBoundsRef.current = nextBounds;
+        ) ?? nextInteractionBounds;
       applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
     }
     latestOnTransformPreviewRef.current?.(nextTransform);
