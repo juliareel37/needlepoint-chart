@@ -144,13 +144,22 @@ export function GridCanvasStage({
       canvas,
       context,
       metrics,
+      viewport.zoom,
+      stageSize,
       sourceCanvasSizingRef.current,
     );
     sourceCanvasSizingRef.current = nextConfiguration.sizing;
     if (nextConfiguration.sizingChanged) {
       initializedRef.current = false;
     }
-  }, [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth]);
+  }, [
+    metrics.cellSize,
+    metrics.surfaceHeight,
+    metrics.surfaceWidth,
+    stageSize.height,
+    stageSize.width,
+    viewport.zoom,
+  ]);
 
   useEffect(() => {
     const canvas = sourceCanvasRef.current;
@@ -254,9 +263,7 @@ export function GridCanvasStage({
       showGridlines,
       showSymbols,
       stageSize,
-      stitchCanvasCache: stitchCanvasCacheRef.current,
       symbolAssignments,
-      threadView,
       viewport,
     });
 
