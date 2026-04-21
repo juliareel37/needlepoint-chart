@@ -573,7 +573,11 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
               placement={textPlacement}
+              portalHost={stageRef.current}
               previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
               zoom={viewport.zoom}
             />
           ) : null}
@@ -585,7 +589,11 @@ export function GridWorldSurface({
               metrics={metrics}
               paletteById={colorsById}
               placement={iconPlacement}
+              portalHost={stageRef.current}
               previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
               zoom={viewport.zoom}
             />
           ) : null}

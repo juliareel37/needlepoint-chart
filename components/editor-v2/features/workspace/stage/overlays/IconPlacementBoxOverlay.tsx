@@ -19,12 +19,17 @@ interface IconPlacementBoxOverlayProps {
   ariaLabel: string;
   baseRect: PositioningRect;
   bounds: PositioningRect;
+  interactionBounds?: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   onTransformCommit?: (
     transform: IconPlacementTransform,
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: IconPlacementTransform) => void;
+  projectBoundsForPreview?: (
+    transform: IconPlacementTransform,
+    baseRect: PositioningRect,
+  ) => PositioningRect;
   transform: IconPlacementTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -49,9 +54,11 @@ export function IconPlacementBoxOverlay({
   ariaLabel,
   baseRect,
   bounds,
+  interactionBounds,
   getWorldPointFromClient,
   onTransformCommit,
   onTransformPreview,
+  projectBoundsForPreview,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -60,12 +67,13 @@ export function IconPlacementBoxOverlay({
   const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
-  const latestBoundsRef = useRef(bounds);
+  const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
   const latestTransformRef = useRef(transform);
   const latestGetWorldPointFromClientRef = useRef(getWorldPointFromClient);
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
+  const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
@@ -76,11 +84,11 @@ export function IconPlacementBoxOverlay({
   }, [baseRect]);
 
   useEffect(() => {
-    latestBoundsRef.current = bounds;
+    latestBoundsRef.current = interactionBounds ?? bounds;
     if (!dragSessionRef.current) {
       applyPreviewBounds(overlayRef.current, handleRefs.current, bounds, handleSize);
     }
-  }, [bounds, handleSize]);
+  }, [bounds, handleSize, interactionBounds]);
 
   useEffect(() => {
     latestTransformRef.current = transform;
@@ -97,6 +105,10 @@ export function IconPlacementBoxOverlay({
   useEffect(() => {
     latestOnTransformCommitRef.current = onTransformCommit;
   }, [onTransformCommit]);
+
+  useEffect(() => {
+    latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
+  }, [projectBoundsForPreview]);
 
   useEffect(() => {
     return () => {
@@ -149,10 +161,18 @@ export function IconPlacementBoxOverlay({
       worldPoint,
       latestBaseRectRef.current,
     );
-    const nextBounds = getIconPlacementBounds(latestBaseRectRef.current, nextTransform);
+    const nextInteractionBounds = getIconPlacementBounds(
+      latestBaseRectRef.current,
+      nextTransform,
+    );
+    const nextBounds =
+      latestProjectBoundsForPreviewRef.current?.(
+        nextTransform,
+        latestBaseRectRef.current,
+      ) ?? nextInteractionBounds;
 
     latestTransformRef.current = nextTransform;
-    latestBoundsRef.current = nextBounds;
+    latestBoundsRef.current = nextInteractionBounds;
     applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
     latestOnTransformPreviewRef.current?.(nextTransform);
 
