@@ -78,7 +78,6 @@ export function TraceImageLayer({
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
-  const mobileControlRef = useRef<HTMLDivElement | null>(null);
   const mobileDragSessionRef = useRef<MobileTraceDragSession | null>(null);
   const mobileDragRafRef = useRef<number | null>(null);
   const [coarsePointer, setCoarsePointer] = useState(false);
@@ -358,7 +357,6 @@ export function TraceImageLayer({
       };
       setMobileDragging(true);
       setMobilePreviewTransform(traceTransform);
-      event.currentTarget.setPointerCapture(event.pointerId);
 
       event.preventDefault();
       event.stopPropagation();
@@ -434,11 +432,6 @@ export function TraceImageLayer({
       }
 
       mobileDragSessionRef.current = null;
-      if (
-        mobileControlRef.current?.hasPointerCapture?.(event.pointerId)
-      ) {
-        mobileControlRef.current.releasePointerCapture(event.pointerId);
-      }
 
       const deltaX = event.clientX - session.startClientX;
       const deltaY = event.clientY - session.startClientY;
@@ -541,7 +534,6 @@ export function TraceImageLayer({
               />
             </div>
             <div
-              ref={mobileControlRef}
               aria-label="Trace image controls"
               role="presentation"
               onPointerDown={handleMobileDragStart}
