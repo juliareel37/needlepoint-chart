@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { upload } from "@vercel/blob/client";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
@@ -617,11 +618,24 @@ async function uploadTraceFile(file: File): Promise<{
   imageWidth: number | null;
   imageHeight: number | null;
 }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await fetch("/api/upload-trace", {
+  const pathname = createTraceUploadPath(file);
+  const uploadedOriginal = await upload(pathname, file, {
+    access: "public",
+    contentType: file.type || undefined,
+    handleUploadUrl: "/api/upload-trace",
+  });
+
+  const response = await fetch("/api/upload-trace/complete", {
     method: "POST",
-    body: formData,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type || null,
+      originalPathname: uploadedOriginal.pathname,
+      originalUrl: uploadedOriginal.url,
+    }),
   });
 
   if (!response.ok) {
@@ -655,6 +669,28 @@ async function uploadTraceFile(file: File): Promise<{
     imageWidth: uploaded.imageWidth,
     imageHeight: uploaded.imageHeight,
   };
+}
+
+function createTraceUploadPath(file: File): string {
+  const extension = getUploadFileExtension(file.name, file.type);
+  const uploadId = `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}`;
+  return `${uploadId}/original.${extension}`;
+}
+
+function getUploadFileExtension(fileName: string, mimeType: string): string {
+  const sanitized = fileName.trim().toLowerCase();
+  const lastDotIndex = sanitized.lastIndexOf(".");
+
+  if (lastDotIndex > 0 && lastDotIndex < sanitized.length - 1) {
+    return sanitized.slice(lastDotIndex + 1).replace(/[^a-z0-9]/g, "") || "bin";
+  }
+
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+
+  return "bin";
 }
 
 function getUploadErrorDetail(responseBody: string): string | null {
