@@ -190,6 +190,41 @@ export function TraceImageLayer({
   }, [trace.previewUrl]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => {
+      if (cancelled) {
+        return;
+      }
+
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+        setMobilePreviewSize({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        });
+      }
+    };
+    image.src = trace.previewUrl;
+
+    if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      setMobilePreviewSize({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      image.onload = null;
+    };
+  }, [trace.previewUrl]);
+
+  useEffect(() => {
     const desktopCanvas = desktopCanvasRef.current;
     if (desktopCanvas) {
       desktopCanvas.style.transform = getPositioningTransformCss(traceTransform);
@@ -468,19 +503,13 @@ export function TraceImageLayer({
               src={trace.previewUrl}
               alt=""
               draggable={false}
-              onLoad={(event) => {
-                const nextWidth = event.currentTarget.naturalWidth;
-                const nextHeight = event.currentTarget.naturalHeight;
-                if (nextWidth > 0 && nextHeight > 0) {
-                  setMobilePreviewSize({ width: nextWidth, height: nextHeight });
-                }
-              }}
               style={{
                 width: "100%",
                 height: "100%",
                 display: "block",
                 imageRendering: "auto",
-                objectFit: "fill",
+                objectFit: "contain",
+                objectPosition: "center",
                 pointerEvents: "none",
                 userSelect: "none",
                 WebkitUserSelect: "none",
@@ -526,37 +555,6 @@ export function TraceImageLayer({
               background: "transparent",
             }}
           />
-          <div
-            aria-live="off"
-            role="status"
-            style={{
-              position: "absolute",
-              top: 8,
-              left: 8,
-              padding: "8px 10px",
-              borderRadius: 8,
-              background: "rgba(15, 23, 42, 0.82)",
-              color: "#f8fafc",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
-              fontSize: 11,
-              lineHeight: 1.35,
-              letterSpacing: "0.01em",
-              pointerEvents: "none",
-              whiteSpace: "pre",
-              zIndex: zIndex + 1,
-            }}
-          >
-            {[
-              `src ${formatDebugPair(mobileDebugMetrics.sourceWidth, mobileDebugMetrics.sourceHeight)}`,
-              `base ${formatDebugPair(mobileDebugMetrics.baseWidth, mobileDebugMetrics.baseHeight)}`,
-              `disp ${formatDebugPair(mobileDebugMetrics.displayWidth, mobileDebugMetrics.displayHeight)}`,
-              `mul ${formatDebugScale(mobileDebugMetrics.scaleUpX)} x ${formatDebugScale(mobileDebugMetrics.scaleUpY)}`,
-              `ofs ${formatDebugNumber(mobileDebugMetrics.offsetX)}, ${formatDebugNumber(mobileDebugMetrics.offsetY)}`,
-              `scl ${formatDebugScale(mobileDebugMetrics.scale)}`,
-              mobileDragging ? "drag yes" : "drag no",
-            ].join("\n")}
-          </div>
         </>
       ) : (
         <>
@@ -621,6 +619,39 @@ export function TraceImageLayer({
           ) : null}
         </>
       )}
+      {coarsePointer && positioningEnabled ? (
+        <div
+          aria-live="off"
+          role="status"
+          style={{
+            position: "fixed",
+            top: 8,
+            left: 8,
+            padding: "8px 10px",
+            borderRadius: 8,
+            background: "rgba(15, 23, 42, 0.92)",
+            color: "#f8fafc",
+            fontFamily:
+              "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
+            fontSize: 11,
+            lineHeight: 1.35,
+            letterSpacing: "0.01em",
+            pointerEvents: "none",
+            whiteSpace: "pre",
+            zIndex: 999999,
+          }}
+        >
+          {[
+            `src ${formatDebugPair(mobileDebugMetrics.sourceWidth, mobileDebugMetrics.sourceHeight)}`,
+            `base ${formatDebugPair(mobileDebugMetrics.baseWidth, mobileDebugMetrics.baseHeight)}`,
+            `disp ${formatDebugPair(mobileDebugMetrics.displayWidth, mobileDebugMetrics.displayHeight)}`,
+            `mul ${formatDebugScale(mobileDebugMetrics.scaleUpX)} x ${formatDebugScale(mobileDebugMetrics.scaleUpY)}`,
+            `ofs ${formatDebugNumber(mobileDebugMetrics.offsetX)}, ${formatDebugNumber(mobileDebugMetrics.offsetY)}`,
+            `scl ${formatDebugScale(mobileDebugMetrics.scale)}`,
+            mobileDragging ? "drag yes" : "drag no",
+          ].join("\n")}
+        </div>
+      ) : null}
     </div>
   );
 }
