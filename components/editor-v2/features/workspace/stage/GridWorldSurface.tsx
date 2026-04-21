@@ -234,6 +234,7 @@ export function GridWorldSurface({
     handleStageAuxClick,
     handleStageMouseDownCapture,
     handleStagePointerDownCapture,
+    isZoomInteracting,
   } = useStagePanInteractions({
     activeTool,
     dispatch,
@@ -491,6 +492,7 @@ export function GridWorldSurface({
               symbolAssignments={state.document.palette.symbolAssignments}
               threadView={threadView}
               viewport={viewport}
+              isZoomInteractionActive={isZoomInteracting}
             />
           </div>
 

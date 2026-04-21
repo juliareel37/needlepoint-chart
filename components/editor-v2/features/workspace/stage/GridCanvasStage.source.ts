@@ -13,6 +13,7 @@ const DESKTOP_MAX_CANVAS_BACKING_DIMENSION = 16384;
 const DESKTOP_MAX_CANVAS_BACKING_AREA = 16_777_216;
 const MOBILE_MAX_CANVAS_BACKING_DIMENSION = 2048;
 const MOBILE_MAX_CANVAS_BACKING_AREA = 4_194_304;
+const MOBILE_INTERACTION_TARGET_PIXEL_RATIO = 0.35;
 const MIN_CANVAS_PIXEL_RATIO = 0.125;
 
 export function getEffectiveSourceCanvasPixelRatio(
@@ -59,6 +60,9 @@ export function configureSourceCanvas(
   metrics: GridWorldMetrics,
   viewportZoom: number,
   stageSize: { width: number; height: number },
+  options: {
+    isZoomInteractionActive?: boolean;
+  },
   previousSizing: CanvasSizing | null,
 ): { sizingChanged: boolean; sizing: CanvasSizing } {
   const width = metrics.surfaceWidth;
@@ -68,8 +72,9 @@ export function configureSourceCanvas(
       typeof window.matchMedia === "function" &&
       window.matchMedia(`(max-width: ${MOBILE_LAYOUT_MAX_WIDTH_PX}px)`).matches) ||
     stageSize.width <= MOBILE_LAYOUT_MAX_WIDTH_PX;
-  const targetPixelRatio =
-    (window.devicePixelRatio || 1) * Math.max(viewportZoom, MIN_CANVAS_PIXEL_RATIO);
+  const targetPixelRatio = options.isZoomInteractionActive && isMobileLayout
+    ? MOBILE_INTERACTION_TARGET_PIXEL_RATIO
+    : (window.devicePixelRatio || 1) * Math.max(viewportZoom, MIN_CANVAS_PIXEL_RATIO);
   const effectivePixelRatio = getEffectiveSourceCanvasPixelRatio(
     width,
     height,
