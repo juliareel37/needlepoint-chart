@@ -143,6 +143,18 @@ describe("POST /api/upload-trace/complete", () => {
     expect(fetch).toHaveBeenCalledWith("https://store.blob.vercel-storage.com/original.png", {
       cache: "no-store",
     });
+    expect(resizeMock).toHaveBeenNthCalledWith(1, {
+      width: 4096,
+      height: 4096,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+    expect(resizeMock).toHaveBeenNthCalledWith(2, {
+      width: 160,
+      height: 160,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
     expect(putMock).toHaveBeenCalledTimes(2);
     expect(body).toEqual({
       originalUrl: "https://store.blob.vercel-storage.com/original.png",

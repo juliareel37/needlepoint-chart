@@ -1,5 +1,5 @@
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-export const PREVIEW_MAX_DIMENSION_PX = 1024;
+export const PREVIEW_MAX_DIMENSION_PX = 4096;
 export const THUMBNAIL_MAX_DIMENSION_PX = 160;
 export const TRACE_UPLOAD_PATH_PATTERN =
   /^editor-v2-trace-\d+-[0-9a-f-]+\/original\.[a-z0-9]+$/i;
