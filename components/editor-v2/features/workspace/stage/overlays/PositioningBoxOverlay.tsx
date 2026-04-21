@@ -28,6 +28,10 @@ interface PositioningBoxOverlayProps {
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: PositioningTransform) => void;
+  projectBoundsForPreview?: (
+    transform: PositioningTransform,
+    baseRect: PositioningRect,
+  ) => PositioningRect;
   interactive?: boolean;
   previewThrottleMs?: number;
   previewBoundsStrategy?: "live" | "none";
@@ -65,6 +69,7 @@ export function PositioningBoxOverlay({
   onInteractionStart,
   onTransformCommit,
   onTransformPreview,
+  projectBoundsForPreview,
   interactive = true,
   handleShape = "mixed",
   previewThrottleMs = 0,
@@ -89,6 +94,7 @@ export function PositioningBoxOverlay({
   const latestOnInteractionEndRef = useRef(onInteractionEnd);
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
+  const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
@@ -132,6 +138,10 @@ export function PositioningBoxOverlay({
   useEffect(() => {
     latestOnTransformCommitRef.current = onTransformCommit;
   }, [onTransformCommit]);
+
+  useEffect(() => {
+    latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
+  }, [projectBoundsForPreview]);
 
   useEffect(() => {
     return () => {
@@ -231,7 +241,11 @@ export function PositioningBoxOverlay({
 
     latestTransformRef.current = nextTransform;
     if (previewBoundsStrategy === "live") {
-      const nextBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      const nextBounds =
+        latestProjectBoundsForPreviewRef.current?.(
+          nextTransform,
+          latestBaseRectRef.current,
+        ) ?? getPositionedBounds(latestBaseRectRef.current, nextTransform);
       latestBoundsRef.current = nextBounds;
       applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
     }
