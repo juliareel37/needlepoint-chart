@@ -530,7 +530,7 @@ export function TraceImageLayer({
                   WebkitBackfaceVisibility: "hidden",
                 }}
               />
-              <TracePositioningChrome zoom={zoom} />
+              <TracePositioningChrome />
             </div>
             <div
               aria-label="Trace image controls"
@@ -791,11 +791,10 @@ function formatDebugNumber(value: number): string {
   return value.toFixed(1);
 }
 
-function TracePositioningChrome({ zoom }: { zoom: number }) {
-  const controlScale = zoom > 0 ? 1 / zoom : 1;
-  const handleSize = 14 * controlScale;
-  const outlineWidth = Math.max(1, 1.5 * controlScale);
-  const handleBorderWidth = Math.max(1, 1.25 * controlScale);
+function TracePositioningChrome() {
+  const handleSize = 14;
+  const outlineWidth = 1.5;
+  const handleBorderWidth = 1.25;
   const handleOffset = `${-handleSize / 2}px`;
 
   return (
