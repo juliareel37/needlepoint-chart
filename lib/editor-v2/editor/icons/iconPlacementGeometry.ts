@@ -1,6 +1,7 @@
 import type {
   PositioningDragMode,
   PositioningHandleId,
+  PositioningPinchState,
   PositioningRect,
 } from "../positioning";
 import type { WorldPoint } from "../viewport";
@@ -68,6 +69,30 @@ export function getIconPlacementTransformFromDrag(
     offsetY: nextBounds.top - baseRect.top,
     scaleX: clampScale(nextBounds.width / Math.max(baseRect.width, 0.0001)),
     scaleY: clampScale(nextBounds.height / Math.max(baseRect.height, 0.0001)),
+  };
+}
+
+export function getIconPlacementTransformFromPinch(
+  pinchState: PositioningPinchState,
+  nextCenter: WorldPoint,
+  nextDistance: number,
+  baseRect: PositioningRect,
+  startTransform: IconPlacementTransform,
+): IconPlacementTransform {
+  const distanceRatio = nextDistance / Math.max(pinchState.startDistance, 0.0001);
+  const nextScaleX = clampScale(startTransform.scaleX * distanceRatio);
+  const nextScaleY = clampScale(startTransform.scaleY * distanceRatio);
+  const nextWidth = baseRect.width * nextScaleX;
+  const nextHeight = baseRect.height * nextScaleY;
+  const nextLeft = nextCenter.x - pinchState.anchorX * nextWidth;
+  const nextTop = nextCenter.y - pinchState.anchorY * nextHeight;
+
+  return {
+    offsetX: nextLeft - baseRect.left,
+    offsetY: nextTop - baseRect.top,
+    scaleX: nextScaleX,
+    scaleY: nextScaleY,
+    lockAspectRatio: startTransform.lockAspectRatio,
   };
 }
 

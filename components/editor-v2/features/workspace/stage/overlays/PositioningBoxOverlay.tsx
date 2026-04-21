@@ -165,6 +165,76 @@ export function PositioningBoxOverlay({
   }, []);
 
   useEffect(() => {
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === "touch" && touchPointsRef.current.has(event.pointerId)) {
+        touchPointsRef.current.set(event.pointerId, {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+      }
+
+      if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+        scheduleFrame();
+        return;
+      }
+
+      const session = dragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      session.pendingClientX = event.clientX;
+      session.pendingClientY = event.clientY;
+
+      const hasLivePreview =
+        previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
+      if (!hasLivePreview) {
+        return;
+      }
+
+      if (
+        previewThrottleMs > 0 &&
+        session.lastPreviewAt > 0 &&
+        performance.now() - session.lastPreviewAt < previewThrottleMs
+      ) {
+        return;
+      }
+
+      scheduleFrame();
+    };
+
+    const handleWindowPointerEnd = (event: PointerEvent) => {
+      if (event.pointerType === "touch") {
+        touchPointsRef.current.set(event.pointerId, {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+      }
+
+      if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+        finalizePinch(event.pointerId);
+        return;
+      }
+
+      if (event.pointerType === "touch") {
+        touchPointsRef.current.delete(event.pointerId);
+      }
+
+      finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerEnd);
+    window.addEventListener("pointercancel", handleWindowPointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerEnd);
+      window.removeEventListener("pointercancel", handleWindowPointerEnd);
+    };
+  }, [previewBoundsStrategy, previewThrottleMs]);
+
+  useEffect(() => {
     if (usePointerCapture) {
       return;
     }
