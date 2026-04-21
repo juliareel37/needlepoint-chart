@@ -91,14 +91,17 @@ export function TraceControls({
         }),
       );
       setTraceUploadStatus("idle");
-    } catch {
+    } catch (error) {
       if (sequence !== traceUploadSequenceRef.current) {
         return;
       }
 
       setTraceUploadStatus("error");
       setTraceUploadErrorMessage(
-        "Try signing in again or choose a smaller PNG, JPG, WEBP, or GIF.",
+        getErrorMessage(
+          error,
+          "Try signing in again or choose a smaller PNG, JPG, WEBP, or GIF.",
+        ),
       );
     }
   };
@@ -622,7 +625,13 @@ async function uploadTraceFile(file: File): Promise<{
   });
 
   if (!response.ok) {
-    throw new Error(`Trace upload failed with status ${response.status}`);
+    const responseBody = await response.text().catch(() => "");
+    const detail = getUploadErrorDetail(responseBody);
+    throw new Error(
+      detail
+        ? `Trace upload failed (${response.status}): ${detail}`
+        : `Trace upload failed with status ${response.status}`,
+    );
   }
 
   const uploaded = (await response.json()) as {
@@ -646,6 +655,37 @@ async function uploadTraceFile(file: File): Promise<{
     imageWidth: uploaded.imageWidth,
     imageHeight: uploaded.imageHeight,
   };
+}
+
+function getUploadErrorDetail(responseBody: string): string | null {
+  const trimmed = responseBody.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { error?: unknown; message?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error.trim();
+    }
+
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message.trim();
+    }
+  } catch {
+    // Ignore JSON parse failures and fall back to plain text below.
+  }
+
+  return trimmed;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function getTraceDisplayName(trace: TraceDocument): string {
