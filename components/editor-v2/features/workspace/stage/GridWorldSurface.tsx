@@ -91,12 +91,6 @@ export function GridWorldSurface({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const [stageBounds, setStageBounds] = useState({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -265,12 +259,6 @@ export function GridWorldSurface({
       const rect = stageElement.getBoundingClientRect();
 
       setStageSize({
-        width: rect.width,
-        height: rect.height,
-      });
-      setStageBounds({
-        left: rect.left,
-        top: rect.top,
         width: rect.width,
         height: rect.height,
       });
@@ -458,8 +446,8 @@ export function GridWorldSurface({
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               frameOrigin={frameOrigin}
+              overlayHost={displayHost}
               positioningEnabled={tracePositioningEnabled}
-              stageBounds={stageBounds}
               trace={trace}
               traceAsset={
                 loadedTraceAsset?.previewUrl === trace.previewUrl
