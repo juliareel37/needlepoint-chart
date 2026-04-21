@@ -7,9 +7,11 @@ import {
   getHandleTop,
   getPositionedBounds,
   getTransformFromDrag,
+  getTransformFromPinch,
   POSITIONING_HANDLES,
   type PositioningDragMode,
   type PositioningDragState,
+  type PositioningPinchState,
   type PositioningRect,
   type PositioningTransform,
 } from "@/lib/editor-v2/editor/positioning";
@@ -58,6 +60,12 @@ interface DragSession {
   lastPreviewAt: number;
 }
 
+interface PinchSession {
+  pinch: PositioningPinchState;
+  pointerIds: [number, number];
+  startClientDistance: number;
+}
+
 const DRAG_THRESHOLD = 4;
 
 export function PositioningBoxOverlay({
@@ -87,6 +95,8 @@ export function PositioningBoxOverlay({
   const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
+  const pinchSessionRef = useRef<PinchSession | null>(null);
+  const touchPointsRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
   const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
   const latestTransformRef = useRef(transform);
@@ -202,19 +212,29 @@ export function PositioningBoxOverlay({
 
   function scheduleFrame() {
     const session = dragSessionRef.current;
-    if (!session || session.rafId !== null) {
+    if (session?.rafId !== null) {
       return;
     }
 
-    session.rafId = window.requestAnimationFrame(() => {
-      const activeSession = dragSessionRef.current;
-      if (!activeSession) {
+    const targetSession = session;
+    const rafId = window.requestAnimationFrame(() => {
+      if (targetSession) {
+        const activeSession = dragSessionRef.current;
+        if (!activeSession) {
+          return;
+        }
+
+        activeSession.rafId = null;
+        flushPreview(activeSession);
         return;
       }
 
-      activeSession.rafId = null;
-      flushPreview(activeSession);
+      flushPinchPreview();
     });
+
+    if (targetSession) {
+      targetSession.rafId = rafId;
+    }
   }
 
   function flushPreview(session: DragSession): PositioningTransform {
@@ -261,6 +281,102 @@ export function PositioningBoxOverlay({
     return nextTransform;
   }
 
+  function flushPinchPreview(): PositioningTransform | null {
+    const pinchSession = pinchSessionRef.current;
+    if (!pinchSession) {
+      return null;
+    }
+
+    const firstTouch = touchPointsRef.current.get(pinchSession.pointerIds[0]);
+    const secondTouch = touchPointsRef.current.get(pinchSession.pointerIds[1]);
+    if (!firstTouch || !secondTouch) {
+      return latestTransformRef.current;
+    }
+
+    const centerClientX = (firstTouch.clientX + secondTouch.clientX) / 2;
+    const centerClientY = (firstTouch.clientY + secondTouch.clientY) / 2;
+    const worldCenter = latestGetWorldPointFromClientRef.current(centerClientX, centerClientY);
+    if (!worldCenter) {
+      return latestTransformRef.current;
+    }
+
+    const nextDistance = Math.hypot(
+      secondTouch.clientX - firstTouch.clientX,
+      secondTouch.clientY - firstTouch.clientY,
+    );
+    const nextTransform = getTransformFromPinch(
+      {
+        ...pinchSession.pinch,
+        startDistance: pinchSession.startClientDistance,
+      },
+      worldCenter,
+      nextDistance,
+      latestBaseRectRef.current,
+    );
+
+    latestTransformRef.current = nextTransform;
+    const nextInteractionBounds = getPositionedBounds(
+      latestBaseRectRef.current,
+      nextTransform,
+    );
+    latestBoundsRef.current = nextInteractionBounds;
+    if (previewBoundsStrategy === "live") {
+      const nextBounds =
+        latestProjectBoundsForPreviewRef.current?.(
+          nextTransform,
+          latestBaseRectRef.current,
+        ) ?? nextInteractionBounds;
+      applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    }
+    latestOnTransformPreviewRef.current?.(nextTransform);
+
+    return nextTransform;
+  }
+
+  function beginPinch(overlayElement: HTMLDivElement) {
+    const activeTouches = Array.from(touchPointsRef.current.entries());
+    if (activeTouches.length < 2) {
+      return;
+    }
+
+    const [[firstPointerId, firstTouch], [secondPointerId, secondTouch]] = activeTouches;
+    const centerClientX = (firstTouch.clientX + secondTouch.clientX) / 2;
+    const centerClientY = (firstTouch.clientY + secondTouch.clientY) / 2;
+    const worldCenter = latestGetWorldPointFromClientRef.current(centerClientX, centerClientY);
+    if (!worldCenter) {
+      return;
+    }
+
+    const startBounds = latestBoundsRef.current;
+    const width = Math.max(startBounds.width, 0.0001);
+    const height = Math.max(startBounds.height, 0.0001);
+
+    pinchSessionRef.current = {
+      pinch: {
+        anchorX: (worldCenter.x - startBounds.left) / width,
+        anchorY: (worldCenter.y - startBounds.top) / height,
+        startDistance: Math.hypot(
+          secondTouch.clientX - firstTouch.clientX,
+          secondTouch.clientY - firstTouch.clientY,
+        ),
+        startTransform: latestTransformRef.current,
+      },
+      pointerIds: [firstPointerId, secondPointerId],
+      startClientDistance: Math.hypot(
+        secondTouch.clientX - firstTouch.clientX,
+        secondTouch.clientY - firstTouch.clientY,
+      ),
+    };
+
+    const activeDragSession = dragSessionRef.current;
+    if (activeDragSession && activeDragSession.rafId !== null) {
+      window.cancelAnimationFrame(activeDragSession.rafId);
+    }
+    dragSessionRef.current = null;
+    overlayElement.style.cursor = interactive ? "grab" : "default";
+    latestOnInteractionStartRef.current?.();
+  }
+
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, mode: PositioningDragMode) {
     if (!interactive) {
       return;
@@ -277,6 +393,21 @@ export function PositioningBoxOverlay({
     const overlayElement = overlayRef.current;
     if (!overlayElement) {
       return;
+    }
+
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+
+      if (touchPointsRef.current.size === 2) {
+        overlayElement.setPointerCapture(event.pointerId);
+        beginPinch(overlayElement);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
     }
 
     dragSequenceRef.current += 1;
@@ -309,6 +440,20 @@ export function PositioningBoxOverlay({
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch" && touchPointsRef.current.has(event.pointerId)) {
+      touchPointsRef.current.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
+    if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+      event.preventDefault();
+      event.stopPropagation();
+      scheduleFrame();
+      return;
+    }
+
     if (!usePointerCapture) {
       return;
     }
@@ -367,7 +512,34 @@ export function PositioningBoxOverlay({
     dragSessionRef.current = null;
   }
 
+  function finalizePinch(pointerId: number) {
+    const pinchSession = pinchSessionRef.current;
+    if (!pinchSession || !pinchSession.pointerIds.includes(pointerId)) {
+      return;
+    }
+
+    const committedTransform = flushPinchPreview();
+    pinchSessionRef.current = null;
+    touchPointsRef.current.clear();
+    latestOnInteractionEndRef.current?.();
+
+    if (committedTransform) {
+      latestOnTransformCommitRef.current?.(
+        committedTransform,
+        `${transactionKeyPrefix}-pinch-${dragSequenceRef.current + 1}`,
+      );
+      dragSequenceRef.current += 1;
+    }
+  }
+
   function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
     if (!usePointerCapture) {
       return;
     }
@@ -378,6 +550,15 @@ export function PositioningBoxOverlay({
       }
     } catch {
       // Ignore release errors during teardown.
+    }
+
+    if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+      finalizePinch(event.pointerId);
+      return;
+    }
+
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.delete(event.pointerId);
     }
 
     finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
