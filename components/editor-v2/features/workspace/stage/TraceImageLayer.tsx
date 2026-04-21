@@ -511,7 +511,7 @@ export function TraceImageLayer({
                 userSelect: "none",
                 WebkitUserSelect: "none",
               }}
-              >
+            >
               <img
                 aria-hidden="true"
                 src={trace.previewUrl}
@@ -530,6 +530,19 @@ export function TraceImageLayer({
                   WebkitBackfaceVisibility: "hidden",
                 }}
               />
+            </div>
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: `${mobileDisplayStageBounds.left - stageBounds.left}px`,
+                top: `${mobileDisplayStageBounds.top - stageBounds.top}px`,
+                width: `${mobileDisplayStageBounds.width}px`,
+                height: `${mobileDisplayStageBounds.height}px`,
+                overflow: "visible",
+                pointerEvents: "none",
+              }}
+            >
               <TracePositioningChrome />
             </div>
             <div
