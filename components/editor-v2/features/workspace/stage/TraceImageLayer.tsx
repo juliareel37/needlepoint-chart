@@ -19,7 +19,6 @@ import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 
-const MOBILE_TRACE_DRAG_PREVIEW_MAX_DIMENSION = 1024;
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MOBILE_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
@@ -74,17 +73,34 @@ export function TraceImageLayer({
     typeof traceTransform | null
   >(null);
   const [mobileDragging, setMobileDragging] = useState(false);
+  const traceSourceSize = useMemo(() => {
+    if (traceAsset?.width && traceAsset?.height) {
+      return {
+        width: traceAsset.width,
+        height: traceAsset.height,
+      };
+    }
+
+    if (trace.imageWidth && trace.imageHeight) {
+      return {
+        width: trace.imageWidth,
+        height: trace.imageHeight,
+      };
+    }
+
+    return null;
+  }, [trace.imageHeight, trace.imageWidth, traceAsset?.height, traceAsset?.width]);
   const traceBaseRect = useMemo(
     () =>
-      traceAsset?.width && traceAsset?.height
+      traceSourceSize
         ? getContainedRect(
-            traceAsset.width,
-            traceAsset.height,
+            traceSourceSize.width,
+            traceSourceSize.height,
             metrics.surfaceWidth,
             metrics.surfaceHeight,
           )
         : null,
-    [metrics.surfaceHeight, metrics.surfaceWidth, traceAsset?.height, traceAsset?.width],
+    [metrics.surfaceHeight, metrics.surfaceWidth, traceSourceSize],
   );
   const traceTransform = useMemo(
     () => ({
@@ -373,7 +389,7 @@ export function TraceImageLayer({
         position: "absolute",
         inset: 0,
         zIndex,
-        overflow: "hidden",
+        overflow: "visible",
         pointerEvents: positioningEnabled ? "auto" : "none",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -395,6 +411,9 @@ export function TraceImageLayer({
               transform: getMobileWrapperTransformCss(mobileDisplayTransform),
               transformOrigin: "top left",
               willChange: "transform",
+              contain: "layout style size",
+              isolation: "isolate",
+              overflow: "visible",
               pointerEvents: "none",
               userSelect: "none",
               WebkitUserSelect: "none",
@@ -414,6 +433,8 @@ export function TraceImageLayer({
                 pointerEvents: "none",
                 userSelect: "none",
                 WebkitUserSelect: "none",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
               }}
             />
           </div>
@@ -430,6 +451,9 @@ export function TraceImageLayer({
               transform: getMobileWrapperTransformCss(mobileDisplayTransform),
               transformOrigin: "top left",
               willChange: "transform",
+              contain: "layout style size",
+              isolation: "isolate",
+              overflow: "visible",
               pointerEvents: "none",
               background: "rgba(37, 99, 235, 0.18)",
               border: "1px solid rgba(37, 99, 235, 0.9)",
@@ -446,41 +470,11 @@ export function TraceImageLayer({
               top: `${mobileDisplayBounds.top}px`,
               width: `${mobileDisplayBounds.width}px`,
               height: `${mobileDisplayBounds.height}px`,
-              border: `${Math.max(1, 1.5 * (zoom > 0 ? 1 / zoom : 1))}px solid ${
-                mobileDragging ? "rgba(37, 99, 235, 1)" : "rgba(37, 99, 235, 0.95)"
-              }`,
-              background:
-                mobilePreviewTransform ? "rgba(37, 99, 235, 0.1)" : "transparent",
-              boxSizing: "border-box",
-              boxShadow: mobileDragging
-                ? "0 0 0 2px rgba(37, 99, 235, 0.14)"
-                : "0 0 0 1px rgba(255, 255, 255, 0.2)",
-              borderRadius: `${Math.max(4, 8 * (zoom > 0 ? 1 / zoom : 1))}px`,
               touchAction: "none",
               cursor: "grab",
+              background: "transparent",
             }}
-          >
-            {MOBILE_TRACE_VISUAL_HANDLES.map((handle) => (
-              <div
-                key={handle.key}
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  width: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
-                  height: `${Math.max(10, 18 * (zoom > 0 ? 1 / zoom : 1))}px`,
-                  borderRadius: "999px",
-                  background: "#ffffff",
-                  border: `${Math.max(1, 1.25 * (zoom > 0 ? 1 / zoom : 1))}px solid #2563eb`,
-                  boxShadow: mobileDragging
-                    ? "0 2px 8px rgba(37, 99, 235, 0.22)"
-                    : "0 1px 4px rgba(15, 23, 42, 0.18)",
-                  left: handle.left,
-                  top: handle.top,
-                  transform: "translate(-50%, -50%)",
-                }}
-              />
-            ))}
-          </div>
+          />
         </>
       ) : (
         <>
@@ -536,6 +530,7 @@ export function TraceImageLayer({
               onTransformCommit={handleDesktopTransformCommit}
               onTransformPreview={handleDesktopTransformPreview}
               previewBoundsStrategy="none"
+              showOutline={false}
               showHandles={false}
               transactionKeyPrefix="trace-drag"
               transform={traceTransform}
@@ -686,10 +681,3 @@ function clampTraceTransformToSurface(
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
-
-const MOBILE_TRACE_VISUAL_HANDLES = [
-  { key: "nw", left: "0%", top: "0%" },
-  { key: "ne", left: "100%", top: "0%" },
-  { key: "sw", left: "0%", top: "100%" },
-  { key: "se", left: "100%", top: "100%" },
-];

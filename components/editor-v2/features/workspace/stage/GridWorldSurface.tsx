@@ -298,6 +298,11 @@ export function GridWorldSurface({
   ]);
 
   useEffect(() => {
+    if (coarsePointer && tracePositioningEnabled) {
+      setLoadedTraceAsset(null);
+      return;
+    }
+
     if (!trace?.previewUrl) {
       setLoadedTraceAsset(null);
       return;
@@ -344,7 +349,7 @@ export function GridWorldSurface({
     return () => {
       cancelled = true;
     };
-  }, [trace?.previewUrl]);
+  }, [coarsePointer, trace?.previewUrl, tracePositioningEnabled]);
 
   const traceAssetReady =
     !trace?.previewUrl ||

@@ -32,6 +32,7 @@ interface PositioningBoxOverlayProps {
   previewBoundsStrategy?: "live" | "none";
   usePointerCapture?: boolean;
   showHandles?: boolean;
+  showOutline?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -68,6 +69,7 @@ export function PositioningBoxOverlay({
   previewBoundsStrategy = "live",
   usePointerCapture = true,
   showHandles = true,
+  showOutline = true,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -381,15 +383,17 @@ export function PositioningBoxOverlay({
       onPointerCancel={handlePointerEnd}
       onPointerDown={(event) => beginDrag(event, "move")}
     >
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
-          background: "transparent",
-        }}
-      />
+      {showOutline ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
+            background: "transparent",
+          }}
+        />
+      ) : null}
 
       {showHandles
         ? POSITIONING_HANDLES.map((handle) => (
