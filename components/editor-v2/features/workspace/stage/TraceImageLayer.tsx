@@ -22,6 +22,7 @@ import {
   getContainedRect,
   getPositionedBounds,
   getPositioningTransformCss,
+  POSITIONING_HANDLES,
 } from "@/lib/editor-v2/editor/positioning";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
@@ -511,8 +512,8 @@ export function TraceImageLayer({
                 WebkitUserSelect: "none",
               }}
               >
-                <img
-                  aria-hidden="true"
+              <img
+                aria-hidden="true"
                 src={trace.previewUrl}
                 alt=""
                 draggable={false}
@@ -529,6 +530,7 @@ export function TraceImageLayer({
                   WebkitBackfaceVisibility: "hidden",
                 }}
               />
+              <TracePositioningChrome zoom={zoom} />
             </div>
             <div
               aria-label="Trace image controls"
@@ -787,4 +789,56 @@ function formatDebugNumber(value: number): string {
   }
 
   return value.toFixed(1);
+}
+
+function TracePositioningChrome({ zoom }: { zoom: number }) {
+  const controlScale = zoom > 0 ? 1 / zoom : 1;
+  const handleSize = 14 * controlScale;
+  const outlineWidth = Math.max(1, 1.5 * controlScale);
+  const handleBorderWidth = Math.max(1, 1.25 * controlScale);
+  const handleOffset = `${-handleSize / 2}px`;
+
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
+          background: "transparent",
+          pointerEvents: "none",
+          boxSizing: "border-box",
+        }}
+      />
+      {POSITIONING_HANDLES.map((handle) => (
+        <div
+          key={handle.id}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left:
+              handle.id === "nw" || handle.id === "w" || handle.id === "sw"
+                ? handleOffset
+                : handle.id === "n" || handle.id === "s"
+                  ? `calc(50% - ${handleSize / 2}px)`
+                  : `calc(100% - ${handleSize / 2}px)`,
+            top:
+              handle.id === "nw" || handle.id === "n" || handle.id === "ne"
+                ? handleOffset
+                : handle.id === "e" || handle.id === "w"
+                  ? `calc(50% - ${handleSize / 2}px)`
+                  : `calc(100% - ${handleSize / 2}px)`,
+            width: `${handleSize}px`,
+            height: `${handleSize}px`,
+            borderRadius: "999px",
+            background: "#ffffff",
+            border: `${handleBorderWidth}px solid #2563eb`,
+            pointerEvents: "none",
+            boxSizing: "border-box",
+          }}
+        />
+      ))}
+    </>
+  );
 }
