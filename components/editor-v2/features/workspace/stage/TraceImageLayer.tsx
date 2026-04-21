@@ -634,22 +634,23 @@ export function TraceImageLayer({
           role="status"
           style={{
             position: "fixed",
-            top: 20,
-            left: 20,
-            maxWidth: "min(94vw, 680px)",
-            padding: "20px 24px",
-            borderRadius: 18,
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            width: "min(96vw, 920px)",
+            padding: "28px 32px",
+            borderRadius: 22,
             background: "rgba(15, 23, 42, 0.96)",
             color: "#f8fafc",
             fontFamily:
               "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace",
-            fontSize: "clamp(26px, 4.8vw, 42px)",
-            lineHeight: 1.35,
+            fontSize: "clamp(34px, 6.5vw, 56px)",
+            lineHeight: 1.28,
             letterSpacing: "0.01em",
             pointerEvents: "none",
             whiteSpace: "pre",
             zIndex: 999999,
-            boxShadow: "0 18px 44px rgba(15, 23, 42, 0.36)",
+            boxShadow: "0 20px 56px rgba(15, 23, 42, 0.42)",
             border: "1px solid rgba(255, 255, 255, 0.12)",
           }}
         >
