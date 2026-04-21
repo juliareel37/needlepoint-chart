@@ -24,7 +24,6 @@ import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
-import { rasterizeTraceImageToSafeSize } from "../trace/traceAssetSizing";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -299,27 +298,24 @@ export function GridWorldSurface({
   ]);
 
   useEffect(() => {
-    if (!trace?.assetUrl) {
+    if (!trace?.previewUrl) {
       setLoadedTraceAsset(null);
       return;
     }
 
     let cancelled = false;
-    const assetUrl = trace.assetUrl;
+    const previewUrl = trace.previewUrl;
     const image = new Image();
     image.decoding = "async";
-    let rasterizedCanvas: HTMLCanvasElement | null = null;
 
     const commitLoadedState = (ready: boolean) => {
       if (cancelled) {
         return;
       }
 
-      const rasterized = ready ? rasterizeTraceImageToSafeSize(image) : null;
-
-      if (ready && !rasterized) {
+      if (ready && (image.naturalWidth <= 0 || image.naturalHeight <= 0)) {
         setLoadedTraceAsset({
-          assetUrl,
+          previewUrl,
           height: 0,
           image: null,
           ready: false,
@@ -328,22 +324,18 @@ export function GridWorldSurface({
         return;
       }
 
-      if (rasterized?.imageSource instanceof HTMLCanvasElement) {
-        rasterizedCanvas = rasterized.imageSource;
-      }
-
       setLoadedTraceAsset({
-        assetUrl,
-        height: rasterized?.height ?? 0,
-        image: rasterized?.imageSource ?? null,
-        ready: Boolean(ready && rasterized),
-        width: rasterized?.width ?? 0,
+        previewUrl,
+        height: ready ? image.naturalHeight : 0,
+        image: ready ? image : null,
+        ready,
+        width: ready ? image.naturalWidth : 0,
       });
     };
 
     image.onload = () => commitLoadedState(true);
     image.onerror = () => commitLoadedState(false);
-    image.src = assetUrl;
+    image.src = previewUrl;
 
     if (image.complete) {
       commitLoadedState(image.naturalWidth > 0 && image.naturalHeight > 0);
@@ -351,23 +343,19 @@ export function GridWorldSurface({
 
     return () => {
       cancelled = true;
-      if (rasterizedCanvas) {
-        rasterizedCanvas.width = 0;
-        rasterizedCanvas.height = 0;
-      }
     };
-  }, [trace?.assetUrl]);
+  }, [trace?.previewUrl]);
 
   const traceAssetReady =
-    !trace?.assetUrl ||
-    (loadedTraceAsset?.assetUrl === trace.assetUrl &&
+    !trace?.previewUrl ||
+    (loadedTraceAsset?.previewUrl === trace.previewUrl &&
       loadedTraceAsset.ready &&
       !!loadedTraceAsset.image &&
       loadedTraceAsset.width > 0 &&
       loadedTraceAsset.height > 0);
   const deferPaintUntilTraceReady =
     Boolean(onSurfaceReady) &&
-    Boolean(trace?.assetUrl) &&
+    Boolean(trace?.previewUrl) &&
     !traceAssetReady;
   const handleDisplayRendered = useCallback(() => {
     if (!traceAssetReady) {
@@ -447,7 +435,7 @@ export function GridWorldSurface({
               positioningEnabled={tracePositioningEnabled}
               trace={trace}
               traceAsset={
-                loadedTraceAsset?.assetUrl === trace.assetUrl
+                loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
                   : null
               }
@@ -471,7 +459,7 @@ export function GridWorldSurface({
               displayHost={displayHost}
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
-                trace && loadedTraceAsset?.assetUrl === trace.assetUrl
+                trace && loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
                   : null
               }

@@ -14,6 +14,24 @@ export function extractBlobUrl(data: unknown): string | null {
   return typeof imageDataUrl === "string" && isBlobUrl(imageDataUrl) ? imageDataUrl : null;
 }
 
+export function extractBlobUrls(values: Array<string | null | undefined>): string[] {
+  return values.filter(isBlobUrl);
+}
+
+export function extractEditorV2TraceBlobUrls(data: unknown): string[] {
+  if (!data || typeof data !== "object") return [];
+  const trace = (data as Record<string, unknown>).trace;
+  if (!trace || typeof trace !== "object") return [];
+
+  const traceRecord = trace as Record<string, unknown>;
+  return extractBlobUrls([
+    typeof traceRecord.previewUrl === "string" ? traceRecord.previewUrl : null,
+    typeof traceRecord.thumbnailUrl === "string" ? traceRecord.thumbnailUrl : null,
+    typeof traceRecord.originalUrl === "string" ? traceRecord.originalUrl : null,
+    typeof traceRecord.assetUrl === "string" ? traceRecord.assetUrl : null,
+  ]);
+}
+
 /** Best-effort delete by URL. */
 export async function deleteBlobIfExists(url: string | null | undefined): Promise<void> {
   if (!isBlobUrl(url)) return;

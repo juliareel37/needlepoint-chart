@@ -318,7 +318,7 @@ export function GridCanvasStage({
     displayTrace?.offsetY,
     displayTrace?.opacity,
     displayTrace?.scale,
-    displayTrace?.assetUrl,
+    displayTrace?.previewUrl,
     displayTraceAsset,
     paintOpacity,
     threadView,

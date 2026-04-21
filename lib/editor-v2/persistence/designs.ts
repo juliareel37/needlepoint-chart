@@ -25,7 +25,9 @@ export interface PersistedEditorV2Palette {
 }
 
 export interface PersistedEditorV2Trace {
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;
@@ -88,7 +90,9 @@ export function serializeEditorV2Document(
     },
     trace: document.trace
       ? {
-          assetUrl: document.trace.assetUrl,
+          previewUrl: document.trace.previewUrl,
+          thumbnailUrl: document.trace.thumbnailUrl,
+          originalUrl: document.trace.originalUrl,
           fileName: document.trace.fileName,
           byteSize: document.trace.byteSize,
           mimeType: document.trace.mimeType,
@@ -131,22 +135,28 @@ export function hydrateEditorV2Document(
       symbolAssignments: record.data.palette.symbolAssignments,
     },
     trace: record.data.trace
-      ? {
-          assetUrl: record.data.trace.assetUrl,
-          fileName: record.data.trace.fileName,
-          byteSize: record.data.trace.byteSize,
-          mimeType: record.data.trace.mimeType,
-          imageWidth: record.data.trace.imageWidth,
-          imageHeight: record.data.trace.imageHeight,
-          offsetX: record.data.trace.offsetX,
-          offsetY: record.data.trace.offsetY,
-          scale: record.data.trace.scale,
-          rotation: record.data.trace.rotation,
-          visible: true,
-          blendMode: "image",
-          opacity: 0.35,
-          locked: true,
-        }
+      ? (() => {
+          const normalizedTrace = normalizePersistedTrace(record.data.trace);
+
+          return {
+            previewUrl: normalizedTrace.previewUrl,
+            thumbnailUrl: normalizedTrace.thumbnailUrl,
+            originalUrl: normalizedTrace.originalUrl,
+            fileName: normalizedTrace.fileName,
+            byteSize: normalizedTrace.byteSize,
+            mimeType: normalizedTrace.mimeType,
+            imageWidth: normalizedTrace.imageWidth,
+            imageHeight: normalizedTrace.imageHeight,
+            offsetX: normalizedTrace.offsetX,
+            offsetY: normalizedTrace.offsetY,
+            scale: normalizedTrace.scale,
+            rotation: normalizedTrace.rotation,
+            visible: true,
+            blendMode: "image",
+            opacity: 0.35,
+            locked: true,
+          };
+        })()
       : null,
     text: record.data.text,
     metadata: {
@@ -189,20 +199,74 @@ export function parsePersistedEditorV2Design(
   if (
     candidate.trace !== null &&
     candidate.trace !== undefined &&
-    (typeof candidate.trace !== "object" ||
-      typeof candidate.trace.assetUrl !== "string" ||
-      typeof candidate.trace.offsetX !== "number" ||
-      typeof candidate.trace.offsetY !== "number" ||
-      typeof candidate.trace.scale !== "number" ||
-      typeof candidate.trace.rotation !== "number")
+    !isPersistedTrace(candidate.trace)
   ) {
     return null;
   }
 
-  return candidate as PersistedEditorV2Design;
+  return {
+    ...candidate,
+    trace: candidate.trace ? normalizePersistedTrace(candidate.trace) : null,
+  } as PersistedEditorV2Design;
 }
 
 export function normalizeProjectTitle(title: string): string {
   const trimmedTitle = title.trim();
   return trimmedTitle.length > 0 ? trimmedTitle : "Untitled Design";
+}
+
+function isPersistedTrace(value: unknown): value is PersistedEditorV2Trace {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const trace = value as Partial<PersistedEditorV2Trace> & {
+    assetUrl?: unknown;
+  };
+
+  return (
+    typeof getLegacyCompatibleTraceUrl(trace, "previewUrl") === "string" &&
+    typeof getLegacyCompatibleTraceUrl(trace, "thumbnailUrl") === "string" &&
+    typeof getLegacyCompatibleTraceUrl(trace, "originalUrl") === "string" &&
+    typeof trace.offsetX === "number" &&
+    typeof trace.offsetY === "number" &&
+    typeof trace.scale === "number" &&
+    typeof trace.rotation === "number"
+  );
+}
+
+function normalizePersistedTrace(
+  trace: PersistedEditorV2Trace | (Partial<PersistedEditorV2Trace> & { assetUrl?: unknown }),
+): PersistedEditorV2Trace {
+  return {
+    ...trace,
+    previewUrl: getLegacyCompatibleTraceUrl(trace, "previewUrl"),
+    thumbnailUrl: getLegacyCompatibleTraceUrl(trace, "thumbnailUrl"),
+    originalUrl: getLegacyCompatibleTraceUrl(trace, "originalUrl"),
+    fileName: trace.fileName ?? null,
+    byteSize: trace.byteSize ?? null,
+    mimeType: trace.mimeType ?? null,
+    imageWidth: trace.imageWidth ?? null,
+    imageHeight: trace.imageHeight ?? null,
+    offsetX: trace.offsetX ?? 0,
+    offsetY: trace.offsetY ?? 0,
+    scale: trace.scale ?? 1,
+    rotation: trace.rotation ?? 0,
+  };
+}
+
+function getLegacyCompatibleTraceUrl(
+  trace: Partial<PersistedEditorV2Trace> & { assetUrl?: unknown },
+  field: "previewUrl" | "thumbnailUrl" | "originalUrl",
+): string {
+  const candidate = trace[field];
+  if (typeof candidate === "string") {
+    return candidate;
+  }
+
+  if (typeof trace.assetUrl === "string") {
+    return trace.assetUrl;
+  }
+
+  throw new Error(`Missing ${field}`);
 }

@@ -109,7 +109,7 @@ export function renderDisplayCanvas(options: {
 
   if (
     displayTrace &&
-    displayTraceAsset?.assetUrl === displayTrace.assetUrl &&
+    displayTraceAsset?.previewUrl === displayTrace.previewUrl &&
     displayTraceAsset.ready &&
     displayTraceAsset.image &&
     displayTraceAsset.width > 0 &&

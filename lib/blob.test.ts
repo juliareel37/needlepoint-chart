@@ -8,7 +8,12 @@ vi.mock("@vercel/blob", () => ({
   del: delMock,
 }));
 
-import { deleteBlobIfExists, extractBlobUrl, isBlobUrl } from "./blob";
+import {
+  deleteBlobIfExists,
+  extractBlobUrl,
+  extractEditorV2TraceBlobUrls,
+  isBlobUrl,
+} from "./blob";
 
 describe("lib/blob", () => {
   beforeEach(() => {
@@ -54,5 +59,21 @@ describe("lib/blob", () => {
 
     await expect(deleteBlobIfExists("https://foo.blob.vercel-storage.com/a.png")).resolves.toBeUndefined();
     expect(delMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("extracts all editor-v2 trace blob URLs", () => {
+    expect(
+      extractEditorV2TraceBlobUrls({
+        trace: {
+          previewUrl: "https://foo.blob.vercel-storage.com/preview.webp",
+          thumbnailUrl: "https://foo.blob.vercel-storage.com/thumb.webp",
+          originalUrl: "https://foo.blob.vercel-storage.com/original.png",
+        },
+      }),
+    ).toEqual([
+      "https://foo.blob.vercel-storage.com/preview.webp",
+      "https://foo.blob.vercel-storage.com/thumb.webp",
+      "https://foo.blob.vercel-storage.com/original.png",
+    ]);
   });
 });

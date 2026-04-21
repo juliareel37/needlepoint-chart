@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { deleteBlobIfExists, extractEditorV2TraceBlobUrls } from "@/lib/blob";
 import {
   normalizeProjectTitle,
   parsePersistedEditorV2Design,
@@ -72,7 +73,7 @@ export async function PUT(req: Request, context: RouteContext) {
 
   const existing = await prisma.editorDesign.findFirst({
     where: { id, userId },
-    select: { id: true },
+    select: { id: true, data: true },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -87,6 +88,15 @@ export async function PUT(req: Request, context: RouteContext) {
       gridHeight: data.grid.height,
     },
   });
+
+  const previousBlobUrls = new Set(extractEditorV2TraceBlobUrls(existing.data));
+  const nextBlobUrls = new Set(extractEditorV2TraceBlobUrls(data));
+  for (const url of previousBlobUrls) {
+    if (nextBlobUrls.has(url)) {
+      continue;
+    }
+    void deleteBlobIfExists(url);
+  }
 
   return NextResponse.json({
     ok: true,

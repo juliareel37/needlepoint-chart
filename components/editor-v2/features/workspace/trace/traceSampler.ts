@@ -3,12 +3,9 @@
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { Rgb } from "@/lib/editor-v2/editor/color-utils";
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
-import {
-  getConstrainedTraceImageSize,
-} from "./traceAssetSizing";
 
 type CachedTraceSampler = {
-  assetUrl: string;
+  previewUrl: string;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   ready: boolean;
@@ -27,7 +24,7 @@ export function sampleTraceRgbAtWorldPoint(
     return null;
   }
 
-  const sampler = getOrCreateSampler(trace.assetUrl);
+  const sampler = getOrCreateSampler(trace.previewUrl);
   if (!sampler.ready || sampler.width <= 0 || sampler.height <= 0) {
     return null;
   }
@@ -66,8 +63,8 @@ export function sampleTraceRgbAtWorldPoint(
   return { r: data[0], g: data[1], b: data[2] };
 }
 
-function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
-  const cached = traceSamplerCache.get(assetUrl);
+function getOrCreateSampler(previewUrl: string): CachedTraceSampler {
+  const cached = traceSamplerCache.get(previewUrl);
   if (cached) {
     return cached;
   }
@@ -89,22 +86,18 @@ function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
     }
 
     const sampler: CachedTraceSampler = {
-      assetUrl,
+      previewUrl,
       canvas: fallbackCanvas,
       context: fallbackContext,
       ready: false,
       width: 0,
       height: 0,
     };
-    traceSamplerCache.set(assetUrl, sampler);
-    image.src = assetUrl;
+    traceSamplerCache.set(previewUrl, sampler);
+    image.src = previewUrl;
     image.onload = () => {
-      const targetSize = getConstrainedTraceImageSize(
-        image.naturalWidth,
-        image.naturalHeight,
-      );
-      sampler.width = targetSize.width;
-      sampler.height = targetSize.height;
+      sampler.width = image.naturalWidth;
+      sampler.height = image.naturalHeight;
       sampler.ready = sampler.width > 0 && sampler.height > 0;
       if (sampler.ready) {
         sampler.canvas.width = sampler.width;
@@ -117,22 +110,18 @@ function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
   }
 
   const sampler: CachedTraceSampler = {
-    assetUrl,
+    previewUrl,
     canvas,
     context,
     ready: false,
     width: 0,
     height: 0,
   };
-  traceSamplerCache.set(assetUrl, sampler);
+  traceSamplerCache.set(previewUrl, sampler);
 
   image.onload = () => {
-    const targetSize = getConstrainedTraceImageSize(
-      image.naturalWidth,
-      image.naturalHeight,
-    );
-    sampler.width = targetSize.width;
-    sampler.height = targetSize.height;
+    sampler.width = image.naturalWidth;
+    sampler.height = image.naturalHeight;
     sampler.ready = sampler.width > 0 && sampler.height > 0;
     if (sampler.ready) {
       sampler.canvas.width = sampler.width;
@@ -144,7 +133,7 @@ function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
   image.onerror = () => {
     sampler.ready = false;
   };
-  image.src = assetUrl;
+  image.src = previewUrl;
 
   return sampler;
 }

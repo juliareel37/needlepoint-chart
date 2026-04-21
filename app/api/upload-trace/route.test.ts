@@ -1,16 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, handleUploadMock } = vi.hoisted(() => ({
-  authMock: vi.fn(),
-  handleUploadMock: vi.fn(),
-}));
+const {
+  authMock,
+  putMock,
+  sharpFactoryMock,
+  metadataMock,
+  resizeMock,
+  webpMock,
+  toBufferMock,
+} = vi.hoisted(() => {
+  const metadataMock = vi.fn();
+  const resizeMock = vi.fn();
+  const webpMock = vi.fn();
+  const toBufferMock = vi.fn();
+  const rotateMock = vi.fn(() => ({
+    resize: resizeMock,
+  }));
+
+  resizeMock.mockImplementation(() => ({
+    webp: webpMock,
+  }));
+  webpMock.mockImplementation(() => ({
+    toBuffer: toBufferMock,
+  }));
+
+  const sharpFactoryMock = vi.fn(() => ({
+    metadata: metadataMock,
+    rotate: rotateMock,
+  }));
+
+  return {
+    authMock: vi.fn(),
+    putMock: vi.fn(),
+    sharpFactoryMock,
+    metadataMock,
+    resizeMock,
+    webpMock,
+    toBufferMock,
+  };
+});
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: authMock,
 }));
 
-vi.mock("@vercel/blob/client", () => ({
-  handleUpload: handleUploadMock,
+vi.mock("@vercel/blob", () => ({
+  put: putMock,
+}));
+
+vi.mock("sharp", () => ({
+  default: sharpFactoryMock,
 }));
 
 import { POST } from "./route";
@@ -18,6 +57,23 @@ import { POST } from "./route";
 describe("POST /api/upload-trace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resizeMock.mockImplementation(() => ({
+      webp: webpMock,
+    }));
+    webpMock.mockImplementation(() => ({
+      toBuffer: toBufferMock,
+    }));
+    metadataMock.mockResolvedValue({
+      width: 2400,
+      height: 1800,
+    });
+    toBufferMock
+      .mockResolvedValueOnce(Buffer.from("preview"))
+      .mockResolvedValueOnce(Buffer.from("thumbnail"));
+    putMock
+      .mockResolvedValueOnce({ url: "https://blob.example.com/original.png" })
+      .mockResolvedValueOnce({ url: "https://blob.example.com/preview.webp" })
+      .mockResolvedValueOnce({ url: "https://blob.example.com/thumbnail.webp" });
   });
 
   it("rejects unauthenticated requests", async () => {
@@ -27,42 +83,49 @@ describe("POST /api/upload-trace", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(401);
-    expect(handleUploadMock).not.toHaveBeenCalled();
+    expect(putMock).not.toHaveBeenCalled();
   });
 
-  it("passes token-generation config to handleUpload", async () => {
+  it("rejects requests without a file", async () => {
     authMock.mockResolvedValue({ userId: "user_123" });
-    handleUploadMock.mockResolvedValue({ token: "t" });
+    const formData = new FormData();
 
     const req = new Request("http://localhost/api/upload-trace", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "blob.generate-client-token",
-        payload: { pathname: "trace.png", callbackUrl: "http://localhost" },
-      }),
+      body: formData,
     });
+    const res = await POST(req);
 
+    expect(res.status).toBe(400);
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it("uploads original, preview, and thumbnail variants", async () => {
+    authMock.mockResolvedValue({ userId: "user_123" });
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new File([Buffer.from("image-bytes")], "trace.png", { type: "image/png" }),
+    );
+
+    const req = new Request("http://localhost/api/upload-trace", {
+      method: "POST",
+      body: formData,
+    });
     const res = await POST(req);
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({ token: "t" });
-    expect(handleUploadMock).toHaveBeenCalledTimes(1);
-
-    const args = handleUploadMock.mock.calls[0][0] as {
-      onBeforeGenerateToken: () => Promise<{
-        allowedContentTypes: string[];
-        maximumSizeInBytes: number;
-        tokenPayload: string;
-      }>;
-      onUploadCompleted: () => Promise<void>;
-    };
-    const tokenConfig = await args.onBeforeGenerateToken();
-
-    expect(tokenConfig.allowedContentTypes).toEqual(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-    expect(tokenConfig.maximumSizeInBytes).toBe(10 * 1024 * 1024);
-    expect(tokenConfig.tokenPayload).toContain("user_123");
-    await expect(args.onUploadCompleted()).resolves.toBeUndefined();
+    expect(putMock).toHaveBeenCalledTimes(3);
+    expect(body).toEqual({
+      originalUrl: "https://blob.example.com/original.png",
+      previewUrl: "https://blob.example.com/preview.webp",
+      thumbnailUrl: "https://blob.example.com/thumbnail.webp",
+      fileName: "trace.png",
+      byteSize: 11,
+      mimeType: "image/png",
+      imageWidth: 2400,
+      imageHeight: 1800,
+    });
   });
 });

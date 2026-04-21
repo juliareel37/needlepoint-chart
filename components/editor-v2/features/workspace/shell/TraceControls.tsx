@@ -20,10 +20,6 @@ import type {
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import {
-  MAX_TRACE_IMAGE_DIMENSION_PX,
-  MAX_TRACE_IMAGE_PIXELS,
-} from "../trace/traceAssetSizing";
-import {
   createAttachTraceCommand,
   createBeginTraceRepositionCommand,
   createCancelTraceRepositionCommand,
@@ -51,7 +47,7 @@ export function TraceControls({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const traceUploadSequenceRef = useRef(0);
   const positioningPreviewRef = useRef<{
-    assetUrl: string;
+    previewUrl: string;
     blendMode: TraceBlendMode;
     opacity: number;
     visible: boolean;
@@ -143,9 +139,9 @@ export function TraceControls({
     }
 
     if (positioningEnabled) {
-      if (positioningPreviewRef.current?.assetUrl !== trace.assetUrl) {
+      if (positioningPreviewRef.current?.previewUrl !== trace.previewUrl) {
         positioningPreviewRef.current = {
-          assetUrl: trace.assetUrl,
+          previewUrl: trace.previewUrl,
           blendMode: trace.blendMode,
           opacity: trace.opacity,
           visible: trace.visible,
@@ -191,7 +187,7 @@ export function TraceControls({
 
     const previewSnapshot = positioningPreviewRef.current;
 
-    if (!previewSnapshot || previewSnapshot.assetUrl !== trace.assetUrl) {
+    if (!previewSnapshot || previewSnapshot.previewUrl !== trace.previewUrl) {
       positioningPreviewRef.current = null;
       return;
     }
@@ -348,7 +344,7 @@ export function TraceControls({
                 ) : (
                   <>
                     <img
-                      src={trace.assetUrl}
+                      src={trace.thumbnailUrl}
                       alt={traceFileName ? `Trace image ${traceFileName}` : "Trace image"}
                       className={styles.traceAttachmentThumb}
                     />
@@ -609,201 +605,47 @@ export function TraceControls({
 }
 
 async function uploadTraceFile(file: File): Promise<{
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string;
   byteSize: number;
-  mimeType: string;
+  mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
 }> {
-  const { upload } = await import("@vercel/blob/client");
-  const preparedFile = await prepareTraceUploadFile(file);
-  const [uploaded, dimensions] = await Promise.all([
-    upload(
-      `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${preparedFile.file.name}`,
-      preparedFile.file,
-      {
-        access: "public",
-        handleUploadUrl: "/api/upload-trace",
-      },
-    ),
-    Promise.resolve(preparedFile.dimensions),
-  ]);
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/upload-trace", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Trace upload failed with status ${response.status}`);
+  }
+
+  const uploaded = (await response.json()) as {
+    previewUrl: string;
+    thumbnailUrl: string;
+    originalUrl: string;
+    fileName: string;
+    byteSize: number;
+    mimeType: string | null;
+    imageWidth: number | null;
+    imageHeight: number | null;
+  };
 
   return {
-    assetUrl: uploaded.url,
-    fileName: preparedFile.file.name,
-    byteSize: preparedFile.file.size,
-    mimeType: preparedFile.file.type,
-    imageWidth: dimensions?.width ?? null,
-    imageHeight: dimensions?.height ?? null,
+    previewUrl: uploaded.previewUrl,
+    thumbnailUrl: uploaded.thumbnailUrl,
+    originalUrl: uploaded.originalUrl,
+    fileName: uploaded.fileName,
+    byteSize: uploaded.byteSize,
+    mimeType: uploaded.mimeType,
+    imageWidth: uploaded.imageWidth,
+    imageHeight: uploaded.imageHeight,
   };
-}
-
-async function prepareTraceUploadFile(file: File): Promise<{
-  file: File;
-  dimensions: { width: number; height: number } | null;
-}> {
-  if (shouldSkipClientTraceNormalization()) {
-    return { file, dimensions: null };
-  }
-
-  if (
-    file.type === "image/gif" ||
-    !file.type.startsWith("image/")
-  ) {
-    return { file, dimensions: null };
-  }
-
-  const prepared = await decodeAndPrepareTraceImage(file);
-
-  if (!prepared) {
-    return { file, dimensions: null };
-  }
-
-  const scaleByDimension =
-    MAX_TRACE_IMAGE_DIMENSION_PX /
-    Math.max(prepared.width, prepared.height);
-  const scaleByPixels = Math.sqrt(
-    MAX_TRACE_IMAGE_PIXELS / (prepared.width * prepared.height),
-  );
-  const scale = Math.min(1, scaleByDimension, scaleByPixels);
-
-  if (scale >= 0.999) {
-    prepared.release();
-    return {
-      file,
-      dimensions: {
-        width: prepared.width,
-        height: prepared.height,
-      },
-    };
-  }
-
-  const targetSize = {
-    height: Math.max(1, Math.round(prepared.height * scale)),
-    width: Math.max(1, Math.round(prepared.width * scale)),
-  };
-  const normalizedFile = await createResizedTraceFile(file, prepared.image, targetSize);
-  prepared.release();
-
-  if (!normalizedFile) {
-    return {
-      file,
-      dimensions: {
-        width: prepared.width,
-        height: prepared.height,
-      },
-    };
-  }
-
-  return {
-    file: normalizedFile,
-    dimensions: targetSize,
-  };
-}
-
-async function decodeAndPrepareTraceImage(
-  file: File,
-): Promise<{
-  height: number;
-  image: HTMLImageElement;
-  release: () => void;
-  width: number;
-} | null> {
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await loadImage(objectUrl);
-    return {
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      image,
-      release: () => {
-        image.src = "";
-        URL.revokeObjectURL(objectUrl);
-      },
-    };
-  } catch {
-    URL.revokeObjectURL(objectUrl);
-    return null;
-  }
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Failed to load image"));
-    image.src = src;
-  });
-}
-
-function shouldSkipClientTraceNormalization(): boolean {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return false;
-  }
-
-  return window.matchMedia("(pointer: coarse)").matches;
-}
-
-async function createResizedTraceFile(
-  file: File,
-  image: CanvasImageSource,
-  targetSize: { width: number; height: number },
-): Promise<File | null> {
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = targetSize.width;
-    canvas.height = targetSize.height;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return null;
-    }
-
-    // Keep trace uploads bounded on mobile Safari, which is sensitive to
-    // multiple full-resolution image decodes/canvas copies at once.
-    context.drawImage(image, 0, 0, targetSize.width, targetSize.height);
-
-    const blob = await canvasToBlob(canvas, "image/webp", 0.9);
-    canvas.width = 0;
-    canvas.height = 0;
-
-    if (!blob) {
-      return null;
-    }
-
-    return new File(
-      [blob],
-      replaceFileExtension(file.name, "webp"),
-      {
-        type: blob.type || "image/webp",
-        lastModified: file.lastModified,
-      },
-    );
-  } catch {
-    return null;
-  }
-}
-
-function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  type: string,
-  quality: number,
-): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), type, quality);
-  });
-}
-
-function replaceFileExtension(fileName: string, nextExtension: string): string {
-  const lastDotIndex = fileName.lastIndexOf(".");
-  if (lastDotIndex <= 0) {
-    return `${fileName}.${nextExtension}`;
-  }
-
-  return `${fileName.slice(0, lastDotIndex)}.${nextExtension}`;
 }
 
 function getTraceDisplayName(trace: TraceDocument): string {
@@ -811,7 +653,7 @@ function getTraceDisplayName(trace: TraceDocument): string {
     return trace.fileName;
   }
 
-  const assetUrl = trace.assetUrl;
+  const assetUrl = trace.originalUrl;
   const fallbackName = "Trace image";
 
   try {
