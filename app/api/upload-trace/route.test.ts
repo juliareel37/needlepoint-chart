@@ -101,7 +101,7 @@ describe("POST /api/upload-trace", () => {
     expect(putMock).not.toHaveBeenCalled();
   });
 
-  it("uploads original, preview, and thumbnail variants", async () => {
+  it("uploads only the original asset while preprocessing is paused", async () => {
     authMock.mockResolvedValue({ userId: "user_123" });
     const formData = new FormData();
     formData.append(
@@ -117,16 +117,17 @@ describe("POST /api/upload-trace", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(putMock).toHaveBeenCalledTimes(3);
+    expect(putMock).toHaveBeenCalledTimes(1);
+    expect(sharpFactoryMock).not.toHaveBeenCalled();
     expect(body).toEqual({
       originalUrl: "https://blob.example.com/original.png",
-      previewUrl: "https://blob.example.com/preview.webp",
-      thumbnailUrl: "https://blob.example.com/thumbnail.webp",
+      previewUrl: "https://blob.example.com/original.png",
+      thumbnailUrl: "https://blob.example.com/original.png",
       fileName: "trace.png",
       byteSize: 11,
       mimeType: "image/png",
-      imageWidth: 2400,
-      imageHeight: 1800,
+      imageWidth: null,
+      imageHeight: null,
     });
   });
 });
