@@ -9,6 +9,10 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
   handle(state, command) {
     const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
     const currentTool = state.session.activeTool.tool;
+    const normalizedCurrentTool =
+      currentTool === "mirror" || currentTool === "eyedropper"
+        ? "pan"
+        : currentTool;
     const nextSelection =
       currentTool === "lasso" && nextTool !== "lasso"
         ? {
@@ -29,7 +33,7 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
       const execution = buildCancelMirrorExecution(state, command.id, nextTool);
       const eyedropperReturnTool =
         nextTool === "eyedropper"
-          ? state.session.eyedropperReturnTool ?? (currentTool === "mirror" ? "pan" : currentTool)
+          ? state.session.eyedropperReturnTool ?? normalizedCurrentTool
           : null;
 
       return {
@@ -52,7 +56,7 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
 
     const eyedropperReturnTool =
       nextTool === "eyedropper"
-        ? state.session.eyedropperReturnTool ?? (currentTool === "eyedropper" ? "pan" : currentTool)
+        ? state.session.eyedropperReturnTool ?? normalizedCurrentTool
         : null;
 
     return {

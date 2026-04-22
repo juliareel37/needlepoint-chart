@@ -10,7 +10,11 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { findClosestPaletteColorId } from "@/lib/editor-v2/editor/color-utils";
 import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
-import { createSetToolCommand, createSetToolWithColorCommand } from "../workspaceCommands";
+import {
+  createPaintCellsCommand,
+  createSetToolCommand,
+  createSetToolWithColorCommand,
+} from "../workspaceCommands";
 import { sampleTraceRgbAtWorldPoint } from "../trace/traceSampler";
 import { useClearSelectionOnEscape } from "./useClearSelectionOnEscape";
 import { useMirrorDrag } from "./useMirrorDrag";
@@ -86,6 +90,11 @@ export function useGridInteractions({
       return;
     }
 
+    if (activeTool === "fill") {
+      handleFillPointerDown(point);
+      return;
+    }
+
     if (!paintDisabled && paintStroke.handlePointerDown(point)) {
       return;
     }
@@ -134,4 +143,69 @@ export function useGridInteractions({
     // Miss: do not change active color, but always return to the previous tool.
     dispatch(createSetToolCommand(returnTool));
   }
+
+  function handleFillPointerDown(point: GridPoint): void {
+    if (paintDisabled || !activeColorId) {
+      return;
+    }
+
+    if (getCell(state, point.x, point.y)) {
+      return;
+    }
+
+    const fillCells = getFillRegion(state, point);
+
+    if (fillCells.length > 0) {
+      dispatch(createPaintCellsCommand(activeColorId, fillCells));
+    }
+  }
+}
+
+function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
+  const { width, height } = state.document.grid;
+
+  if (start.x < 0 || start.y < 0 || start.x >= width || start.y >= height) {
+    return [];
+  }
+
+  if (getCell(state, start.x, start.y)) {
+    return [];
+  }
+
+  const region: GridPoint[] = [];
+  const visited = new Set<string>();
+  const queue: GridPoint[] = [start];
+
+  while (queue.length > 0) {
+    const point = queue.shift();
+
+    if (!point) {
+      continue;
+    }
+
+    const key = `${point.x}:${point.y}`;
+    if (visited.has(key)) {
+      continue;
+    }
+    visited.add(key);
+
+    if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) {
+      continue;
+    }
+
+    if (getCell(state, point.x, point.y)) {
+      continue;
+    }
+
+    region.push(point);
+
+    queue.push(
+      { x: point.x - 1, y: point.y },
+      { x: point.x + 1, y: point.y },
+      { x: point.x, y: point.y - 1 },
+      { x: point.x, y: point.y + 1 },
+    );
+  }
+
+  return region;
 }

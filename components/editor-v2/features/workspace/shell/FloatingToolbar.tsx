@@ -401,6 +401,21 @@ export function FloatingToolbar({
 
         <ToolbarButton
           type="button"
+          active={activeTool === "fill"}
+          aria-pressed={activeTool === "fill"}
+          aria-label="Fill"
+          title="Fill"
+          onClick={() => {
+            closeColorLibrary();
+            closeImageMenu();
+            dispatch(createSetToolCommand(activeTool === "fill" ? "pan" : "fill"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
           active={activeTool === "paint"}
           aria-pressed={activeTool === "paint"}
           aria-label="Brush"
@@ -526,13 +541,6 @@ export function FloatingToolbar({
         </ToolbarAnchor>
 
         <ToolbarDivider />
-
-        {/*
-        <ToolbarButton type="button" disabled>
-          <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
-          <ToolbarLabel>Fill</ToolbarLabel>
-        </ToolbarButton>
-        */}
 
         <ToolbarButton
           type="button"

@@ -63,7 +63,7 @@ export function useStagePanInteractions({
   const panToolActive = activeTool === "pan" && !dragPanningDisabled;
   const cursor = isPanDragging
     ? "grabbing"
-    : activeTool === "eyedropper"
+    : activeTool === "eyedropper" || activeTool === "fill"
       ? "crosshair"
     : (spacePressed && !dragPanningDisabled) || panToolActive
       ? "grab"
