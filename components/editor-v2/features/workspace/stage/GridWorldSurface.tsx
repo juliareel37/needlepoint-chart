@@ -111,6 +111,8 @@ export function GridWorldSurface({
   };
   const textPlacementActive = Boolean(textPlacement);
   const iconPlacementActive = Boolean(iconPlacement);
+  const paintDisabled =
+    tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -288,6 +290,7 @@ export function GridWorldSurface({
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
     metrics,
+    paintDisabled,
     state,
     trace,
   });
@@ -301,7 +304,7 @@ export function GridWorldSurface({
     activeTool,
     dispatch,
     dragPanningDisabled:
-      tracePositioningEnabled || textPlacementActive || iconPlacementActive,
+      paintDisabled,
     metrics,
     stageRef,
     stageSize,
