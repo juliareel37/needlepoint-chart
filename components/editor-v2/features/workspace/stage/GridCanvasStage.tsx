@@ -244,7 +244,10 @@ export function GridCanvasStage({
     metrics.cellSize,
     metrics.surfaceHeight,
     metrics.surfaceWidth,
+    stageSize.height,
+    stageSize.width,
     threadView,
+    viewport.zoom,
   ]);
 
   useEffect(() => {
