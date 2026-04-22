@@ -26,6 +26,10 @@ const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
 const ICON_PREVIEW_SIZE = 72;
 const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
 const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
+const CATEGORY_ORDER_PRIORITY: Record<string, number> = {
+  Shapes: 0,
+  Frames: 1,
+};
 
 export type IconsPanelView =
   | { type: "overview" }
@@ -123,10 +127,21 @@ export function IconsPanelPage({
         }
       }
 
-      return Array.from(groups.entries()).map(([category, items]) => ({
-        category,
-        items,
-      }));
+      return Array.from(groups.entries())
+        .map(([category, items]) => ({
+          category,
+          items,
+        }))
+        .sort((left, right) => {
+          const leftPriority = CATEGORY_ORDER_PRIORITY[left.category] ?? Number.POSITIVE_INFINITY;
+          const rightPriority = CATEGORY_ORDER_PRIORITY[right.category] ?? Number.POSITIVE_INFINITY;
+
+          if (leftPriority !== rightPriority) {
+            return leftPriority - rightPriority;
+          }
+
+          return left.category.localeCompare(right.category);
+        });
     },
     [filteredIcons],
   );
@@ -254,14 +269,6 @@ export function IconsPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        {/* <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
-            <h3 style={typographyStyles.h5}>Icon library</h3>
-          </div>
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            Click any icon to place it on the canvas, then size, color, and convert it.
-          </p>
-        </div> */}
 
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>
