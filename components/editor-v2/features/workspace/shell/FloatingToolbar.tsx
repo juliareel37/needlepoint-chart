@@ -230,8 +230,9 @@ export function FloatingToolbar({
   const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
 
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
-  const canPaintSelection = Boolean(selectionCommitted && selectionBounds && activeColor);
+  const canStartNewSelection = Boolean(selectionBounds) || activeTool === "lasso";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
+  const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -333,8 +334,10 @@ export function FloatingToolbar({
   }, [imageOpacityTooltipVisible]);
 
   useEffect(() => {
-    setSelectOpen(activeTool === "lasso");
-  }, [activeTool]);
+    if (!selectionVisible) {
+      setSelectOpen(false);
+    }
+  }, [selectionVisible]);
 
   function openSidebarSection(section: "color" | "trace") {
     dispatch(createSetActiveSidebarSectionCommand(section));
@@ -635,8 +638,8 @@ export function FloatingToolbar({
         <ToolbarAnchor ref={selectAnchorRef}>
           <ToolbarButton
             type="button"
-            active={activeTool === "lasso" || selectOpen}
-            aria-pressed={activeTool === "lasso" || selectOpen}
+            active={selectionVisible || selectOpen}
+            aria-pressed={selectionVisible || selectOpen}
             aria-label="Select"
             title="Select"
             onClick={handleSelectionButtonClick}
@@ -660,7 +663,7 @@ export function FloatingToolbar({
                 onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
               >
                 <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
-                <ToolbarLabel>Freehand</ToolbarLabel>
+                {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
               </ToolbarButton>
       
 
@@ -671,7 +674,7 @@ export function FloatingToolbar({
                 onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
               >
                 <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
-                <ToolbarLabel>Rect</ToolbarLabel>
+                {/* <ToolbarLabel>Rect</ToolbarLabel> */}
               </ToolbarButton>
 
               <ToolbarDivider />
@@ -679,33 +682,13 @@ export function FloatingToolbar({
               <Button
                 type="button"
                 variant="secondary"
-                disabled={!canPaintSelection}
+                disabled={!canStartNewSelection}
                 onClick={handleNewSelection}
               >
                 Select new
               </Button>
 
               <ToolbarDivider />
-
-              <ToolbarButton
-                type="button"
-                disabled={!canPaintSelection}
-                onClick={() => {
-                  if (!selectionBounds || !activeColor) {
-                    return;
-                  }
-
-                  dispatch(
-                    createPaintCellsCommand(
-                      activeColor.id,
-                      buildSelectionCandidateCells(selectionBounds),
-                    ),
-                  );
-                }}
-              >
-                <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
-                <ToolbarLabel>Fill</ToolbarLabel>
-              </ToolbarButton>
 
               <ToolbarButton
                 type="button"

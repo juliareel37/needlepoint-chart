@@ -10,6 +10,8 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { findClosestPaletteColorId } from "@/lib/editor-v2/editor/color-utils";
 import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
+import { getSelectionBounds } from "@/lib/editor-v2/editor/selectors/session/getSelectionBounds";
+import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import {
   createPaintCellsCommand,
   createSetToolCommand,
@@ -149,6 +151,13 @@ export function useGridInteractions({
       return;
     }
 
+    const selectionCells = getSelectedRegionCells(state, point);
+
+    if (selectionCells.length > 0) {
+      dispatch(createPaintCellsCommand(activeColorId, selectionCells));
+      return;
+    }
+
     if (getCell(state, point.x, point.y)) {
       return;
     }
@@ -161,10 +170,46 @@ export function useGridInteractions({
   }
 }
 
+function getSelectedRegionCells(
+  state: EditorStoreState,
+  start: GridPoint,
+): GridPoint[] {
+  const selectionBounds = getSelectionBounds(state);
+
+  if (!selectionBounds || state.session.selection.preview) {
+    return [];
+  }
+
+  if (!isCellInSelection(state, start)) {
+    return [];
+  }
+
+  const cells: GridPoint[] = [];
+
+  for (let y = selectionBounds.y; y < selectionBounds.y + selectionBounds.height; y += 1) {
+    for (let x = selectionBounds.x; x < selectionBounds.x + selectionBounds.width; x += 1) {
+      const cell = { x, y };
+
+      if (isCellInSelection(state, cell)) {
+        cells.push(cell);
+      }
+    }
+  }
+
+  return cells;
+}
+
 function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
   const { width, height } = state.document.grid;
+  const hasCommittedSelection = Boolean(
+    getSelectionBounds(state) && !state.session.selection.preview,
+  );
 
   if (start.x < 0 || start.y < 0 || start.x >= width || start.y >= height) {
+    return [];
+  }
+
+  if (hasCommittedSelection && !isCellInSelection(state, start)) {
     return [];
   }
 
@@ -190,6 +235,10 @@ function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
     visited.add(key);
 
     if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) {
+      continue;
+    }
+
+    if (hasCommittedSelection && !isCellInSelection(state, point)) {
       continue;
     }
 

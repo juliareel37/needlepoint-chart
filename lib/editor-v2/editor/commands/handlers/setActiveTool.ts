@@ -9,12 +9,21 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
   handle(state, command) {
     const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
     const currentTool = state.session.activeTool.tool;
+    const hasCommittedSelection = Boolean(
+      state.session.selection.rect && !state.session.selection.preview,
+    );
     const normalizedCurrentTool =
       currentTool === "mirror" || currentTool === "eyedropper"
         ? "pan"
         : currentTool;
+    const shouldPreserveSelectionForFill =
+      hasCommittedSelection &&
+      ((currentTool === "lasso" && nextTool === "fill") ||
+        (currentTool === "fill" && nextTool === "lasso"));
     const nextSelection =
-      currentTool === "lasso" && nextTool !== "lasso"
+      (currentTool === "lasso" || currentTool === "fill") &&
+      nextTool !== currentTool &&
+      !shouldPreserveSelectionForFill
         ? {
             mode: "none" as const,
             shape: state.session.selection.shape,

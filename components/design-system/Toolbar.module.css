@@ -213,36 +213,36 @@
 }
 
 .popover .button:not(.buttonPrimary):hover:not(:disabled):not([data-active="true"]) {
-  background: var(--button-ghost2-hover);
+  /* background: var(--button-ghost2-hover); */
   /* color: var(--neutral-900); */
   /* box-shadow: none !important; */
 }
 
 .popover .button[data-inert-active="true"]:hover:not(:disabled) {
-  background: var(--button-ghost2-hover);
+  /* background: var(--button-ghost2-hover); */
   /* color: var(--brand-600); */
   /* box-shadow: none !important; */
 }
 
 .popover .button {
-  min-width: 0;
+  /* min-width: 0;
   min-height: 32px;
   padding: 8px;
   border-radius: 12px;
   font-size: inherit;
   line-height: inherit;
   gap: 4px;
-  justify-content: flex-start;
+  justify-content: flex-start; */
 }
 
 .popover .button[data-active="true"] {
-  background: var(--brand-lightest);
+  /* background: var(--brand-lightest); */
   /* color: var(--brand-600); */
   /* box-shadow: none !important; */
 }
 
 .popover .buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--button-ghost2-hover);
+  /* background: var(--button-ghost2-hover); */
   /* color: var(--neutral-0); */
   /* box-shadow: none !important; */
 }
