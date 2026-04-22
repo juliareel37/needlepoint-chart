@@ -8,8 +8,9 @@
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
   filter: none;
   transform: none;
-  font-weight:550;
+  font-weight: 600;
   /* box-shadow: 0 1px 4px var(--ui-border-subtle); */
+  color: var(--text-secondary);
 }
 
 .button:focus-visible {
@@ -68,6 +69,7 @@
 
 .secondary:hover:not(:disabled) {
   background: var(--button-secondary-hover);
+  color: var(--text-primary);
 }
 
 .secondary[data-active="true"] {
@@ -89,13 +91,14 @@
 .secondary2:hover:not(:disabled) {
   background: var(--button-secondary2-hover);
   box-shadow: var(--ui-shadow-sm);
-
+  color: var(--text-primary);
 }
 
 .secondary2[data-active="true"] {
   color: var(--button-secondary2-active-text);
   background: var(--button-secondary2-active);
   box-shadow: var(--ui-shadow-sm);
+  font-weight: 600;
 }
 
 .secondary2[data-active="true"]:hover:not(:disabled) {
@@ -144,6 +147,7 @@
 
 .ghostV2:hover:not(:disabled) {
   background: var(--button-ghost2-hover);
+  color: var(--text-primary);
 }
 
 .ghostV2[data-active="true"] {

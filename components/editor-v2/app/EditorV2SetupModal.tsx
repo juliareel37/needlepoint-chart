@@ -29,12 +29,11 @@ const LARGE_GRID_PRESETS = [
   { label: "400 x 400", width: 400, height: 400 },
 ] as const;
 const INCH_SIZE_PRESETS = [
-  { label: '4" x 4"', width: 4, height: 4 },
-  { label: '5" x 5"', width: 5, height: 5 },
-  { label: '5" x 7"', width: 5, height: 7 },
+  { label: '6" x 10"', width: 6, height: 10 },
   { label: '8" x 8"', width: 8, height: 8 },
-  { label: '8" x 10"', width: 8, height: 10 },
-  { label: '10" x 14"', width: 10, height: 14 },
+  { label: '7" x 9"', width: 7, height: 9 },
+  { label: '9" x 9"', width: 9, height: 9 },
+  { label: '11" x 7"', width: 11, height: 7 },
 ] as const;
 const CELLS_PER_INCH_PRESETS = [10, 13, 18] as const;
 
@@ -183,7 +182,7 @@ export function EditorV2SetupModal({
         <div className={styles.content}>
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle} style={typographyStyles.h5}>
+              <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
                 New design
               </h2>
             </div>
@@ -197,8 +196,8 @@ export function EditorV2SetupModal({
                 value={draftSizingMode}
                 onChange={onDraftSizingModeChange}
                 options={[
-                  { label: "Mesh Count", value: "inches" },
-                  { label: "Stitches", value: "stitches" },
+                  { label: "Canvas Size + Mesh", value: "inches" },
+                  { label: "Grid Size", value: "stitches" },
                 ]}
               />
             </Field>
@@ -235,7 +234,7 @@ export function EditorV2SetupModal({
                       <Button
                         key={preset.label}
                         type="button"
-                        variant="ghostV2"
+                        variant="secondary2"
                         size="sm"
                         className={styles.presetButton}
                         onClick={() => {
@@ -251,10 +250,16 @@ export function EditorV2SetupModal({
               </>
             ) : (
               <>
-                <div className={styles.presetBlock}>
-                  <p className={styles.presetLabel} style={typographyStyles.p2}>
-                    {/* Canvas size */}
-                  </p>
+
+              <div className={styles.presetBlock}>
+              <section className={styles.inchesSection}>
+
+               <h2 style={typographyStyles.h5}>
+                 Dimensions
+              </h2>
+                  {/* <p className={styles.presetLabel} style={typographyStyles.p2}>
+                    Canvas size
+                  </p> */}
                   <div className={styles.fieldGrid}>
                     <Field label="Length (inches)">
                       <FieldInput
@@ -292,7 +297,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset.label}
                             type="button"
-                            variant="secondary"
+                            variant="secondary2"
                             size="sm"
                             // className={styles.compactPresetButton}
                             active={active}
@@ -309,12 +314,15 @@ export function EditorV2SetupModal({
                       })}
                     </div>
                   </div>
+              </section>
+              <section className={styles.inchesSection}>
+               <h2 style={typographyStyles.h5}>
+                Canvas Mesh
+              </h2>
+                  {/* <div className={styles.presetBlock} > */}
 
-                  <div 
-                  className={styles.presetBlock}
-                  >
                     <p className={styles.presetLabel} style={typographyStyles.p2}>
-                      Canvas mesh (stitches per inch)
+                      The number of holes per inch of your canvas.
                     </p>
                     <div 
                     className={styles.inlineOptionGrid}
@@ -328,7 +336,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset}
                             type="button"
-                            variant="secondary"
+                            variant="secondary2"
                             size="md"
                             // className={styles.compactPresetButton}
                             active={active}
@@ -339,7 +347,7 @@ export function EditorV2SetupModal({
                               onDraftMeshCountChange(String(preset));
                             }}
                           >
-                            {preset} 
+                            {preset + " mesh"} 
                           </Button>
                         );
                       })}
@@ -373,8 +381,9 @@ export function EditorV2SetupModal({
                         </Button>
                       )}
                     </div>
-                  </div>
-                </div>
+                  {/* </div> */}
+                  </section>
+
 
                 {inchSizing.error ? (
                   <Notification
@@ -385,9 +394,12 @@ export function EditorV2SetupModal({
                   />
                 ) : (
                   <p className={styles.helper} style={typographyStyles.p2}>
-                    Grid size: {inchSizing.width} x {inchSizing.height} cells
+                    Total canvas size: {inchSizing.width} x {inchSizing.height} cells
                   </p>
                 )}
+
+                                </div>
+
               </>
             )}
 
@@ -441,7 +453,7 @@ export function EditorV2SetupModal({
                   });
                 }}
               >
-                Create New
+                Create new design
               </Button>
             </div>
           </section>
@@ -506,7 +518,7 @@ export function EditorV2SetupModal({
                       onLoadSavedDesign(selectedStorageId);
                     }}
                   >
-                    Load Design
+                    Load design
                   </Button>
                 </div>
               </>

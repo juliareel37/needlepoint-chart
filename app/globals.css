@@ -229,9 +229,9 @@
   --brand-100: #f9eefd;
   --brand-200: #e9c4f5;
   --brand-300: #d08de3;
-  --brand-400: #b36dc8;
-  --brand-500: #954cad;
-  --brand-600: #4c205d;
+  --brand-400: #c57bda;
+  --brand-500: #ae60c3;
+  --brand-600: #6b0983;
   
   --status-success-soft: #e5f6ea;
   --status-success-base: #4ea56b;
@@ -285,13 +285,13 @@
 
   --button-secondary-default: var(--neutral-200);
   --button-secondary-hover: var(--neutral-300);
-  --button-secondary-active: var(--brand-500);
+  --button-secondary-active: var(--brand-400);
   --button-secondary-active-text: var(--neutral-0);
 
   --button-secondary2-default: var(--neutral-0);
-  --button-secondary2-hover: rgb(207, 136, 4);
-  --button-secondary2-active: rgb(149, 98, 3);
-  --button-secondary2-active-text: var(--neutral-0);
+  --button-secondary2-hover: var(--brand-50);
+  --button-secondary2-active: var(--brand-100);
+  --button-secondary2-active-text: var(--brand-600);
 
   --button-ghost-default: transparent;
   --button-ghost-hover: var(--neutral-0);
@@ -299,8 +299,9 @@
 
   --button-ghost2-default: transparent;
   --button-ghost2-hover: var(--neutral-200);
+  /* --button-ghost2-hover: var(--brand-100); */
   --button-ghost2-active: var(--brand-100);
-  --button-ghost2-active-text: var(--brand-500);
+  --button-ghost2-active-text: var(--brand-600);
 
   /* UI components */
   --icon-on-bg-filter: invert(0);
