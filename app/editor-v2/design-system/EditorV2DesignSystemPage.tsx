@@ -95,9 +95,9 @@ const buttonVariants: Array<{
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
-  { variant: "secondary2", label: "Secondary2" },
-  { variant: "destructive", label: "Destructive" },
-  { variant: "ghost", label: "Ghost" },
+  // { variant: "secondary2", label: "Secondary2" },
+  // { variant: "destructive", label: "Destructive" },
+  // { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 

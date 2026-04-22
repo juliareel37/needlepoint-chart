@@ -51,14 +51,14 @@
 }
 
 .item:hover {
-  background: var(--button-ghost2-hover);
+  background: var(--sidebar-button-hover-bg);
   /* color: var(--toolbar-button-hover-text); */
   filter: none !important;
 }
 
 .item[data-active="true"] {
-  background: var(--button-ghost2-active);
-  color: var(--button-ghost2-active-text);
+  background: var(--sidebar-button-active-bg);
+  color: var(--sidebar-button-active-text);
   filter: none !important;
 }
 

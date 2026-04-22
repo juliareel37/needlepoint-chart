@@ -51,7 +51,7 @@
   min-height: 32px;
   padding: 6px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-primary);
   font-size: inherit;
@@ -83,14 +83,14 @@
   border: none;
   border-radius: 8px;
   background: transparent !important;
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 .buttonSwatch:hover:not(:disabled),
 .buttonSwatch[data-active="true"] {
   background: transparent !important;
   color: inherit;
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 /* .button:hover:not(:disabled):not([data-active="true"]) {
@@ -124,21 +124,23 @@
 } */
 
 .button {
-  background: var(--button-ghost2-default);
+  /* background: var(--button-ghost2-default); */
   /* color: var(--toolbar-button-default-text); */
   filter: none;
 }
 
 .button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--button-ghost2-hover);
+  background: var(--toolbar-button-hover-bg);
   /* color: var(--toolbar-button-hover-text); */
   filter: none;
+  /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); */
 }
 
 .button[data-active="true"] {
-  background: var(--button-ghost2-active);
-  color: var(--button-ghost2-active-text);
+  background: var(--toolbar-button-active-bg);
+  color: var(--toolbar-button-active-text);
   filter: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .button:disabled {
@@ -213,13 +215,13 @@
 .popover .button:not(.buttonPrimary):hover:not(:disabled):not([data-active="true"]) {
   background: var(--button-ghost2-hover);
   /* color: var(--neutral-900); */
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 .popover .button[data-inert-active="true"]:hover:not(:disabled) {
   background: var(--button-ghost2-hover);
   /* color: var(--brand-600); */
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 .popover .button {
@@ -236,13 +238,13 @@
 .popover .button[data-active="true"] {
   background: var(--brand-lightest);
   /* color: var(--brand-600); */
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 .popover .buttonPrimary:hover:not(:disabled):not([data-active="true"]) {
   background: var(--button-ghost2-hover);
   /* color: var(--neutral-0); */
-  box-shadow: none !important;
+  /* box-shadow: none !important; */
 }
 
 .popover .divider {

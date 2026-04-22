@@ -58,25 +58,17 @@ export function SelectionSessionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-        {/* <div
-          style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            flexWrap: "nowrap",
-            padding: "6px 8px",
-          }}
-        >
-          <ToolbarLabel>{instruction}</ToolbarLabel>
-        </div>
 
-        <ToolbarDivider /> */}
-          <ToolbarButton
-            type="button"
+          <Button
+            type="button"            
+            variant="ghostV2"
+            aria-label="Exit selection"
+            title="Exit selection"
             onClick={handleExitSelection}
           >
-          <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
-          </ToolbarButton>
+            <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
+
+          </Button>
           
         <ToolbarDivider />
 
@@ -111,11 +103,11 @@ export function SelectionSessionToolbar({
 
         <Button
           type="button"
-          variant="ghostV2"
+          variant="secondary"
           disabled={!canPaintSelection}
           onClick={handleNewSelection}
         >
-          Clear
+          Select new
         </Button>
 
         <ToolbarDivider />

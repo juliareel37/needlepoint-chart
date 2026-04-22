@@ -49,14 +49,17 @@
 .primary {
   background: var(--button-primary-default);
   color: var(--button-primary-text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
 .primary:hover:not(:disabled) {
   background: var(--button-primary-hover);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }
 
 .primary[data-active="true"] {
   background: var(--button-primary-active);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
 .primary[data-active="true"]:hover:not(:disabled) {
@@ -65,23 +68,27 @@
 
 .secondary {
   background: var(--button-secondary-default);
+  box-shadow: none;
 }
 
 .secondary:hover:not(:disabled) {
   background: var(--button-secondary-hover);
   color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
 }
 
 .secondary[data-active="true"] {
   color: var(--button-secondary-active-text);
   background: var(--button-secondary-active);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .secondary[data-active="true"]:hover:not(:disabled) {
   color: var(--button-secondary-active-text);
   background: var(--button-secondary-active);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
 }
-
+/* 
 .secondary2 {
   background: var(--button-secondary2-default);
   box-shadow: var(--ui-shadow-sm);
@@ -105,7 +112,7 @@
   color: var(--button-secondary2-active-text);
   background: var(--button-secondary2-active);
   box-shadow: var(--ui-shadow-sm);
-}
+} */
 
 .destructive {
   border: none;

@@ -117,7 +117,7 @@ export function ViewportToolbar({
                 ),
               );
             }}
-            wrapperStyle={{ width: "fit-content", background: "var(--zoom-menu-bg)"}}
+            wrapperStyle={{ width: "fit-content"}}
             triggerStyle={{
               minWidth: "auto",
               padding: "6px 8px",

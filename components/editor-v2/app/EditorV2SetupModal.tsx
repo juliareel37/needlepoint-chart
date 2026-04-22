@@ -230,7 +230,7 @@ export function EditorV2SetupModal({
                       <Button
                         key={preset.label}
                         type="button"
-                        variant="secondary2"
+                        variant="secondary"
                         size="sm"
                         className={styles.presetButton}
                         onClick={() => {
@@ -291,7 +291,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset.label}
                             type="button"
-                            variant="secondary2"
+                            variant="secondary"
                             size="sm"
                             className={styles.compactPresetButton}
                             onClick={() => {
@@ -327,7 +327,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset}
                             type="button"
-                            variant="secondary2"
+                            variant="secondary"
                             size="md"
                             className={styles.compactPresetButton}
                             active={active}

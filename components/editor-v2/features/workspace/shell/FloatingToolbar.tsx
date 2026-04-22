@@ -733,17 +733,28 @@ export function FloatingToolbar({
                   */}
                 </>
               ) : (
-                <ToolbarButton
-                  type="button"
-                  primary
-                  onClick={() => {
-                    openSidebarSection("trace");
-                    closeImageMenu();
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/lucide/image.svg" />
-                  <ToolbarLabel>Add image</ToolbarLabel>
-                  </ToolbarButton>
+                // <ToolbarButton
+                //   type="button"
+                //   primary
+                //   onClick={() => {
+                //     openSidebarSection("trace");
+                //     closeImageMenu();
+                //   }}
+                // >
+                //   <ToolbarIcon icon="/icons/lucide/image.svg" />
+                //   <ToolbarLabel>Add image</ToolbarLabel>
+                //   </ToolbarButton>
+
+                  <Button 
+                    type="button" 
+                    variant="ghostV2" 
+                    onClick={() => {
+                      openSidebarSection("trace");
+                      closeImageMenu();
+                    }}                  >
+                    <ButtonIcon icon="/icons/lucide/image.svg" />
+                    Upload image
+                  </Button>
                 )}
             </FloatingToolbarPortalPopover>
           ) : null}

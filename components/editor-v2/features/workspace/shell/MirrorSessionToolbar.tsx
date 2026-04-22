@@ -21,18 +21,22 @@ export function MirrorSessionToolbar({
   const hasCommittedSelection = Boolean(session?.sourceRect && !session?.dragAnchor);
   const instruction = !hasCommittedSelection
     ? "Drag to select mirror area."
-    : "Select a region to mirror.";
+    : "Choose a region to mirror";
 
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-          <ToolbarButton
+          <Button
             type="button"
+            variant="ghostV2"
+            aria-label="Cancel mirror session"
             onClick={() => dispatch(createCancelMirrorCommand())}
           >
-          <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
-          </ToolbarButton>
-                  <ToolbarDivider />
+            <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+
+          </Button>
+          
+          <ToolbarDivider />
 
         <div
           style={{
@@ -50,12 +54,14 @@ export function MirrorSessionToolbar({
 
         <Button
           type="button"
-          variant="ghostV2"
+          variant="secondary"
           disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
-          Clear
-           {/* <ToolbarIcon icon="/icons/lucide/trash.svg" /> */}
+          Select new
+          {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+
+          
         </Button>
 
         <ToolbarDivider />
