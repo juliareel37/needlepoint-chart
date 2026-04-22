@@ -596,7 +596,15 @@ export function FloatingToolbar({
           onClick={() => {
             closeColorLibrary();
             closeImageMenu();
-            dispatch(createSetToolCommand(activeTool === "erase" ? "pan" : "erase"));
+            dispatch(
+              createSetToolCommand(
+                activeTool === "erase"
+                  ? selectionVisible
+                    ? "lasso"
+                    : "pan"
+                  : "erase",
+              ),
+            );
           }}
         >
           <ToolbarIcon icon="/icons/lucide/eraser.svg" />
