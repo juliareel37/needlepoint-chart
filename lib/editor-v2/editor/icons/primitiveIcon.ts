@@ -28,6 +28,47 @@ const DEFAULT_STROKE_COLOR = "#121923";
 const HEART_PARAMETRIC_SAMPLE_COUNT = 240;
 const DEFAULT_PRIMITIVE_STROKE_RATIO = 2 / 24;
 const FRAME_PRIMITIVE_STROKE_RATIO = 1.2 / 24;
+const FRAME_PRIMITIVE_MIN_STROKE_WIDTH = 0.45;
+const FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH = 0.3;
+const DEFAULT_FRAME_STROKE_WIDTH_SCALE = 0.7;
+const DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
+
+export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined): boolean {
+  return (
+    kind === "double-rectangle-frame" ||
+    kind === "scalloped-frame" ||
+    kind === "greek-key-frame" ||
+    kind === "greek-key-frame-shadow"
+  );
+}
+
+export function getPrimitiveDefaultStrokeWidthScale(
+  kind: PrimitiveIconKind | null | undefined,
+): number {
+  return isPrimitiveFrameKind(kind) ? DEFAULT_FRAME_STROKE_WIDTH_SCALE : 1;
+}
+
+export function getPrimitiveStrokeWidthScaleRange(
+  kind: PrimitiveIconKind | null | undefined,
+): { min: number; max: number } {
+  if (!isPrimitiveFrameKind(kind)) {
+    return {
+      min: 0.5,
+      max: 3,
+    };
+  }
+
+  return {
+    min: 0.3,
+    max: kind === "double-rectangle-frame" ? 1.4 : 2.2,
+  };
+}
+
+export function getPrimitiveDefaultSpacingScale(
+  kind: PrimitiveIconKind | null | undefined,
+): number {
+  return kind === "double-rectangle-frame" ? DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE : 1;
+}
 
 export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | null {
   switch (relativePath) {
@@ -152,8 +193,8 @@ export function buildPrimitiveIconDataUrl({
           : Math.min(normalizedWidth, normalizedHeight);
       const normalizedSpacingScale =
         Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
-      const innerStrokeWidth = Math.max(1, strokeWidth * 0.58);
-      const innerGap = Math.max(referenceSize * 0.08 * normalizedSpacingScale, 6);
+      const innerStrokeWidth = Math.max(FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH, strokeWidth * 0.58);
+      const innerGap = Math.max(referenceSize * 0.055 * normalizedSpacingScale, 3);
       const innerHalfStroke = innerStrokeWidth / 2;
       const innerOffset = strokeWidth + innerGap + innerHalfStroke;
 
@@ -202,7 +243,7 @@ export function buildPrimitiveIconDataUrl({
       break;
     }
     case "greek-key-frame-shadow": {
-      const shadowStrokeWidth = Math.max(1, strokeWidth * 0.5);
+      const shadowStrokeWidth = Math.max(FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH, strokeWidth * 0.5);
       const shadowHalfStroke = shadowStrokeWidth / 2;
       // Place the lighter stroke directly against the inside edge of the main border.
       const shadowInset = strokeWidth + shadowHalfStroke;
@@ -306,7 +347,8 @@ function getPrimitiveStrokeWidth(
   const baseStrokeWidth = Math.max(Math.min(width, height), referenceSize) * baseStrokeRatio;
   const normalizedScale =
     Number.isFinite(strokeWidthScale) && strokeWidthScale > 0 ? strokeWidthScale : 1;
-  return Math.max(1, baseStrokeWidth * normalizedScale);
+  const minimumStrokeWidth = isPrimitiveFrameKind(kind) ? FRAME_PRIMITIVE_MIN_STROKE_WIDTH : 1;
+  return Math.max(minimumStrokeWidth, baseStrokeWidth * normalizedScale);
 }
 
 function buildHeartParametricPathData(

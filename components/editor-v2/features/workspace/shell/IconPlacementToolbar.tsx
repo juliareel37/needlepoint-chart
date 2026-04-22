@@ -17,6 +17,7 @@ import {
   ToolbarPopover,
 } from "@/components/design-system";
 import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
+import { getPrimitiveStrokeWidthScaleRange } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type {
   EditorStore,
   IconPlacementSession,
@@ -179,9 +180,9 @@ export function IconPlacementToolbar({
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
       : Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
-  const strokeWidthMin = 0.5;
-  const strokeWidthMax =
-    placement.primitiveKind === "double-rectangle-frame" ? 2 : 3;
+  const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
+    placement.primitiveKind,
+  );
   const strokeWidthTooltipPercent = Math.max(
     0,
     Math.min(

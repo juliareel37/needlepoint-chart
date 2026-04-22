@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
-import { buildPrimitiveIconDataUrl } from "@/lib/editor-v2/editor/icons/primitiveIcon";
+import {
+  buildPrimitiveIconDataUrl,
+  getPrimitiveDefaultSpacingScale,
+  getPrimitiveDefaultStrokeWidthScale,
+} from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
 import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -157,7 +161,8 @@ export function IconsPanelPage({
               height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeColor: "#121923",
               strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
-              strokeWidthScale: 1,
+              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
+              spacingScale: getPrimitiveDefaultSpacingScale(icon.primitiveKind),
             })
           : icon.src;
         return accumulator;
@@ -202,9 +207,9 @@ export function IconsPanelPage({
                 ? Math.min(baseRect.width, baseRect.height) * initialTransform.scale
                 : null,
               supportsStrokeWidth: item.supportsStrokeWidth,
-              strokeWidthScale: 1,
+              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(item.primitiveKind),
               primitivePatternScale: 1,
-              primitiveSpacingScale: 1,
+              primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
               selectedColorSlotId: item.colorSlots[0]?.id ?? null,
               ...initialTransform,
             }),
