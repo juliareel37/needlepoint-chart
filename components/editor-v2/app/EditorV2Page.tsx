@@ -31,14 +31,14 @@ const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
 export function EditorV2Page() {
   const { isLoaded, isSignedIn } = useAuth();
   const clerk = useClerk();
-  const [draftWidth, setDraftWidth] = useState("8");
-  const [draftHeight, setDraftHeight] = useState("8");
+  const [draftWidth, setDraftWidth] = useState("120");
+  const [draftHeight, setDraftHeight] = useState("120");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
     "inches",
   );
-  const [draftWidthInches, setDraftWidthInches] = useState("1");
-  const [draftHeightInches, setDraftHeightInches] = useState("1");
-  const [draftMeshCount, setDraftMeshCount] = useState("13");
+  const [draftWidthInches, setDraftWidthInches] = useState("8");
+  const [draftHeightInches, setDraftHeightInches] = useState("8");
+  const [draftMeshCount, setDraftMeshCount] = useState("18");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
   const [designConfig, setDesignConfig] =
     useState<EditorV2DesignConfig>(INITIAL_DESIGN_CONFIG);
