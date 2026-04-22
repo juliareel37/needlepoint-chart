@@ -242,7 +242,10 @@ export function IconsPanelPage({
               lockAspectRatio: item.lockAspectRatio,
               primitiveStrokeReferenceSize: initialReferenceSize,
               supportsStrokeWidth: item.supportsStrokeWidth,
-              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(item.primitiveKind),
+              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(
+                item.primitiveKind,
+                initialReferenceSize,
+              ),
               primitivePatternScale: 1,
               primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
               selectedColorSlotId: item.colorSlots[0]?.id ?? null,

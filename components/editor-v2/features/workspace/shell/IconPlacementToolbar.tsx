@@ -182,6 +182,7 @@ export function IconPlacementToolbar({
   const normalizedStrokeWidth = placement.strokeWidthScale;
   const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
     placement.primitiveKind,
+    placement.primitiveStrokeReferenceSize,
   );
   const strokeWidthTooltipPercent = Math.max(
     0,

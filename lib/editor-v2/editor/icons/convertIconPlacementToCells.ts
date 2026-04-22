@@ -15,6 +15,84 @@ export interface IconPlacementPaintGroup {
   cells: GridPoint[];
 }
 
+export async function renderCellSampledPlacementPreview(options: {
+  bounds: { left: number; top: number; width: number; height: number };
+  metrics: GridWorldMetrics;
+  src: string;
+}): Promise<string> {
+  const canvasWidth = Math.max(1, Math.ceil(options.bounds.width));
+  const canvasHeight = Math.max(1, Math.ceil(options.bounds.height));
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = canvasWidth;
+  sourceCanvas.height = canvasHeight;
+  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  if (!sourceContext) {
+    return options.src;
+  }
+
+  const previewCanvas = document.createElement("canvas");
+  previewCanvas.width = canvasWidth;
+  previewCanvas.height = canvasHeight;
+  const previewContext = previewCanvas.getContext("2d");
+  if (!previewContext) {
+    return options.src;
+  }
+
+  const image = await loadImage(options.src);
+  sourceContext.clearRect(0, 0, canvasWidth, canvasHeight);
+  sourceContext.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+  previewContext.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  const pitch = options.metrics.cellSize + options.metrics.cellGap;
+  const minCellX = Math.max(0, Math.floor(options.bounds.left / pitch));
+  const minCellY = Math.max(0, Math.floor(options.bounds.top / pitch));
+  const maxCellX = Math.min(
+    options.metrics.width - 1,
+    Math.ceil((options.bounds.left + options.bounds.width) / pitch),
+  );
+  const maxCellY = Math.min(
+    options.metrics.height - 1,
+    Math.ceil((options.bounds.top + options.bounds.height) / pitch),
+  );
+
+  for (let y = minCellY; y <= maxCellY; y += 1) {
+    for (let x = minCellX; x <= maxCellX; x += 1) {
+      const centerWorldX = x * pitch + options.metrics.cellSize / 2;
+      const centerWorldY = y * pitch + options.metrics.cellSize / 2;
+
+      if (
+        centerWorldX < options.bounds.left ||
+        centerWorldY < options.bounds.top ||
+        centerWorldX > options.bounds.left + options.bounds.width ||
+        centerWorldY > options.bounds.top + options.bounds.height
+      ) {
+        continue;
+      }
+
+      const sampleX = Math.floor(centerWorldX - options.bounds.left);
+      const sampleY = Math.floor(centerWorldY - options.bounds.top);
+      if (sampleX < 0 || sampleY < 0 || sampleX >= canvasWidth || sampleY >= canvasHeight) {
+        continue;
+      }
+
+      const pixel = sourceContext.getImageData(sampleX, sampleY, 1, 1).data;
+      const alpha = pixel[3] ?? 0;
+      if (alpha <= 1) {
+        continue;
+      }
+
+      const cellLeft = x * pitch - options.bounds.left;
+      const cellTop = y * pitch - options.bounds.top;
+      previewContext.fillStyle = `rgba(${pixel[0] ?? 0}, ${pixel[1] ?? 0}, ${pixel[2] ?? 0}, ${
+        alpha / 255
+      })`;
+      previewContext.fillRect(cellLeft, cellTop, options.metrics.cellSize, options.metrics.cellSize);
+    }
+  }
+
+  return previewCanvas.toDataURL();
+}
+
 export async function convertIconPlacementToPaintGroups(
   placement: IconPlacementSession,
   metrics: GridWorldMetrics,

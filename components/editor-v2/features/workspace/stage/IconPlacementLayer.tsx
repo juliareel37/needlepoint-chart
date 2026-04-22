@@ -8,6 +8,7 @@ import {
   resolvePrimitiveColorSlots,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
+import { renderCellSampledPlacementPreview } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { ViewportState } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -115,7 +116,6 @@ export function IconPlacementLayer({
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
-  const [previewSrc, setPreviewSrc] = useState(placement.src);
   const primitiveColors = useMemo(
     () =>
       placement.primitiveKind
@@ -150,6 +150,9 @@ export function IconPlacementLayer({
       primitiveColors,
     ],
   );
+  const [previewSrc, setPreviewSrc] = useState<string | null>(
+    placement.primitiveKind ? null : placement.src,
+  );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (coarsePointer && portalHost) {
       setMobilePreviewTransform(nextTransform);
@@ -167,19 +170,6 @@ export function IconPlacementLayer({
       previewIconRef.current.style.width = `${nextBounds.width}px`;
       previewIconRef.current.style.height = `${nextBounds.height}px`;
       previewIconRef.current.style.transform = "none";
-      if (previewImageRef.current) {
-        previewImageRef.current.src = buildPrimitiveIconDataUrl({
-          kind: placement.primitiveKind,
-          width: nextBounds.width,
-          height: nextBounds.height,
-          strokeColor: primitiveColors?.primary ?? previewColor,
-          secondaryStrokeColor: primitiveColors?.secondary,
-          strokeReferenceSize: placement.primitiveStrokeReferenceSize,
-          strokeWidthScale: placement.strokeWidthScale,
-          patternScale: placement.primitivePatternScale,
-          spacingScale: placement.primitiveSpacingScale,
-        });
-      }
       return;
     }
 
@@ -237,7 +227,24 @@ export function IconPlacementLayer({
 
     async function buildPreview() {
       if (placement.primitiveKind) {
-        setPreviewSrc(primitivePreviewSrc ?? placement.src);
+        if (!primitivePreviewSrc) {
+          return;
+        }
+
+        try {
+          const nextPreviewSrc = await renderCellSampledPlacementPreview({
+            src: primitivePreviewSrc,
+            bounds: displayBounds,
+            metrics,
+          });
+          if (!cancelled) {
+            setPreviewSrc(nextPreviewSrc);
+          }
+        } catch {
+          if (!cancelled) {
+            setPreviewSrc(primitivePreviewSrc);
+          }
+        }
         return;
       }
 
@@ -277,6 +284,9 @@ export function IconPlacementLayer({
   }, [
     displayBounds.height,
     displayBounds.width,
+    displayBounds.left,
+    displayBounds.top,
+    metrics,
     paletteById,
     placement.colorSlots,
     placement.intrinsicHeight,
@@ -342,9 +352,9 @@ export function IconPlacementLayer({
               filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
             }}
           >
-            {placement.primitiveKind || placement.colorSlots.length > 0 ? (
+            {(placement.primitiveKind ? Boolean(previewSrc) : placement.colorSlots.length > 0) ? (
               <img
-                src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
+                src={previewSrc ?? undefined}
                 alt=""
                 aria-hidden="true"
                 style={{
@@ -353,7 +363,7 @@ export function IconPlacementLayer({
                   objectFit: "contain",
                 }}
               />
-            ) : (
+            ) : placement.primitiveKind ? null : (
               <div
                 style={{
                   width: "100%",
@@ -425,10 +435,10 @@ export function IconPlacementLayer({
               filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
             }}
           >
-            {placement.primitiveKind || placement.colorSlots.length > 0 ? (
+            {(placement.primitiveKind ? Boolean(previewSrc) : placement.colorSlots.length > 0) ? (
               <img
                 ref={previewImageRef}
-                src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
+                src={previewSrc ?? undefined}
                 alt=""
                 aria-hidden="true"
                 style={{
@@ -437,7 +447,7 @@ export function IconPlacementLayer({
                   objectFit: "contain",
                 }}
               />
-            ) : (
+            ) : placement.primitiveKind ? null : (
               <div
                 style={{
                   width: "100%",

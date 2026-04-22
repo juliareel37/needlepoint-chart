@@ -32,8 +32,12 @@ const DEFAULT_PRIMITIVE_STROKE_RATIO = 2 / 24;
 const FRAME_PRIMITIVE_STROKE_RATIO = 1.2 / 24;
 const FRAME_PRIMITIVE_MIN_STROKE_WIDTH = 0.45;
 const FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH = 0.3;
+const DEFAULT_SHAPE_STROKE_WIDTH_SCALE = 0.45;
 const DEFAULT_FRAME_STROKE_WIDTH_SCALE = 0.7;
 const DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
+const RESPONSIVE_STROKE_REFERENCE_MIN = 96;
+const RESPONSIVE_STROKE_REFERENCE_MAX = 180;
+const RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN = 0.7;
 
 export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined): boolean {
   return (
@@ -46,23 +50,36 @@ export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined)
 
 export function getPrimitiveDefaultStrokeWidthScale(
   kind: PrimitiveIconKind | null | undefined,
+  strokeReferenceSize?: number | null,
 ): number {
-  return isPrimitiveFrameKind(kind) ? DEFAULT_FRAME_STROKE_WIDTH_SCALE : 1;
+  const baseDefaultScale = isPrimitiveFrameKind(kind)
+    ? DEFAULT_FRAME_STROKE_WIDTH_SCALE
+    : DEFAULT_SHAPE_STROKE_WIDTH_SCALE;
+  return clampPrimitiveStrokeWidthScale(
+    applyResponsiveStrokeScale(baseDefaultScale, strokeReferenceSize),
+    kind,
+    strokeReferenceSize,
+  );
 }
 
 export function getPrimitiveStrokeWidthScaleRange(
   kind: PrimitiveIconKind | null | undefined,
+  strokeReferenceSize?: number | null,
 ): { min: number; max: number } {
+  const responsiveMultiplier = getResponsiveStrokeScaleMultiplier(strokeReferenceSize);
+
   if (!isPrimitiveFrameKind(kind)) {
     return {
-      min: 0.5,
-      max: 3,
+      min: roundStrokeScale(Math.max(0.15, 0.2 * responsiveMultiplier)),
+      max: roundStrokeScale(Math.max(1.1, 1.8 * responsiveMultiplier)),
     };
   }
 
   return {
-    min: 0.3,
-    max: kind === "double-rectangle-frame" ? 1.4 : 2.2,
+    min: roundStrokeScale(Math.max(0.25, 0.3 * responsiveMultiplier)),
+    max: roundStrokeScale(
+      Math.max(0.9, (kind === "double-rectangle-frame" ? 1.4 : 2.2) * responsiveMultiplier),
+    ),
   };
 }
 
@@ -357,6 +374,51 @@ function getPrimitiveStrokeWidth(
     Number.isFinite(strokeWidthScale) && strokeWidthScale > 0 ? strokeWidthScale : 1;
   const minimumStrokeWidth = isPrimitiveFrameKind(kind) ? FRAME_PRIMITIVE_MIN_STROKE_WIDTH : 1;
   return Math.max(minimumStrokeWidth, baseStrokeWidth * normalizedScale);
+}
+
+function getResponsiveStrokeScaleMultiplier(
+  strokeReferenceSize: number | null | undefined,
+): number {
+  if (typeof strokeReferenceSize !== "number" || !Number.isFinite(strokeReferenceSize)) {
+    return 1;
+  }
+
+  const referenceSize = Math.max(strokeReferenceSize, 1);
+  if (referenceSize <= RESPONSIVE_STROKE_REFERENCE_MIN) {
+    return RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN;
+  }
+
+  if (referenceSize >= RESPONSIVE_STROKE_REFERENCE_MAX) {
+    return 1;
+  }
+
+  const progress =
+    (referenceSize - RESPONSIVE_STROKE_REFERENCE_MIN) /
+    (RESPONSIVE_STROKE_REFERENCE_MAX - RESPONSIVE_STROKE_REFERENCE_MIN);
+  return (
+    RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN +
+    (1 - RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN) * progress
+  );
+}
+
+function applyResponsiveStrokeScale(
+  scale: number,
+  strokeReferenceSize: number | null | undefined,
+): number {
+  return roundStrokeScale(scale * getResponsiveStrokeScaleMultiplier(strokeReferenceSize));
+}
+
+function clampPrimitiveStrokeWidthScale(
+  scale: number,
+  kind: PrimitiveIconKind | null | undefined,
+  strokeReferenceSize: number | null | undefined,
+): number {
+  const { min, max } = getPrimitiveStrokeWidthScaleRange(kind, strokeReferenceSize);
+  return roundStrokeScale(Math.min(Math.max(scale, min), max));
+}
+
+function roundStrokeScale(value: number): number {
+  return Number(value.toFixed(2));
 }
 
 function buildHeartParametricPathData(
