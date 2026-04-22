@@ -15,6 +15,7 @@ const MOBILE_MAX_CANVAS_BACKING_DIMENSION = 2048;
 const MOBILE_MAX_CANVAS_BACKING_AREA = 4_194_304;
 const MOBILE_INTERACTION_TARGET_PIXEL_RATIO = 0.35;
 const MIN_CANVAS_PIXEL_RATIO = 0.125;
+const MIN_ALIGNED_CELL_PIXELS = 4;
 
 export function getEffectiveSourceCanvasPixelRatio(
   width: number,
@@ -81,19 +82,23 @@ export function configureSourceCanvas(
     targetPixelRatio,
     { isMobile: isMobileLayout },
   );
+  const alignedPixelRatio = alignSourcePixelRatioToCellSize(
+    effectivePixelRatio,
+    metrics.cellSize,
+  );
 
-  const nextCanvasWidth = Math.max(1, Math.round(width * effectivePixelRatio));
-  const nextCanvasHeight = Math.max(1, Math.round(height * effectivePixelRatio));
+  const nextCanvasWidth = Math.max(1, Math.round(width * alignedPixelRatio));
+  const nextCanvasHeight = Math.max(1, Math.round(height * alignedPixelRatio));
   const sizingChanged =
     !previousSizing ||
     previousSizing.width !== nextCanvasWidth ||
     previousSizing.height !== nextCanvasHeight ||
-    previousSizing.pixelRatio !== effectivePixelRatio;
+    previousSizing.pixelRatio !== alignedPixelRatio;
 
   if (sizingChanged) {
     canvas.width = nextCanvasWidth;
     canvas.height = nextCanvasHeight;
-    context.setTransform(effectivePixelRatio, 0, 0, effectivePixelRatio, 0, 0);
+    context.setTransform(alignedPixelRatio, 0, 0, alignedPixelRatio, 0, 0);
     context.imageSmoothingEnabled = false;
   }
 
@@ -102,9 +107,26 @@ export function configureSourceCanvas(
     sizing: {
       width: nextCanvasWidth,
       height: nextCanvasHeight,
-      pixelRatio: effectivePixelRatio,
+      pixelRatio: alignedPixelRatio,
     },
   };
+}
+
+export function alignSourcePixelRatioToCellSize(
+  pixelRatio: number,
+  cellSize: number,
+): number {
+  const safeCellSize = Math.max(cellSize, 1);
+  const pixelsPerCell = safeCellSize * pixelRatio;
+
+  if (!Number.isFinite(pixelRatio) || pixelsPerCell < MIN_ALIGNED_CELL_PIXELS) {
+    return pixelRatio;
+  }
+
+  return Math.max(
+    MIN_CANVAS_PIXEL_RATIO,
+    Math.floor(pixelsPerCell) / safeCellSize,
+  );
 }
 
 export function redrawSourceCanvas(options: {
@@ -173,11 +195,12 @@ export function drawChangedSourceCells(options: {
     return;
   }
 
-  const affectedIndices = new Set<number>();
+  let minAffectedX = gridWidth;
+  let maxAffectedX = -1;
+  let minAffectedY = gridHeight;
+  let maxAffectedY = -1;
 
   for (const index of changedIndices) {
-    clearCell(context, index, gridWidth, cellSize, 1);
-
     const cellX = index % gridWidth;
     const cellY = Math.floor(index / gridWidth);
 
@@ -195,21 +218,39 @@ export function drawChangedSourceCells(options: {
           continue;
         }
 
-        affectedIndices.add(neighborY * gridWidth + neighborX);
+        minAffectedX = Math.min(minAffectedX, neighborX);
+        maxAffectedX = Math.max(maxAffectedX, neighborX);
+        minAffectedY = Math.min(minAffectedY, neighborY);
+        maxAffectedY = Math.max(maxAffectedY, neighborY);
       }
     }
   }
 
-  for (const index of affectedIndices) {
-    drawCell(context, {
+  if (maxAffectedX >= minAffectedX && maxAffectedY >= minAffectedY) {
+    clearCellRect(
+      context,
+      minAffectedX,
+      minAffectedY,
+      maxAffectedX,
+      maxAffectedY,
       cellSize,
-      colorId: cells[index] ?? null,
-      colorsById,
-      gridWidth,
-      index,
-      stitchCanvasCache,
-      threadView,
-    });
+      0,
+    );
+
+    for (let cellY = minAffectedY; cellY <= maxAffectedY; cellY += 1) {
+      for (let cellX = minAffectedX; cellX <= maxAffectedX; cellX += 1) {
+        const index = cellY * gridWidth + cellX;
+        drawCell(context, {
+          cellSize,
+          colorId: cells[index] ?? null,
+          colorsById,
+          gridWidth,
+          index,
+          stitchCanvasCache,
+          threadView,
+        });
+      }
+    }
   }
 }
 
@@ -223,6 +264,28 @@ function clearCell(
   const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
 
   context.clearRect(x0 - bleed, y0 - bleed, width + bleed * 2, height + bleed * 2);
+}
+
+function clearCellRect(
+  context: CanvasRenderingContext2D,
+  minCellX: number,
+  minCellY: number,
+  maxCellX: number,
+  maxCellY: number,
+  cellSize: number,
+  bleed = 0,
+): void {
+  const left = Math.round(minCellX * cellSize);
+  const top = Math.round(minCellY * cellSize);
+  const right = Math.round((maxCellX + 1) * cellSize);
+  const bottom = Math.round((maxCellY + 1) * cellSize);
+
+  context.clearRect(
+    left - bleed,
+    top - bleed,
+    Math.max(right - left, 1) + bleed * 2,
+    Math.max(bottom - top, 1) + bleed * 2,
+  );
 }
 
 function drawCell(

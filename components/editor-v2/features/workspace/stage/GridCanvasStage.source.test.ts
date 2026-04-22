@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getEffectiveSourceCanvasPixelRatio } from "./GridCanvasStage.source";
+import {
+  alignSourcePixelRatioToCellSize,
+  getEffectiveSourceCanvasPixelRatio,
+} from "./GridCanvasStage.source";
 
 describe("getEffectiveSourceCanvasPixelRatio", () => {
   it("preserves device pixel ratio for modest canvas sizes", () => {
@@ -25,5 +28,15 @@ describe("getEffectiveSourceCanvasPixelRatio", () => {
 
   it("never drops below the minimum safety ratio for extremely large canvases", () => {
     expect(getEffectiveSourceCanvasPixelRatio(100_000, 100_000, 3)).toBe(0.125);
+  });
+});
+
+describe("alignSourcePixelRatioToCellSize", () => {
+  it("snaps higher-resolution ratios down to a whole number of source pixels per cell", () => {
+    expect(alignSourcePixelRatioToCellSize(2.6, 28)).toBeCloseTo(72 / 28, 6);
+  });
+
+  it("preserves very low ratios where alignment would cost too much detail", () => {
+    expect(alignSourcePixelRatioToCellSize(0.125, 28)).toBe(0.125);
   });
 });

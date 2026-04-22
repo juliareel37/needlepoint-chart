@@ -91,14 +91,24 @@ export function renderDisplayCanvas(options: {
   } = options;
   const width = Math.max(stageSize.width, 1);
   const height = Math.max(stageSize.height, 1);
+  const devicePixelRatio = window.devicePixelRatio || 1;
 
   context.imageSmoothingEnabled = false;
   context.clearRect(0, 0, width, height);
 
-  const drawX = frameOrigin.x + viewport.offsetX;
-  const drawY = frameOrigin.y + viewport.offsetY;
-  const drawWidth = metrics.surfaceWidth * viewport.zoom;
-  const drawHeight = metrics.surfaceHeight * viewport.zoom;
+  const drawRect = snapRectToDevicePixels(
+    {
+      x: frameOrigin.x + viewport.offsetX,
+      y: frameOrigin.y + viewport.offsetY,
+      width: metrics.surfaceWidth * viewport.zoom,
+      height: metrics.surfaceHeight * viewport.zoom,
+    },
+    devicePixelRatio,
+  );
+  const drawX = drawRect.x;
+  const drawY = drawRect.y;
+  const drawWidth = drawRect.width;
+  const drawHeight = drawRect.height;
 
   context.fillStyle = backgroundColor;
   context.fillRect(drawX, drawY, drawWidth, drawHeight);
@@ -126,15 +136,24 @@ export function renderDisplayCanvas(options: {
       offsetY: displayTrace.offsetY,
       scale: displayTrace.scale,
     });
+    const traceRect = snapRectToDevicePixels(
+      {
+        x: drawX + bounds.left * viewport.zoom,
+        y: drawY + bounds.top * viewport.zoom,
+        width: bounds.width * viewport.zoom,
+        height: bounds.height * viewport.zoom,
+      },
+      devicePixelRatio,
+    );
 
     context.save();
     context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
     context.drawImage(
       displayTraceAsset.image,
-      drawX + bounds.left * viewport.zoom,
-      drawY + bounds.top * viewport.zoom,
-      bounds.width * viewport.zoom,
-      bounds.height * viewport.zoom,
+      traceRect.x,
+      traceRect.y,
+      traceRect.width,
+      traceRect.height,
     );
     context.restore();
   }
@@ -177,4 +196,25 @@ export function renderDisplayCanvas(options: {
   }
 
   context.restore();
+}
+
+function snapRectToDevicePixels(
+  rect: { x: number; y: number; width: number; height: number },
+  devicePixelRatio: number,
+) {
+  const left = snapToDevicePixel(rect.x, devicePixelRatio);
+  const top = snapToDevicePixel(rect.y, devicePixelRatio);
+  const right = snapToDevicePixel(rect.x + rect.width, devicePixelRatio);
+  const bottom = snapToDevicePixel(rect.y + rect.height, devicePixelRatio);
+
+  return {
+    x: left,
+    y: top,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  };
+}
+
+function snapToDevicePixel(value: number, devicePixelRatio: number): number {
+  return Math.round(value * devicePixelRatio) / devicePixelRatio;
 }
