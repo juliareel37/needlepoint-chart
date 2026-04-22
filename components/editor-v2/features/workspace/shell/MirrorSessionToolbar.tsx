@@ -50,7 +50,7 @@ export function MirrorSessionToolbar({
 
         <Button
           type="button"
-          variant="ghost"
+          variant="ghostV2"
           disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
@@ -89,7 +89,7 @@ export function MirrorSessionToolbar({
 
         {/* <Button
           type="button"
-          variant="ghost"
+          variant="ghostV2"
           aria-label="Cancel mirror session"
           onClick={() => dispatch(createCancelMirrorCommand())}
         >

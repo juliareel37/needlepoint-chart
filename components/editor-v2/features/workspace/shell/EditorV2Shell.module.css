@@ -56,7 +56,7 @@
   height: 100%;
   max-height: 100%;
   padding: 16px 10px;
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   border-right: 1px solid var(--ui-border-reg);
   overflow-y: auto;
 }
@@ -103,7 +103,7 @@
   height: 100%;
   max-height: 100%;
   padding: 24px;
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   overflow-y: auto;
 }
 
@@ -478,8 +478,8 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-card) 88%, var(--surface-card-alt)),
-      color-mix(in srgb, var(--surface-card-alt) 92%, transparent)
+      color-mix(in srgb, var(--surface-card) 88%, var(--surface-card)),
+      color-mix(in srgb, var(--surface-card) 92%, transparent)
     ),
     linear-gradient(
       135deg,
@@ -500,8 +500,8 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-card-alt) 58%, var(--surface-card)),
-      color-mix(in srgb, var(--surface-card) 100%, var(--surface-card-alt))
+      color-mix(in srgb, var(--surface-card) 58%, var(--surface-card)),
+      color-mix(in srgb, var(--surface-card) 100%, var(--surface-card))
     );
 }
 
@@ -581,56 +581,6 @@
 
 .settingsControlLabel {
   color: var(--text-primary);
-}
-
-.sidebarSegmentedControl {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 2px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
-  border: 1px solid var(--ui-border-subtle);
-}
-
-.sidebarSegmentedItem {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 550;
-  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
-}
-
-.sidebarSegmentedItem:hover {
-  background: var(--button-ghost-hover);
-}
-
-.sidebarSegmentedItem[data-active="true"] {
-  background: var(--button-ghost-active);
-  cursor: default;
-}
-
-.sidebarSegmentedItem[data-active="true"]:hover {
-  background: var(--button-ghost-active);
-}
-
-.sidebarSegmentedItem:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 1px;
 }
 
 .canvasColumn {
@@ -1430,7 +1380,7 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-sidebar) 82%, white);
+  background: color-mix(in srgb, var(--surface-primary) 82%, white);
   border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 72%, transparent);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transform: scale(1);
@@ -1544,29 +1494,6 @@
 
 .traceOpacityControls[data-disabled="true"] {
   opacity: 0.55;
-}
-
-.traceSegmentedControl {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 2px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
-  border: 1px solid var(--ui-border-subtle);
-}
-
-.traceSegmentedItem {
-  width: 100%;
-  min-height: 28px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
 }
 
 .traceSliderRow {

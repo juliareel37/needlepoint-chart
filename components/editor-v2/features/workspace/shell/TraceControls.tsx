@@ -11,6 +11,7 @@ import {
   Field,
   Modal,
   Notification,
+  SegmentedControl,
   Slider,
   Toggle,
 } from "@/components/design-system";
@@ -395,7 +396,7 @@ export function TraceControls({
             </button>
             <Button
               type="button"
-              variant="ghost"
+              variant="ghostV2"
               className={styles.traceAttachmentRemoveButton}
               aria-label="Remove trace image"
               title="Remove image"
@@ -504,45 +505,25 @@ export function TraceControls({
                   >
                     Blending
                   </span>
-                  <div
-                    className={styles.traceSegmentedControl}
-                    role="radiogroup"
-                    aria-label="Opacity blending mode"
-                    aria-disabled={!trace.visible}
-                  >
-                    <BlendModeButton
-                      active={trace.blendMode === "crossfade"}
-                      disabled={!trace.visible}
-                      label="Crossfade"
-                      mode="crossfade"
-                      onSelect={(mode) =>
-                        dispatch(
-                          createUpdateTraceCommand(
-                            {
-                              blendMode: mode,
-                            },
-                            { history: { mode: "skip" } },
-                          ),
-                        )
-                      }
-                    />
-                    <BlendModeButton
-                      active={(trace.blendMode ?? "image") === "image"}
-                      disabled={!trace.visible}
-                      label="Image only"
-                      mode="image"
-                      onSelect={(mode) =>
-                        dispatch(
-                          createUpdateTraceCommand(
-                            {
-                              blendMode: mode,
-                            },
-                            { history: { mode: "skip" } },
-                          ),
-                        )
-                      }
-                    />
-                  </div>
+                  <SegmentedControl
+                    ariaLabel="Opacity blending mode"
+                    disabled={!trace.visible}
+                    value={trace.blendMode ?? "image"}
+                    onChange={(mode) =>
+                      dispatch(
+                        createUpdateTraceCommand(
+                          {
+                            blendMode: mode,
+                          },
+                          { history: { mode: "skip" } },
+                        ),
+                      )
+                    }
+                    options={[
+                      { label: "Crossfade", value: "crossfade" },
+                      { label: "Image only", value: "image" },
+                    ]}
+                  />
                 </div>
               </Field>
 
@@ -770,43 +751,6 @@ function splitFileNameForDisplay(fileName: string): {
     baseName: trimmedFileName.slice(0, lastDotIndex),
     extension: trimmedFileName.slice(lastDotIndex),
   };
-}
-
-function BlendModeButton({
-  active,
-  disabled = false,
-  label,
-  mode,
-  onSelect,
-}: {
-  active: boolean;
-  disabled?: boolean;
-  label: string;
-  mode: TraceBlendMode;
-  onSelect: (mode: TraceBlendMode) => void;
-}) {
-  const isInertActive = active && !disabled;
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="md"
-      className={styles.traceSegmentedItem}
-      style={{ padding: "4px 8px" }}
-      disabled={disabled}
-      active={active}
-      inertWhenActive={isInertActive}
-      aria-pressed={active}
-      onClick={() => {
-        if (!disabled && !isInertActive) {
-          onSelect(mode);
-        }
-      }}
-    >
-      {label}
-    </Button>
-  );
 }
 
 function TraceSection({

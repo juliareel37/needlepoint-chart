@@ -5,7 +5,7 @@
   height: 250px;
   overflow: auto;
   padding: 8px;
-  background: var(--surface-card);
+  /* background: var(--surface-card); */
   border-radius: 16px;
   justify-content: space-evenly;
 }

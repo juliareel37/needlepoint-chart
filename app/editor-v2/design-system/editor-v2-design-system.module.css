@@ -383,7 +383,7 @@
   padding: 20px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 20px;
-  background: var(--surface-card);
+  background: var(--surface-primary);
   box-shadow: var(--ui-shadow-sm);
 }
 

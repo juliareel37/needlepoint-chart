@@ -99,7 +99,7 @@ export default function RootLayout({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "0 28px 0 16px",
-                background: "var(--surface-header)",
+                background: "var(--surface-primary)",
                 borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
                 zIndex: 200,

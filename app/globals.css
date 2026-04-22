@@ -220,9 +220,9 @@
   --neutral-100: #fafaf9;
   --neutral-200: #f2f2f2;
   --neutral-300: #e6e6e6;
-  --neutral-600: #747474;
-  --neutral-700: #585858;
-  --neutral-800: #3a3a3a;
+  --neutral-600: #686868;
+  --neutral-700: #484848;
+  --neutral-800: #2b2b2b;
   --neutral-900: #1c1c1c;
 
   --brand-50: #fcf7ff;
@@ -254,7 +254,7 @@
   --font-primary: ui-sans-serif, system-ui, sans-serif;
   --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-800);
+  --text-secondary: var(--neutral-700);
 
   --control-secondary-bg: #f1f3f6;
   --canvas-surround-bg: #e2e2e2;
@@ -265,15 +265,12 @@
   --brand-lightest: var(--brand-50);
 
   --surface-app: var(--neutral-0);
-  --surface-card: var(--neutral-0);
-  --surface-card-alt: var(--neutral-100);
-  --surface-sidebar: var(--neutral-0);
-  --surface-header: var(--neutral-0);
+  --surface-primary: var(--neutral-0);
+  --surface-card: var(--neutral-100);
 
   --canvas-stage-bg: var(--neutral-100);
   --canvas-bg: var(--neutral-0);
 
-  --toolbar-bg: var(--neutral-0);
   --toolbar-border: var(--neutral-300);
 
   --ui-border-subtle: var(--neutral-200);
@@ -282,8 +279,8 @@
 
   /* Buttons */
   --button-primary-text: var(--neutral-0);
-  --button-primary-default: var(--brand-300);
-  --button-primary-hover: var(--brand-400);
+  --button-primary-default: var(--brand-400);
+  --button-primary-hover: var(--brand-500);
   --button-primary-active: var(--brand-500);
 
   --button-secondary-default: var(--neutral-200);
@@ -291,26 +288,19 @@
   --button-secondary-active: var(--brand-500);
   --button-secondary-active-text: var(--neutral-0);
 
+  --button-secondary2-default: var(--neutral-0);
+  --button-secondary2-hover: rgb(207, 136, 4);
+  --button-secondary2-active: rgb(149, 98, 3);
+  --button-secondary2-active-text: var(--neutral-0);
+
   --button-ghost-default: transparent;
-  --button-ghost-hover: var(--neutral-100);
-  --button-ghost-active: var(--neutral-200);
+  --button-ghost-hover: var(--neutral-0);
+  --button-ghost-active: var(--neutral-0);
 
   --button-ghost2-default: transparent;
   --button-ghost2-hover: var(--neutral-200);
   --button-ghost2-active: var(--brand-100);
   --button-ghost2-active-text: var(--brand-500);
-
-  --toolbar-button-default: transparent;
-  --toolbar-button-hover: var(--neutral-200);
-  --toolbar-button-active: var(--brand-100);
-  --toolbar-button-active-text: var(--brand-500);
-
-  /* incorrectly assigned (legacy) */
-
-  /* --ui-hover-soft: var(--neutral-200); */
-  --ui-hover-soft: orange;
-  
-  --button-secondary-bg: var(--control-secondary-bg);
 
   /* UI components */
   --icon-on-bg-filter: invert(0);
@@ -325,7 +315,13 @@
   --slider-thumb-border: var(--brand-300);
 
   --menu-item-hover-bg: var(--brand-100);
+  
   --zoom-menu-bg: var(--surface-card);
+
+  --sidebar-segmented-control-bg: var(--surface-primary);
+
+
+    /* incorrectly assigned (legacy) */
 
 }
 
@@ -338,16 +334,13 @@
   --brand-700: #572669;
 
   --surface-app: var(--neutral-900);
+  --surface-primary: var(--neutral-800);
   --surface-card: var(--neutral-900);
-  --surface-card-alt: var(--neutral-800);
-  --surface-sidebar: var(--neutral-800);
-  --surface-header: var(--neutral-800);
 
-  --toolbar-bg: var(--neutral-800);
   --toolbar-border: var(--neutral-700);
 
   --canvas-stage-bg: var(--neutral-900);
-  --canvas-bg: var(--neutral-800);
+  --canvas-bg: var(--surface-primary);
 
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
@@ -357,33 +350,23 @@
   --ui-border-strong: var(--neutral-600);
 
   /* Buttons */
-  --button-primary-text: var(--neutral-0);
-  --button-primary-default: var(--brand-400);
-  --button-primary-hover: var(--brand-300);
-  --button-primary-active: var(--brand-500);
 
   --button-secondary-default: var(--neutral-700);
   --button-secondary-hover: var(--neutral-600);
-  --button-secondary-active: var(--brand-500);
+  --button-secondary-active: var(--brand-540);
   --button-secondary-active-text: var(--neutral-0);
 
-  --button-ghost-default: transparent;
-  --button-ghost-hover: var(--neutral-700);
+  --button-ghost-hover: var(--neutral-800);
   --button-ghost-active: var(--neutral-700);
 
-  --button-ghost2-default: transparent;
   --button-ghost2-hover: var(--neutral-700);
-  --button-ghost2-active: var(--brand-600);
+  --button-ghost2-active: var(--brand-400);
   --button-ghost2-active-text: var(--brand-100);
-
-  --toolbar-button-default: transparent;
-  --toolbar-button-hover: var(--neutral-700);
-  --toolbar-button-active: var(--brand-500);
-  --toolbar-button-active-text: var(--brand-100);
 
   --menu-item-hover-bg: var(--brand-700);
 
   --zoom-menu-bg: var(--neutral-800);
+
 
   /* --neutral-0: #ffffff;
   --neutral-100: #fafaf9;
@@ -439,7 +422,7 @@
   --neutral-100: var(--neutral-100);
   --surface-elevated: var(--neutral-100);
   --canvas-surround-bg: #181818;
-  --surface-sidebar: var(--neutral-700);
+  --surface-primary: var(--neutral-700);
   --canvas-toolbar-bg: #252b34;
   --icon-on-bg-filter: invert(1);
   --icon-on-fg-filter: invert(0);
@@ -507,7 +490,7 @@ button:disabled {
   z-index: 2;
 }
 .pattern-sidebar {
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   border-radius: 0;
   padding: 0;
   box-sizing: border-box;
@@ -518,7 +501,7 @@ button:disabled {
   will-change: width;
 }
 .pattern-sidebar-inner {
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
 }
 :root,
 :root * {

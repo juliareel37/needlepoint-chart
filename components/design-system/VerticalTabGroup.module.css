@@ -18,7 +18,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: var(--toolbar-button-default-text);
+  /* color: var(--toolbar-button-default-text); */
   text-align: center;
   cursor: pointer;
   filter: none;
@@ -51,14 +51,14 @@
 }
 
 .item:hover {
-  background: var(--toolbar-button-hover);
-  color: var(--toolbar-button-hover-text);
+  background: var(--button-ghost2-hover);
+  /* color: var(--toolbar-button-hover-text); */
   filter: none !important;
 }
 
 .item[data-active="true"] {
-  background: var(--toolbar-button-active);
-  color: var(--toolbar-button-active-text);
+  background: var(--button-ghost2-active);
+  color: var(--button-ghost2-active-text);
   filter: none !important;
 }
 

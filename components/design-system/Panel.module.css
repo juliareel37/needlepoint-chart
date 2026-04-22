@@ -5,7 +5,7 @@
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--ui-border-subtle);
-  background: var(--surface-card-alt);
+  background: var(--surface-card);
   box-shadow: var(--ui-shadow-sm);
 }
 

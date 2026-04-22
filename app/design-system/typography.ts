@@ -80,7 +80,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   s: {
     label: "s",
-    size: 10,
+    size: 12,
     lineHeight: 14,
     weight: fontWeights.regular,
     usage: "supporting labels, dense UI",

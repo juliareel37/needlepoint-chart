@@ -90,34 +90,38 @@ const paletteGroups = [
 ];
 
 const buttonVariants: Array<{
-  variant: "primary" | "secondary" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
   label: string;
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
+  { variant: "secondary2", label: "Secondary2" },
   { variant: "destructive", label: "Destructive" },
   { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 
 const buttonHoverStyles: Record<
-  "primary" | "secondary" | "destructive" | "ghost" | "ghostV2",
+  "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2",
   CSSProperties
 > = {
   primary: {
-    background: "var(--brand-500)",
+    background: "var(--button-primary-hover)",
   },
   secondary: {
-    background: "var(--neutral-200)",
+    background: "var(--button-secondary-hover)",
+  },
+  secondary2: {
+    background: "var(--button-secondary2-hover)",
   },
   destructive: {
     background: "var(--status-destructive-strong)",
   },
   ghost: {
-    background: "var(--neutral-100)",
+    background: "var(--button-ghost-hover)",
   },
   ghostV2: {
-    background: "var(--neutral-200)",
+    background: "var(--button-ghost2-hover)",
   },
 };
 
@@ -589,7 +593,7 @@ function ButtonStateRow({
   active: boolean;
   label: string;
   onToggle: () => void;
-  variant: "primary" | "secondary" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
 }) {
   return (
     <>

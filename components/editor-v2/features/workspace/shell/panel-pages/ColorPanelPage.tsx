@@ -46,7 +46,8 @@ export function ColorPanelPage({
       <div className={styles.sidebarPageBody}>
         {view === "overview" ? (
           <>
-            <div className={styles.sidebarSubsection}>
+          {/* style={{ background : "var(--surface-card)" }} */}
+            <div className={styles.sidebarSubsection} >
               <div className={styles.metaRow} style={typographyStyles.p2}>
                 <span>Active:</span>
                 <strong className={styles.activeColorValue}>
@@ -54,7 +55,8 @@ export function ColorPanelPage({
                 </strong>
               </div>
               <div style={{"border": "solid 1px var(--ui-border-subtle)",
-                "borderRadius": "16px"}}>
+                "borderRadius": "16px",
+                "background": "var(--surface-card)"}}>
               <ColorLibrary
                 activeColorId={activeColorId}
                 colors={palette}

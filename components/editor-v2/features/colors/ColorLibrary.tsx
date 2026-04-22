@@ -40,7 +40,7 @@ export function ColorLibrary({
             key={color.id}
             type="button"
             onClick={() => onColorSelect(color.id)}
-            variant="ghost"
+            variant="ghostV2"
             size="sm"
             active={selected}
             inertWhenActive

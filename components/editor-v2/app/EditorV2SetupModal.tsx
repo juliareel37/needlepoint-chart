@@ -9,6 +9,7 @@ import {
   Field,
   FieldInput,
   Notification,
+  SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
 import {
@@ -27,6 +28,15 @@ const LARGE_GRID_PRESETS = [
   { label: "300 x 300", width: 300, height: 300 },
   { label: "400 x 400", width: 400, height: 400 },
 ] as const;
+const INCH_SIZE_PRESETS = [
+  { label: '4" x 4"', width: 4, height: 4 },
+  { label: '5" x 5"', width: 5, height: 5 },
+  { label: '5" x 7"', width: 5, height: 7 },
+  { label: '8" x 8"', width: 8, height: 8 },
+  { label: '8" x 10"', width: 8, height: 10 },
+  { label: '10" x 14"', width: 10, height: 14 },
+] as const;
+const CELLS_PER_INCH_PRESETS = [10, 13, 18] as const;
 
 export interface EditorV2DesignConfigNew {
   kind: "new";
@@ -104,6 +114,9 @@ export function EditorV2SetupModal({
   setupErrorMessage,
 }: EditorV2SetupModalProps) {
   const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
+  const [useCustomMeshCount, setUseCustomMeshCount] = useState(
+    () => getCellsPerInchPreset(draftMeshCount) === null,
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 799px)");
@@ -123,6 +136,11 @@ export function EditorV2SetupModal({
     heightInches: draftHeightInches,
     meshCount: draftMeshCount,
   });
+  const selectedInchSizePreset = getInchSizePreset({
+    widthInches: draftWidthInches,
+    heightInches: draftHeightInches,
+  });
+  const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
   const createDisabled =
     draftSizingMode === "inches" && inchSizing.error !== null;
 
@@ -168,36 +186,27 @@ export function EditorV2SetupModal({
               <h2 className={styles.sectionTitle} style={typographyStyles.h5}>
                 New design
               </h2>
-              {/* <p className={styles.sectionHint} style={typographyStyles.p2}>
-                Pick a sizing mode, then set the starting dimensions.
-              </p> */}
             </div>
 
             <Field 
-            label="Sizing mode"
+            // label="Sizing mode"
             >
-              <div
-                className={styles.segmentedControl}
-                role="radiogroup"
-                aria-label="Sizing mode"
-              >
-                <SizingModeButton
-                  active={draftSizingMode === "stitches"}
-                  label="Grid cells"
-                  onClick={() => onDraftSizingModeChange("stitches")}
-                />
-                <SizingModeButton
-                  active={draftSizingMode === "inches"}
-                  label="Inches + CPI"
-                  onClick={() => onDraftSizingModeChange("inches")}
-                />
-              </div>
+              <SegmentedControl
+                ariaLabel="Sizing mode"
+                stackOnSmallScreens
+                value={draftSizingMode}
+                onChange={onDraftSizingModeChange}
+                options={[
+                  { label: "Mesh Count", value: "inches" },
+                  { label: "Stitches", value: "stitches" },
+                ]}
+              />
             </Field>
 
             {draftSizingMode === "stitches" ? (
               <>
                 <div className={styles.fieldGrid}>
-                  <Field label="Grid width">
+                  <Field label="Length">
                     <FieldInput
                       type="number"
                       min={EDITOR_V2_MIN_GRID_SIZE}
@@ -206,7 +215,7 @@ export function EditorV2SetupModal({
                       onChange={(event) => onDraftWidthChange(event.target.value)}
                     />
                   </Field>
-                  <Field label="Grid height">
+                  <Field label="Height">
                     <FieldInput
                       type="number"
                       min={EDITOR_V2_MIN_GRID_SIZE}
@@ -219,14 +228,14 @@ export function EditorV2SetupModal({
 
                 <div className={styles.presetBlock}>
                   <p className={styles.presetLabel} style={typographyStyles.p2}>
-                    Large canvas presets
+                    Quick presets
                   </p>
                   <div className={styles.presetGrid}>
                     {LARGE_GRID_PRESETS.map((preset) => (
                       <Button
                         key={preset.label}
                         type="button"
-                        variant="ghost"
+                        variant="ghostV2"
                         size="sm"
                         className={styles.presetButton}
                         onClick={() => {
@@ -242,40 +251,130 @@ export function EditorV2SetupModal({
               </>
             ) : (
               <>
-                <div className={styles.fieldGrid}>
-                  <Field label="Width (inches)">
-                    <FieldInput
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={draftWidthInches}
-                      onChange={(event) =>
-                        onDraftWidthInchesChange(event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Height (inches)">
-                    <FieldInput
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={draftHeightInches}
-                      onChange={(event) =>
-                        onDraftHeightInchesChange(event.target.value)
-                      }
-                    />
-                  </Field>
-                </div>
+                <div className={styles.presetBlock}>
+                  <p className={styles.presetLabel} style={typographyStyles.p2}>
+                    {/* Canvas size */}
+                  </p>
+                  <div className={styles.fieldGrid}>
+                    <Field label="Length (inches)">
+                      <FieldInput
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={draftWidthInches}
+                        onChange={(event) =>
+                          onDraftWidthInchesChange(event.target.value)
+                        }
+                      />
+                    </Field>
+                    <Field label="Height (inches)">
+                      <FieldInput
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={draftHeightInches}
+                        onChange={(event) =>
+                          onDraftHeightInchesChange(event.target.value)
+                        }
+                      />
+                    </Field>
+                  </div>
 
-                <Field label="Cells per inch">
-                  <FieldInput
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={draftMeshCount}
-                    onChange={(event) => onDraftMeshCountChange(event.target.value)}
-                  />
-                </Field>
+                  <div className={styles.helperRow}>
+                    <p className={styles.subtleLabel} style={typographyStyles.s}>
+                      Quick presets
+                    </p>
+                    <div className={styles.inlineOptionGrid}>
+                      {INCH_SIZE_PRESETS.map((preset) => {
+                        const active = selectedInchSizePreset?.label === preset.label;
+
+                        return (
+                          <Button
+                            key={preset.label}
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            // className={styles.compactPresetButton}
+                            active={active}
+                            inertWhenActive={active}
+                            aria-pressed={active}
+                            onClick={() => {
+                              onDraftWidthInchesChange(String(preset.width));
+                              onDraftHeightInchesChange(String(preset.height));
+                            }}
+                          >
+                            {preset.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div 
+                  className={styles.presetBlock}
+                  >
+                    <p className={styles.presetLabel} style={typographyStyles.p2}>
+                      Canvas mesh (stitches per inch)
+                    </p>
+                    <div 
+                    className={styles.inlineOptionGrid}
+                    >
+                      {CELLS_PER_INCH_PRESETS.map((preset) => {
+                        const active =
+                          !useCustomMeshCount &&
+                          selectedCellsPerInchPreset === preset;
+
+                        return (
+                          <Button
+                            key={preset}
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            // className={styles.compactPresetButton}
+                            active={active}
+                            inertWhenActive={active}
+                            aria-pressed={active}
+                            onClick={() => {
+                              setUseCustomMeshCount(false);
+                              onDraftMeshCountChange(String(preset));
+                            }}
+                          >
+                            {preset} 
+                          </Button>
+                        );
+                      })}
+                      {useCustomMeshCount ? (
+                        <FieldInput
+                          aria-label="Custom cells per inch"
+                          type="number"
+                          min="0"
+                          step="any"
+                          className={styles.customMeshCountInput}
+                          value={draftMeshCount}
+                          onChange={(event) => {
+                            setUseCustomMeshCount(true);
+                            onDraftMeshCountChange(event.target.value);
+                          }}
+                        />
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghostV2"
+                          size="md"
+                          className={styles.compactPresetButton}
+                          active={useCustomMeshCount}
+                          inertWhenActive={useCustomMeshCount}
+                          aria-pressed={useCustomMeshCount}
+                          onClick={() => {
+                            setUseCustomMeshCount(true);
+                          }}
+                        >
+                          Custom
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 {inchSizing.error ? (
                   <Notification
@@ -433,31 +532,6 @@ export function EditorV2SetupModal({
   );
 }
 
-function SizingModeButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="md"
-      className={styles.segmentedItem}
-      active={active}
-      inertWhenActive={active}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      {label}
-    </Button>
-  );
-}
-
 function formatSavedDesignLabel(record: SavedEditorV2DocumentRecord): string {
   return `${record.title || "Untitled Design"} (${record.gridWidth}x${record.gridHeight})`;
 }
@@ -492,6 +566,38 @@ function parsePositiveDecimal(value: string): number | null {
 function normalizeDecimalInput(value: string): string {
   const parsed = parsePositiveDecimal(value);
   return parsed === null ? value : String(parsed);
+}
+
+function getCellsPerInchPreset(value: string): (typeof CELLS_PER_INCH_PRESETS)[number] | null {
+  const parsed = parsePositiveDecimal(value);
+
+  if (parsed === null) {
+    return null;
+  }
+
+  return CELLS_PER_INCH_PRESETS.find((preset) => preset === parsed) ?? null;
+}
+
+function getInchSizePreset({
+  widthInches,
+  heightInches,
+}: {
+  widthInches: string;
+  heightInches: string;
+}): (typeof INCH_SIZE_PRESETS)[number] | null {
+  const parsedWidth = parsePositiveDecimal(widthInches);
+  const parsedHeight = parsePositiveDecimal(heightInches);
+
+  if (parsedWidth === null || parsedHeight === null) {
+    return null;
+  }
+
+  return (
+    INCH_SIZE_PRESETS.find(
+      (preset) =>
+        preset.width === parsedWidth && preset.height === parsedHeight,
+    ) ?? null
+  );
 }
 
 function resolveInchSizing({

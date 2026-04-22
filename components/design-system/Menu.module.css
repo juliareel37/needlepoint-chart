@@ -61,7 +61,7 @@
 
 .triggerGhost:hover,
 .triggerGhost[data-open="true"] {
-  background: var(--toolbar-button-hover);
+  background: var(--button-ghost2-hover);
 }
 
 .surface {
@@ -69,8 +69,8 @@
   min-width: 100px;
   max-width: 100%;
   border-radius: 16px;
-  border: 1px solid var(--ui-border-reg);
-  background: var(--surface-card-alt);
+  /* border: 1px solid var(--ui-border-reg); */
+  background: var(--surface-card);
   box-shadow: var(--ui-shadow-lg);
   backdrop-filter: blur(10px);
   padding: 8px;

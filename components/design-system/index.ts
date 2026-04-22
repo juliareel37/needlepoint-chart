@@ -5,6 +5,7 @@ export * from "./Menu";
 export * from "./Modal";
 export * from "./Notification";
 export * from "./Panel";
+export * from "./SegmentedControl";
 export * from "./Slider";
 export * from "./SingleSelectDropdown";
 export * from "./Toggle";
