@@ -41,7 +41,6 @@ import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { ButtonIcon, Notification } from "@/components/design-system";
 import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
-import { SelectionSessionToolbar } from "./SelectionSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
@@ -116,7 +115,6 @@ export function EditorV2Shell({
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
   const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
-  const selectionActive = activeTool === "lasso";
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
@@ -618,14 +616,6 @@ export function EditorV2Shell({
                     dispatch={dispatch}
                     session={mirrorSession}
                   />
-                ) : selectionActive ? (
-                  <SelectionSessionToolbar
-                    activeColor={activeColor}
-                    dispatch={dispatch}
-                    selectionBounds={selectionBounds}
-                    selectionCommitted={selectionCommitted}
-                    selectionShape={state.session.selection.shape}
-                  />
                 ) : textPlacement ? (
                   <TextPlacementToolbar
                     activeColorHex={activeColor?.hex ?? null}
@@ -655,6 +645,9 @@ export function EditorV2Shell({
                     dispatch={dispatch}
                     hasPaintedCells={hasPaintedCells}
                     palette={palette}
+                    selectionBounds={selectionBounds}
+                    selectionCommitted={selectionCommitted}
+                    selectionShape={state.session.selection.shape}
                     trace={trace}
                   />
                 )}
