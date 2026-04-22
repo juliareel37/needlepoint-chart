@@ -372,7 +372,12 @@ export function FloatingToolbar({
     closeImageMenu();
 
     if (activeTool === "lasso") {
-      setSelectOpen((current) => !current);
+      if (selectOpen) {
+        handleExitSelection();
+        return;
+      }
+
+      setSelectOpen(true);
       return;
     }
 
@@ -387,7 +392,7 @@ export function FloatingToolbar({
   }
 
   function handleDoneSelection() {
-    closeSelectMenu();
+    handleExitSelection();
   }
 
   function handleNewSelection() {
@@ -647,7 +652,6 @@ export function FloatingToolbar({
               subtoolbar
               role="dialog"
               aria-label="Selection tools"
-              onRequestClose={closeSelectMenu}
             >
               <ToolbarButton
                 type="button"

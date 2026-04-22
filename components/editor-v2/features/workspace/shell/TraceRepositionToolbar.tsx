@@ -30,7 +30,7 @@ export function TraceRepositionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-        <ToolbarButton
+        {/* <ToolbarButton
           type="button"
           onClick={() => {
             dispatch(
@@ -45,7 +45,22 @@ export function TraceRepositionToolbar({
             icon={trace.visible ? "/icons/eye.svg" : "/icons/eye_off.svg"}
           />
           <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
-        </ToolbarButton>
+        </ToolbarButton> */}
+
+        <Button
+          type="button"
+          onClick={() => {
+            dispatch(
+              createUpdateTraceCommand(
+                { visible: !trace.visible },
+                { history: { mode: "skip" } },
+              ),
+            );
+          }}
+        >
+          <ButtonIcon icon="/icons/lucide/eye.svg" />
+          <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
+        </Button>
 
         <ToolbarDivider />
 
@@ -84,17 +99,26 @@ export function TraceRepositionToolbar({
         alignItems: "center",
         flexWrap: "nowrap",
       }}>
-        <Button
+        {/* <Button
             type="button"
             variant="secondary"
             onClick={() => dispatch(createCancelTraceRepositionCommand())}>
           Cancel
-        </Button>
+        </Button> */}
         <Button 
             type="button" 
             variant="primary" 
             onClick={() => dispatch(createCommitTraceRepositionCommand())}>
           Done
+        </Button>
+        
+        <ToolbarDivider />
+
+         <Button
+            type="button"
+            variant="ghostV2"
+            onClick={() => dispatch(createCancelTraceRepositionCommand())}>
+          <ButtonIcon icon="/icons/lucide/x.svg" />
         </Button>
       </div>
          
