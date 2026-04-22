@@ -12,7 +12,8 @@ export type ButtonVariant =
   | "secondary2"
   | "destructive"
   | "ghost"
-  | "ghostV2";
+  | "ghostV2"
+  | "toolbarX";
 type ButtonSize = "sm" | "md" | "lg";
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {

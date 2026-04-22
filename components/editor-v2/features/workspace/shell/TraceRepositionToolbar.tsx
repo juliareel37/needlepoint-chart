@@ -116,7 +116,7 @@ export function TraceRepositionToolbar({
 
          <Button
             type="button"
-            variant="ghostV2"
+            variant="toolbarX"
             onClick={() => dispatch(createCancelTraceRepositionCommand())}>
           <ButtonIcon icon="/icons/lucide/x.svg" />
         </Button>

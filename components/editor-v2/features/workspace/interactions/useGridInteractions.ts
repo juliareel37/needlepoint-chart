@@ -14,6 +14,7 @@ import { getSelectionBounds } from "@/lib/editor-v2/editor/selectors/session/get
 import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import {
   createClearSelectionCommand,
+  createEraseCellsCommand,
   createPaintCellsCommand,
   createSetToolCommand,
   createSetToolWithColorCommand,
@@ -98,6 +99,12 @@ export function useGridInteractions({
       return;
     }
 
+    if (activeTool === "erase") {
+      if (handleSelectionErasePointerDown(point)) {
+        return;
+      }
+    }
+
     if (!paintDisabled && paintStroke.handlePointerDown(point)) {
       return;
     }
@@ -170,6 +177,23 @@ export function useGridInteractions({
     if (fillCells.length > 0) {
       dispatch(createPaintCellsCommand(activeColorId, fillCells));
     }
+  }
+
+  function handleSelectionErasePointerDown(point: GridPoint): boolean {
+    if (paintDisabled) {
+      return false;
+    }
+
+    const selectionCells = getSelectedRegionCells(state, point);
+
+    if (selectionCells.length === 0) {
+      return false;
+    }
+
+    dispatch(createEraseCellsCommand(selectionCells));
+    dispatch(createClearSelectionCommand("canvas"));
+    dispatch(createSetToolCommand("lasso"));
+    return true;
   }
 }
 

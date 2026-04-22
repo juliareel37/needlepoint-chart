@@ -45,7 +45,7 @@ export function SelectionOverlay({
     activeTool === "lasso" ||
     activeTool === "mirror" ||
     Boolean(mirrorSession) ||
-    (activeTool === "fill" && hasCommittedSelection);
+    ((activeTool === "fill" || activeTool === "erase") && hasCommittedSelection);
   const selectionRectPath = selection.rect
     ? buildRectPath(selection.rect, metrics.cellSize)
     : null;

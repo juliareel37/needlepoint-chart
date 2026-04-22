@@ -16,14 +16,14 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
       currentTool === "mirror" || currentTool === "eyedropper"
         ? "pan"
         : currentTool;
-    const shouldPreserveSelectionForFill =
+    const shouldPreserveSelectionForSelectionActionTool =
       hasCommittedSelection &&
-      ((currentTool === "lasso" && nextTool === "fill") ||
-        (currentTool === "fill" && nextTool === "lasso"));
+      ((currentTool === "lasso" && (nextTool === "fill" || nextTool === "erase")) ||
+        ((currentTool === "fill" || currentTool === "erase") && nextTool === "lasso"));
     const nextSelection =
-      (currentTool === "lasso" || currentTool === "fill") &&
+      (currentTool === "lasso" || currentTool === "fill" || currentTool === "erase") &&
       nextTool !== currentTool &&
-      !shouldPreserveSelectionForFill
+      !shouldPreserveSelectionForSelectionActionTool
         ? {
             mode: "none" as const,
             shape: state.session.selection.shape,

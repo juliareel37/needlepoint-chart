@@ -662,26 +662,46 @@ export function FloatingToolbar({
               role="dialog"
               aria-label="Selection tools"
             >
-              <ToolbarButton
+              {/* <ToolbarButton
                 type="button"
                 active={selectionShape === "freehand"}
                 aria-pressed={selectionShape === "freehand"}
                 onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
               >
                 <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
-                {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
-              </ToolbarButton>
-      
+                <ToolbarLabel>Lasso</ToolbarLabel>
+              </ToolbarButton> */}
 
-              <ToolbarButton
+              <Button
+                type="button"
+                variant="secondary"
+                active={selectionShape === "freehand"}
+                aria-pressed={selectionShape === "freehand"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
+                <ToolbarLabel>Lasso</ToolbarLabel>
+              </Button>
+      
+              <Button
+                type="button"
+                variant="secondary"
+                active={selectionShape === "rect"}
+                aria-pressed={selectionShape === "rect"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
+                <ToolbarLabel>Rectangle</ToolbarLabel>
+              </Button>
+              {/* <ToolbarButton
                 type="button"
                 active={selectionShape === "rect"}
                 aria-pressed={selectionShape === "rect"}
                 onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
               >
                 <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
-                {/* <ToolbarLabel>Rect</ToolbarLabel> */}
-              </ToolbarButton>
+                <ToolbarLabel>Rectangle</ToolbarLabel>
+              </ToolbarButton> */}
 
               <ToolbarDivider />
 
@@ -691,11 +711,12 @@ export function FloatingToolbar({
                 disabled={!canStartNewSelection}
                 onClick={handleNewSelection}
               >
-                Select new
+                Unselect
+                {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
               </Button>
 
               <ToolbarDivider />
-
+{/* 
               <ToolbarButton
                 type="button"
                 disabled={!canEraseSelection}
@@ -713,25 +734,34 @@ export function FloatingToolbar({
               >
                 <ToolbarIcon icon="/icons/lucide/eraser.svg" />
                 <ToolbarLabel>Erase</ToolbarLabel>
-              </ToolbarButton>
+              </ToolbarButton> */}
 
-              <ToolbarDivider />
+              {/* <ToolbarDivider /> */}
 
-              <Button
+              {/* <Button
                 type="button"
                 variant="secondary"
                 onClick={handleExitSelection}
               >
                 Cancel
-              </Button>
+              </Button> */}
 
-              <Button
+              {/* <Button
                 type="button"
                 variant="primary"
                 onClick={handleDoneSelection}
               >
                 Done
+              </Button> */}
+
+               <Button
+                type="button"
+                variant="toolbarX"
+                onClick={handleExitSelection}
+              >
+                <ButtonIcon icon="/icons/lucide/x.svg" />
               </Button>
+
             </FloatingToolbarPortalPopover>
           ) : null}
         </ToolbarAnchor>
@@ -788,8 +818,10 @@ export function FloatingToolbar({
                     </>
                   ) : (
                     <>
-                      <ToolbarButton
+
+                      <Button
                         type="button"
+                        variant="ghostV2"
                         onClick={() => {
                           dispatch(
                             createUpdateTraceCommand(
@@ -805,7 +837,8 @@ export function FloatingToolbar({
                         <ToolbarLabel>
                           {trace.visible ? "Visible" : "Hidden"}
                         </ToolbarLabel>
-                      </ToolbarButton>
+
+                      </Button>
 
                       <ToolbarDivider />
 
@@ -877,8 +910,9 @@ export function FloatingToolbar({
                     </>
                   )}
 
-                  <ToolbarButton
+                  <Button
                     type="button"
+                    variant="ghostV2"
                     aria-label="Reposition trace"
                     title="Reposition trace"
                     onClick={() => {
@@ -890,8 +924,8 @@ export function FloatingToolbar({
                     }}
                   >
                     <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
-                    <ToolbarLabel>Reposition</ToolbarLabel>
-                  </ToolbarButton>
+                    Reposition
+                  </Button>
 
                   {/*
                   <ToolbarButton type="button" disabled>

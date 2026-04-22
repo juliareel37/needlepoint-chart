@@ -145,4 +145,33 @@ describe("setActiveToolCommandHandler", () => {
       preview: null,
     });
   });
+
+  it("keeps a committed selection when switching from lasso to erase", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "lasso";
+    initial.session.selection = {
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-1",
+      kind: "tool.setActive",
+      payload: { tool: "erase" },
+      meta: { source: "toolbar", timestamp: 1, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.tool).toBe("erase");
+    expect(store.getState().session.selection).toEqual(initial.session.selection);
+  });
 });

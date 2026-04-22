@@ -26,7 +26,7 @@ export function MirrorSessionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-          <Button
+          {/* <Button
             type="button"
             variant="ghostV2"
             aria-label="Cancel mirror session"
@@ -34,9 +34,9 @@ export function MirrorSessionToolbar({
           >
             <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
 
-          </Button>
+          </Button> */}
           
-          <ToolbarDivider />
+          {/* <ToolbarDivider /> */}
 
         <div
           style={{
@@ -50,7 +50,6 @@ export function MirrorSessionToolbar({
           <ToolbarLabel>{instruction}</ToolbarLabel>
         </div>
 
-        {/* <ToolbarDivider /> */}
 
         <Button
           type="button"
@@ -63,13 +62,14 @@ export function MirrorSessionToolbar({
 
           
         </Button>
+          <ToolbarDivider />
 
-        <ToolbarDivider />
 
         <div
           style={{
             display: "flex",
             gap: 8,}}>
+
           {/* <Button
             type="button"
             variant="secondary"
@@ -88,7 +88,21 @@ export function MirrorSessionToolbar({
           >
             Done
           </Button>
+
         </div>
+
+
+          <ToolbarDivider />
+
+           <Button
+            type="button"
+            variant="toolbarX"
+            aria-label="Cancel mirror session"
+            onClick={() => dispatch(createCancelMirrorCommand())}
+          >
+            <ButtonIcon icon="/icons/lucide/x.svg" />
+
+          </Button>
 
 
 
