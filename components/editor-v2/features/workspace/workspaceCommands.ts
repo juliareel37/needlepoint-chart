@@ -487,7 +487,9 @@ export function createPreviewTraceRepositionCommand(payload: {
 }
 
 export function createAttachTraceCommand(payload: {
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;

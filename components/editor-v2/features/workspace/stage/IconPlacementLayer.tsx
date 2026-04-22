@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildPrimitiveIconDataUrl,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
+import type { ViewportState } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
@@ -25,7 +27,11 @@ interface IconPlacementLayerProps {
   metrics: GridWorldMetrics;
   paletteById: Record<string, PaletteColor>;
   placement: IconPlacementSession;
+  portalHost?: HTMLElement | null;
   previewColor: string;
+  stageBounds: { left: number; top: number; width: number; height: number };
+  viewport: ViewportState;
+  worldBounds: { left: number; top: number; width: number; height: number };
   zoom: number;
 }
 
@@ -35,9 +41,17 @@ export function IconPlacementLayer({
   metrics,
   paletteById,
   placement,
+  portalHost = null,
   previewColor,
+  stageBounds,
+  viewport,
+  worldBounds,
   zoom,
 }: IconPlacementLayerProps) {
+  const [coarsePointer, setCoarsePointer] = useState(false);
+  const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
+    IconPlacementTransform | null
+  >(null);
   const baseRect = useMemo(
     () =>
       getContainedRect(
@@ -73,6 +87,29 @@ export function IconPlacementLayer({
     () => getIconPlacementBounds(baseRect, transform),
     [baseRect, transform],
   );
+  const displayTransform = mobilePreviewTransform ?? transform;
+  const displayBounds = useMemo(
+    () => getIconPlacementBounds(baseRect, displayTransform),
+    [baseRect, displayTransform],
+  );
+  const mobileDisplayStageBounds = useMemo(
+    () => ({
+      left: worldBounds.left + displayBounds.left * viewport.zoom,
+      top: worldBounds.top + displayBounds.top * viewport.zoom,
+      width: displayBounds.width * viewport.zoom,
+      height: displayBounds.height * viewport.zoom,
+    }),
+    [displayBounds, viewport.zoom, worldBounds.left, worldBounds.top],
+  );
+  const mobileOverlayBounds = useMemo(
+    () => ({
+      left: mobileDisplayStageBounds.left - stageBounds.left,
+      top: mobileDisplayStageBounds.top - stageBounds.top,
+      width: mobileDisplayStageBounds.width,
+      height: mobileDisplayStageBounds.height,
+    }),
+    [mobileDisplayStageBounds, stageBounds.left, stageBounds.top],
+  );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
   const [previewSrc, setPreviewSrc] = useState(placement.src);
@@ -88,8 +125,8 @@ export function IconPlacementLayer({
       placement.primitiveKind
         ? buildPrimitiveIconDataUrl({
             kind: placement.primitiveKind,
-            width: bounds.width,
-            height: bounds.height,
+            width: displayBounds.width,
+            height: displayBounds.height,
             strokeColor: primitiveColors?.primary ?? previewColor,
             secondaryStrokeColor: primitiveColors?.secondary,
             strokeReferenceSize: placement.primitiveStrokeReferenceSize,
@@ -99,8 +136,8 @@ export function IconPlacementLayer({
           })
         : null,
     [
-      bounds.height,
-      bounds.width,
+      displayBounds.height,
+      displayBounds.width,
       placement.primitiveKind,
       placement.primitiveStrokeReferenceSize,
       placement.strokeWidthScale,
@@ -111,6 +148,11 @@ export function IconPlacementLayer({
     ],
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
+    if (coarsePointer && portalHost) {
+      setMobilePreviewTransform(nextTransform);
+      return;
+    }
+
     if (!previewIconRef.current) {
       return;
     }
@@ -141,7 +183,9 @@ export function IconPlacementLayer({
     previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
   }, [
     baseRect,
+    coarsePointer,
     placement.primitiveKind,
+    portalHost,
     placement.strokeWidthScale,
     placement.primitivePatternScale,
     placement.primitiveSpacingScale,
@@ -158,8 +202,31 @@ export function IconPlacementLayer({
           scaleY: nextTransform.scaleY,
         }),
       );
+      setMobilePreviewTransform(nextTransform);
     },
     [dispatch],
+  );
+  const projectMobileStageBounds = useCallback(
+    (
+      nextTransform: IconPlacementTransform,
+      nextBaseRect: typeof baseRect,
+    ) => {
+      const nextBounds = getIconPlacementBounds(nextBaseRect, nextTransform);
+
+      return {
+        left: worldBounds.left - stageBounds.left + nextBounds.left * viewport.zoom,
+        top: worldBounds.top - stageBounds.top + nextBounds.top * viewport.zoom,
+        width: nextBounds.width * viewport.zoom,
+        height: nextBounds.height * viewport.zoom,
+      };
+    },
+    [
+      stageBounds.left,
+      stageBounds.top,
+      viewport.zoom,
+      worldBounds.left,
+      worldBounds.top,
+    ],
   );
 
   useEffect(() => {
@@ -205,8 +272,8 @@ export function IconPlacementLayer({
       cancelled = true;
     };
   }, [
-    bounds.height,
-    bounds.width,
+    displayBounds.height,
+    displayBounds.width,
     paletteById,
     placement.colorSlots,
     placement.intrinsicHeight,
@@ -223,80 +290,182 @@ export function IconPlacementLayer({
     primitiveColors,
   ]);
 
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 10,
-        overflow: "visible",
-        pointerEvents: "auto",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-      }}
-    >
-      <div
-        ref={previewIconRef}
-        style={{
-          position: "absolute",
-          top: `${placement.primitiveKind ? bounds.top : baseRect.top}px`,
-          left: `${placement.primitiveKind ? bounds.left : baseRect.left}px`,
-          width: `${placement.primitiveKind ? bounds.width : baseRect.width}px`,
-          height: `${placement.primitiveKind ? bounds.height : baseRect.height}px`,
-          transform: placement.primitiveKind
-            ? "none"
-            : getIconPlacementTransformCss(transform),
-          transformOrigin: "top left",
-          willChange: "transform",
-          pointerEvents: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
-        }}
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    setMobilePreviewTransform(null);
+  }, [transform]);
+
+  const showMobilePositioning = coarsePointer && portalHost;
+  const mobileOverlay = showMobilePositioning
+    ? createPortal(
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
         >
-        {placement.primitiveKind || placement.colorSlots.length > 0 ? (
-          <img
-            ref={previewImageRef}
-            src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
-            alt=""
-            aria-hidden="true"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-            }}
-          />
-        ) : (
           <div
             style={{
-              width: "100%",
-              height: "100%",
-              backgroundColor: previewColor,
-              WebkitMaskImage: `url(${placement.src})`,
-              WebkitMaskRepeat: "no-repeat",
-              WebkitMaskPosition: "center",
-              WebkitMaskSize: "100% 100%",
-              maskImage: `url(${placement.src})`,
-              maskRepeat: "no-repeat",
-              maskPosition: "center",
-              maskSize: "100% 100%",
+              position: "absolute",
+              top: `${mobileOverlayBounds.top}px`,
+              left: `${mobileOverlayBounds.left}px`,
+              width: `${mobileOverlayBounds.width}px`,
+              height: `${mobileOverlayBounds.height}px`,
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
             }}
-          />
-        )}
-      </div>
+          >
+            {placement.primitiveKind || placement.colorSlots.length > 0 ? (
+              <img
+                src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: previewColor,
+                  WebkitMaskImage: `url(${placement.src})`,
+                  WebkitMaskRepeat: "no-repeat",
+                  WebkitMaskPosition: "center",
+                  WebkitMaskSize: "100% 100%",
+                  maskImage: `url(${placement.src})`,
+                  maskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  maskSize: "100% 100%",
+                }}
+              />
+            )}
+          </div>
 
-      <IconPlacementBoxOverlay
-        ariaLabel="Icon placement controls"
-        baseRect={baseRect}
-        bounds={bounds}
-        getWorldPointFromClient={getWorldPointFromClient}
-        onTransformCommit={handleTransformCommit}
-        onTransformPreview={handleTransformPreview}
-        transactionKeyPrefix="icon-drag"
-        transform={transform}
-        zoom={zoom}
-      />
-    </div>
+          <IconPlacementBoxOverlay
+            ariaLabel="Icon placement controls"
+            baseRect={baseRect}
+            bounds={mobileOverlayBounds}
+            interactionBounds={displayBounds}
+            getWorldPointFromClient={getWorldPointFromClient}
+            onTransformCommit={handleTransformCommit}
+            onTransformPreview={handleTransformPreview}
+            projectBoundsForPreview={projectMobileStageBounds}
+            transactionKeyPrefix="icon-drag"
+            transform={transform}
+            zoom={1}
+          />
+        </div>,
+        portalHost,
+      )
+    : null;
+
+  return (
+    <>
+      {mobileOverlay}
+      {!showMobilePositioning ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
+            overflow: "visible",
+            pointerEvents: "auto",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+          }}
+        >
+          <div
+            ref={previewIconRef}
+            style={{
+              position: "absolute",
+              top: `${placement.primitiveKind ? bounds.top : baseRect.top}px`,
+              left: `${placement.primitiveKind ? bounds.left : baseRect.left}px`,
+              width: `${placement.primitiveKind ? bounds.width : baseRect.width}px`,
+              height: `${placement.primitiveKind ? bounds.height : baseRect.height}px`,
+              transform: placement.primitiveKind
+                ? "none"
+                : getIconPlacementTransformCss(transform),
+              transformOrigin: "top left",
+              willChange: "transform",
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
+            }}
+          >
+            {placement.primitiveKind || placement.colorSlots.length > 0 ? (
+              <img
+                ref={previewImageRef}
+                src={placement.primitiveKind ? primitivePreviewSrc ?? previewSrc : previewSrc}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: previewColor,
+                  WebkitMaskImage: `url(${placement.src})`,
+                  WebkitMaskRepeat: "no-repeat",
+                  WebkitMaskPosition: "center",
+                  WebkitMaskSize: "100% 100%",
+                  maskImage: `url(${placement.src})`,
+                  maskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  maskSize: "100% 100%",
+                }}
+              />
+            )}
+          </div>
+
+          <IconPlacementBoxOverlay
+            ariaLabel="Icon placement controls"
+            baseRect={baseRect}
+            bounds={bounds}
+            getWorldPointFromClient={getWorldPointFromClient}
+            onTransformCommit={handleTransformCommit}
+            onTransformPreview={handleTransformPreview}
+            transactionKeyPrefix="icon-drag"
+            transform={transform}
+            zoom={zoom}
+          />
+        </div>
+      ) : null}
+    </>
   );
 }

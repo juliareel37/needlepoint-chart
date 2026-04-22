@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
   EditorStore,
   EditorStoreState,
   PaletteColor,
+  ViewportState,
 } from "@/lib/editor-v2/editor/store";
 import {
   clampWorldPointToSurface,
@@ -24,7 +25,7 @@ import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
-import { rasterizeTraceImageToSafeSize } from "../trace/traceAssetSizing";
+import { clearTraceSampler } from "../trace/traceSampler";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -73,7 +74,7 @@ export function GridWorldSurface({
   const showDisplayTrace = Boolean(
     trace &&
       traceVisible &&
-      (!tracePositioningEnabled || coarsePointer),
+      !tracePositioningEnabled,
   );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
@@ -90,6 +91,18 @@ export function GridWorldSurface({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageBounds, setStageBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
+  const [worldBounds, setWorldBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -98,8 +111,59 @@ export function GridWorldSurface({
   };
   const textPlacementActive = Boolean(textPlacement);
   const iconPlacementActive = Boolean(iconPlacement);
+  const paintDisabled =
+    tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
+
+  const syncSurfaceMeasurements = useCallback(() => {
+    const stageElement = stageRef.current;
+    const worldElement = worldRef.current;
+
+    if (stageElement) {
+      const rect = stageElement.getBoundingClientRect();
+
+      setStageSize((current) =>
+        current.width === rect.width && current.height === rect.height
+          ? current
+          : {
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+      setStageBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+
+    if (worldElement) {
+      const rect = worldElement.getBoundingClientRect();
+
+      setWorldBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -226,6 +290,7 @@ export function GridWorldSurface({
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
     metrics,
+    paintDisabled,
     state,
     trace,
   });
@@ -234,16 +299,21 @@ export function GridWorldSurface({
     handleStageAuxClick,
     handleStageMouseDownCapture,
     handleStagePointerDownCapture,
+    isZoomInteracting,
   } = useStagePanInteractions({
     activeTool,
     dispatch,
     dragPanningDisabled:
-      tracePositioningEnabled || textPlacementActive || iconPlacementActive,
+      paintDisabled,
     metrics,
     stageRef,
     stageSize,
     viewport,
     zoomAnchor,
+  });
+
+  useLayoutEffect(() => {
+    syncSurfaceMeasurements();
   });
 
   useEffect(() => {
@@ -253,27 +323,21 @@ export function GridWorldSurface({
       return;
     }
 
-    const update = () => {
-      const rect = stageElement.getBoundingClientRect();
-
-      setStageSize({
-        width: rect.width,
-        height: rect.height,
-      });
-    };
-
-    update();
+    syncSurfaceMeasurements();
 
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", update);
-      return () => window.removeEventListener("resize", update);
+      window.addEventListener("resize", syncSurfaceMeasurements);
+      return () => window.removeEventListener("resize", syncSurfaceMeasurements);
     }
 
-    const observer = new ResizeObserver(update);
+    const observer = new ResizeObserver(syncSurfaceMeasurements);
     observer.observe(stageElement);
+    if (worldRef.current) {
+      observer.observe(worldRef.current);
+    }
 
     return () => observer.disconnect();
-  }, []);
+  }, [syncSurfaceMeasurements]);
 
   useEffect(() => {
     if (stageSize.width <= 0 || stageSize.height <= 0) {
@@ -298,27 +362,35 @@ export function GridWorldSurface({
   ]);
 
   useEffect(() => {
-    if (!trace?.assetUrl) {
+    if (trace?.previewUrl && tracePositioningEnabled) {
+      clearTraceSampler(trace.previewUrl);
+    }
+  }, [trace?.previewUrl, tracePositioningEnabled]);
+
+  useEffect(() => {
+    if (coarsePointer && tracePositioningEnabled) {
+      setLoadedTraceAsset(null);
+      return;
+    }
+
+    if (!trace?.previewUrl) {
       setLoadedTraceAsset(null);
       return;
     }
 
     let cancelled = false;
-    const assetUrl = trace.assetUrl;
+    const previewUrl = trace.previewUrl;
     const image = new Image();
     image.decoding = "async";
-    let rasterizedCanvas: HTMLCanvasElement | null = null;
 
     const commitLoadedState = (ready: boolean) => {
       if (cancelled) {
         return;
       }
 
-      const rasterized = ready ? rasterizeTraceImageToSafeSize(image) : null;
-
-      if (ready && !rasterized) {
+      if (ready && (image.naturalWidth <= 0 || image.naturalHeight <= 0)) {
         setLoadedTraceAsset({
-          assetUrl,
+          previewUrl,
           height: 0,
           image: null,
           ready: false,
@@ -327,22 +399,18 @@ export function GridWorldSurface({
         return;
       }
 
-      if (rasterized?.imageSource instanceof HTMLCanvasElement) {
-        rasterizedCanvas = rasterized.imageSource;
-      }
-
       setLoadedTraceAsset({
-        assetUrl,
-        height: rasterized?.height ?? 0,
-        image: rasterized?.imageSource ?? null,
-        ready: Boolean(ready && rasterized),
-        width: rasterized?.width ?? 0,
+        previewUrl,
+        height: ready ? image.naturalHeight : 0,
+        image: ready ? image : null,
+        ready,
+        width: ready ? image.naturalWidth : 0,
       });
     };
 
     image.onload = () => commitLoadedState(true);
     image.onerror = () => commitLoadedState(false);
-    image.src = assetUrl;
+    image.src = previewUrl;
 
     if (image.complete) {
       commitLoadedState(image.naturalWidth > 0 && image.naturalHeight > 0);
@@ -350,23 +418,19 @@ export function GridWorldSurface({
 
     return () => {
       cancelled = true;
-      if (rasterizedCanvas) {
-        rasterizedCanvas.width = 0;
-        rasterizedCanvas.height = 0;
-      }
     };
-  }, [trace?.assetUrl]);
+  }, [coarsePointer, trace?.previewUrl, tracePositioningEnabled]);
 
   const traceAssetReady =
-    !trace?.assetUrl ||
-    (loadedTraceAsset?.assetUrl === trace.assetUrl &&
+    !trace?.previewUrl ||
+    (loadedTraceAsset?.previewUrl === trace.previewUrl &&
       loadedTraceAsset.ready &&
       !!loadedTraceAsset.image &&
       loadedTraceAsset.width > 0 &&
       loadedTraceAsset.height > 0);
   const deferPaintUntilTraceReady =
     Boolean(onSurfaceReady) &&
-    Boolean(trace?.assetUrl) &&
+    Boolean(trace?.previewUrl) &&
     !traceAssetReady;
   const handleDisplayRendered = useCallback(() => {
     if (!traceAssetReady) {
@@ -444,12 +508,16 @@ export function GridWorldSurface({
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
+              portalHost={stageRef.current}
+              stageBounds={stageBounds}
               trace={trace}
               traceAsset={
-                loadedTraceAsset?.assetUrl === trace.assetUrl
+                loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
                   : null
               }
+              viewport={viewport as ViewportState}
+              worldBounds={worldBounds}
               zIndex={3}
               zoom={viewport.zoom}
             />
@@ -470,7 +538,7 @@ export function GridWorldSurface({
               displayHost={displayHost}
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
-                trace && loadedTraceAsset?.assetUrl === trace.assetUrl
+                trace && loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
                   : null
               }
@@ -491,6 +559,7 @@ export function GridWorldSurface({
               symbolAssignments={state.document.palette.symbolAssignments}
               threadView={threadView}
               viewport={viewport}
+              isZoomInteractionActive={isZoomInteracting}
             />
           </div>
 
@@ -507,7 +576,11 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
               placement={textPlacement}
+              portalHost={stageRef.current}
               previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
               zoom={viewport.zoom}
             />
           ) : null}
@@ -519,7 +592,11 @@ export function GridWorldSurface({
               metrics={metrics}
               paletteById={colorsById}
               placement={iconPlacement}
+              portalHost={stageRef.current}
               previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
               zoom={viewport.zoom}
             />
           ) : null}

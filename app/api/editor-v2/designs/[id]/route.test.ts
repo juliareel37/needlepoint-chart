@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
-const { authMock, findFirstMock, updateMock } = vi.hoisted(() => ({
+const { authMock, findFirstMock, updateMock, deleteBlobIfExistsMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   findFirstMock: vi.fn(),
   updateMock: vi.fn(),
+  deleteBlobIfExistsMock: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -18,6 +19,20 @@ vi.mock("@/lib/db", () => ({
       findFirst: findFirstMock,
       update: updateMock,
     },
+  },
+}));
+
+vi.mock("@/lib/blob", () => ({
+  deleteBlobIfExists: deleteBlobIfExistsMock,
+  extractEditorV2TraceBlobUrls: (data: unknown) => {
+    if (!data || typeof data !== "object") return [];
+    const trace = (data as { trace?: Record<string, unknown> }).trace;
+    if (!trace) return [];
+    return [
+      trace.previewUrl,
+      trace.thumbnailUrl,
+      trace.originalUrl,
+    ].filter((value): value is string => typeof value === "string");
   },
 }));
 
@@ -60,7 +75,7 @@ describe("editor-v2 individual design routes", () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
     authMock.mockResolvedValue({ userId: "user_1" });
-    findFirstMock.mockResolvedValue({ id: "design_123" });
+    findFirstMock.mockResolvedValue({ id: "design_123", data: { trace: null } });
     updateMock.mockResolvedValue({
       id: "design_123",
       title: "Untitled Design",
@@ -99,5 +114,63 @@ describe("editor-v2 individual design routes", () => {
       createdAt: "2026-04-16T12:00:00.000Z",
       updatedAt: "2026-04-16T12:10:00.000Z",
     });
+  });
+
+  it("cleans up replaced trace blobs after saving", async () => {
+    const state = createNewDesignState(2, 2);
+    state.document.trace = {
+      previewUrl: "https://blob.example.com/new-preview.webp",
+      thumbnailUrl: "https://blob.example.com/new-thumbnail.webp",
+      originalUrl: "https://blob.example.com/new-original.png",
+      fileName: "trace.png",
+      byteSize: 123,
+      mimeType: "image/png",
+      imageWidth: 200,
+      imageHeight: 100,
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1,
+      rotation: 0,
+      visible: true,
+      blendMode: "image",
+      opacity: 0.35,
+      locked: true,
+    };
+    const data = serializeEditorV2Document(state.document);
+
+    authMock.mockResolvedValue({ userId: "user_1" });
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      data: {
+        trace: {
+          previewUrl: "https://blob.example.com/old-preview.webp",
+          thumbnailUrl: "https://blob.example.com/old-thumbnail.webp",
+          originalUrl: "https://blob.example.com/old-original.png",
+        },
+      },
+    });
+    updateMock.mockResolvedValue({
+      id: "design_123",
+      title: "Untitled Design",
+      gridWidth: 2,
+      gridHeight: 2,
+      createdAt: new Date("2026-04-16T12:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+    });
+
+    const response = await PUT(
+      new Request("http://localhost", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      }),
+      { params: { id: "design_123" } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(deleteBlobIfExistsMock).toHaveBeenCalledTimes(3);
+    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-preview.webp");
+    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-thumbnail.webp");
+    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-original.png");
   });
 });

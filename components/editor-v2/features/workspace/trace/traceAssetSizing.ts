@@ -1,7 +1,7 @@
 "use client";
 
-export const MAX_TRACE_IMAGE_DIMENSION_PX = 2048;
-export const MAX_TRACE_IMAGE_PIXELS = 4_000_000;
+export const MAX_TRACE_IMAGE_DIMENSION_PX = 4096;
+export const MAX_TRACE_IMAGE_PIXELS = 4_096 * 4_096;
 
 export interface TraceImageSize {
   width: number;

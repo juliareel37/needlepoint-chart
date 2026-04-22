@@ -8,29 +8,42 @@ import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 import type { CanvasSizing } from "./GridCanvasStage.shared";
 
-const MAX_CANVAS_BACKING_DIMENSION = 16384;
-const MAX_CANVAS_BACKING_AREA = 16_777_216;
+const MOBILE_LAYOUT_MAX_WIDTH_PX = 768;
+const DESKTOP_MAX_CANVAS_BACKING_DIMENSION = 16384;
+const DESKTOP_MAX_CANVAS_BACKING_AREA = 16_777_216;
+const MOBILE_MAX_CANVAS_BACKING_DIMENSION = 2048;
+const MOBILE_MAX_CANVAS_BACKING_AREA = 4_194_304;
+const MOBILE_INTERACTION_TARGET_PIXEL_RATIO = 0.35;
 const MIN_CANVAS_PIXEL_RATIO = 0.125;
 
 export function getEffectiveSourceCanvasPixelRatio(
   width: number,
   height: number,
-  devicePixelRatio: number,
+  targetPixelRatio: number,
+  options?: {
+    isMobile?: boolean;
+  },
 ): number {
   const safeWidth = Math.max(width, 1);
   const safeHeight = Math.max(height, 1);
-  const safeDevicePixelRatio = Number.isFinite(devicePixelRatio)
-    ? Math.max(devicePixelRatio, 1)
+  const safeTargetPixelRatio = Number.isFinite(targetPixelRatio)
+    ? Math.max(targetPixelRatio, MIN_CANVAS_PIXEL_RATIO)
     : 1;
+  const maxBackingDimension = options?.isMobile
+    ? MOBILE_MAX_CANVAS_BACKING_DIMENSION
+    : DESKTOP_MAX_CANVAS_BACKING_DIMENSION;
+  const maxBackingArea = options?.isMobile
+    ? MOBILE_MAX_CANVAS_BACKING_AREA
+    : DESKTOP_MAX_CANVAS_BACKING_AREA;
   const maxDimensionScale = Math.min(
-    MAX_CANVAS_BACKING_DIMENSION / safeWidth,
-    MAX_CANVAS_BACKING_DIMENSION / safeHeight,
+    maxBackingDimension / safeWidth,
+    maxBackingDimension / safeHeight,
   );
   const maxAreaScale = Math.sqrt(
-    MAX_CANVAS_BACKING_AREA / Math.max(safeWidth * safeHeight, 1),
+    maxBackingArea / Math.max(safeWidth * safeHeight, 1),
   );
   const limitedPixelRatio = Math.min(
-    safeDevicePixelRatio,
+    safeTargetPixelRatio,
     maxDimensionScale,
     maxAreaScale,
   );
@@ -45,14 +58,28 @@ export function configureSourceCanvas(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
   metrics: GridWorldMetrics,
+  viewportZoom: number,
+  stageSize: { width: number; height: number },
+  options: {
+    isZoomInteractionActive?: boolean;
+  },
   previousSizing: CanvasSizing | null,
 ): { sizingChanged: boolean; sizing: CanvasSizing } {
   const width = metrics.surfaceWidth;
   const height = metrics.surfaceHeight;
+  const isMobileLayout =
+    (typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia(`(max-width: ${MOBILE_LAYOUT_MAX_WIDTH_PX}px)`).matches) ||
+    stageSize.width <= MOBILE_LAYOUT_MAX_WIDTH_PX;
+  const targetPixelRatio = options.isZoomInteractionActive && isMobileLayout
+    ? MOBILE_INTERACTION_TARGET_PIXEL_RATIO
+    : (window.devicePixelRatio || 1) * Math.max(viewportZoom, MIN_CANVAS_PIXEL_RATIO);
   const effectivePixelRatio = getEffectiveSourceCanvasPixelRatio(
     width,
     height,
-    window.devicePixelRatio || 1,
+    targetPixelRatio,
+    { isMobile: isMobileLayout },
   );
 
   const nextCanvasWidth = Math.max(1, Math.round(width * effectivePixelRatio));

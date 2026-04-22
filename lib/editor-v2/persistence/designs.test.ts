@@ -30,7 +30,9 @@ describe("editor-v2 persisted designs", () => {
       "custom:red": "@",
     };
     state.document.trace = {
-      assetUrl: "https://blob.example.com/trace.png",
+      previewUrl: "https://blob.example.com/trace-preview.webp",
+      thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
+      originalUrl: "https://blob.example.com/trace.png",
       fileName: "trace.png",
       byteSize: 12345,
       mimeType: "image/png",
@@ -65,7 +67,9 @@ describe("editor-v2 persisted designs", () => {
       },
     });
     expect(persisted.trace).toEqual({
-      assetUrl: "https://blob.example.com/trace.png",
+      previewUrl: "https://blob.example.com/trace-preview.webp",
+      thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
+      originalUrl: "https://blob.example.com/trace.png",
       fileName: "trace.png",
       byteSize: 12345,
       mimeType: "image/png",
@@ -118,7 +122,9 @@ describe("editor-v2 persisted designs", () => {
           },
         },
         trace: {
-          assetUrl: "https://blob.example.com/trace.png",
+          previewUrl: "https://blob.example.com/trace-preview.webp",
+          thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
+          originalUrl: "https://blob.example.com/trace.png",
           fileName: "trace.png",
           byteSize: 12345,
           mimeType: "image/png",
@@ -140,7 +146,9 @@ describe("editor-v2 persisted designs", () => {
     expect(hydrated.project.createdAt).toBe("2026-04-16T12:00:00.000Z");
     expect(hydrated.project.updatedAt).toBe("2026-04-16T12:15:00.000Z");
     expect(hydrated.trace).toMatchObject({
-      assetUrl: "https://blob.example.com/trace.png",
+      previewUrl: "https://blob.example.com/trace-preview.webp",
+      thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
+      originalUrl: "https://blob.example.com/trace.png",
       fileName: "trace.png",
       byteSize: 12345,
       mimeType: "image/png",
@@ -154,6 +162,57 @@ describe("editor-v2 persisted designs", () => {
       blendMode: "image",
       opacity: 0.35,
       locked: true,
+    });
+  });
+
+  it("hydrates legacy persisted traces that only stored assetUrl", () => {
+    const hydrated = hydrateEditorV2Document({
+      id: "design_legacy",
+      createdAt: "2026-04-16T12:00:00.000Z",
+      updatedAt: "2026-04-16T12:15:00.000Z",
+      data: {
+        schemaVersion: 1,
+        project: {
+          title: "Legacy Design",
+        },
+        grid: {
+          width: 1,
+          height: 1,
+          sizingMode: "stitches",
+          meshCount: null,
+          widthInches: null,
+          heightInches: null,
+          cells: [null],
+        },
+        palette: {
+          colorsById: {},
+          customPalettesById: {},
+          extractedPaletteIds: [],
+          symbolAssignments: {},
+        },
+        trace: {
+          assetUrl: "https://blob.example.com/legacy.png",
+          fileName: "legacy.png",
+          byteSize: 500,
+          mimeType: "image/png",
+          imageWidth: 400,
+          imageHeight: 300,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 1,
+          rotation: 0,
+        } as never,
+        text: {
+          mode: "destructive-grid",
+          entities: [],
+        },
+      },
+    });
+
+    expect(hydrated.trace).toMatchObject({
+      previewUrl: "https://blob.example.com/legacy.png",
+      thumbnailUrl: "https://blob.example.com/legacy.png",
+      originalUrl: "https://blob.example.com/legacy.png",
     });
   });
 });

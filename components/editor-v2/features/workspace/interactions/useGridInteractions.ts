@@ -28,6 +28,7 @@ interface UseGridInteractionsOptions {
   ) => SelectionPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
   metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
+  paintDisabled?: boolean;
   state: EditorStoreState;
   trace: TraceDocument | null;
 }
@@ -40,6 +41,7 @@ export function useGridInteractions({
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
   metrics,
+  paintDisabled = false,
   state,
   trace,
 }: UseGridInteractionsOptions) {
@@ -48,6 +50,7 @@ export function useGridInteractions({
     activeTool,
     brushSize,
     dispatch,
+    disabled: paintDisabled,
   });
   const selectionDrag = useSelectionDrag({
     activeTool,
@@ -83,7 +86,7 @@ export function useGridInteractions({
       return;
     }
 
-    if (paintStroke.handlePointerDown(point)) {
+    if (!paintDisabled && paintStroke.handlePointerDown(point)) {
       return;
     }
 
@@ -95,6 +98,10 @@ export function useGridInteractions({
   }
 
   function handlePointerEnter(point: GridPoint): void {
+    if (paintDisabled) {
+      return;
+    }
+
     paintStroke.handlePointerEnter(point);
   }
 

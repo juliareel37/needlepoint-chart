@@ -15,7 +15,6 @@ import type {
 import {
   drawGridOverlay,
   drawSymbolsOverlay,
-  drawThreadOverlay,
 } from "./overlays/GridCanvasStage.overlays";
 
 export function configureDisplayCanvas(
@@ -67,9 +66,7 @@ export function renderDisplayCanvas(options: {
   showGridlines: boolean;
   showSymbols: boolean;
   stageSize: { width: number; height: number };
-  stitchCanvasCache: Map<string, HTMLCanvasElement>;
   symbolAssignments: Record<string, string>;
-  threadView: boolean;
   viewport: ViewportState;
 }) {
   const {
@@ -89,9 +86,7 @@ export function renderDisplayCanvas(options: {
     showGridlines,
     showSymbols,
     stageSize,
-    stitchCanvasCache,
     symbolAssignments,
-    threadView,
     viewport,
   } = options;
   const width = Math.max(stageSize.width, 1);
@@ -114,7 +109,7 @@ export function renderDisplayCanvas(options: {
 
   if (
     displayTrace &&
-    displayTraceAsset?.assetUrl === displayTrace.assetUrl &&
+    displayTraceAsset?.previewUrl === displayTrace.previewUrl &&
     displayTraceAsset.ready &&
     displayTraceAsset.image &&
     displayTraceAsset.width > 0 &&
@@ -147,26 +142,7 @@ export function renderDisplayCanvas(options: {
   if (!deferPaintUntilTraceReady) {
     context.save();
     context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-    if (threadView) {
-      drawThreadOverlay(context, {
-        cells,
-        colorsById,
-        drawX,
-        drawY,
-        gridWidth,
-        renderedCellSize: metrics.cellSize * viewport.zoom,
-        stitchCanvasCache,
-      });
-    } else {
-      drawFlatPaintOverlay(context, {
-        cells,
-        colorsById,
-        drawX,
-        drawY,
-        gridWidth,
-        renderedCellSize: metrics.cellSize * viewport.zoom,
-      });
-    }
+    context.drawImage(sourceCanvas, drawX, drawY, drawWidth, drawHeight);
     context.restore();
   }
 
@@ -201,49 +177,4 @@ export function renderDisplayCanvas(options: {
   }
 
   context.restore();
-}
-
-function drawFlatPaintOverlay(
-  context: CanvasRenderingContext2D,
-  options: {
-    cells: GridCellValue[];
-    colorsById: Record<string, PaletteColor>;
-    drawX: number;
-    drawY: number;
-    gridWidth: number;
-    renderedCellSize: number;
-  },
-) {
-  const {
-    cells,
-    colorsById,
-    drawX,
-    drawY,
-    gridWidth,
-    renderedCellSize,
-  } = options;
-
-  for (let index = 0; index < cells.length; index += 1) {
-    const colorId = cells[index];
-
-    if (!colorId) {
-      continue;
-    }
-
-    const color = colorsById[colorId];
-
-    if (!color) {
-      continue;
-    }
-
-    const x = index % gridWidth;
-    const y = Math.floor(index / gridWidth);
-    const x0 = Math.round(drawX + x * renderedCellSize);
-    const y0 = Math.round(drawY + y * renderedCellSize);
-    const x1 = Math.round(drawX + (x + 1) * renderedCellSize);
-    const y1 = Math.round(drawY + (y + 1) * renderedCellSize);
-
-    context.fillStyle = color.hex;
-    context.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
-  }
 }

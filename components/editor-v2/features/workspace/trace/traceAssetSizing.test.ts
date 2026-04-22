@@ -11,15 +11,15 @@ describe("getConstrainedTraceImageSize", () => {
 
   it("caps images by maximum dimension", () => {
     expect(getConstrainedTraceImageSize(4096, 1024)).toEqual({
-      width: 2048,
-      height: 512,
+      width: 4096,
+      height: 1024,
     });
   });
 
   it("caps images by total pixel budget", () => {
-    expect(getConstrainedTraceImageSize(3000, 3000)).toEqual({
-      width: 2000,
-      height: 2000,
+    expect(getConstrainedTraceImageSize(5000, 5000)).toEqual({
+      width: 4096,
+      height: 4096,
     });
   });
 });

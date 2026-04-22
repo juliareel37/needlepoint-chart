@@ -7,9 +7,11 @@ import {
   getHandleTop,
   getPositionedBounds,
   getTransformFromDrag,
+  getTransformFromPinch,
   POSITIONING_HANDLES,
   type PositioningDragMode,
   type PositioningDragState,
+  type PositioningPinchState,
   type PositioningRect,
   type PositioningTransform,
 } from "@/lib/editor-v2/editor/positioning";
@@ -18,7 +20,9 @@ interface PositioningBoxOverlayProps {
   ariaLabel: string;
   baseRect: PositioningRect;
   bounds: PositioningRect;
+  interactionBounds?: PositioningRect;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
+  handleShape?: "mixed" | "circle";
   onClick?: () => void;
   onInteractionEnd?: () => void;
   onInteractionStart?: () => void;
@@ -27,11 +31,16 @@ interface PositioningBoxOverlayProps {
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: PositioningTransform) => void;
+  projectBoundsForPreview?: (
+    transform: PositioningTransform,
+    baseRect: PositioningRect,
+  ) => PositioningRect;
   interactive?: boolean;
   previewThrottleMs?: number;
   previewBoundsStrategy?: "live" | "none";
   usePointerCapture?: boolean;
   showHandles?: boolean;
+  showOutline?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -51,23 +60,33 @@ interface DragSession {
   lastPreviewAt: number;
 }
 
+interface PinchSession {
+  pinch: PositioningPinchState;
+  pointerIds: [number, number];
+  startClientDistance: number;
+}
+
 const DRAG_THRESHOLD = 4;
 
 export function PositioningBoxOverlay({
   ariaLabel,
   baseRect,
   bounds,
+  interactionBounds,
   getWorldPointFromClient,
   onClick,
   onInteractionEnd,
   onInteractionStart,
   onTransformCommit,
   onTransformPreview,
+  projectBoundsForPreview,
   interactive = true,
+  handleShape = "mixed",
   previewThrottleMs = 0,
   previewBoundsStrategy = "live",
   usePointerCapture = true,
   showHandles = true,
+  showOutline = true,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -76,7 +95,10 @@ export function PositioningBoxOverlay({
   const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
-  const latestBoundsRef = useRef(bounds);
+  const pinchSessionRef = useRef<PinchSession | null>(null);
+  const frameIdRef = useRef<number | null>(null);
+  const touchPointsRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
+  const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
   const latestTransformRef = useRef(transform);
   const latestGetWorldPointFromClientRef = useRef(getWorldPointFromClient);
@@ -85,6 +107,7 @@ export function PositioningBoxOverlay({
   const latestOnInteractionEndRef = useRef(onInteractionEnd);
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
+  const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
@@ -95,11 +118,11 @@ export function PositioningBoxOverlay({
   }, [baseRect]);
 
   useEffect(() => {
-    latestBoundsRef.current = bounds;
+    latestBoundsRef.current = interactionBounds ?? bounds;
     if (!dragSessionRef.current) {
       applyPreviewBounds(overlayRef.current, handleRefs.current, bounds, handleSize);
     }
-  }, [bounds, handleSize]);
+  }, [bounds, handleSize, interactionBounds]);
 
   useEffect(() => {
     latestTransformRef.current = transform;
@@ -130,20 +153,32 @@ export function PositioningBoxOverlay({
   }, [onTransformCommit]);
 
   useEffect(() => {
+    latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
+  }, [projectBoundsForPreview]);
+
+  useEffect(() => {
     return () => {
-      const session = dragSessionRef.current;
-      if (session && session.rafId !== null) {
-        window.cancelAnimationFrame(session.rafId);
+      if (frameIdRef.current !== null) {
+        window.cancelAnimationFrame(frameIdRef.current);
+        frameIdRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    if (usePointerCapture) {
-      return;
-    }
-
     const handleWindowPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === "touch" && touchPointsRef.current.has(event.pointerId)) {
+        touchPointsRef.current.set(event.pointerId, {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+      }
+
+      if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+        scheduleFrame();
+        return;
+      }
+
       const session = dragSessionRef.current;
       if (!session || event.pointerId !== session.pointerId) {
         return;
@@ -170,6 +205,22 @@ export function PositioningBoxOverlay({
     };
 
     const handleWindowPointerEnd = (event: PointerEvent) => {
+      if (event.pointerType === "touch") {
+        touchPointsRef.current.set(event.pointerId, {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+      }
+
+      if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
+        finalizePinch(event.pointerId);
+        return;
+      }
+
+      if (event.pointerType === "touch") {
+        touchPointsRef.current.delete(event.pointerId);
+      }
+
       finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
     };
 
@@ -182,22 +233,23 @@ export function PositioningBoxOverlay({
       window.removeEventListener("pointerup", handleWindowPointerEnd);
       window.removeEventListener("pointercancel", handleWindowPointerEnd);
     };
-  }, [previewBoundsStrategy, previewThrottleMs, usePointerCapture]);
+  }, [previewBoundsStrategy, previewThrottleMs]);
 
   function scheduleFrame() {
-    const session = dragSessionRef.current;
-    if (!session || session.rafId !== null) {
+    if (frameIdRef.current !== null) {
       return;
     }
 
-    session.rafId = window.requestAnimationFrame(() => {
+    frameIdRef.current = window.requestAnimationFrame(() => {
+      frameIdRef.current = null;
+
       const activeSession = dragSessionRef.current;
-      if (!activeSession) {
+      if (activeSession) {
+        flushPreview(activeSession);
         return;
       }
 
-      activeSession.rafId = null;
-      flushPreview(activeSession);
+      flushPinchPreview();
     });
   }
 
@@ -226,15 +278,120 @@ export function PositioningBoxOverlay({
     );
 
     latestTransformRef.current = nextTransform;
+    const nextInteractionBounds = getPositionedBounds(
+      latestBaseRectRef.current,
+      nextTransform,
+    );
+    latestBoundsRef.current = nextInteractionBounds;
     if (previewBoundsStrategy === "live") {
-      const nextBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
-      latestBoundsRef.current = nextBounds;
+      const nextBounds =
+        latestProjectBoundsForPreviewRef.current?.(
+          nextTransform,
+          latestBaseRectRef.current,
+        ) ?? nextInteractionBounds;
       applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
     }
     latestOnTransformPreviewRef.current?.(nextTransform);
     session.lastPreviewAt = performance.now();
 
     return nextTransform;
+  }
+
+  function flushPinchPreview(): PositioningTransform | null {
+    const pinchSession = pinchSessionRef.current;
+    if (!pinchSession) {
+      return null;
+    }
+
+    const firstTouch = touchPointsRef.current.get(pinchSession.pointerIds[0]);
+    const secondTouch = touchPointsRef.current.get(pinchSession.pointerIds[1]);
+    if (!firstTouch || !secondTouch) {
+      return latestTransformRef.current;
+    }
+
+    const centerClientX = (firstTouch.clientX + secondTouch.clientX) / 2;
+    const centerClientY = (firstTouch.clientY + secondTouch.clientY) / 2;
+    const worldCenter = latestGetWorldPointFromClientRef.current(centerClientX, centerClientY);
+    if (!worldCenter) {
+      return latestTransformRef.current;
+    }
+
+    const nextDistance = Math.hypot(
+      secondTouch.clientX - firstTouch.clientX,
+      secondTouch.clientY - firstTouch.clientY,
+    );
+    const nextTransform = getTransformFromPinch(
+      {
+        ...pinchSession.pinch,
+        startDistance: pinchSession.startClientDistance,
+      },
+      worldCenter,
+      nextDistance,
+      latestBaseRectRef.current,
+    );
+
+    latestTransformRef.current = nextTransform;
+    const nextInteractionBounds = getPositionedBounds(
+      latestBaseRectRef.current,
+      nextTransform,
+    );
+    latestBoundsRef.current = nextInteractionBounds;
+    if (previewBoundsStrategy === "live") {
+      const nextBounds =
+        latestProjectBoundsForPreviewRef.current?.(
+          nextTransform,
+          latestBaseRectRef.current,
+        ) ?? nextInteractionBounds;
+      applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    }
+    latestOnTransformPreviewRef.current?.(nextTransform);
+
+    return nextTransform;
+  }
+
+  function beginPinch(overlayElement: HTMLDivElement) {
+    const activeTouches = Array.from(touchPointsRef.current.entries());
+    if (activeTouches.length < 2) {
+      return;
+    }
+
+    const [[firstPointerId, firstTouch], [secondPointerId, secondTouch]] = activeTouches;
+    const centerClientX = (firstTouch.clientX + secondTouch.clientX) / 2;
+    const centerClientY = (firstTouch.clientY + secondTouch.clientY) / 2;
+    const worldCenter = latestGetWorldPointFromClientRef.current(centerClientX, centerClientY);
+    if (!worldCenter) {
+      return;
+    }
+
+    const startBounds = latestBoundsRef.current;
+    const width = Math.max(startBounds.width, 0.0001);
+    const height = Math.max(startBounds.height, 0.0001);
+
+    pinchSessionRef.current = {
+      pinch: {
+        anchorX: (worldCenter.x - startBounds.left) / width,
+        anchorY: (worldCenter.y - startBounds.top) / height,
+        startDistance: Math.hypot(
+          secondTouch.clientX - firstTouch.clientX,
+          secondTouch.clientY - firstTouch.clientY,
+        ),
+        startTransform: latestTransformRef.current,
+      },
+      pointerIds: [firstPointerId, secondPointerId],
+      startClientDistance: Math.hypot(
+        secondTouch.clientX - firstTouch.clientX,
+        secondTouch.clientY - firstTouch.clientY,
+      ),
+    };
+
+    const activeDragSession = dragSessionRef.current;
+    if (frameIdRef.current !== null) {
+      window.cancelAnimationFrame(frameIdRef.current);
+      frameIdRef.current = null;
+    }
+    dragSessionRef.current = null;
+    overlayElement.style.cursor = interactive ? "grab" : "default";
+    latestOnInteractionStartRef.current?.();
   }
 
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, mode: PositioningDragMode) {
@@ -253,6 +410,21 @@ export function PositioningBoxOverlay({
     const overlayElement = overlayRef.current;
     if (!overlayElement) {
       return;
+    }
+
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+
+      if (touchPointsRef.current.size === 2) {
+        overlayElement.setPointerCapture(event.pointerId);
+        beginPinch(overlayElement);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
     }
 
     dragSequenceRef.current += 1;
@@ -284,45 +456,15 @@ export function PositioningBoxOverlay({
     latestOnInteractionStartRef.current?.();
   }
 
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!usePointerCapture) {
-      return;
-    }
-
-    const session = dragSessionRef.current;
-    if (!session || event.pointerId !== session.pointerId) {
-      return;
-    }
-
-    session.pendingClientX = event.clientX;
-    session.pendingClientY = event.clientY;
-
-    const hasLivePreview =
-      previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
-    if (!hasLivePreview) {
-      return;
-    }
-
-    if (
-      previewThrottleMs > 0 &&
-      session.lastPreviewAt > 0 &&
-      performance.now() - session.lastPreviewAt < previewThrottleMs
-    ) {
-      return;
-    }
-
-    scheduleFrame();
-  }
-
   function finalizePointerEnd(pointerId: number, clientX: number, clientY: number) {
     const session = dragSessionRef.current;
     if (!session || pointerId !== session.pointerId) {
       return;
     }
 
-    if (session.rafId !== null) {
-      window.cancelAnimationFrame(session.rafId);
-      session.rafId = null;
+    if (frameIdRef.current !== null) {
+      window.cancelAnimationFrame(frameIdRef.current);
+      frameIdRef.current = null;
     }
 
     session.pendingClientX = clientX;
@@ -341,22 +483,40 @@ export function PositioningBoxOverlay({
 
     latestOnInteractionEndRef.current?.();
     dragSessionRef.current = null;
+    try {
+      if (overlayRef.current?.hasPointerCapture(pointerId)) {
+        overlayRef.current.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // Ignore release errors during teardown.
+    }
   }
 
-  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!usePointerCapture) {
+  function finalizePinch(pointerId: number) {
+    const pinchSession = pinchSessionRef.current;
+    if (!pinchSession || !pinchSession.pointerIds.includes(pointerId)) {
       return;
     }
 
+    const committedTransform = flushPinchPreview();
+    pinchSessionRef.current = null;
+    touchPointsRef.current.clear();
+    latestOnInteractionEndRef.current?.();
     try {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
+      if (overlayRef.current?.hasPointerCapture(pointerId)) {
+        overlayRef.current.releasePointerCapture(pointerId);
       }
     } catch {
       // Ignore release errors during teardown.
     }
 
-    finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
+    if (committedTransform) {
+      latestOnTransformCommitRef.current?.(
+        committedTransform,
+        `${transactionKeyPrefix}-pinch-${dragSequenceRef.current + 1}`,
+      );
+      dragSequenceRef.current += 1;
+    }
   }
 
   return (
@@ -376,20 +536,19 @@ export function PositioningBoxOverlay({
         pointerEvents: interactive ? "auto" : "none",
         touchAction: "none",
       }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
       onPointerDown={(event) => beginDrag(event, "move")}
     >
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
-          background: "transparent",
-        }}
-      />
+      {showOutline ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            border: `${outlineWidth}px solid rgba(37, 99, 235, 0.95)`,
+            background: "transparent",
+          }}
+        />
+      ) : null}
 
       {showHandles
         ? POSITIONING_HANDLES.map((handle) => (
@@ -407,7 +566,12 @@ export function PositioningBoxOverlay({
                 top: `${getHandleTop(handle.id, bounds.height, handleSize)}px`,
                 width: `${handleSize}px`,
                 height: `${handleSize}px`,
-                borderRadius: handle.kind === "edge" ? `${4 * controlScale}px` : "999px",
+                borderRadius:
+                  handleShape === "circle"
+                    ? "999px"
+                    : handle.kind === "edge"
+                      ? `${4 * controlScale}px`
+                      : "999px",
                 background: "#ffffff",
                 border: `${handleBorderWidth}px solid #2563eb`,
                 cursor: handle.cursor,

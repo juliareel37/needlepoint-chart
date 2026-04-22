@@ -60,7 +60,9 @@ export interface CustomPalette {
 }
 
 export interface TraceDocument {
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;

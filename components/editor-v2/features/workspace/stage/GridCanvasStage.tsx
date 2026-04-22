@@ -49,6 +49,7 @@ interface GridCanvasStageProps {
   symbolAssignments: Record<string, string>;
   threadView: boolean;
   viewport: ViewportState;
+  isZoomInteractionActive: boolean;
 }
 
 export function GridCanvasStage({
@@ -75,6 +76,7 @@ export function GridCanvasStage({
   symbolAssignments,
   threadView,
   viewport,
+  isZoomInteractionActive,
 }: GridCanvasStageProps) {
   const TOUCH_PAINT_ACTIVATION_DISTANCE_PX = 8;
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,6 +86,7 @@ export function GridCanvasStage({
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
   const previousThreadViewRef = useRef<boolean | null>(null);
+  const previousZoomInteractionActiveRef = useRef<boolean>(false);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
@@ -140,17 +143,39 @@ export function GridCanvasStage({
       return;
     }
 
+    const justEnteredZoomInteraction =
+      isZoomInteractionActive && !previousZoomInteractionActiveRef.current;
+    const isContinuingZoomInteraction =
+      isZoomInteractionActive && previousZoomInteractionActiveRef.current;
+
+    previousZoomInteractionActiveRef.current = isZoomInteractionActive;
+
+    if (isContinuingZoomInteraction && sourceCanvasSizingRef.current) {
+      return;
+    }
+
     const nextConfiguration = configureSourceCanvas(
       canvas,
       context,
       metrics,
+      viewport.zoom,
+      stageSize,
+      { isZoomInteractionActive },
       sourceCanvasSizingRef.current,
     );
     sourceCanvasSizingRef.current = nextConfiguration.sizing;
-    if (nextConfiguration.sizingChanged) {
+    if (nextConfiguration.sizingChanged || justEnteredZoomInteraction) {
       initializedRef.current = false;
     }
-  }, [metrics.cellSize, metrics.surfaceHeight, metrics.surfaceWidth]);
+  }, [
+    isZoomInteractionActive,
+    metrics.cellSize,
+    metrics.surfaceHeight,
+    metrics.surfaceWidth,
+    stageSize.height,
+    stageSize.width,
+    viewport.zoom,
+  ]);
 
   useEffect(() => {
     const canvas = sourceCanvasRef.current;
@@ -162,6 +187,10 @@ export function GridCanvasStage({
     const context = canvas.getContext("2d");
 
     if (!context) {
+      return;
+    }
+
+    if (isZoomInteractionActive && initializedRef.current) {
       return;
     }
 
@@ -211,6 +240,7 @@ export function GridCanvasStage({
     cells,
     colorsById,
     gridWidth,
+    isZoomInteractionActive,
     metrics.cellSize,
     metrics.surfaceHeight,
     metrics.surfaceWidth,
@@ -254,9 +284,7 @@ export function GridCanvasStage({
       showGridlines,
       showSymbols,
       stageSize,
-      stitchCanvasCache: stitchCanvasCacheRef.current,
       symbolAssignments,
-      threadView,
       viewport,
     });
 
@@ -290,7 +318,7 @@ export function GridCanvasStage({
     displayTrace?.offsetY,
     displayTrace?.opacity,
     displayTrace?.scale,
-    displayTrace?.assetUrl,
+    displayTrace?.previewUrl,
     displayTraceAsset,
     paintOpacity,
     threadView,

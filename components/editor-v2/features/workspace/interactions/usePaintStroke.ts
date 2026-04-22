@@ -18,6 +18,7 @@ interface UsePaintStrokeOptions {
   activeColorId: string | null;
   activeTool: ActiveTool;
   brushSize: number;
+  disabled?: boolean;
   dispatch: EditorStore["dispatch"];
 }
 
@@ -25,12 +26,23 @@ export function usePaintStroke({
   activeColorId,
   activeTool,
   brushSize,
+  disabled = false,
   dispatch,
 }: UsePaintStrokeOptions) {
   const [paintStrokeId, setPaintStrokeId] = useState<string | null>(null);
 
   const paintedCellKeysRef = useRef<Set<string>>(new Set());
   const lastStrokePointRef = useRef<GridPoint | null>(null);
+
+  useEffect(() => {
+    if (!disabled) {
+      return;
+    }
+
+    paintedCellKeysRef.current.clear();
+    lastStrokePointRef.current = null;
+    setPaintStrokeId(null);
+  }, [disabled]);
 
   useEffect(() => {
     if (!paintStrokeId) {
@@ -67,6 +79,10 @@ export function usePaintStroke({
   }
 
   function handlePointerDown(point: GridPoint): boolean {
+    if (disabled) {
+      return false;
+    }
+
     if (activeTool === "paint") {
       if (!activeColorId) {
         return false;
@@ -95,6 +111,10 @@ export function usePaintStroke({
   }
 
   function handlePointerEnter(point: GridPoint): boolean {
+    if (disabled) {
+      return false;
+    }
+
     if (!paintStrokeId) {
       return false;
     }

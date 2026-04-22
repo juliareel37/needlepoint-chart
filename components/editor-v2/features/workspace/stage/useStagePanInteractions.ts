@@ -45,8 +45,10 @@ export function useStagePanInteractions({
   viewport,
   zoomAnchor,
 }: UseStagePanInteractionsOptions) {
+  const ZOOM_INTERACTION_SETTLE_DELAY_MS = 120;
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanDragging, setIsPanDragging] = useState(false);
+  const [isZoomInteracting, setIsZoomInteracting] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
   const touchGestureRef = useRef<{
@@ -55,6 +57,7 @@ export function useStagePanInteractions({
     distance: number;
     zoom: number;
   } | null>(null);
+  const zoomInteractionTimeoutRef = useRef<number | null>(null);
   const viewportRef = useRef(viewport);
   const zoomAnchorRef = useRef(zoomAnchor);
   const panToolActive = activeTool === "pan" && !dragPanningDisabled;
@@ -74,6 +77,26 @@ export function useStagePanInteractions({
     zoomAnchorRef.current = zoomAnchor;
   }, [zoomAnchor]);
 
+  const beginZoomInteraction = useEffectEvent(() => {
+    if (zoomInteractionTimeoutRef.current !== null) {
+      window.clearTimeout(zoomInteractionTimeoutRef.current);
+      zoomInteractionTimeoutRef.current = null;
+    }
+
+    setIsZoomInteracting(true);
+  });
+
+  const scheduleZoomInteractionEnd = useEffectEvent(() => {
+    if (zoomInteractionTimeoutRef.current !== null) {
+      window.clearTimeout(zoomInteractionTimeoutRef.current);
+    }
+
+    zoomInteractionTimeoutRef.current = window.setTimeout(() => {
+      zoomInteractionTimeoutRef.current = null;
+      setIsZoomInteracting(false);
+    }, ZOOM_INTERACTION_SETTLE_DELAY_MS);
+  });
+
   const handleWheel = useCallback(
     (event: WheelEvent) => {
       event.preventDefault();
@@ -88,7 +111,9 @@ export function useStagePanInteractions({
         const nextZoom = currentViewport.zoom * zoomFactor;
         const anchor = zoomAnchorRef.current ?? undefined;
 
+        beginZoomInteraction();
         dispatch(createSetViewportZoomCommand(nextZoom, anchor));
+        scheduleZoomInteractionEnd();
         return;
       }
 
@@ -110,7 +135,7 @@ export function useStagePanInteractions({
 
       dispatch(createPanViewportCommand(panDeltaX, panDeltaY));
     },
-    [dispatch, metrics, stageSize],
+    [beginZoomInteraction, dispatch, metrics, scheduleZoomInteractionEnd, stageSize],
   );
 
   const stopPanDragging = useEffectEvent(() => {
@@ -203,6 +228,7 @@ export function useStagePanInteractions({
       }
 
       event.preventDefault();
+      beginZoomInteraction();
       touchGestureRef.current = {
         ...geometry,
         zoom: viewportRef.current.zoom,
@@ -228,6 +254,7 @@ export function useStagePanInteractions({
       const panDeltaX = geometry.centerX - gesture.centerX;
       const panDeltaY = geometry.centerY - gesture.centerY;
 
+      beginZoomInteraction();
       dispatch(createSetViewportZoomCommand(nextZoom, anchor));
 
       if (panDeltaX !== 0 || panDeltaY !== 0) {
@@ -238,6 +265,7 @@ export function useStagePanInteractions({
         ...geometry,
         zoom: nextZoom,
       };
+      scheduleZoomInteractionEnd();
     };
     const endTouchGesture = () => {
       if (!touchGestureRef.current) {
@@ -245,6 +273,7 @@ export function useStagePanInteractions({
       }
 
       touchGestureRef.current = null;
+      scheduleZoomInteractionEnd();
     };
 
     stageElement.addEventListener("wheel", handleWheel, { passive: false });
@@ -269,6 +298,11 @@ export function useStagePanInteractions({
     stageElement.addEventListener("touchcancel", endTouchGesture);
 
     return () => {
+      if (zoomInteractionTimeoutRef.current !== null) {
+        window.clearTimeout(zoomInteractionTimeoutRef.current);
+        zoomInteractionTimeoutRef.current = null;
+      }
+
       stageElement.removeEventListener("wheel", handleWheel);
       stageElement.removeEventListener("gesturestart", handleGestureEvent);
       stageElement.removeEventListener("gesturechange", handleGestureEvent);
@@ -289,6 +323,7 @@ export function useStagePanInteractions({
     stageRef,
     stageSize.height,
     stageSize.width,
+    scheduleZoomInteractionEnd,
     startPanDragging,
   ]);
 
@@ -443,6 +478,7 @@ export function useStagePanInteractions({
     handleStageAuxClick,
     handleStageMouseDownCapture,
     handleStagePointerDownCapture,
+    isZoomInteracting,
   };
 }
 
