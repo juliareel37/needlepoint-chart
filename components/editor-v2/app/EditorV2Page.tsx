@@ -104,6 +104,28 @@ export function EditorV2Page() {
     });
   }, [designConfig]);
 
+  const loadDesignIntoWorkspace = async (storageId: string) => {
+    const instanceKey = `loaded_${storageId}_${Date.now()}`;
+    setCanvasLoadingKey(instanceKey);
+
+    try {
+      const document = await loadSavedEditorV2Document(storageId);
+      setCurrentStorageId(storageId);
+      setSelectedStorageId(storageId);
+      setSetupErrorMessage(null);
+      setDesignConfig({
+        kind: "loaded",
+        document,
+        storageId,
+        instanceKey,
+      });
+      setSetupModalOpen(false);
+    } catch (error) {
+      setCanvasLoadingKey(null);
+      throw error;
+    }
+  };
+
   return (
     <EditorV2Providers
       key={designConfig.instanceKey}
@@ -148,19 +170,7 @@ export function EditorV2Page() {
           return savedRecord;
         }}
         onLoadDocument={async (record) => {
-          const instanceKey = `loaded_${record.storageId}_${Date.now()}`;
-          setCanvasLoadingKey(instanceKey);
-          const document = await loadSavedEditorV2Document(record.storageId);
-          setCurrentStorageId(record.storageId);
-          setSelectedStorageId(record.storageId);
-          setSetupErrorMessage(null);
-          setDesignConfig({
-            kind: "loaded",
-            document,
-            storageId: record.storageId,
-            instanceKey,
-          });
-          setSetupModalOpen(false);
+          await loadDesignIntoWorkspace(record.storageId);
         }}
         onStartOver={() => setSetupModalOpen(true)}
         setupModalOpen={setupModalOpen}
@@ -191,23 +201,8 @@ export function EditorV2Page() {
             onDraftWidthChange={setDraftWidth}
             onDraftWidthInchesChange={setDraftWidthInches}
             onLoadSavedDesign={(storageId) => {
-              const instanceKey = `loaded_${storageId}_${Date.now()}`;
-              setCanvasLoadingKey(instanceKey);
-              void loadSavedEditorV2Document(storageId)
-                .then((document) => {
-                  setCurrentStorageId(storageId);
-                  setSelectedStorageId(storageId);
-                  setSetupErrorMessage(null);
-                  setDesignConfig({
-                    kind: "loaded",
-                    document,
-                    storageId,
-                    instanceKey,
-                  });
-                  setSetupModalOpen(false);
-                })
+              void loadDesignIntoWorkspace(storageId)
                 .catch((error) => {
-                  setCanvasLoadingKey(null);
                   setSetupErrorMessage(
                     getErrorMessage(error, "Try again in a moment."),
                   );
