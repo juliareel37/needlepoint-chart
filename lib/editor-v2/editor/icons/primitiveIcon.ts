@@ -1,3 +1,5 @@
+import { DMC_COLOR_LIBRARY_BY_ID } from "../color-library";
+import { findClosestPaletteColorId, hexToRgb, type Rgb } from "../color-utils";
 import type { PaletteColor } from "../store/state";
 import type { IconColorSlot } from "./iconColorSlots";
 
@@ -313,12 +315,18 @@ export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColo
       {
         id: "slot-1",
         sourceHex: "#121923",
-        paletteColorId: null,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb("#121923") as Rgb,
+        ),
       },
       {
         id: "slot-2",
         sourceHex: "#8e99ab",
-        paletteColorId: null,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb("#8e99ab") as Rgb,
+        ),
       },
     ];
   }
