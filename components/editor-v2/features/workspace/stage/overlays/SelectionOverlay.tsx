@@ -31,7 +31,6 @@ export function SelectionOverlay({
   const lassoPoints = selection.lassoPoints
     .map((point) => `${point.x * metrics.cellSize},${point.y * metrics.cellSize}`)
     .join(" ");
-  const shouldDimCanvas = activeTool === "lasso" || activeTool === "mirror" || Boolean(mirrorSession);
   const hasCommittedFreehandSelection =
     selection.mode === "lasso" &&
     !selection.preview &&
@@ -40,6 +39,13 @@ export function SelectionOverlay({
     selection.mode === "rect" &&
     !selection.preview &&
     Boolean(selection.rect);
+  const hasCommittedSelection =
+    hasCommittedFreehandSelection || hasCommittedRectSelection;
+  const shouldDimCanvas =
+    activeTool === "lasso" ||
+    activeTool === "mirror" ||
+    Boolean(mirrorSession) ||
+    (activeTool === "fill" && hasCommittedSelection);
   const selectionRectPath = selection.rect
     ? buildRectPath(selection.rect, metrics.cellSize)
     : null;

@@ -13,6 +13,7 @@ import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
 import { getSelectionBounds } from "@/lib/editor-v2/editor/selectors/session/getSelectionBounds";
 import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import {
+  createClearSelectionCommand,
   createPaintCellsCommand,
   createSetToolCommand,
   createSetToolWithColorCommand,
@@ -155,6 +156,8 @@ export function useGridInteractions({
 
     if (selectionCells.length > 0) {
       dispatch(createPaintCellsCommand(activeColorId, selectionCells));
+      dispatch(createClearSelectionCommand("canvas"));
+      dispatch(createSetToolCommand("lasso"));
       return;
     }
 

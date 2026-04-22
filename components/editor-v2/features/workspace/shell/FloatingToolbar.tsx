@@ -20,6 +20,7 @@ import {
   ToolbarSwatch,
 } from "@/components/design-system";
 import type {
+  ActiveTool,
   EditorStore,
   GridPoint,
   GridRect,
@@ -39,6 +40,7 @@ import {
   createSetSidebarCollapsedCommand,
   createSetSelectionShapeCommand,
   createSetToolCommand,
+  createSetToolWithColorCommand,
   createSetBrushSizeCommand,
   createUndoCommand,
   createUpdateTraceCommand,
@@ -175,7 +177,7 @@ function FloatingToolbarPortalPopover({
 interface FloatingToolbarProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
-  activeTool: "paint" | "erase" | string;
+  activeTool: ActiveTool;
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
@@ -443,7 +445,11 @@ export function FloatingToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 onColorSelect={(colorId) => {
-                  dispatch(createSetActiveColorCommand(colorId));
+                  dispatch(
+                    selectionVisible
+                      ? createSetToolWithColorCommand(activeTool, colorId)
+                      : createSetActiveColorCommand(colorId),
+                  );
                   closeColorLibrary();
                 }}
               />
