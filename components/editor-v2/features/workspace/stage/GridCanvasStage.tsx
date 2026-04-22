@@ -84,8 +84,11 @@ export function GridCanvasStage({
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const displayCanvasSizingRef = useRef<CanvasSizing | null>(null);
   const previousCellsRef = useRef<GridCellValue[] | null>(null);
+  const previousCellsInputRef = useRef<GridCellValue[] | null>(null);
   const previousColorsRef = useRef<Record<string, PaletteColor> | null>(null);
+  const previousColorsInputRef = useRef<Record<string, PaletteColor> | null>(null);
   const previousThreadViewRef = useRef<boolean | null>(null);
+  const previousThreadViewInputRef = useRef<boolean | null>(null);
   const previousZoomInteractionActiveRef = useRef<boolean>(false);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const initializedRef = useRef(false);
@@ -190,13 +193,18 @@ export function GridCanvasStage({
       return;
     }
 
-    if (isZoomInteractionActive && initializedRef.current) {
-      return;
-    }
-
     const previousCells = previousCellsRef.current;
     const previousColors = previousColorsRef.current;
     const previousThreadView = previousThreadViewRef.current;
+    const inputsUnchangedSinceLastRender =
+      previousCellsInputRef.current === cells &&
+      previousColorsInputRef.current === colorsById &&
+      previousThreadViewInputRef.current === threadView;
+
+    if (isZoomInteractionActive && initializedRef.current && inputsUnchangedSinceLastRender) {
+      return;
+    }
+
     const shouldRedrawAll =
       !initializedRef.current ||
       !previousCells ||
@@ -217,8 +225,11 @@ export function GridCanvasStage({
 
       initializedRef.current = true;
       previousCellsRef.current = cells.slice();
+      previousCellsInputRef.current = cells;
       previousColorsRef.current = colorsById;
+      previousColorsInputRef.current = colorsById;
       previousThreadViewRef.current = threadView;
+      previousThreadViewInputRef.current = threadView;
       return;
     }
 
@@ -234,8 +245,11 @@ export function GridCanvasStage({
     });
 
     previousCellsRef.current = cells.slice();
+    previousCellsInputRef.current = cells;
     previousColorsRef.current = colorsById;
+    previousColorsInputRef.current = colorsById;
     previousThreadViewRef.current = threadView;
+    previousThreadViewInputRef.current = threadView;
   }, [
     cells,
     colorsById,
