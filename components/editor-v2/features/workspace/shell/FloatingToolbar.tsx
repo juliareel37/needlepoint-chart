@@ -236,6 +236,7 @@ export function FloatingToolbar({
   const canStartNewSelection = Boolean(selectionBounds) || activeTool === "lasso";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
+  const selectionLockedToolsDisabled = Boolean(selectionCommitted && selectionBounds);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -537,6 +538,7 @@ export function FloatingToolbar({
           aria-pressed={activeTool === "eyedropper"}
           aria-label="Eyedropper"
           title="Eyedropper"
+          disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
             closeImageMenu();
@@ -555,7 +557,15 @@ export function FloatingToolbar({
           onClick={() => {
             closeColorLibrary();
             closeImageMenu();
-            dispatch(createSetToolCommand(activeTool === "fill" ? "pan" : "fill"));
+            dispatch(
+              createSetToolCommand(
+                activeTool === "fill"
+                  ? selectionVisible
+                    ? "lasso"
+                    : "pan"
+                  : "fill",
+              ),
+            );
           }}
         >
           <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
@@ -567,6 +577,7 @@ export function FloatingToolbar({
           aria-pressed={activeTool === "paint"}
           aria-label="Brush"
           title="Brush"
+          disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
             closeImageMenu();
@@ -598,6 +609,7 @@ export function FloatingToolbar({
             aria-pressed={drawOpen}
             aria-label="Brush size"
             title="Brush size"
+            disabled={selectionLockedToolsDisabled}
             onClick={() => {
               setDrawOpen((current) => !current);
               closeColorLibrary();
@@ -680,6 +692,7 @@ export function FloatingToolbar({
           aria-pressed={activeTool === "mirror"}
           aria-label="Mirror"
           title="Mirror"
+          disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
             setDrawOpen(false);
@@ -759,7 +772,7 @@ export function FloatingToolbar({
               <Button
                 type="button"
                 variant="secondary"
-                disabled={!canStartNewSelection}
+                disabled={!selectionCommitted}
                 onClick={handleNewSelection}
               >
                 Unselect
@@ -828,6 +841,7 @@ export function FloatingToolbar({
           aria-pressed={imageOpen}
           aria-label="Image"
           title="Image"
+          disabled={selectionLockedToolsDisabled}
           onClick={() => {
               closeColorLibrary();
               if (imageOpen) {
