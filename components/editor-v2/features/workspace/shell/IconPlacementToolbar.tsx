@@ -593,7 +593,7 @@ export function IconPlacementToolbar({
             void handleConvert();
           }}
         >
-          {isConverting ? "Converting..." : "Convert to stitches"}
+          {isConverting ? "Converting..." : "Convert"}
         </Button>
       </ToolbarGroup>
     </Toolbar>

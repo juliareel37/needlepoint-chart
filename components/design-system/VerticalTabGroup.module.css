@@ -71,5 +71,15 @@
 @media (max-width: 768px) {
   .group {
     display: flex;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+    width: max-content;
+    min-width: max-content;
+  }
+
+  .item {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 50px;
   }
 }

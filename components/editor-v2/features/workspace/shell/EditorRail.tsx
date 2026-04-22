@@ -15,7 +15,7 @@ const railItems: Array<{ id: EditorSidebarSection; label: string; icon: string }
   { id: "color", label: "Color", icon: "/icons/lucide/palette.svg" },
   { id: "trace", label: "Trace", icon: "/icons/lucide/image.svg" },
   { id: "text", label: "Text", icon: "/icons/lucide/type-outline.svg" },
-  { id: "icons", label: "Icons", icon: "/icons/lucide/vector_square.svg" },
+  { id: "icons", label: "Icons", icon: "/icons/lucide/shapes-icon.svg" },
   { id: "settings", label: "Settings", icon: "/icons/lucide/settings.svg" },
 ];
 

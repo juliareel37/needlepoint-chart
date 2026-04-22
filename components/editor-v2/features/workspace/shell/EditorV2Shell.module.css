@@ -507,7 +507,7 @@
 
 .iconLibraryCard:hover,
 .iconLibraryCard:focus-visible {
-  border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
+  /* border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle)); */
   background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
   box-shadow: var(--ui-shadow-sm);
   transform: translateY(-1px);
@@ -1668,9 +1668,9 @@
     height: 72px;
   }
 
-  .iconLibraryGrid {
+  /* .iconLibraryGrid {
     grid-template-columns: 1fr;
-  }
+  } */
 
   .iconSelectionAction {
     align-self: stretch;
@@ -1700,13 +1700,39 @@
   }
   .rail {
     grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
   .railSurface {
     flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
     padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
     min-height: calc(56px + env(safe-area-inset-bottom, 0px));
     border-right: none;
     border-top: 1px solid var(--ui-border-reg);
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .railSurface::-webkit-scrollbar {
+    display: none;
+  }
+
+  .railNav {
+    flex: 0 0 auto;
+    width: max-content;
+    min-width: max-content;
+  }
+
+  .railTabs {
+    flex: 0 0 auto;
+    width: max-content;
   }
   .shell {
     position: relative;
