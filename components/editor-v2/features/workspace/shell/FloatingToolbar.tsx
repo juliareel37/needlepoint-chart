@@ -631,6 +631,10 @@ export function FloatingToolbar({
             <FloatingToolbarPortalPopover
               align="center"
               anchorRef={drawAnchorRef}
+              onRequestClose={() => {
+                setDrawOpen(false);
+                setBrushSizeTooltipVisible(false);
+              }}
               role="dialog"
               aria-label="Draw size"
             >
@@ -869,6 +873,7 @@ export function FloatingToolbar({
               anchorRef={imageAnchorRef}
               clampToViewport
               subtoolbar
+              onRequestClose={closeImageMenu}
               role="dialog"
               aria-label="Image tools"
             >
