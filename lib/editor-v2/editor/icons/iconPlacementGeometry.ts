@@ -12,6 +12,7 @@ export interface IconPlacementTransform {
   scaleX: number;
   scaleY: number;
   lockAspectRatio?: boolean;
+  freeCornerResize?: boolean;
 }
 
 export interface IconPlacementDragState {
@@ -62,6 +63,7 @@ export function getIconPlacementTransformFromDrag(
     point,
     baseRect,
     dragState.startTransform.lockAspectRatio ?? false,
+    dragState.startTransform.freeCornerResize ?? false,
   );
 
   return {
@@ -69,6 +71,8 @@ export function getIconPlacementTransformFromDrag(
     offsetY: nextBounds.top - baseRect.top,
     scaleX: clampScale(nextBounds.width / Math.max(baseRect.width, 0.0001)),
     scaleY: clampScale(nextBounds.height / Math.max(baseRect.height, 0.0001)),
+    lockAspectRatio: dragState.startTransform.lockAspectRatio,
+    freeCornerResize: dragState.startTransform.freeCornerResize,
   };
 }
 
@@ -93,6 +97,7 @@ export function getIconPlacementTransformFromPinch(
     scaleX: nextScaleX,
     scaleY: nextScaleY,
     lockAspectRatio: startTransform.lockAspectRatio,
+    freeCornerResize: startTransform.freeCornerResize,
   };
 }
 
@@ -102,6 +107,7 @@ function getIconPlacementBoundsFromHandleDrag(
   point: WorldPoint,
   baseRect: PositioningRect,
   lockAspectRatio: boolean,
+  freeCornerResize: boolean,
 ): PositioningRect {
   const minWidth = Math.max(baseRect.width * MIN_SCALE, 1);
   const minHeight = Math.max(baseRect.height * MIN_SCALE, 1);
@@ -111,7 +117,7 @@ function getIconPlacementBoundsFromHandleDrag(
   const startBottom = startBounds.top + startBounds.height;
   const preserveAspectRatio =
     lockAspectRatio ||
-    handle === "nw" || handle === "ne" || handle === "se" || handle === "sw";
+    (!freeCornerResize && (handle === "nw" || handle === "ne" || handle === "se" || handle === "sw"));
 
   if (preserveAspectRatio) {
     return getAspectRatioPreservingBounds(

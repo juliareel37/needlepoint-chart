@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildPrimitiveIconDataUrl,
+  isPrimitiveFrameKind,
   resolvePrimitiveColorSlots,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
@@ -74,8 +75,10 @@ export function IconPlacementLayer({
       scaleX: placement.scaleX,
       scaleY: placement.scaleY,
       lockAspectRatio: placement.lockAspectRatio,
+      freeCornerResize: isPrimitiveFrameKind(placement.primitiveKind),
     }),
     [
+      placement.primitiveKind,
       placement.lockAspectRatio,
       placement.offsetX,
       placement.offsetY,
