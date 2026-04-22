@@ -96,6 +96,7 @@ export function PositioningBoxOverlay({
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
   const pinchSessionRef = useRef<PinchSession | null>(null);
+  const frameIdRef = useRef<number | null>(null);
   const touchPointsRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
   const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
@@ -157,9 +158,9 @@ export function PositioningBoxOverlay({
 
   useEffect(() => {
     return () => {
-      const session = dragSessionRef.current;
-      if (session && session.rafId !== null) {
-        window.cancelAnimationFrame(session.rafId);
+      if (frameIdRef.current !== null) {
+        window.cancelAnimationFrame(frameIdRef.current);
+        frameIdRef.current = null;
       }
     };
   }, []);
@@ -234,77 +235,22 @@ export function PositioningBoxOverlay({
     };
   }, [previewBoundsStrategy, previewThrottleMs]);
 
-  useEffect(() => {
-    if (usePointerCapture) {
-      return;
-    }
-
-    const handleWindowPointerMove = (event: PointerEvent) => {
-      const session = dragSessionRef.current;
-      if (!session || event.pointerId !== session.pointerId) {
-        return;
-      }
-
-      session.pendingClientX = event.clientX;
-      session.pendingClientY = event.clientY;
-
-      const hasLivePreview =
-        previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
-      if (!hasLivePreview) {
-        return;
-      }
-
-      if (
-        previewThrottleMs > 0 &&
-        session.lastPreviewAt > 0 &&
-        performance.now() - session.lastPreviewAt < previewThrottleMs
-      ) {
-        return;
-      }
-
-      scheduleFrame();
-    };
-
-    const handleWindowPointerEnd = (event: PointerEvent) => {
-      finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
-    };
-
-    window.addEventListener("pointermove", handleWindowPointerMove);
-    window.addEventListener("pointerup", handleWindowPointerEnd);
-    window.addEventListener("pointercancel", handleWindowPointerEnd);
-
-    return () => {
-      window.removeEventListener("pointermove", handleWindowPointerMove);
-      window.removeEventListener("pointerup", handleWindowPointerEnd);
-      window.removeEventListener("pointercancel", handleWindowPointerEnd);
-    };
-  }, [previewBoundsStrategy, previewThrottleMs, usePointerCapture]);
-
   function scheduleFrame() {
-    const session = dragSessionRef.current;
-    if (session?.rafId !== null) {
+    if (frameIdRef.current !== null) {
       return;
     }
 
-    const targetSession = session;
-    const rafId = window.requestAnimationFrame(() => {
-      if (targetSession) {
-        const activeSession = dragSessionRef.current;
-        if (!activeSession) {
-          return;
-        }
+    frameIdRef.current = window.requestAnimationFrame(() => {
+      frameIdRef.current = null;
 
-        activeSession.rafId = null;
+      const activeSession = dragSessionRef.current;
+      if (activeSession) {
         flushPreview(activeSession);
         return;
       }
 
       flushPinchPreview();
     });
-
-    if (targetSession) {
-      targetSession.rafId = rafId;
-    }
   }
 
   function flushPreview(session: DragSession): PositioningTransform {
@@ -439,8 +385,9 @@ export function PositioningBoxOverlay({
     };
 
     const activeDragSession = dragSessionRef.current;
-    if (activeDragSession && activeDragSession.rafId !== null) {
-      window.cancelAnimationFrame(activeDragSession.rafId);
+    if (frameIdRef.current !== null) {
+      window.cancelAnimationFrame(frameIdRef.current);
+      frameIdRef.current = null;
     }
     dragSessionRef.current = null;
     overlayElement.style.cursor = interactive ? "grab" : "default";
@@ -509,59 +456,15 @@ export function PositioningBoxOverlay({
     latestOnInteractionStartRef.current?.();
   }
 
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "touch" && touchPointsRef.current.has(event.pointerId)) {
-      touchPointsRef.current.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-    }
-
-    if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
-      event.preventDefault();
-      event.stopPropagation();
-      scheduleFrame();
-      return;
-    }
-
-    if (!usePointerCapture) {
-      return;
-    }
-
-    const session = dragSessionRef.current;
-    if (!session || event.pointerId !== session.pointerId) {
-      return;
-    }
-
-    session.pendingClientX = event.clientX;
-    session.pendingClientY = event.clientY;
-
-    const hasLivePreview =
-      previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
-    if (!hasLivePreview) {
-      return;
-    }
-
-    if (
-      previewThrottleMs > 0 &&
-      session.lastPreviewAt > 0 &&
-      performance.now() - session.lastPreviewAt < previewThrottleMs
-    ) {
-      return;
-    }
-
-    scheduleFrame();
-  }
-
   function finalizePointerEnd(pointerId: number, clientX: number, clientY: number) {
     const session = dragSessionRef.current;
     if (!session || pointerId !== session.pointerId) {
       return;
     }
 
-    if (session.rafId !== null) {
-      window.cancelAnimationFrame(session.rafId);
-      session.rafId = null;
+    if (frameIdRef.current !== null) {
+      window.cancelAnimationFrame(frameIdRef.current);
+      frameIdRef.current = null;
     }
 
     session.pendingClientX = clientX;
@@ -580,6 +483,13 @@ export function PositioningBoxOverlay({
 
     latestOnInteractionEndRef.current?.();
     dragSessionRef.current = null;
+    try {
+      if (overlayRef.current?.hasPointerCapture(pointerId)) {
+        overlayRef.current.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // Ignore release errors during teardown.
+    }
   }
 
   function finalizePinch(pointerId: number) {
@@ -592,6 +502,13 @@ export function PositioningBoxOverlay({
     pinchSessionRef.current = null;
     touchPointsRef.current.clear();
     latestOnInteractionEndRef.current?.();
+    try {
+      if (overlayRef.current?.hasPointerCapture(pointerId)) {
+        overlayRef.current.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // Ignore release errors during teardown.
+    }
 
     if (committedTransform) {
       latestOnTransformCommitRef.current?.(
@@ -600,38 +517,6 @@ export function PositioningBoxOverlay({
       );
       dragSequenceRef.current += 1;
     }
-  }
-
-  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "touch") {
-      touchPointsRef.current.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-    }
-
-    if (!usePointerCapture) {
-      return;
-    }
-
-    try {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      // Ignore release errors during teardown.
-    }
-
-    if (pinchSessionRef.current?.pointerIds.includes(event.pointerId)) {
-      finalizePinch(event.pointerId);
-      return;
-    }
-
-    if (event.pointerType === "touch") {
-      touchPointsRef.current.delete(event.pointerId);
-    }
-
-    finalizePointerEnd(event.pointerId, event.clientX, event.clientY);
   }
 
   return (
@@ -651,9 +536,6 @@ export function PositioningBoxOverlay({
         pointerEvents: interactive ? "auto" : "none",
         touchAction: "none",
       }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
       onPointerDown={(event) => beginDrag(event, "move")}
     >
       {showOutline ? (

@@ -183,7 +183,9 @@ export function IconPlacementLayer({
     previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
   }, [
     baseRect,
+    coarsePointer,
     placement.primitiveKind,
+    portalHost,
     placement.strokeWidthScale,
     placement.primitivePatternScale,
     placement.primitiveSpacingScale,
