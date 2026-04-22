@@ -8,6 +8,7 @@ import {
   buildPrimitiveIconDataUrl,
   getPrimitiveDefaultSpacingScale,
   getPrimitiveDefaultStrokeWidthScale,
+  isPrimitiveFrameKind,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type { EditorStore, IconPlacementSession } from "@/lib/editor-v2/editor/store";
 import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
@@ -24,6 +25,7 @@ const ICON_PREVIEW_LIMIT = ICON_PREVIEW_ROWS * ICON_COLUMNS;
 const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
 const ICON_PREVIEW_SIZE = 72;
 const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
+const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
 
 export type IconsPanelView =
   | { type: "overview" }
@@ -180,19 +182,33 @@ export function IconsPanelPage({
         title={item.name}
         disabled={placementActive}
         onClick={() => {
-          const initialTransform = getInitialPlacementTransform({
-            intrinsicWidth: item.intrinsicWidth,
-            intrinsicHeight: item.intrinsicHeight,
-            metrics: gridMetrics,
-            viewportCenter,
-            widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
-          });
           const baseRect = getContainedRect(
             item.intrinsicWidth,
             item.intrinsicHeight,
             gridMetrics.surfaceWidth,
             gridMetrics.surfaceHeight,
           );
+          const initialTransform = isPrimitiveFrameKind(item.primitiveKind)
+            ? getInitialFramePlacementTransform({
+                baseRect,
+                metrics: gridMetrics,
+                viewportCenter,
+                sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
+              })
+            : getInitialPlacementTransform({
+                intrinsicWidth: item.intrinsicWidth,
+                intrinsicHeight: item.intrinsicHeight,
+                metrics: gridMetrics,
+                viewportCenter,
+                widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+              });
+          const initialReferenceSize = item.primitiveKind
+            ? Math.min(
+                baseRect.width * ("scaleX" in initialTransform ? initialTransform.scaleX : initialTransform.scale),
+                baseRect.height *
+                  ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
+              )
+            : null;
           dispatch(
             createBeginIconPlacementCommand({
               iconId: item.id,
@@ -203,9 +219,7 @@ export function IconsPanelPage({
               colorSlots: item.colorSlots,
               primitiveKind: item.primitiveKind,
               lockAspectRatio: item.lockAspectRatio,
-              primitiveStrokeReferenceSize: item.primitiveKind
-                ? Math.min(baseRect.width, baseRect.height) * initialTransform.scale
-                : null,
+              primitiveStrokeReferenceSize: initialReferenceSize,
               supportsStrokeWidth: item.supportsStrokeWidth,
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(item.primitiveKind),
               primitivePatternScale: 1,
@@ -367,4 +381,35 @@ export function IconsPanelPage({
       </div>
     </section>
   );
+}
+
+function getInitialFramePlacementTransform(options: {
+  baseRect: { left: number; top: number; width: number; height: number };
+  metrics: GridWorldMetrics;
+  viewportCenter: WorldPoint | null;
+  sizeRatio: number;
+}): { offsetX: number; offsetY: number; scaleX: number; scaleY: number } {
+  const targetWidth = options.metrics.surfaceWidth * options.sizeRatio;
+  const targetHeight = options.metrics.surfaceHeight * options.sizeRatio;
+  const scaleX = clampInitialFrameScale(targetWidth / Math.max(options.baseRect.width, 1));
+  const scaleY = clampInitialFrameScale(targetHeight / Math.max(options.baseRect.height, 1));
+  const targetCenterX = options.viewportCenter?.x ?? options.metrics.surfaceWidth / 2;
+  const targetCenterY = options.viewportCenter?.y ?? options.metrics.surfaceHeight / 2;
+  const targetLeft = targetCenterX - (options.baseRect.width * scaleX) / 2;
+  const targetTop = targetCenterY - (options.baseRect.height * scaleY) / 2;
+
+  return {
+    offsetX: targetLeft - options.baseRect.left,
+    offsetY: targetTop - options.baseRect.top,
+    scaleX,
+    scaleY,
+  };
+}
+
+function clampInitialFrameScale(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.min(4, Math.max(0.1, Number(value.toFixed(4))));
 }
