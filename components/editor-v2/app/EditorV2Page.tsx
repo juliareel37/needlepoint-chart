@@ -34,7 +34,7 @@ export function EditorV2Page() {
   const [draftWidth, setDraftWidth] = useState("8");
   const [draftHeight, setDraftHeight] = useState("8");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
-    "stitches",
+    "inches",
   );
   const [draftWidthInches, setDraftWidthInches] = useState("1");
   const [draftHeightInches, setDraftHeightInches] = useState("1");

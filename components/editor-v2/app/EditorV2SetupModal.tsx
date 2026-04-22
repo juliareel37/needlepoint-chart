@@ -135,10 +135,6 @@ export function EditorV2SetupModal({
     heightInches: draftHeightInches,
     meshCount: draftMeshCount,
   });
-  const selectedInchSizePreset = getInchSizePreset({
-    widthInches: draftWidthInches,
-    heightInches: draftHeightInches,
-  });
   const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
   const createDisabled =
     draftSizingMode === "inches" && inchSizing.error !== null;
@@ -291,18 +287,13 @@ export function EditorV2SetupModal({
                     </p>
                     <div className={styles.inlineOptionGrid}>
                       {INCH_SIZE_PRESETS.map((preset) => {
-                        const active = selectedInchSizePreset?.label === preset.label;
-
                         return (
                           <Button
                             key={preset.label}
                             type="button"
                             variant="secondary2"
                             size="sm"
-                            // className={styles.compactPresetButton}
-                            active={active}
-                            inertWhenActive={active}
-                            aria-pressed={active}
+                            className={styles.compactPresetButton}
                             onClick={() => {
                               onDraftWidthInchesChange(String(preset.width));
                               onDraftHeightInchesChange(String(preset.height));
@@ -338,7 +329,7 @@ export function EditorV2SetupModal({
                             type="button"
                             variant="secondary2"
                             size="md"
-                            // className={styles.compactPresetButton}
+                            className={styles.compactPresetButton}
                             active={active}
                             inertWhenActive={active}
                             aria-pressed={active}
@@ -370,9 +361,6 @@ export function EditorV2SetupModal({
                           variant="ghostV2"
                           size="md"
                           className={styles.compactPresetButton}
-                          active={useCustomMeshCount}
-                          inertWhenActive={useCustomMeshCount}
-                          aria-pressed={useCustomMeshCount}
                           onClick={() => {
                             setUseCustomMeshCount(true);
                           }}
@@ -588,28 +576,6 @@ function getCellsPerInchPreset(value: string): (typeof CELLS_PER_INCH_PRESETS)[n
   }
 
   return CELLS_PER_INCH_PRESETS.find((preset) => preset === parsed) ?? null;
-}
-
-function getInchSizePreset({
-  widthInches,
-  heightInches,
-}: {
-  widthInches: string;
-  heightInches: string;
-}): (typeof INCH_SIZE_PRESETS)[number] | null {
-  const parsedWidth = parsePositiveDecimal(widthInches);
-  const parsedHeight = parsePositiveDecimal(heightInches);
-
-  if (parsedWidth === null || parsedHeight === null) {
-    return null;
-  }
-
-  return (
-    INCH_SIZE_PRESETS.find(
-      (preset) =>
-        preset.width === parsedWidth && preset.height === parsedHeight,
-    ) ?? null
-  );
 }
 
 function resolveInchSizing({
