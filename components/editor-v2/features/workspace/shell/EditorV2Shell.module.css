@@ -496,6 +496,15 @@
     transform 140ms ease;
 }
 
+:root[data-theme="dark"] .iconLibraryCard {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card-alt) 58%, var(--surface-card)),
+      color-mix(in srgb, var(--surface-card) 100%, var(--surface-card-alt))
+    );
+}
+
 .iconLibraryCard:hover,
 .iconLibraryCard:focus-visible {
   border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
