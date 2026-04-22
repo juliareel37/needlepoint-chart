@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
 import {
@@ -52,10 +53,15 @@ export function IconsPanelPage({
   view,
   viewportCenter,
 }: IconsPanelPageProps) {
+  const { themeMode } = useThemeMode();
   const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const primitivePreviewStrokeColor = useMemo(
+    () => resolvePrimitivePreviewStrokeColor(),
+    [themeMode],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +182,7 @@ export function IconsPanelPage({
               kind: icon.primitiveKind,
               width: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
-              strokeColor: "#121923",
+              strokeColor: primitivePreviewStrokeColor,
               strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
               spacingScale: getPrimitiveDefaultSpacingScale(icon.primitiveKind),
@@ -184,7 +190,7 @@ export function IconsPanelPage({
           : icon.src;
         return accumulator;
       }, {}),
-    [icons],
+    [icons, primitivePreviewStrokeColor],
   );
 
   function renderIconButton(item: ShapeIconLibraryItem) {
@@ -272,14 +278,7 @@ export function IconsPanelPage({
 
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>
-            <img
-              src="/icons/lucide/search.svg"
-              alt=""
-              aria-hidden="true"
-              width="16"
-              height="16"
-              className={styles.sidebarSearchIcon}
-            />
+            <span aria-hidden="true" className={styles.sidebarSearchIcon} />
             <FieldInput
               type="search"
               value={searchQuery}
@@ -419,4 +418,69 @@ function clampInitialFrameScale(value: number): number {
   }
 
   return Math.min(4, Math.max(0.1, Number(value.toFixed(4))));
+}
+
+function resolvePrimitivePreviewStrokeColor(): string {
+  if (typeof document === "undefined") {
+    return "#121923";
+  }
+
+  const styles = window.getComputedStyle(document.documentElement);
+  const textPrimary = styles
+    .getPropertyValue("--text-primary")
+    .trim();
+  const textSecondary = styles
+    .getPropertyValue("--text-secondary")
+    .trim();
+
+  if (textPrimary && textSecondary) {
+    const mixed = mixCssColors(textPrimary, textSecondary, 0.72);
+    if (mixed) {
+      return mixed;
+    }
+  }
+
+  return textPrimary || "#121923";
+}
+
+function mixCssColors(primary: string, secondary: string, primaryWeight: number): string | null {
+  const left = parseCssColor(primary);
+  const right = parseCssColor(secondary);
+
+  if (!left || !right) {
+    return null;
+  }
+
+  const clampedWeight = Math.min(Math.max(primaryWeight, 0), 1);
+  const mix = (leftChannel: number, rightChannel: number) =>
+    Math.round(leftChannel * clampedWeight + rightChannel * (1 - clampedWeight));
+
+  return `rgb(${mix(left.r, right.r)} ${mix(left.g, right.g)} ${mix(left.b, right.b)})`;
+}
+
+function parseCssColor(value: string): { r: number; g: number; b: number } | null {
+  const normalized = value.trim();
+
+  const hexMatch = normalized.match(/^#([0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    return {
+      r: Number.parseInt(hex.slice(0, 2), 16),
+      g: Number.parseInt(hex.slice(2, 4), 16),
+      b: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  const rgbMatch = normalized.match(
+    /^rgba?\(\s*(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*[,/]\s*[\d.]+)?\s*\)$/i,
+  );
+  if (rgbMatch) {
+    return {
+      r: Number.parseInt(rgbMatch[1] ?? "0", 10),
+      g: Number.parseInt(rgbMatch[2] ?? "0", 10),
+      b: Number.parseInt(rgbMatch[3] ?? "0", 10),
+    };
+  }
+
+  return null;
 }

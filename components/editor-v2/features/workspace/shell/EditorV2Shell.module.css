@@ -381,6 +381,7 @@
 
 .sidebarSearchField {
   position: relative;
+  color: var(--text-primary);
 }
 
 .sidebarSearchIcon {
@@ -392,6 +393,9 @@
   transform: translateY(-50%);
   opacity: 0.64;
   pointer-events: none;
+  background: currentColor center / contain no-repeat;
+  -webkit-mask: url("/icons/lucide/search.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/search.svg") center / contain no-repeat;
 }
 
 .sidebarSearchInput {
@@ -472,8 +476,16 @@
   border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 252, 0.84)),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.02), rgba(15, 23, 42, 0.08));
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card) 88%, var(--surface-card-alt)),
+      color-mix(in srgb, var(--surface-card-alt) 92%, transparent)
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--text-primary) 2%, transparent),
+      color-mix(in srgb, var(--text-primary) 8%, transparent)
+    );
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
