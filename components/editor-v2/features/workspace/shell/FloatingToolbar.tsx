@@ -218,6 +218,7 @@ export function FloatingToolbar({
   const drawAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectAnchorRef = useRef<HTMLDivElement | null>(null);
+  const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
 
   const normalizedBrushSize = Number.isFinite(brushSize)
     ? Math.min(Math.max(Math.round(brushSize), 1), 10)
@@ -340,6 +341,56 @@ export function FloatingToolbar({
       setSelectOpen(false);
     }
   }, [selectionVisible]);
+
+  useEffect(() => {
+    if (!trace) {
+      selectionTraceOpacityRestoreRef.current = null;
+      return;
+    }
+
+    const overrideActive = selectionTraceOpacityRestoreRef.current !== null;
+    const shouldTemporarilyReduceTraceOpacity =
+      selectOpen &&
+      trace.visible &&
+      trace.blendMode === "crossfade";
+
+    if (!shouldTemporarilyReduceTraceOpacity) {
+      if (!overrideActive) {
+        return;
+      }
+
+      const restoreOpacity = selectionTraceOpacityRestoreRef.current;
+      if (restoreOpacity === null) {
+        return;
+      }
+
+      dispatch(
+        createUpdateTraceCommand(
+          { opacity: restoreOpacity },
+          { history: { mode: "skip" } },
+        ),
+      );
+      selectionTraceOpacityRestoreRef.current = null;
+      return;
+    }
+
+    if (!overrideActive) {
+      if (trace.opacity < 0.7) {
+        return;
+      }
+
+      selectionTraceOpacityRestoreRef.current = trace.opacity;
+    }
+
+    if (Math.abs(trace.opacity - 0.5) > 0.0001) {
+      dispatch(
+        createUpdateTraceCommand(
+          { opacity: 0.5 },
+          { history: { mode: "skip" } },
+        ),
+      );
+    }
+  }, [dispatch, selectOpen, trace]);
 
   function openSidebarSection(section: "color" | "trace") {
     dispatch(createSetActiveSidebarSectionCommand(section));
@@ -674,23 +725,23 @@ export function FloatingToolbar({
 
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghostV2"
                 active={selectionShape === "freehand"}
                 aria-pressed={selectionShape === "freehand"}
                 onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
               >
-                <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
+                <ToolbarIcon icon="/icons/lucide/lasso.svg" />
                 <ToolbarLabel>Lasso</ToolbarLabel>
               </Button>
       
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghostV2"
                 active={selectionShape === "rect"}
                 aria-pressed={selectionShape === "rect"}
                 onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
               >
-                <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
+                <ToolbarIcon icon="/icons/lucide/selection.svg" />
                 <ToolbarLabel>Rectangle</ToolbarLabel>
               </Button>
               {/* <ToolbarButton
