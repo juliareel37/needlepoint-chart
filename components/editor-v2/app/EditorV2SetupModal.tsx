@@ -80,6 +80,7 @@ interface EditorV2SetupModalProps {
   onDraftWidthInchesChange: (value: string) => void;
   onLoadSavedDesign: (storageId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   savedDocumentsErrorMessage: string | null;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -107,6 +108,7 @@ export function EditorV2SetupModal({
   onDraftWidthInchesChange,
   onLoadSavedDesign,
   savedDocuments,
+  savedDocumentsLoading,
   savedDocumentsErrorMessage,
   selectedStorageId,
   setSelectedStorageId,
@@ -483,13 +485,26 @@ export function EditorV2SetupModal({
                 </p>
                 <SingleSelectDropdown
                   ariaLabel="Saved designs"
-                  emptyLabel="No saved designs"
+                  emptyLabel={
+                    savedDocumentsLoading ? (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <span className="loading-spinner" aria-hidden="true" />
+                        Loading saved designs...
+                      </span>
+                    ) : "No saved designs"
+                  }
                   getItemLabel={formatSavedDesignLabel}
                   getItemValue={(record) => record.storageId}
                   items={savedDocuments}
                   menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
                   onValueChange={setSelectedStorageId}
-                  placeholder="Load saved design"
+                  placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
                   value={selectedStorageId}
                   wrapperStyle={{ width: "100%" }}
                   triggerStyle={{ width: "100%" }}
@@ -499,7 +514,7 @@ export function EditorV2SetupModal({
                   <Button
                     type="button"
                     variant="primary"
-                    disabled={!selectedStorageId}
+                    disabled={savedDocumentsLoading || !selectedStorageId}
                     onClick={() => {
                       if (!selectedStorageId) {
                         return;

@@ -34,6 +34,7 @@ interface EditorSidebarProps {
   palette: PaletteColor[];
   saveButtonState: SaveButtonState;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
@@ -66,6 +67,7 @@ export function EditorSidebar({
   palette,
   saveButtonState,
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
   onLoadSelected,
@@ -178,6 +180,7 @@ export function EditorSidebar({
             onStartOver={onStartOver}
             saveButtonState={saveButtonState}
             savedDocuments={savedDocuments}
+            savedDocumentsLoading={savedDocumentsLoading}
             selectedStorageId={selectedStorageId}
             setSelectedStorageId={setSelectedStorageId}
           />

@@ -22,6 +22,7 @@ export function EditorV2Workspace({
   onCanvasReady,
   currentStorageId,
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
   onSaveDocument,
@@ -35,6 +36,7 @@ export function EditorV2Workspace({
   onCanvasReady: () => void;
   currentStorageId: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onSaveDocument: (
@@ -138,6 +140,7 @@ export function EditorV2Workspace({
         saveButtonState={saveButtonState}
         saveMessage={saveMessage}
         savedDocuments={savedDocuments}
+        savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
         setupModal={setupModal}

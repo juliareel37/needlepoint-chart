@@ -778,6 +778,12 @@
   animation: saveButtonSpin 900ms linear infinite;
 }
 
+.loadingDropdownState {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .saveButtonIcon,
 .saveButtonIcon span {
   width: 14px;

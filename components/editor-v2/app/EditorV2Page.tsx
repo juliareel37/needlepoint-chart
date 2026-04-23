@@ -40,6 +40,7 @@ export function EditorV2Page() {
   const [draftHeightInches, setDraftHeightInches] = useState("8");
   const [draftMeshCount, setDraftMeshCount] = useState("18");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
+  const [savedDocumentsLoading, setSavedDocumentsLoading] = useState(false);
   const [designConfig, setDesignConfig] =
     useState<EditorV2DesignConfig>(INITIAL_DESIGN_CONFIG);
   const [currentStorageId, setCurrentStorageId] = useState("");
@@ -62,6 +63,7 @@ export function EditorV2Page() {
     }
 
     if (!isSignedIn) {
+      setSavedDocumentsLoading(false);
       setSavedDocuments([]);
       setSavedDocumentsErrorMessage(null);
       setSetupErrorMessage(null);
@@ -70,15 +72,18 @@ export function EditorV2Page() {
       return;
     }
 
+    setSavedDocumentsLoading(true);
     void listSavedEditorV2Documents()
       .then((documents) => {
         if (!cancelled) {
+          setSavedDocumentsLoading(false);
           setSavedDocuments(documents);
           setSavedDocumentsErrorMessage(null);
         }
       })
       .catch((error) => {
         if (!cancelled) {
+          setSavedDocumentsLoading(false);
           setSavedDocuments([]);
           setSavedDocumentsErrorMessage(
             getErrorMessage(error, "Try signing in again or refreshing the page."),
@@ -141,6 +146,7 @@ export function EditorV2Page() {
         }}
         currentStorageId={currentStorageId}
         savedDocuments={savedDocuments}
+        savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
         onSaveDocument={async (document, storageId) => {
@@ -209,6 +215,7 @@ export function EditorV2Page() {
                 });
             }}
             savedDocuments={savedDocuments}
+            savedDocumentsLoading={savedDocumentsLoading}
             savedDocumentsErrorMessage={savedDocumentsErrorMessage}
             selectedStorageId={selectedStorageId}
             setSelectedStorageId={setSelectedStorageId}

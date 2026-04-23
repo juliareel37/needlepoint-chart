@@ -66,6 +66,7 @@ export function EditorV2Shell({
   saveButtonState,
   saveMessage,
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
   setupModal,
@@ -82,6 +83,7 @@ export function EditorV2Shell({
   saveButtonState: SaveButtonState;
   saveMessage: string;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   setupModal: ReactNode;
@@ -572,6 +574,7 @@ export function EditorV2Shell({
                 showRuler={showRuler}
                 saveButtonState={saveButtonState}
                 savedDocuments={savedDocuments}
+                savedDocumentsLoading={savedDocumentsLoading}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
                 onLoadSelected={() => {

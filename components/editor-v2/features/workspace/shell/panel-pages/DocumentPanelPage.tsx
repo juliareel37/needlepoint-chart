@@ -25,6 +25,7 @@ interface DocumentPanelPageProps {
   onStartOver: () => void;
   saveButtonState: SaveButtonState;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
@@ -39,6 +40,7 @@ export function DocumentPanelPage({
   onStartOver,
   saveButtonState,
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
@@ -159,13 +161,14 @@ export function DocumentPanelPage({
 
               <SavedDesignSingleSelect
                 savedDocuments={savedDocuments}
+                savedDocumentsLoading={savedDocumentsLoading}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
               />
               <Button
                 type="button"
                 variant="primary"
-                disabled={!selectedStorageId}
+                disabled={savedDocumentsLoading || !selectedStorageId}
                 onClick={onLoadSelected}
                 className={styles.loadButton}
               >
@@ -223,10 +226,12 @@ function SaveButtonLabel({
 
 function SavedDesignSingleSelect({
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
 }: {
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }) {
@@ -254,14 +259,21 @@ function SavedDesignSingleSelect({
       </p>
       <SingleSelectDropdown
         ariaLabel="Saved designs"
-        emptyLabel="No saved designs"
+        emptyLabel={
+          savedDocumentsLoading ? (
+            <span className={styles.loadingDropdownState}>
+              <span className={styles.saveButtonSpinner} aria-hidden="true" />
+              Loading saved designs...
+            </span>
+          ) : "No saved designs"
+        }
         getItemLabel={formatSavedDesignLabel}
         getItemValue={(record) => record.storageId}
         items={savedDocuments}
         menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
         menuPortalToViewport={useTopDropdownPlacement}
         onValueChange={setSelectedStorageId}
-        placeholder="Load saved design"
+        placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
         value={selectedStorageId}
       />
           </div>
