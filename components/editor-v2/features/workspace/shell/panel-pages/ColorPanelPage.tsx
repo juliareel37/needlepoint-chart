@@ -59,6 +59,7 @@ export function ColorPanelPage({
                 "background": "var(--surface-card)"}}>
               <ColorLibrary
                 activeColorId={activeColorId}
+                className={styles.sidebarColorLibrary}
                 colors={palette}
                 featuredColorIds={usedColors.map((entry) => entry.colorId)}
                 onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}

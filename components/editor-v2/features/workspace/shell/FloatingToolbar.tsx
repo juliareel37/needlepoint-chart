@@ -522,7 +522,7 @@ export function FloatingToolbar({
             active={colorLibraryOpen}
             aria-pressed={colorLibraryOpen}
             aria-label="Open color library"
-            data-tooltip="Open color library"
+            // data-tooltip="Open color library"
             title="Open color library"
             className={styles.libraryPopoverSwatchTrigger}
             onClick={() => {

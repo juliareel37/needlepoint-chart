@@ -694,9 +694,13 @@
   padding-top: 4px;
 }
 
-.toolbarColorLibrary {
+.toolbarColorLibrary.toolbarColorLibrary {
   width: min(260px, calc(100vw - 40px));
   height: min(250px, calc(100vh - 180px));
+}
+
+.sidebarColorLibrary.sidebarColorLibrary {
+  width: 100%;
 }
 
 .libraryPopoverSwatchTrigger {
