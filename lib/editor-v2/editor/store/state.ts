@@ -132,6 +132,8 @@ export type ActiveTool =
 export interface ActiveToolState {
   tool: ActiveTool;
   brushSize: number;
+  paintBrushSize: number;
+  eraseBrushSize: number;
   colorId: string | null;
 }
 
@@ -406,6 +408,8 @@ export function createInitialEditorStoreState(): EditorStoreState {
       activeTool: {
         tool: "pan",
         brushSize: 1,
+        paintBrushSize: 1,
+        eraseBrushSize: 1,
         colorId: null,
       },
       eyedropperReturnTool: null,

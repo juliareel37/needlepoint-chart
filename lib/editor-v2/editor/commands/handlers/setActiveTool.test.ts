@@ -174,4 +174,51 @@ describe("setActiveToolCommandHandler", () => {
     expect(store.getState().session.activeTool.tool).toBe("erase");
     expect(store.getState().session.selection).toEqual(initial.session.selection);
   });
+
+  it("remembers separate brush sizes for paint and erase", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "paint";
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-1",
+      kind: "tool.setActive",
+      payload: { tool: "paint", brushSize: 6 },
+      meta: { source: "toolbar", timestamp: 1, history: { mode: "skip" } },
+    });
+
+    store.dispatch({
+      id: "cmd-2",
+      kind: "tool.setActive",
+      payload: { tool: "erase" },
+      meta: { source: "toolbar", timestamp: 2, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.brushSize).toBe(1);
+    expect(store.getState().session.activeTool.paintBrushSize).toBe(6);
+    expect(store.getState().session.activeTool.eraseBrushSize).toBe(1);
+
+    store.dispatch({
+      id: "cmd-3",
+      kind: "tool.setActive",
+      payload: { tool: "erase", brushSize: 2 },
+      meta: { source: "toolbar", timestamp: 3, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.brushSize).toBe(2);
+    expect(store.getState().session.activeTool.eraseBrushSize).toBe(2);
+
+    store.dispatch({
+      id: "cmd-4",
+      kind: "tool.setActive",
+      payload: { tool: "paint" },
+      meta: { source: "toolbar", timestamp: 4, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.tool).toBe("paint");
+    expect(store.getState().session.activeTool.brushSize).toBe(6);
+    expect(store.getState().session.activeTool.paintBrushSize).toBe(6);
+    expect(store.getState().session.activeTool.eraseBrushSize).toBe(2);
+  });
 });

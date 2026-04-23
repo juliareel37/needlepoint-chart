@@ -240,19 +240,23 @@ export function FloatingToolbar({
   trace,
 }: FloatingToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
-  const [drawOpen, setDrawOpen] = useState(false);
+  const [drawPopoverTool, setDrawPopoverTool] = useState<"paint" | "erase" | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
+  const [brushSizeSliderValue, setBrushSizeSliderValue] = useState(1);
+  const [brushSizeSliderDragging, setBrushSizeSliderDragging] = useState(false);
   const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
-  const drawAnchorRef = useRef<HTMLDivElement | null>(null);
+  const paintAnchorRef = useRef<HTMLDivElement | null>(null);
+  const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
+  const drawOpen = drawPopoverTool !== null;
 
   const normalizedBrushSize = Number.isFinite(brushSize)
     ? Math.min(Math.max(Math.round(brushSize), 1), 10)
@@ -260,7 +264,7 @@ export function FloatingToolbar({
   const brushFootprintSize = normalizedBrushSize;
   const brushFootprintLabel = `${brushFootprintSize}x${brushFootprintSize}`;
   const brushSizeTooltipPercent =
-    ((normalizedBrushSize - 1) / 9) * 100;
+    ((brushSizeSliderValue - 1) / 9) * 100;
   const normalizedImageOpacity = trace
     ? Math.min(Math.max(trace.opacity, 0), 1)
     : 0;
@@ -271,6 +275,14 @@ export function FloatingToolbar({
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const selectionLockedToolsDisabled = Boolean(selectionCommitted && selectionBounds);
+
+  useEffect(() => {
+    if (brushSizeSliderDragging) {
+      return;
+    }
+
+    setBrushSizeSliderValue(normalizedBrushSize);
+  }, [brushSizeSliderDragging, normalizedBrushSize]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -351,6 +363,7 @@ export function FloatingToolbar({
     }
 
     function handlePointerUp() {
+      setBrushSizeSliderDragging(false);
       setBrushSizeTooltipVisible(false);
     }
 
@@ -437,6 +450,12 @@ export function FloatingToolbar({
     setImageOpacityTooltipVisible(false);
   }
 
+  function closeDrawMenu(): void {
+    setDrawPopoverTool(null);
+    setBrushSizeSliderDragging(false);
+    setBrushSizeTooltipVisible(false);
+  }
+
   function closeColorLibrary(): void {
     setColorLibraryOpen(false);
   }
@@ -459,7 +478,7 @@ export function FloatingToolbar({
 
   function handleSelectionButtonClick() {
     closeColorLibrary();
-    setDrawOpen(false);
+    closeDrawMenu();
     closeImageMenu();
 
     if (activeTool === "lasso") {
@@ -507,7 +526,7 @@ export function FloatingToolbar({
             className={styles.libraryPopoverSwatchTrigger}
             onClick={() => {
               setColorLibraryOpen((current) => !current);
-              setDrawOpen(false);
+              closeDrawMenu();
               closeImageMenu();
             }}
           >
@@ -558,7 +577,7 @@ export function FloatingToolbar({
             title="Pan"
             onClick={() => {
               closeColorLibrary();
-              setDrawOpen(false);
+              closeDrawMenu();
               closeImageMenu();
               dispatch(createSetToolCommand("pan"));
             }}
@@ -576,6 +595,7 @@ export function FloatingToolbar({
           disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
+            closeDrawMenu();
             closeImageMenu();
             dispatch(createSetToolCommand("eyedropper"));
           }}
@@ -591,6 +611,7 @@ export function FloatingToolbar({
           title="Fill"
           onClick={() => {
             closeColorLibrary();
+            closeDrawMenu();
             closeImageMenu();
             dispatch(
               createSetToolCommand(
@@ -606,70 +627,58 @@ export function FloatingToolbar({
           <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
         </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={activeTool === "paint"}
-          aria-pressed={activeTool === "paint"}
-          aria-label="Brush"
-          title="Brush"
-          disabled={selectionLockedToolsDisabled}
-          onClick={() => {
-            closeColorLibrary();
-            closeImageMenu();
-            dispatch(createSetToolCommand(activeTool === "paint" ? "pan" : "paint"));
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
-          active={activeTool === "erase"}
-          aria-pressed={activeTool === "erase"}
-          aria-label="Erase"
-          title="Erase"
-          onClick={() => {
-            closeColorLibrary();
-            closeImageMenu();
-            dispatch(
-              createSetToolCommand(
-                activeTool === "erase"
-                  ? selectionVisible
-                    ? "lasso"
-                    : "pan"
-                  : "erase",
-              ),
-            );
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-        </ToolbarButton>
-
-        <ToolbarAnchor ref={drawAnchorRef}>
+        <ToolbarAnchor ref={paintAnchorRef}>
           <ToolbarButton
             type="button"
-            active={drawOpen}
-            aria-pressed={drawOpen}
-            aria-label="Brush size"
-            title="Brush size"
+            active={activeTool === "paint"}
+            aria-pressed={activeTool === "paint"}
+            aria-label="Brush"
+            title="Brush"
             disabled={selectionLockedToolsDisabled}
             onClick={() => {
-              setDrawOpen((current) => !current);
               closeColorLibrary();
               closeImageMenu();
+              if (activeTool === "paint") {
+                setDrawPopoverTool((current) => (current === "paint" ? null : "paint"));
+                return;
+              }
+
+              dispatch(createSetToolCommand("paint"));
+              setDrawPopoverTool("paint");
             }}
           >
-            <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+            <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
+          </ToolbarButton>
+        </ToolbarAnchor>
+
+        <ToolbarAnchor ref={eraseAnchorRef}>
+          <ToolbarButton
+            type="button"
+            active={activeTool === "erase"}
+            aria-pressed={activeTool === "erase"}
+            aria-label="Erase"
+            title="Erase"
+            disabled={selectionLockedToolsDisabled}
+            onClick={() => {
+              closeColorLibrary();
+              closeImageMenu();
+              if (activeTool === "erase") {
+                setDrawPopoverTool((current) => (current === "erase" ? null : "erase"));
+                return;
+              }
+
+              dispatch(createSetToolCommand("erase"));
+              setDrawPopoverTool("erase");
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/eraser.svg" />
           </ToolbarButton>
 
           {drawOpen ? (
             <FloatingToolbarPortalPopover
               align="center"
-              anchorRef={drawAnchorRef}
-              onRequestClose={() => {
-                setDrawOpen(false);
-                setBrushSizeTooltipVisible(false);
-              }}
+              anchorRef={drawPopoverTool === "erase" ? eraseAnchorRef : paintAnchorRef}
+              onRequestClose={closeDrawMenu}
               role="dialog"
               aria-label="Draw size"
             >
@@ -683,7 +692,7 @@ export function FloatingToolbar({
                     padding: "6px 8px",
                   }}
                 >
-                  <ToolbarLabel>Size</ToolbarLabel>
+                  <ToolbarIcon icon="/icons/other/stroke-width.svg" />
                   <div
                     className={styles.traceSliderTooltipWrap}
                     style={{ width: 80, flexShrink: 0 }}
@@ -705,20 +714,31 @@ export function FloatingToolbar({
                     <Slider
                       min={1}
                       max={10}
-                      step={1}
-                      value={normalizedBrushSize}
+                      step={0.05}
+                      value={brushSizeSliderValue}
                       aria-label="Brush size"
                       aria-valuetext={`${brushFootprintLabel} paint area`}
-                      onPointerDown={() => setBrushSizeTooltipVisible(true)}
-                      onBlur={() => setBrushSizeTooltipVisible(false)}
+                      onPointerDown={() => {
+                        setBrushSizeSliderDragging(true);
+                        setBrushSizeTooltipVisible(true);
+                      }}
+                      onBlur={() => {
+                        setBrushSizeSliderDragging(false);
+                        setBrushSizeTooltipVisible(false);
+                      }}
                       onChange={(e) => {
-                        const newSize = Number(e.currentTarget.value);
+                        const nextSliderValue = Number(e.currentTarget.value);
+                        setBrushSizeSliderValue(nextSliderValue);
+                        const newSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
+
+                        if (newSize === normalizedBrushSize) {
+                          return;
+                        }
+
                         dispatch(
                           createSetBrushSizeCommand(
                             newSize,
-                            activeTool === "paint" || activeTool === "erase"
-                              ? activeTool
-                              : "pan",
+                            drawPopoverTool ?? "paint",
                           ),
                         );
                       }}
@@ -742,7 +762,7 @@ export function FloatingToolbar({
           disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
-            setDrawOpen(false);
+            closeDrawMenu();
             closeImageMenu();
             dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
           }}
@@ -896,7 +916,7 @@ export function FloatingToolbar({
               } else {
                 setImageOpen(true);
               }
-              setDrawOpen(false);
+              closeDrawMenu();
             }}
           >
             <ToolbarIcon icon="/icons/lucide/image.svg" />
