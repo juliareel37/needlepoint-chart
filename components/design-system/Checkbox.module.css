@@ -14,10 +14,6 @@
   transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
-.checkbox:hover {
-  border-color: var(--brand-primary);
-}
-
 .checkbox:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
@@ -54,4 +50,10 @@
 
 .label {
   min-width: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .checkbox:hover {
+    border-color: var(--brand-primary);
+  }
 }

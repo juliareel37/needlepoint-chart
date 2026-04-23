@@ -50,12 +50,6 @@
   white-space: nowrap;
 }
 
-.item:hover {
-  background: var(--sidebar-button-hover-bg);
-  /* color: var(--toolbar-button-hover-text); */
-  filter: none !important;
-}
-
 .item[data-active="true"] {
   background: var(--sidebar-button-active-bg);
   color: var(--sidebar-button-active-text);
@@ -67,6 +61,13 @@
   outline-offset: 2px;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .item:hover {
+    background: var(--sidebar-button-hover-bg);
+    /* color: var(--toolbar-button-hover-text); */
+    filter: none !important;
+  }
+}
 
 @media (max-width: 768px) {
   .group {

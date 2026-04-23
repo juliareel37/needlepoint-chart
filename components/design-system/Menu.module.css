@@ -42,8 +42,7 @@
   box-shadow: var(--ui-shadow-sm);
 }
 
-.triggerSelection[data-open="true"],
-.triggerSelection:hover {
+.triggerSelection[data-open="true"] {
   border-color: var(--brand-primary);
 }
 
@@ -59,7 +58,6 @@
   color: var(--text-primary);
 }
 
-.triggerGhost:hover,
 .triggerGhost[data-open="true"] {
   background: var(--button-ghost2-hover);
 }
@@ -94,10 +92,6 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 
-.item:hover {
-  background: var(--menu-item-hover-bg);
-}
-
 .item:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 1px;
@@ -126,6 +120,20 @@
 
 .itemLabel {
   min-width: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .triggerSelection:hover {
+    border-color: var(--brand-primary);
+  }
+
+  .triggerGhost:hover {
+    background: var(--button-ghost2-hover);
+  }
+
+  .item:hover {
+    background: var(--menu-item-hover-bg);
+  }
 }
 
 .divider {

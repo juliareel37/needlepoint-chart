@@ -30,21 +30,11 @@
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
-.item:hover:not(:disabled) {
-  background: var(--button-ghost-hover);
-  color: var(--text-primary);
-}
-
 .item[data-active="true"] {
   background: var(--button-ghost-active);
   color: var(--text-primary);
   cursor: default;
   box-shadow: var(--ui-shadow-md);
-}
-
-.item[data-active="true"]:hover:not(:disabled) {
-  background: var(--button-ghost-active);
-  color: var(--text-primary);
 }
 
 .item:focus-visible {
@@ -64,3 +54,15 @@
     grid-auto-columns: unset;
   }
 } */
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover:not(:disabled) {
+    background: var(--button-ghost-hover);
+    color: var(--text-primary);
+  }
+
+  .item[data-active="true"]:hover:not(:disabled) {
+    background: var(--button-ghost-active);
+    color: var(--text-primary);
+  }
+}

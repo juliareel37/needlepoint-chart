@@ -143,7 +143,6 @@
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
-.sidebarPanelBackButton:hover,
 .sidebarPanelBackButton:focus-visible {
   background: var(--button-ghost-hover);
   color: var(--text-primary);
@@ -249,7 +248,6 @@
     box-shadow 140ms ease;
 }
 
-.editableTitleTrigger:hover,
 .editableTitleTrigger:focus-visible {
   border-color: transparent;
   background: transparent;
@@ -276,7 +274,6 @@
   height: 12px;
 }
 
-.editableTitleTrigger:hover .titleHoverIcon,
 .editableTitleTrigger:focus-visible .titleHoverIcon {
   opacity: 0.65;
 }
@@ -312,7 +309,6 @@
     transform 140ms ease;
 }
 
-.sidebarDetailCard:hover,
 .sidebarDetailCard:focus-visible {
   border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
   background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
@@ -511,7 +507,6 @@
     );
 }
 
-.iconLibraryCard:hover,
 .iconLibraryCard:focus-visible {
   /* border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle)); */
   background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
@@ -547,7 +542,6 @@
   font-weight: 600;
 }
 
-.iconLibraryMoreButton:hover,
 .iconLibraryMoreButton:focus-visible {
   background: color-mix(in srgb, var(--brand-100) 42%, transparent);
   color: var(--brand-700);
@@ -661,7 +655,6 @@
   transform: scale(1);
 }
 
-.libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch,
 .libraryPopoverSwatchTrigger:focus-visible .libraryPopoverSwatch,
 .libraryPopoverSwatchTrigger[data-active="true"] .libraryPopoverSwatch {
   transform: scale(1.14);
@@ -689,7 +682,6 @@
 }
 
 .iconPlacementSwatchButton[data-selected="true"] .libraryPopoverSwatch,
-.iconPlacementSwatchButton:hover .libraryPopoverSwatch,
 .iconPlacementSwatchButton:focus-visible .libraryPopoverSwatch {
   transform: scale(1.14);
   border-color: var(--swatch-border-strong);
@@ -1112,12 +1104,6 @@
   outline-offset: 2px;
 }
 
-.usedColorsItem[data-selectable="true"][data-selected="false"]:hover:not(:disabled) {
-  background: var(--button-secondary-hover);
-  border-color: transparent;
-  box-shadow: none;
-}
-
 .usedColorsItem[data-selected="true"] {
   background: var(--button-secondary-active);
   color: var(--button-secondary-active-text);
@@ -1214,7 +1200,6 @@
   background: currentColor;
 }
 
-.usedColorSwatchButton:hover:not(:disabled) .swatch,
 .usedColorSwatchButton:focus-visible .swatch {
   transform: scale(1.14);
   border-color: var(--swatch-border-strong);
@@ -1223,7 +1208,6 @@
     0 0 0 3px var(--swatch-ring-outer);
 }
 
-.usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon,
 .usedColorSwatchButton:focus-visible .usedColorSwatchSwapIcon,
 .usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSwapIcon {
   opacity: 1;
@@ -1398,7 +1382,6 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 
-.headerSaveStatusDismiss:hover,
 .headerSaveStatusDismiss:focus-visible {
   background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
   color: var(--text-primary);
@@ -1534,19 +1517,16 @@
   background: currentColor;
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbFrame,
 .traceAttachmentButton:focus-visible .traceAttachmentThumbFrame {
   transform: scale(1.08);
   border-color: rgba(15, 23, 42, 0.18);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumb,
 .traceAttachmentButton:focus-visible .traceAttachmentThumb {
   filter: brightness(0.68);
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbOverlay,
 .traceAttachmentButton:focus-visible .traceAttachmentThumbOverlay {
   opacity: 1;
   transform: scale(1);
@@ -1593,7 +1573,6 @@
   color: color-mix(in srgb, var(--text-primary) 58%, transparent);
 }
 
-.traceAttachmentRemoveButton:hover:not(:disabled),
 .traceAttachmentRemoveButton:focus-visible {
   color: var(--text-primary);
 }
@@ -1684,6 +1663,102 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebarPanelBackButton:hover {
+    background: var(--button-ghost-hover);
+    color: var(--text-primary);
+  }
+
+  .editableTitleTrigger:hover {
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-primary);
+    box-shadow: none;
+  }
+
+  .editableTitleTrigger:hover .titleHoverIcon {
+    opacity: 0.65;
+  }
+
+  .sidebarDetailCard:hover {
+    border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
+    background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+    box-shadow: var(--ui-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .iconLibraryCard:hover {
+    /* border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle)); */
+    background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+    box-shadow: var(--ui-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .iconLibraryMoreButton:hover {
+    background: color-mix(in srgb, var(--brand-100) 42%, transparent);
+    color: var(--brand-700);
+  }
+
+  .libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .iconPlacementSwatchButton:hover .libraryPopoverSwatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .usedColorsItem[data-selectable="true"][data-selected="false"]:hover:not(:disabled) {
+    background: var(--button-secondary-hover);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .usedColorSwatchButton:hover:not(:disabled) .swatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .headerSaveStatusDismiss:hover {
+    background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
+    color: var(--text-primary);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbFrame {
+    transform: scale(1.08);
+    border-color: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumb {
+    filter: brightness(0.68);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbOverlay {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .traceAttachmentRemoveButton:hover:not(:disabled) {
+    color: var(--text-primary);
+  }
 }
 
 @media (max-width: 1080px) {

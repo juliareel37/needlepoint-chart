@@ -15,10 +15,7 @@
   padding: 4px !important;
 }
 
-.colorButton:hover:not(:disabled),
-.colorButton[data-active="true"],
-.colorButton[data-active="true"]:hover:not(:disabled),
-.colorButton[data-inert-active="true"]:hover:not(:disabled) {
+.colorButton[data-active="true"] {
   background: transparent;
 }
 
@@ -38,7 +35,6 @@
   transform: scale(1);
 }
 
-.colorButton:hover:not(:disabled) .swatch,
 .colorButton:focus-visible .swatch {
   transform: scale(1.14);
   border-color: var(--swatch-border-strong);
@@ -51,4 +47,20 @@
   font-size: 14px;
   line-height: 1;
   font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .colorButton:hover:not(:disabled),
+  .colorButton[data-active="true"]:hover:not(:disabled),
+  .colorButton[data-inert-active="true"]:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .colorButton:hover:not(:disabled) .swatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
 }
