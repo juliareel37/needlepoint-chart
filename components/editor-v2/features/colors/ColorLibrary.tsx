@@ -21,6 +21,7 @@ interface ColorLibraryProps {
   activeColorId: string | null;
   className?: string;
   colors: PaletteColor[];
+  featuredColorIds?: string[];
   onColorSelect: (colorId: string) => void;
 }
 
@@ -28,44 +29,64 @@ export function ColorLibrary({
   activeColorId,
   className,
   colors,
+  featuredColorIds = [],
   onColorSelect,
 }: ColorLibraryProps) {
-  return (
-    <div className={[styles.library, className].filter(Boolean).join(" ")}>
-      {colors.map((color) => {
-        const selected = color.id === activeColorId;
+  const featuredColorIdSet = new Set(featuredColorIds);
+  const featuredColors = colors.filter((color) => featuredColorIdSet.has(color.id));
 
-        return (
-          <Button
-            key={color.id}
-            type="button"
-            onClick={() => onColorSelect(color.id)}
-            variant="ghostV2"
-            size="sm"
-            active={selected}
-            inertWhenActive
-            className={styles.colorButton}
-            aria-label={`${color.name} (${color.code})`}
-            aria-pressed={selected}
-          >
+  function renderColorButton(color: PaletteColor) {
+    const selected = color.id === activeColorId;
+
+    return (
+      <Button
+        key={color.id}
+        type="button"
+        onClick={() => onColorSelect(color.id)}
+        variant="ghostV2"
+        size="sm"
+        active={selected}
+        inertWhenActive
+        className={styles.colorButton}
+        aria-label={`${color.name} (${color.code})`}
+        aria-pressed={selected}
+      >
+        <span
+          aria-hidden="true"
+          className={styles.swatch}
+          style={{ backgroundColor: color.hex }}
+        >
+          {selected ? (
             <span
               aria-hidden="true"
-              className={styles.swatch}
-              style={{ backgroundColor: color.hex }}
+              className={styles.swatchCheck}
+              style={{ color: getSwatchCheckColor(color.hex) }}
             >
-              {selected ? (
-                <span
-                  aria-hidden="true"
-                  className={styles.swatchCheck}
-                  style={{ color: getSwatchCheckColor(color.hex) }}
-                >
-                  ✓
-                </span>
-              ) : null}
+              ✓
             </span>
-          </Button>
-        );
-      })}
+          ) : null}
+        </span>
+      </Button>
+    );
+  }
+
+  return (
+    <div className={[styles.library, className].filter(Boolean).join(" ")}>
+      {featuredColors.length > 0 ? (
+        <section className={styles.section} aria-label="Design colors">
+          <div className={styles.sectionContent}>
+            <h3 className={styles.sectionHeader}>Design Colors</h3>
+            <div className={styles.sectionGrid}>{featuredColors.map(renderColorButton)}</div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={styles.section} aria-label="All colors">
+        <div className={styles.sectionContent}>
+          <h3 className={styles.sectionHeader}>All Colors</h3>
+          <div className={styles.sectionGrid}>{colors.map(renderColorButton)}</div>
+        </div>
+      </section>
     </div>
   );
 }

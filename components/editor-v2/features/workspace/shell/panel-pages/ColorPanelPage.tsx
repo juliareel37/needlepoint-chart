@@ -60,6 +60,7 @@ export function ColorPanelPage({
               <ColorLibrary
                 activeColorId={activeColorId}
                 colors={palette}
+                featuredColorIds={usedColors.map((entry) => entry.colorId)}
                 onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
               />
               </div>

@@ -116,6 +116,7 @@ export function EditorV2Shell({
   const activeColorId = getActiveColorId(state);
   const activeColor = getActiveColor(state);
   const palette = getPaletteColors(state);
+  const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const canUndo = getCanUndo(state);
   const canRedo = getCanRedo(state);
   const hasPaintedCells = state.document.grid.cells.some((cell) => cell !== null);
@@ -835,6 +836,7 @@ export function EditorV2Shell({
                     activeColorHex={activeColor?.hex ?? null}
                     activeColorId={activeColorId}
                     dispatch={dispatch}
+                    featuredColorIds={featuredColorIds}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={textPlacement}
@@ -844,6 +846,7 @@ export function EditorV2Shell({
                     activeColorHex={activeColor?.hex ?? null}
                     activeColorId={activeColorId}
                     dispatch={dispatch}
+                    featuredColorIds={featuredColorIds}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={iconPlacement}
@@ -858,6 +861,7 @@ export function EditorV2Shell({
                     canUndo={canUndo}
                     dispatch={dispatch}
                     hasPaintedCells={hasPaintedCells}
+                    featuredColorIds={featuredColorIds}
                     palette={palette}
                     selectionBounds={selectionBounds}
                     selectionCommitted={selectionCommitted}

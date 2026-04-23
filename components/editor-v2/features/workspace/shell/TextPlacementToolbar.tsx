@@ -134,6 +134,7 @@ interface TextPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
   dispatch: EditorStore["dispatch"];
+  featuredColorIds: string[];
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: TextPlacementSession;
@@ -143,6 +144,7 @@ export function TextPlacementToolbar({
   activeColorHex,
   activeColorId,
   dispatch,
+  featuredColorIds,
   gridMetrics,
   palette,
   placement,
@@ -230,6 +232,7 @@ export function TextPlacementToolbar({
                 activeColorId={activeColorId}
                 className={styles.toolbarColorLibrary}
                 colors={palette}
+                featuredColorIds={featuredColorIds}
                 onColorSelect={(colorId) => {
                   dispatch(createSetActiveColorCommand(colorId));
                   setColorLibraryOpen(false);

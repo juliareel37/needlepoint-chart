@@ -204,6 +204,7 @@ export function UsedColorsSummary({
     useState<UsedColorsSuccessNotification | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
+  const featuredColorIds = usedColors.map((entry) => entry.colorId);
 
   useEffect(() => {
     setSelectedColorIds((current) =>
@@ -515,6 +516,7 @@ export function UsedColorsSummary({
                           activeColorId={entry.colorId}
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
+                          featuredColorIds={featuredColorIds}
                           onColorSelect={(colorId) => {
                             if (colorId !== entry.colorId) {
                               onSwapColor(entry.colorId, colorId);
@@ -641,6 +643,7 @@ export function UsedColorsSummary({
                                 activeColorId={mergeTargetColorId}
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
+                                featuredColorIds={featuredColorIds}
                                 onColorSelect={(colorId) => {
                                   setMergeTargetColorId(colorId);
                                   setMergePickerOpen(false);

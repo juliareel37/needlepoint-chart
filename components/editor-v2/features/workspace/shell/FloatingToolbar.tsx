@@ -184,6 +184,7 @@ interface FloatingToolbarProps {
   dispatch: EditorStore["dispatch"];
   hasPaintedCells: boolean;
   palette: PaletteColor[];
+  featuredColorIds: string[];
   selectionBounds: GridRect | null;
   selectionCommitted: boolean;
   selectionShape: SelectionState["shape"];
@@ -200,6 +201,7 @@ export function FloatingToolbar({
   dispatch,
   hasPaintedCells,
   palette,
+  featuredColorIds,
   selectionBounds,
   selectionCommitted,
   selectionShape,
@@ -496,6 +498,7 @@ export function FloatingToolbar({
                 activeColorId={activeColorId}
                 className={styles.toolbarColorLibrary}
                 colors={palette}
+                featuredColorIds={featuredColorIds}
                 onColorSelect={(colorId) => {
                   dispatch(
                     selectionVisible

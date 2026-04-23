@@ -129,6 +129,7 @@ interface IconColorSlotSwatchPopoverProps {
   activeColorId: string | null;
   assignedColorHex: string;
   colors: PaletteColor[];
+  featuredColorIds: string[];
   isOpen: boolean;
   isSelected: boolean;
   label: string;
@@ -140,6 +141,7 @@ function IconColorSlotSwatchPopover({
   activeColorId,
   assignedColorHex,
   colors,
+  featuredColorIds,
   isOpen,
   isSelected,
   label,
@@ -179,6 +181,7 @@ function IconColorSlotSwatchPopover({
             activeColorId={activeColorId}
             className={styles.toolbarColorLibrary}
             colors={colors}
+            featuredColorIds={featuredColorIds}
             onColorSelect={(colorId) => {
               onColorSelect(colorId);
               onOpenChange(false);
@@ -194,6 +197,7 @@ interface IconPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
   dispatch: EditorStore["dispatch"];
+  featuredColorIds: string[];
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: IconPlacementSession;
@@ -203,6 +207,7 @@ export function IconPlacementToolbar({
   activeColorHex,
   activeColorId,
   dispatch,
+  featuredColorIds,
   gridMetrics,
   palette,
   placement,
@@ -372,6 +377,7 @@ export function IconPlacementToolbar({
                     activeColorId={activeColorId}
                     className={styles.toolbarColorLibrary}
                     colors={palette}
+                    featuredColorIds={featuredColorIds}
                     onColorSelect={(colorId) => {
                       dispatch(createSetActiveColorCommand(colorId));
                       setColorLibraryOpen(false);
@@ -639,6 +645,7 @@ export function IconPlacementToolbar({
                     activeColorId={slot.paletteColorId ?? null}
                     assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
                     colors={palette}
+                    featuredColorIds={featuredColorIds}
                     isOpen={openColorSlotId === slot.id}
                     isSelected={isSelected}
                     label={`Edit icon color ${slot.sourceHex}`}
