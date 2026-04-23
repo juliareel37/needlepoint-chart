@@ -11,7 +11,7 @@ import {
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
-import type { ExportButtonState, SaveButtonState } from "../../../../app/EditorV2Workspace";
+import type { SaveButtonState } from "../../../../app/EditorV2Workspace";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
 
@@ -19,10 +19,8 @@ interface DocumentPanelPageProps {
   dispatch: EditorStore["dispatch"];
   document: EditorDocumentState;
   documentTitle: string;
-  exportButtonState: ExportButtonState;
   hasSavedDesignAccess: boolean;
   onLoadSelected: () => void;
-  onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   saveButtonState: SaveButtonState;
@@ -36,10 +34,8 @@ export function DocumentPanelPage({
   dispatch,
   document,
   documentTitle,
-  exportButtonState,
   hasSavedDesignAccess,
   onLoadSelected,
-  onExportDocument,
   onSaveDocument,
   onStartOver,
   saveButtonState,
@@ -141,15 +137,6 @@ export function DocumentPanelPage({
             </Button>
             <Button
               type="button"
-              variant="secondary"
-              className={styles.pendingActionButton}
-              disabled={exportButtonState === "exporting"}
-              onClick={() => onExportDocument(document)}
-            >
-              <ExportButtonLabel state={exportButtonState} />
-            </Button>
-            <Button
-              type="button"
               variant="primary"
               className={styles.pendingActionButton}
               disabled={saveButtonState === "saving"}
@@ -206,28 +193,6 @@ export function DocumentPanelPage({
         </div>
       </div>
     </section>
-  );
-}
-
-function ExportButtonLabel({
-  state,
-}: {
-  state: ExportButtonState;
-}) {
-  if (state === "exporting") {
-    return (
-      <>
-        <span className={styles.saveButtonSpinner} aria-hidden="true" />
-        Exporting
-      </>
-    );
-  }
-
-  return (
-    <>
-      <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
-      Export PDF
-    </>
   );
 }
 

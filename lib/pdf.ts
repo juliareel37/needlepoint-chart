@@ -4,6 +4,7 @@ import { idx } from "./grid";
 import { symbolForColorId } from "./symbols";
 
 const AXIS_STEP = 5;
+const STITCHES_PER_SKEIN = 1600;
 const MAJOR_LINE_RGB = { r: 64, g: 64, b: 64 };
 const MINOR_LINE_RGB = { r: 170, g: 170, b: 170 };
 const RULER_TEXT_RGB = { r: 31, g: 41, b: 55 };
@@ -213,7 +214,10 @@ function drawLegendTablePages(opts: {
     pdf.text(fitText(color.name || "", colName - 12), nameX, y + rowH / 2, { align: "left", baseline: "middle" });
     pdf.text(color.code ? String(color.code) : "", numberX, y + rowH / 2, { align: "center", baseline: "middle" });
     pdf.text(String(count), stitchesX, y + rowH / 2, { align: "center", baseline: "middle" });
-    pdf.text("TBD", skeinsX, y + rowH / 2, { align: "center", baseline: "middle" });
+    pdf.text(String(estimateSkeinCount(count)), skeinsX, y + rowH / 2, {
+      align: "center",
+      baseline: "middle",
+    });
 
     y += rowH;
   }
@@ -403,4 +407,8 @@ function contrastForRgb(r: number, g: number, b: number) {
 
 function sanitizeFilename(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function estimateSkeinCount(stitchCount: number) {
+  return Math.max(1, Math.ceil(stitchCount / STITCHES_PER_SKEIN));
 }

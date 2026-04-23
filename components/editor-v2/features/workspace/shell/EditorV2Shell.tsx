@@ -16,6 +16,7 @@ import {
 } from "@/lib/editor-v2/editor/selectors";
 import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import {
+  Button,
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
@@ -141,6 +142,7 @@ export function EditorV2Shell({
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
+  const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
   const gridMetrics = useMemo(
@@ -448,6 +450,7 @@ export function EditorV2Shell({
   [saveMessage]);
 
   useEffect(() => {
+    setHeaderActionsTarget(window.document.getElementById("app-header-actions"));
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
     setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
   }, []);
@@ -513,6 +516,31 @@ export function EditorV2Shell({
               </ToolbarButton>
             </div>,
             headerHistoryTarget,
+          )
+        : null}
+      {!setupModalOpen && headerActionsTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className={styles.headerExportButton}
+              disabled={exportButtonState === "exporting"}
+              onClick={() => onExportDocument(document)}
+            >
+              {exportButtonState === "exporting" ? (
+                <>
+                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                  Exporting
+                </>
+              ) : (
+                <>
+                  <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
+                  Export
+                </>
+              )}
+            </Button>,
+            headerActionsTarget,
           )
         : null}
       {mounted && saveNotificationVisible
@@ -609,7 +637,6 @@ export function EditorV2Shell({
                 colorsById={colorsById}
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
-                exportButtonState={exportButtonState}
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
@@ -626,7 +653,6 @@ export function EditorV2Shell({
                   void onLoadDocument(selectedRecord);
                 }}
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
-                onExportDocument={onExportDocument}
                 onSaveDocument={onSaveDocument}
                 onStartOver={onStartOver}
                 previewMode={previewMode}

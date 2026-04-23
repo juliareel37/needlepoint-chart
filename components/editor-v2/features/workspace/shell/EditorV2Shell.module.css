@@ -720,6 +720,10 @@
   flex: 0 0 auto;
 }
 
+.headerExportButton {
+  white-space: nowrap;
+}
+
 .headerHistoryButton {
   min-width: 32px;
   min-height: 28px;
