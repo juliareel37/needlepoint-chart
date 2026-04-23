@@ -1251,39 +1251,44 @@
 }
 
 .headerSaveStatus {
+  --header-save-status-badge-bg: color-mix(in srgb, var(--neutral-900) 10%, transparent);
+  --header-save-status-icon-color: var(--neutral-700);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   max-width: min(260px, 32vw);
-  padding: 6px 10px;
-  border: 1px solid var(--ui-border-reg);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
-  color: var(--text-secondary);
-  /* box-shadow: var(--ui-shadow-sm); */
+  padding: 4px 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 10px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-shadow-md);
 }
 
 .headerSaveStatus[data-state="ready"] {
-  color: var(--text-secondary);
+  --header-save-status-badge-bg: var(--brand-200);
+  --header-save-status-icon-color: var(--brand-600);
+}
+
+.headerSaveStatus[data-state="info"] {
+  --header-save-status-badge-bg: var(--status-warning-base);
+  --header-save-status-icon-color: var(--neutral-900);
 }
 
 .headerSaveStatus[data-state="alert"] {
-  color: color-mix(in srgb, var(--text-primary) 76%, #8a5a00);
-  background: color-mix(in srgb, var(--surface-card) 32%, #fff3cd);
-  border-color: color-mix(in srgb, #e0b84f 46%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--status-warning-base);
+  --header-save-status-icon-color: var(--neutral-900);
 }
 
 .headerSaveStatus[data-state="saved"] {
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--surface-card) 70%, var(--brand-100));
-  border-color: color-mix(in srgb, var(--brand-300) 48%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--brand-200);
+  --header-save-status-icon-color: var(--brand-600);
 }
 
 .headerSaveStatus[data-state="error"] {
-  color: color-mix(in srgb, var(--text-primary) 82%, #8a1c1c);
-  background: color-mix(in srgb, var(--surface-card) 62%, #fff1f1);
-  border-color: color-mix(in srgb, #d85c5c 40%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--status-destructive-base);
+  --header-save-status-icon-color: var(--neutral-0);
 }
 
 .headerSaveStatusIconWrap {
@@ -1291,13 +1296,17 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: inherit;
+  width: 22px;
+  height: 22px;
+  color: var(--header-save-status-icon-color);
+  border-radius: 999px;
+  background: var(--header-save-status-badge-bg);
 }
 
 .headerSaveStatusIcon,
 .headerSaveStatusIcon span {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .headerSaveStatusMessage {
@@ -1306,6 +1315,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .loadButton {

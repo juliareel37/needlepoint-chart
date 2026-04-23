@@ -711,7 +711,7 @@ function HeaderSaveStatus({
   hasUnsavedChanges: boolean;
   saveMessage: string;
 }) {
-  if (!saveMessage && hasSavedDesignAccess && !hasUnsavedChanges) {
+  if (!saveMessage && !hasUnsavedChanges) {
     return null;
   }
 
@@ -719,13 +719,17 @@ function HeaderSaveStatus({
   const message =
     !hasSavedDesignAccess && !saveMessage
       ? "Sign in to save changes"
-      : saveMessage || "Not saved yet";
+      : saveMessage || "Changes not saved";
   const icon =
-    state === "alert"
-      ? "/icons/lucide/alert.svg"
-      : state === "error"
+    state === "info"
+      ? "/icons/lucide/info.svg"
+      : state === "alert"
         ? "/icons/lucide/alert.svg"
-        : "/icons/lucide/save.svg";
+        : state === "ready"
+          ? "/icons/lucide/alert.svg"
+        : state === "error"
+          ? "/icons/lucide/alert.svg"
+          : "/icons/lucide/save.svg";
 
   return (
     <div
@@ -750,7 +754,7 @@ function getSaveStatusState(
   hasSavedDesignAccess: boolean,
 ): "ready" | "saved" | "error" | "info" | "alert" {
   if (!hasSavedDesignAccess && !saveMessage) {
-    return "alert";
+    return "info";
   }
 
   if (!saveMessage) {
