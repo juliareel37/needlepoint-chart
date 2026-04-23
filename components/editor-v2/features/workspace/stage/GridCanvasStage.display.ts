@@ -6,6 +6,7 @@ import type {
   TraceDocument,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
+import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import type {
@@ -263,6 +264,7 @@ function drawHighlightedCells(
     return;
   }
 
+  const highlightLiftAlpha = getHighlightLiftAlpha(color.hex);
   const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
   const stitchCanvas = threadView
     ? getThreadStitchCanvas(
@@ -295,7 +297,44 @@ function drawHighlightedCells(
         renderedCellSize,
       );
     }
+
+    if (highlightLiftAlpha > 0) {
+      context.fillStyle = `rgba(255, 255, 255, ${highlightLiftAlpha})`;
+      context.fillRect(cellX, cellY, renderedCellSize, renderedCellSize);
+    }
   }
+}
+
+function getHighlightLiftAlpha(hex: string): number {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return 0.22;
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  if (luminance <= 0.14) {
+    return 0.68;
+  }
+
+  if (luminance <= 0.24) {
+    return 0.56;
+  }
+
+  if (luminance <= 0.36) {
+    return 0.42;
+  }
+
+  if (luminance <= 0.5) {
+    return 0.28;
+  }
+
+  if (luminance <= 0.68) {
+    return 0.14;
+  }
+
+  return 0.04;
 }
 
 function snapRectToDevicePixels(

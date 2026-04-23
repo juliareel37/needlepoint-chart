@@ -1845,8 +1845,7 @@
     transform: scale(1);
   }
 
-  .usedColorsItem:hover .usedColorsHighlightButton,
-  .usedColorsItem:focus-within .usedColorsHighlightButton {
+  .usedColorsItem:hover .usedColorsHighlightButton {
     opacity: 1;
     transform: scale(1);
   }
