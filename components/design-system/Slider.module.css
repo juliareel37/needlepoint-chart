@@ -1,4 +1,6 @@
 .wrap {
+  --slider-thumb-size: 12px;
+  --slider-hit-area-size: 12px;
   position: relative;
   width: 100%;
   max-width: 220px;
@@ -32,8 +34,8 @@
 .thumb {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
   border-radius: 999px;
   background: var(--brand-primary);
   transform: translate(-50%, -50%);
@@ -41,14 +43,23 @@
 
 .input {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: var(--slider-hit-area-size);
   margin: 0;
   opacity: 0;
   cursor: pointer;
+  transform: translateY(-50%);
 }
 
 .input:focus-visible {
   outline: none;
+}
+
+@media (pointer: coarse) {
+  .wrap {
+    --slider-thumb-size: 16px;
+    --slider-hit-area-size: 28px;
+  }
 }
