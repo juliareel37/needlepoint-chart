@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   GridPoint,
@@ -102,6 +102,7 @@ export function GridCanvasStage({
     pointerId: number;
     selectionPoint: SelectionPoint;
   } | null>(null);
+  const touchFallbackResetTimeoutRef = useRef<number | null>(null);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
 
   useEffect(() => {
@@ -344,11 +345,29 @@ export function GridCanvasStage({
     viewport.zoom,
   ]);
 
-  const clearPendingTouchPaint = () => {
+  const clearPendingTouchPaint = useCallback(() => {
     pendingTouchPaintRef.current = null;
-  };
+  }, []);
 
-  const activatePendingTouchPaint = () => {
+  const clearTouchFallbackResetTimeout = useCallback(() => {
+    if (touchFallbackResetTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(touchFallbackResetTimeoutRef.current);
+    touchFallbackResetTimeoutRef.current = null;
+  }, []);
+
+  const clearTouchInteractionState = useCallback(() => {
+    clearTouchFallbackResetTimeout();
+    activeTouchPointerIdsRef.current.clear();
+    touchGestureLockedRef.current = false;
+    activePointerIdRef.current = null;
+    clearPendingTouchPaint();
+    cancelPaintStroke();
+  }, [cancelPaintStroke, clearPendingTouchPaint, clearTouchFallbackResetTimeout]);
+
+  const activatePendingTouchPaint = useCallback(() => {
     const pendingTouchPaint = pendingTouchPaintRef.current;
 
     if (!pendingTouchPaint) {
@@ -358,7 +377,79 @@ export function GridCanvasStage({
     handlePointerDown(pendingTouchPaint.point, pendingTouchPaint.selectionPoint);
     pendingTouchPaintRef.current = null;
     return true;
-  };
+  }, [handlePointerDown]);
+
+  useEffect(() => {
+    function handleWindowPointerEnd(event: PointerEvent) {
+      if (event.pointerType !== "touch") {
+        return;
+      }
+
+      clearTouchFallbackResetTimeout();
+      activeTouchPointerIdsRef.current.delete(event.pointerId);
+
+      if (pendingTouchPaintRef.current?.pointerId === event.pointerId) {
+        if (!touchGestureLockedRef.current) {
+          activatePendingTouchPaint();
+        } else {
+          clearPendingTouchPaint();
+        }
+      }
+
+      if (activePointerIdRef.current === event.pointerId) {
+        activePointerIdRef.current = null;
+        cancelPaintStroke();
+      }
+
+      if (activeTouchPointerIdsRef.current.size === 0) {
+        touchGestureLockedRef.current = false;
+      }
+    }
+
+    function handleWindowTouchEnd(event: TouchEvent) {
+      if (event.touches.length > 0) {
+        return;
+      }
+
+      clearTouchFallbackResetTimeout();
+      touchFallbackResetTimeoutRef.current = window.setTimeout(() => {
+        clearTouchInteractionState();
+      }, 0);
+    }
+
+    function handleWindowBlur() {
+      clearTouchInteractionState();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState !== "visible") {
+        clearTouchInteractionState();
+      }
+    }
+
+    window.addEventListener("pointerup", handleWindowPointerEnd);
+    window.addEventListener("pointercancel", handleWindowPointerEnd);
+    window.addEventListener("touchend", handleWindowTouchEnd);
+    window.addEventListener("touchcancel", handleWindowTouchEnd);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pointerup", handleWindowPointerEnd);
+      window.removeEventListener("pointercancel", handleWindowPointerEnd);
+      window.removeEventListener("touchend", handleWindowTouchEnd);
+      window.removeEventListener("touchcancel", handleWindowTouchEnd);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearTouchFallbackResetTimeout();
+    };
+  }, [
+    activatePendingTouchPaint,
+    cancelPaintStroke,
+    clearPendingTouchPaint,
+    clearTouchFallbackResetTimeout,
+    clearTouchInteractionState,
+  ]);
 
   return (
     <>
