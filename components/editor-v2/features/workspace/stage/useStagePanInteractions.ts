@@ -447,6 +447,23 @@ export function useStagePanInteractions({
 
   function handleStagePointerDownCapture(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType === "mouse") {
+      const isMiddleMouseButton = event.button === 1;
+      const isSpaceDrag =
+        event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
+      const isPanToolDrag = event.button === 0 && panToolActive;
+
+      if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      panDragRef.current = {
+        lastX: event.clientX,
+        lastY: event.clientY,
+      };
+      setIsPanDragging(true);
       return;
     }
 

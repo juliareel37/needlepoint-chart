@@ -1021,17 +1021,16 @@
   flex-direction: column;
   gap: 6px;
   margin: 0;
-  padding: 0;
   list-style: none;
   /* height: 350px; */
-  overflow: scroll;
-  /* padding:8px; */
+  /* overflow: scroll; */
+  padding:8px;
   background:var(--surface-card);
   border-radius:12px;
 }
 
 .usedColorsList[data-selection-overlay="true"] {
-  padding-bottom: 120px;
+  /* padding-bottom: 120px; */
 }
 
 .usedColorsItem {
@@ -1068,14 +1067,14 @@
 }
 
 .usedColorsItem[data-selectable="true"][data-selected="false"]:hover:not(:disabled) {
-  background: var(--button-ghost2-hover);
+  background: var(--button-secondary-hover);
   border-color: transparent;
   box-shadow: none;
 }
 
 .usedColorsItem[data-selected="true"] {
-  background: var(--button-ghost2-active);
-  color: var(--button-ghost2-active-text);
+  background: var(--button-secondary-active);
+  color: var(--button-secondary-active-text);
   border-color: transparent;
   box-shadow: none;
 }
