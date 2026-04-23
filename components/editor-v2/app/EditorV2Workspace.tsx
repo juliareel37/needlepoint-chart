@@ -86,7 +86,7 @@ export function EditorV2Workspace({
             exportPatternPdfFromDocument(document);
             setSuccessNotification({
               title: "Export complete",
-              description: "Your PDF pattern is ready and has been added to downloads.",
+              description: "Your PDF pattern is ready.",
             });
             setErrorNotification(null);
           } catch (error) {

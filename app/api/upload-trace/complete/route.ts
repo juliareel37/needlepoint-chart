@@ -1,5 +1,4 @@
 import { put } from "@vercel/blob";
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { isBlobUrl } from "@/lib/blob";
 import {
@@ -21,11 +20,6 @@ interface CompleteTraceUploadRequest {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const body = (await req.json().catch(() => null)) as CompleteTraceUploadRequest | null;
   const originalUrl =
     body && typeof body.originalUrl === "string" ? body.originalUrl : null;

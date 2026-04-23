@@ -334,7 +334,7 @@ function NotificationLibrary() {
             {
               tone: "success" as const,
               title: "Export complete",
-              description: "Your PDF pattern is ready and has been added to downloads.",
+              description: "Your PDF pattern is ready.",
             },
             {
               tone: "warning" as const,

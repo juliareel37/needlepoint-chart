@@ -1,5 +1,4 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
   MAX_UPLOAD_BYTES,
@@ -21,11 +20,6 @@ export async function POST(req: Request) {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname) => {
-        const { userId } = await auth();
-        if (!userId) {
-          throw new Error("Unauthorized");
-        }
-
         if (!isValidTraceUploadPath(pathname)) {
           throw new Error("Invalid upload path");
         }
@@ -54,7 +48,6 @@ export async function POST(req: Request) {
       error instanceof Error && error.message.trim()
         ? error.message
         : "Trace upload token generation failed";
-    const status = message === "Unauthorized" ? 401 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

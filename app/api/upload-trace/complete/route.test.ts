@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  authMock,
   putMock,
   sharpFactoryMock,
   metadataMock,
@@ -30,7 +29,6 @@ const {
   }));
 
   return {
-    authMock: vi.fn(),
     putMock: vi.fn(),
     sharpFactoryMock,
     metadataMock,
@@ -39,10 +37,6 @@ const {
     toBufferMock,
   };
 });
-
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
-}));
 
 vi.mock("@vercel/blob", () => ({
   put: putMock,
@@ -77,25 +71,7 @@ describe("POST /api/upload-trace/complete", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("rejects unauthenticated requests", async () => {
-    authMock.mockResolvedValue({ userId: null });
-
-    const req = new Request("http://localhost/api/upload-trace/complete", {
-      method: "POST",
-      body: JSON.stringify({}),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const res = await POST(req);
-
-    expect(res.status).toBe(401);
-    expect(putMock).not.toHaveBeenCalled();
-  });
-
   it("rejects invalid blob urls", async () => {
-    authMock.mockResolvedValue({ userId: "user_123" });
-
     const req = new Request("http://localhost/api/upload-trace/complete", {
       method: "POST",
       body: JSON.stringify({
@@ -112,8 +88,7 @@ describe("POST /api/upload-trace/complete", () => {
     expect(putMock).not.toHaveBeenCalled();
   });
 
-  it("preprocesses the uploaded original and returns trace asset metadata", async () => {
-    authMock.mockResolvedValue({ userId: "user_123" });
+  it("allows anonymous upload completion preprocessing", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(Buffer.from("image-bytes"), {
         status: 200,
@@ -128,8 +103,7 @@ describe("POST /api/upload-trace/complete", () => {
       body: JSON.stringify({
         fileName: "trace.png",
         mimeType: "image/png",
-        originalPathname:
-          "editor-v2-trace-1-123e4567-e89b-12d3-a456-426614174000/original.png",
+        originalPathname: "editor-v2-trace-1-123e4567-e89b-12d3-a456-426614174000/original.png",
         originalUrl: "https://store.blob.vercel-storage.com/original.png",
       }),
       headers: {
@@ -137,9 +111,9 @@ describe("POST /api/upload-trace/complete", () => {
       },
     });
     const res = await POST(req);
-    const body = await res.json();
 
     expect(res.status).toBe(200);
+    const body = await res.json();
     expect(fetch).toHaveBeenCalledWith("https://store.blob.vercel-storage.com/original.png", {
       cache: "no-store",
     });
