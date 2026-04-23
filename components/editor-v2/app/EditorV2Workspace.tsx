@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
+import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
 import { useEditorStoreDispatch } from "./editorStoreContext";
 import type {
   SaveEditorV2DocumentResult,
@@ -11,7 +12,12 @@ import { EditorV2Shell } from "../features/workspace/shell/EditorV2Shell";
 import { createApplyProjectServerStateCommand } from "../features/workspace/workspaceCommands";
 
 export type SaveButtonState = "idle" | "saving" | "saved";
+export type ExportButtonState = "idle" | "exporting";
 export interface EditorV2ErrorNotification {
+  title: string;
+  description?: string;
+}
+export interface EditorV2SuccessNotification {
   title: string;
   description?: string;
 }
@@ -51,8 +57,12 @@ export function EditorV2Workspace({
   const dispatch = useEditorStoreDispatch();
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [saveButtonState, setSaveButtonState] = useState<SaveButtonState>("idle");
+  const [exportButtonState, setExportButtonState] =
+    useState<ExportButtonState>("idle");
   const [errorNotification, setErrorNotification] =
     useState<EditorV2ErrorNotification | null>(null);
+  const [successNotification, setSuccessNotification] =
+    useState<EditorV2SuccessNotification | null>(null);
   const saveButtonResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -69,6 +79,26 @@ export function EditorV2Workspace({
         canvasLoading={canvasLoading}
         hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={onCanvasReady}
+        onExportDocument={async (document) => {
+          setExportButtonState("exporting");
+
+          try {
+            exportPatternPdfFromDocument(document);
+            setSuccessNotification({
+              title: "Export complete",
+              description: "Your PDF pattern is ready and has been added to downloads.",
+            });
+            setErrorNotification(null);
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't export PDF",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+          } finally {
+            setExportButtonState("idle");
+          }
+        }}
         onSaveDocument={async (nextDocument) => {
           if (saveButtonResetTimeoutRef.current !== null) {
             window.clearTimeout(saveButtonResetTimeoutRef.current);
@@ -137,12 +167,15 @@ export function EditorV2Workspace({
         onStartOver={onStartOver}
         errorNotification={errorNotification}
         onDismissErrorNotification={() => setErrorNotification(null)}
+        exportButtonState={exportButtonState}
         saveButtonState={saveButtonState}
         saveMessage={saveMessage}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
+        successNotification={successNotification}
+        onDismissSuccessNotification={() => setSuccessNotification(null)}
         setupModal={setupModal}
         setupModalOpen={setupModalOpen}
       />

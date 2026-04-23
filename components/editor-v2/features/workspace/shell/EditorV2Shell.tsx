@@ -25,7 +25,9 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
+  ExportButtonState,
   EditorV2ErrorNotification,
+  EditorV2SuccessNotification,
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
@@ -57,9 +59,12 @@ const ERROR_NOTIFICATION_DURATION_MS = 8000;
 export function EditorV2Shell({
   canvasLoading,
   errorNotification,
+  exportButtonState,
   hasSavedDesignAccess,
   onCanvasReady,
   onDismissErrorNotification,
+  onDismissSuccessNotification,
+  onExportDocument,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
@@ -71,12 +76,16 @@ export function EditorV2Shell({
   setSelectedStorageId,
   setupModal,
   setupModalOpen,
+  successNotification,
 }: {
   canvasLoading: boolean;
   errorNotification: EditorV2ErrorNotification | null;
+  exportButtonState: ExportButtonState;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   onDismissErrorNotification: () => void;
+  onDismissSuccessNotification: () => void;
+  onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
@@ -88,6 +97,7 @@ export function EditorV2Shell({
   setSelectedStorageId: (value: string) => void;
   setupModal: ReactNode;
   setupModalOpen: boolean;
+  successNotification: EditorV2SuccessNotification | null;
 }) {
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
@@ -454,6 +464,18 @@ export function EditorV2Shell({
     return () => window.clearTimeout(timeoutId);
   }, [errorNotification, onDismissErrorNotification]);
 
+  useEffect(() => {
+    if (!successNotification) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      onDismissSuccessNotification();
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [onDismissSuccessNotification, successNotification]);
+
   return (
     <main className={styles.shell}>
       {!setupModalOpen && headerAutosaveTarget
@@ -503,6 +525,24 @@ export function EditorV2Shell({
                   tone="success"
                   title="Design saved"
                   onDismiss={() => setSaveNotificationVisible(false)}
+                />
+              </div>
+            </div>,
+            window.document.body,
+          )
+        : null}
+      {mounted && successNotification
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div
+                className={styles.editorNotificationStack}
+                data-auto-dismiss="true"
+              >
+                <Notification
+                  tone="success"
+                  title={successNotification.title}
+                  description={successNotification.description}
+                  onDismiss={onDismissSuccessNotification}
                 />
               </div>
             </div>,
@@ -569,6 +609,7 @@ export function EditorV2Shell({
                 colorsById={colorsById}
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
+                exportButtonState={exportButtonState}
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
@@ -585,6 +626,7 @@ export function EditorV2Shell({
                   void onLoadDocument(selectedRecord);
                 }}
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
+                onExportDocument={onExportDocument}
                 onSaveDocument={onSaveDocument}
                 onStartOver={onStartOver}
                 previewMode={previewMode}

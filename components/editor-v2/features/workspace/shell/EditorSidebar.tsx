@@ -15,7 +15,7 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
-import type { SaveButtonState } from "../../../app/EditorV2Workspace";
+import type { ExportButtonState, SaveButtonState } from "../../../app/EditorV2Workspace";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -30,6 +30,7 @@ interface EditorSidebarProps {
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   documentTitle: string;
+  exportButtonState: ExportButtonState;
   hasSavedDesignAccess: boolean;
   palette: PaletteColor[];
   saveButtonState: SaveButtonState;
@@ -39,6 +40,7 @@ interface EditorSidebarProps {
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
   onClose: () => void;
+  onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   previewMode: boolean;
@@ -63,6 +65,7 @@ export function EditorSidebar({
   activeColorId,
   colorsById,
   documentTitle,
+  exportButtonState,
   hasSavedDesignAccess,
   palette,
   saveButtonState,
@@ -72,6 +75,7 @@ export function EditorSidebar({
   setSelectedStorageId,
   onLoadSelected,
   onClose,
+  onExportDocument,
   onSaveDocument,
   onStartOver,
   previewMode,
@@ -174,8 +178,10 @@ export function EditorSidebar({
             dispatch={dispatch}
             document={document}
             documentTitle={documentTitle}
+            exportButtonState={exportButtonState}
             hasSavedDesignAccess={hasSavedDesignAccess}
             onLoadSelected={onLoadSelected}
+            onExportDocument={onExportDocument}
             onSaveDocument={onSaveDocument}
             onStartOver={onStartOver}
             saveButtonState={saveButtonState}
