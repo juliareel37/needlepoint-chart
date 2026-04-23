@@ -51,9 +51,11 @@ interface EditorSidebarProps {
   usedColors: Array<{ colorId: string; count: number }>;
   document: EditorDocumentState;
   gridMetrics: GridWorldMetrics;
+  highlightedColorId: string | null;
   dispatch: EditorStore["dispatch"];
   textPlacement: TextPlacementSession | null;
   iconPlacement: IconPlacementSession | null;
+  onHighlightColorChange: (colorId: string | null) => void;
   textViewportCenter: WorldPoint | null;
 }
 
@@ -84,9 +86,11 @@ export function EditorSidebar({
   usedColors,
   document,
   gridMetrics,
+  highlightedColorId,
   dispatch,
   textPlacement,
   iconPlacement,
+  onHighlightColorChange,
   textViewportCenter,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
@@ -192,7 +196,9 @@ export function EditorSidebar({
             activeColorId={activeColorId}
             colorsById={colorsById}
             dispatch={dispatch}
+            highlightedColorId={highlightedColorId}
             onViewChange={setColorPanelView}
+            onHighlightColorChange={onHighlightColorChange}
             palette={palette}
             usedColors={usedColors}
             view={colorPanelView}

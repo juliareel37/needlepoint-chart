@@ -16,6 +16,7 @@ import {
   drawGridOverlay,
   drawSymbolsOverlay,
 } from "./overlays/GridCanvasStage.overlays";
+import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 export function configureDisplayCanvas(
   canvas: HTMLCanvasElement,
@@ -61,12 +62,14 @@ export function renderDisplayCanvas(options: {
   frameOrigin: { x: number; y: number };
   gridOverlayStep: number;
   gridWidth: number;
+  highlightedColorId?: string | null;
   metrics: GridWorldMetrics;
   paintOpacity: number;
   showGridlines: boolean;
   showSymbols: boolean;
   stageSize: { width: number; height: number };
   symbolAssignments: Record<string, string>;
+  threadView: boolean;
   viewport: ViewportState;
 }) {
   const {
@@ -81,12 +84,14 @@ export function renderDisplayCanvas(options: {
     frameOrigin,
     gridOverlayStep,
     gridWidth,
+    highlightedColorId = null,
     metrics,
     paintOpacity,
     showGridlines,
     showSymbols,
     stageSize,
     symbolAssignments,
+    threadView,
     viewport,
   } = options;
   const width = Math.max(stageSize.width, 1);
@@ -195,7 +200,102 @@ export function renderDisplayCanvas(options: {
     context.restore();
   }
 
+  if (highlightedColorId) {
+    context.save();
+    context.fillStyle = "rgba(6, 10, 16, 0.84)";
+    context.fillRect(drawX, drawY, drawWidth, drawHeight);
+    drawHighlightedCells(context, {
+      cells,
+      colorsById,
+      drawX,
+      drawY,
+      gridWidth,
+      highlightedColorId,
+      renderedCellSize: metrics.cellSize * viewport.zoom,
+      threadView,
+    });
+
+    if (showSymbols && !deferPaintUntilTraceReady) {
+      drawSymbolsOverlay(context, {
+        cells,
+        cellSize: metrics.cellSize,
+        colorsById,
+        drawX,
+        drawY,
+        gridWidth,
+        symbolAssignments,
+        zoom: viewport.zoom,
+        onlyColorId: highlightedColorId,
+      });
+    }
+    context.restore();
+  }
+
   context.restore();
+}
+
+function drawHighlightedCells(
+  context: CanvasRenderingContext2D,
+  options: {
+    cells: GridCellValue[];
+    colorsById: Record<string, PaletteColor>;
+    drawX: number;
+    drawY: number;
+    gridWidth: number;
+    highlightedColorId: string;
+    renderedCellSize: number;
+    threadView: boolean;
+  },
+) {
+  const {
+    cells,
+    colorsById,
+    drawX,
+    drawY,
+    gridWidth,
+    highlightedColorId,
+    renderedCellSize,
+    threadView,
+  } = options;
+  const color = colorsById[highlightedColorId];
+
+  if (!color || renderedCellSize <= 0) {
+    return;
+  }
+
+  const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
+  const stitchCanvas = threadView
+    ? getThreadStitchCanvas(
+        color.hex,
+        Math.max(1, Math.round(renderedCellSize)),
+        stitchCanvasCache,
+        1,
+      )
+    : null;
+
+  for (let index = 0; index < cells.length; index += 1) {
+    if (cells[index] !== highlightedColorId) {
+      continue;
+    }
+
+    const x = index % gridWidth;
+    const y = Math.floor(index / gridWidth);
+    const cellX = drawX + x * renderedCellSize;
+    const cellY = drawY + y * renderedCellSize;
+
+    context.fillStyle = color.hex;
+    context.fillRect(cellX, cellY, renderedCellSize, renderedCellSize);
+
+    if (threadView && stitchCanvas) {
+      context.drawImage(
+        stitchCanvas,
+        cellX,
+        cellY,
+        renderedCellSize,
+        renderedCellSize,
+      );
+    }
+  }
 }
 
 function snapRectToDevicePixels(

@@ -147,6 +147,7 @@ export function EditorV2Shell({
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
+  const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
@@ -806,6 +807,8 @@ export function EditorV2Shell({
                 usedColors={usedColors}
                 document={document}
                 dispatch={dispatch}
+                highlightedColorId={highlightedColorId}
+                onHighlightColorChange={setHighlightedColorId}
                 showGridlines={showGridlines}
                 showSymbols={showSymbols}
                 textViewportCenter={textViewportCenter}
@@ -893,6 +896,7 @@ export function EditorV2Shell({
                 brushSize={brushSize}
                 colorsById={colorsById}
                 dispatch={dispatch}
+                highlightedColorId={highlightedColorId}
                 onSurfaceReady={onCanvasReady}
                 previewMode={previewMode}
                 showGridlines={showGridlines}

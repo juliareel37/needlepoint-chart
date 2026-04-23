@@ -25,7 +25,9 @@ interface ColorPanelPageProps {
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedColorId: string | null;
   onViewChange: (view: ColorPanelView) => void;
+  onHighlightColorChange: (colorId: string | null) => void;
   palette: PaletteColor[];
   usedColors: Array<{ colorId: string; count: number }>;
   view: ColorPanelView;
@@ -36,7 +38,9 @@ export function ColorPanelPage({
   activeColorId,
   colorsById,
   dispatch,
+  highlightedColorId,
   onViewChange,
+  onHighlightColorChange,
   palette,
   usedColors,
   view,
@@ -106,7 +110,9 @@ export function ColorPanelPage({
             <UsedColorsSummary
               usedColors={usedColors}
               colorsById={colorsById}
+              highlightedColorId={highlightedColorId}
               palette={palette}
+              onHighlightColorChange={onHighlightColorChange}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }

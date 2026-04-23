@@ -33,6 +33,7 @@ interface GridWorldSurfaceProps {
   brushSize: number;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedColorId: string | null;
   onSurfaceReady?: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -48,6 +49,7 @@ export function GridWorldSurface({
   brushSize,
   colorsById,
   dispatch,
+  highlightedColorId,
   onSurfaceReady,
   previewMode,
   showGridlines,
@@ -536,6 +538,7 @@ export function GridWorldSurface({
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}
+              highlightedColorId={highlightedColorId}
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
                 trace && loadedTraceAsset?.previewUrl === trace.previewUrl

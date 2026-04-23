@@ -199,14 +199,18 @@ function UsedColorsPortalPopover({
 export function UsedColorsSummary({
   usedColors,
   colorsById,
+  highlightedColorId,
   palette,
+  onHighlightColorChange,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
 }: {
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
+  highlightedColorId: string | null;
   palette: PaletteColor[];
+  onHighlightColorChange: (colorId: string | null) => void;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -224,12 +228,34 @@ export function UsedColorsSummary({
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
+  const isSelecting = toolMode !== "idle";
 
   useEffect(() => {
     setSelectedColorIds((current) =>
       current.filter((colorId) => usedColors.some((entry) => entry.colorId === colorId)),
     );
   }, [usedColors]);
+
+  useEffect(() => {
+    if (highlightedColorId && !usedColors.some((entry) => entry.colorId === highlightedColorId)) {
+      onHighlightColorChange(null);
+    }
+  }, [highlightedColorId, onHighlightColorChange, usedColors]);
+
+  useEffect(() => {
+    if (!isSelecting) {
+      return;
+    }
+
+    onHighlightColorChange(null);
+  }, [isSelecting, onHighlightColorChange]);
+
+  useEffect(
+    () => () => {
+      onHighlightColorChange(null);
+    },
+    [onHighlightColorChange],
+  );
 
   useEffect(() => {
     if (!swapSourceColorId) {
@@ -270,7 +296,6 @@ export function UsedColorsSummary({
       usedColors.find((entry) => !selectedColorIdSet.has(entry.colorId))?.colorId ?? null,
     [selectedColorIdSet, usedColors],
   );
-  const isSelecting = toolMode !== "idle";
   const canDelete =
     selectedColorIds.length > 0 &&
     selectedColorIds.some((colorId) =>
@@ -567,6 +592,32 @@ export function UsedColorsSummary({
                     <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
                     <span className={styles.usedColorsItemCount}>×{entry.count}</span>
                   </button>
+
+                  {!isSelecting ? (
+                    <button
+                      type="button"
+                      className={styles.usedColorsHighlightButton}
+                      aria-label={
+                        highlightedColorId === entry.colorId
+                          ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                          : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                      }
+                      aria-pressed={highlightedColorId === entry.colorId}
+                      title={
+                        highlightedColorId === entry.colorId
+                          ? "Stop highlight"
+                          : "Highlight on canvas"
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onHighlightColorChange(
+                          highlightedColorId === entry.colorId ? null : entry.colorId,
+                        );
+                      }}
+                    >
+                      <ButtonIcon icon="/icons/lucide/search.svg" />
+                    </button>
+                  ) : null}
                 </div>
               </li>
             ))}
