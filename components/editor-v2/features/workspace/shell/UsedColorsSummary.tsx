@@ -284,9 +284,8 @@ export function UsedColorsSummary({
     [selectedColorIdSet, usedColors],
   );
   const defaultMergeTargetColorId = useMemo(
-    () =>
-      usedColors.find((entry) => !selectedColorIdSet.has(entry.colorId))?.colorId ?? null,
-    [selectedColorIdSet, usedColors],
+    () => selectedUsedColors[0]?.colorId ?? null,
+    [selectedUsedColors],
   );
   const canDelete =
     selectedColorIds.length > 0 &&
@@ -333,6 +332,21 @@ export function UsedColorsSummary({
     deleteSelectionCount === 1
       ? `${deleteStitchCount} canvas cell${deleteStitchCount === 1 ? "" : "s"} will be replaced with the closest remaining color in the design palette.`
       : `${deleteStitchCount} canvas cells will be replaced with the most similar remaining color in the design palette.`;
+
+  useEffect(() => {
+    if (actionMode !== "merge") {
+      return;
+    }
+
+    if (
+      mergeTargetColorId &&
+      selectedColorIds.some((colorId) => colorId === mergeTargetColorId)
+    ) {
+      return;
+    }
+
+    setMergeTargetColorId(defaultMergeTargetColorId);
+  }, [actionMode, defaultMergeTargetColorId, mergeTargetColorId, selectedColorIds]);
 
   const exitToolMode = () => {
     setToolMode("idle");
