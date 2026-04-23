@@ -413,7 +413,7 @@ export function EditorV2SetupModal({
                 {inchSizing.error ? (
                   <Notification
                     tone="destructive"
-                    title="Check your dimensions"
+                    title={inchSizing.errorTitle}
                     description={inchSizing.error}
                     layout="compact"
                   />
@@ -670,6 +670,7 @@ function resolveInchSizing({
   meshCount: string;
 }):
   | {
+      errorTitle: string;
       error: string;
       width: null;
       height: null;
@@ -678,6 +679,7 @@ function resolveInchSizing({
       meshCount: null;
     }
   | {
+      errorTitle: null;
       error: null;
       width: number;
       height: number;
@@ -695,6 +697,7 @@ function resolveInchSizing({
     parsedMeshCount === null
   ) {
     return {
+      errorTitle: "Check your dimensions",
       error: "Enter positive values for width, height, and cells per inch.",
       width: null,
       height: null,
@@ -704,10 +707,36 @@ function resolveInchSizing({
     };
   }
 
-  const width = clampGridSize(String(parsedWidthInches * parsedMeshCount));
-  const height = clampGridSize(String(parsedHeightInches * parsedMeshCount));
+  const widthCellCount = parsedWidthInches * parsedMeshCount;
+  const heightCellCount = parsedHeightInches * parsedMeshCount;
+  const sizeErrors = [
+    getInchSizeMaxError("Length", widthCellCount),
+    getInchSizeMaxError("Height", heightCellCount),
+  ].filter((error): error is string => error !== null);
+
+  if (sizeErrors.length > 0) {
+    return {
+      errorTitle: getInchSizeMaxErrorTitle(
+        widthCellCount > EDITOR_V2_MAX_GRID_SIZE,
+        heightCellCount > EDITOR_V2_MAX_GRID_SIZE,
+      ),
+      error: `Maximum canvas size is ${EDITOR_V2_MAX_GRID_SIZE} x ${EDITOR_V2_MAX_GRID_SIZE} cells. Please input ${getInchSizeMaxSuggestion(
+        widthCellCount > EDITOR_V2_MAX_GRID_SIZE,
+        heightCellCount > EDITOR_V2_MAX_GRID_SIZE,
+      )} or choose a lower mesh count.`,
+      width: null,
+      height: null,
+      widthInches: null,
+      heightInches: null,
+      meshCount: null,
+    };
+  }
+
+  const width = clampGridSize(String(widthCellCount));
+  const height = clampGridSize(String(heightCellCount));
 
   return {
+    errorTitle: null,
     error: null,
     width,
     height,
@@ -715,4 +744,32 @@ function resolveInchSizing({
     heightInches: parsedHeightInches,
     meshCount: parsedMeshCount,
   };
+}
+
+function getInchSizeMaxErrorTitle(widthExceeded: boolean, heightExceeded: boolean): string {
+  if (widthExceeded && heightExceeded) {
+    return "Max length and height exceeded";
+  }
+
+  return widthExceeded ? "Max length exceeded" : "Max height exceeded";
+}
+
+function getInchSizeMaxSuggestion(widthExceeded: boolean, heightExceeded: boolean): string {
+  if (widthExceeded && heightExceeded) {
+    return "a smaller length and height";
+  }
+
+  return widthExceeded ? "a smaller length" : "a smaller height";
+}
+
+function getInchSizeMaxError(label: string, cellCount: number): string | null {
+  if (cellCount <= EDITOR_V2_MAX_GRID_SIZE) {
+    return null;
+  }
+
+  return `${label} creates ${formatCellCount(cellCount)} cells, over the ${EDITOR_V2_MAX_GRID_SIZE} max.`;
+}
+
+function formatCellCount(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
