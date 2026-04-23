@@ -234,6 +234,15 @@ export function createSetSelectionShapeCommand(
   );
 }
 
+export function createBeginMirrorFromSelectionCommand(): EditorCommand {
+  return createCommand(
+    "mirror.beginFromSelection",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createStartMirrorSelectionCommand(point: GridPoint): EditorCommand {
   return createCommand(
     "mirror.start",
@@ -267,6 +276,17 @@ export function createApplyMirrorCommand(direction: "left" | "right" | "top" | "
     { direction },
     "canvas",
     { mode: "skip" },
+  );
+}
+
+export function createApplyMirrorFromSelectionCommand(
+  direction: "left" | "right" | "top" | "bottom",
+): EditorCommand {
+  return createCommand(
+    "mirror.apply",
+    { direction },
+    "canvas",
+    { mode: "push", label: "Mirror" },
   );
 }
 

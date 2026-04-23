@@ -22,7 +22,6 @@ import {
 import type {
   ActiveTool,
   EditorStore,
-  GridPoint,
   GridRect,
   PaletteColor,
   SelectionState,
@@ -30,10 +29,9 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import {
   createBeginTraceRepositionCommand,
+  createBeginMirrorFromSelectionCommand,
   createClearCanvasCommand,
   createClearSelectionCommand,
-  createEraseCellsCommand,
-  createPaintCellsCommand,
   createRedoCommand,
   createSetActiveColorCommand,
   createSetActiveSidebarSectionCommand,
@@ -219,8 +217,10 @@ interface FloatingToolbarProps {
   featuredColorIds: string[];
   selectionBounds: GridRect | null;
   selectionCommitted: boolean;
+  selectionMode: SelectionState["mode"];
   selectionShape: SelectionState["shape"];
   trace: TraceDocument | null;
+  mirrorSessionActive: boolean;
 }
 
 export function FloatingToolbar({
@@ -236,8 +236,10 @@ export function FloatingToolbar({
   featuredColorIds,
   selectionBounds,
   selectionCommitted,
+  selectionMode,
   selectionShape,
   trace,
+  mirrorSessionActive,
 }: FloatingToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [drawPopoverTool, setDrawPopoverTool] = useState<"paint" | "erase" | null>(null);
@@ -271,10 +273,9 @@ export function FloatingToolbar({
   const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
 
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
-  const canStartNewSelection = Boolean(selectionBounds) || activeTool === "lasso";
-  const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const selectionLockedToolsDisabled = Boolean(selectionCommitted && selectionBounds);
+  const canMirrorSelection = selectionCommitted && selectionMode === "rect";
 
   useEffect(() => {
     if (brushSizeSliderDragging) {
@@ -464,18 +465,6 @@ export function FloatingToolbar({
     setSelectOpen(false);
   }
 
-  function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
-    const cells: GridPoint[] = [];
-
-    for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
-      for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
-        cells.push({ x, y });
-      }
-    }
-
-    return cells;
-  }
-
   function handleSelectionButtonClick() {
     closeColorLibrary();
     closeDrawMenu();
@@ -497,12 +486,7 @@ export function FloatingToolbar({
 
   function handleExitSelection() {
     dispatch(createClearSelectionCommand());
-    dispatch(createSetToolCommand("pan"));
     closeSelectMenu();
-  }
-
-  function handleDoneSelection() {
-    handleExitSelection();
   }
 
   function handleNewSelection() {
@@ -759,23 +743,6 @@ export function FloatingToolbar({
 
         <ToolbarDivider />
 
-        <ToolbarButton
-          type="button"
-          active={activeTool === "mirror"}
-          aria-pressed={activeTool === "mirror"}
-          aria-label="Mirror"
-          data-tooltip="Mirror"
-          title="Mirror"
-          disabled={selectionLockedToolsDisabled}
-          onClick={() => {
-            closeColorLibrary();
-            closeDrawMenu();
-            closeImageMenu();
-            dispatch(createSetToolCommand(activeTool === "mirror" ? "pan" : "mirror"));
-          }}
-        >
-          <ToolbarIcon icon="/icons/flip.svg" />
-        </ToolbarButton>
       </ToolbarGroup>
 
       <ToolbarGroup>
@@ -841,6 +808,26 @@ export function FloatingToolbar({
                 <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
                 <ToolbarLabel>Rectangle</ToolbarLabel>
               </ToolbarButton> */}
+
+              <ToolbarDivider />
+
+              <Button
+                type="button"
+                variant="ghostV2"
+                active={mirrorSessionActive}
+                aria-pressed={mirrorSessionActive}
+                disabled={!canMirrorSelection}
+                onClick={() => {
+                  if (!canMirrorSelection) {
+                    return;
+                  }
+
+                  dispatch(createBeginMirrorFromSelectionCommand());
+                }}
+              >
+                <ToolbarIcon icon="/icons/flip.svg" />
+                <ToolbarLabel>Mirror</ToolbarLabel>
+              </Button>
 
               <ToolbarDivider />
 

@@ -45,7 +45,6 @@ import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { ButtonIcon, Notification } from "@/components/design-system";
-import { MirrorSessionToolbar } from "./MirrorSessionToolbar";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
@@ -132,7 +131,6 @@ export function EditorV2Shell({
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
-  const mirrorActive = activeTool === "mirror" || Boolean(mirrorSession);
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
@@ -829,11 +827,6 @@ export function EditorV2Shell({
                     dispatch={dispatch}
                     trace={trace}
                   />
-                ) : mirrorActive ? (
-                  <MirrorSessionToolbar
-                    dispatch={dispatch}
-                    session={mirrorSession}
-                  />
                 ) : textPlacement ? (
                   <TextPlacementToolbar
                     activeColorHex={activeColor?.hex ?? null}
@@ -868,8 +861,10 @@ export function EditorV2Shell({
                     palette={palette}
                     selectionBounds={selectionBounds}
                     selectionCommitted={selectionCommitted}
+                    selectionMode={state.session.selection.mode}
                     selectionShape={state.session.selection.shape}
                     trace={trace}
+                    mirrorSessionActive={Boolean(mirrorSession)}
                   />
                 )}
               </div>

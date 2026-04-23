@@ -11,6 +11,7 @@ import type {
 import { getMirrorDirectionAtPoint } from "@/lib/editor-v2/editor/selection/mirrorGeometry";
 import {
   createApplyMirrorCommand,
+  createApplyMirrorFromSelectionCommand,
   createCommitMirrorSelectionCommand,
   createStartMirrorSelectionCommand,
   createUpdateMirrorSelectionCommand,
@@ -34,15 +35,20 @@ export function useMirrorDrag({
 }: UseMirrorDragOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const lastPointRef = useRef<string | null>(null);
+  const mirrorSession = state.session.mirrorInteraction.session;
+  const canApplyMirrorFromSelection =
+    activeTool === "lasso" &&
+    Boolean(mirrorSession?.sourceRect) &&
+    !mirrorSession?.dragAnchor;
 
   useEffect(() => {
-    if (activeTool === "mirror") {
+    if (activeTool === "mirror" || canApplyMirrorFromSelection) {
       return;
     }
 
     lastPointRef.current = null;
     setIsDragging(false);
-  }, [activeTool]);
+  }, [activeTool, canApplyMirrorFromSelection]);
 
   useEffect(() => {
     if (!isDragging) {
@@ -105,11 +111,9 @@ export function useMirrorDrag({
   };
 
   function handlePointerDown(point: GridPoint): boolean {
-    if (activeTool !== "mirror") {
+    if (activeTool !== "mirror" && !canApplyMirrorFromSelection) {
       return false;
     }
-
-    const mirrorSession = state.session.mirrorInteraction.session;
 
     if (mirrorSession?.sourceRect && !mirrorSession.dragAnchor) {
       const direction = getMirrorDirectionAtPoint(
@@ -120,8 +124,16 @@ export function useMirrorDrag({
       );
 
       if (direction) {
-        dispatch(createApplyMirrorCommand(direction));
+        dispatch(
+          canApplyMirrorFromSelection
+            ? createApplyMirrorFromSelectionCommand(direction)
+            : createApplyMirrorCommand(direction),
+        );
         return true;
+      }
+
+      if (canApplyMirrorFromSelection) {
+        return false;
       }
     }
 

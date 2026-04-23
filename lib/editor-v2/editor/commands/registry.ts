@@ -5,6 +5,7 @@ import { gridPaintCommandHandler } from "./handlers/gridPaint";
 import { applyProjectServerStateCommandHandler } from "./handlers/applyProjectServerState";
 import {
   applyMirrorCommandHandler,
+  beginMirrorFromSelectionCommandHandler,
   cancelMirrorCommandHandler,
   commitMirrorCommandHandler,
   doneMirrorCommandHandler,
@@ -70,6 +71,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   commitSelectionCommandHandler,
   clearSelectionCommandHandler,
   setSelectionShapeCommandHandler,
+  beginMirrorFromSelectionCommandHandler,
   startMirrorCommandHandler,
   updateMirrorCommandHandler,
   commitMirrorCommandHandler,

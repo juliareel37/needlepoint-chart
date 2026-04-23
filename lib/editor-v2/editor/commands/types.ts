@@ -37,6 +37,7 @@ export type EditorCommandKind =
   | "selection.commit"
   | "selection.clear"
   | "selection.setShape"
+  | "mirror.beginFromSelection"
   | "mirror.start"
   | "mirror.update"
   | "mirror.commit"
@@ -148,6 +149,11 @@ export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>
 export type SetSelectionShapeCommand = BaseEditorCommand<
   "selection.setShape",
   { shape: SelectionState["shape"] }
+>;
+
+export type BeginMirrorFromSelectionCommand = BaseEditorCommand<
+  "mirror.beginFromSelection",
+  object
 >;
 
 export type StartMirrorCommand = BaseEditorCommand<
@@ -411,6 +417,7 @@ export type EditorCommand =
   | CommitSelectionCommand
   | ClearSelectionCommand
   | SetSelectionShapeCommand
+  | BeginMirrorFromSelectionCommand
   | StartMirrorCommand
   | UpdateMirrorCommand
   | CommitMirrorCommand

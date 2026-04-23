@@ -84,6 +84,9 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
             preview: null,
           }
         : state.session.selection;
+    const shouldClearMirrorSession =
+      Boolean(state.session.mirrorInteraction.session) &&
+      (nextTool !== "lasso" || nextSelection.mode === "none");
 
     if (
       currentTool === "mirror" &&
@@ -120,6 +123,11 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
         ...state.session,
         activeTool: getNextActiveToolState(state.session.activeTool, nextTool, command),
         selection: nextSelection,
+        mirrorInteraction: {
+          session: shouldClearMirrorSession
+            ? null
+            : state.session.mirrorInteraction.session,
+        },
         eyedropperReturnTool,
       },
       nextUi: state.ui,

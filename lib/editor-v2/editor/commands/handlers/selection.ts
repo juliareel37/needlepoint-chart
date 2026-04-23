@@ -21,6 +21,9 @@ export const startSelectionCommandHandler: EditorCommandHandler<StartSelectionCo
           command.payload.point,
           state.session.selection.shape,
         ),
+        mirrorInteraction: {
+          session: null,
+        },
       },
       nextUi: state.ui,
       patches: [],
@@ -110,6 +113,9 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
           mirrorAxis: null,
           preview: null,
         },
+        mirrorInteraction: {
+          session: null,
+        },
       },
       nextUi: state.ui,
       patches: [],
@@ -140,6 +146,9 @@ export const setSelectionShapeCommandHandler: EditorCommandHandler<SetSelectionS
           lassoPoints: [],
           mirrorAxis: null,
           preview: null,
+        },
+        mirrorInteraction: {
+          session: null,
         },
       },
       nextUi: state.ui,

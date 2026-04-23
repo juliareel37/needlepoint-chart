@@ -175,6 +175,41 @@ describe("setActiveToolCommandHandler", () => {
     expect(store.getState().session.selection).toEqual(initial.session.selection);
   });
 
+  it("clears an active mirror session when leaving lasso", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "lasso";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+    initial.session.mirrorInteraction.session = {
+      sourceRect: { x: 2, y: 3, width: 4, height: 5 },
+      dragAnchor: null,
+      appliedDirection: null,
+      forwardPatches: [],
+      inversePatches: [],
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-1",
+      kind: "tool.setActive",
+      payload: { tool: "fill" },
+      meta: { source: "toolbar", timestamp: 1, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.tool).toBe("fill");
+    expect(store.getState().session.mirrorInteraction.session).toBeNull();
+  });
+
   it("remembers separate brush sizes for paint and erase", () => {
     const initial = createInitialEditorStoreState();
     initial.session.activeTool.tool = "paint";
