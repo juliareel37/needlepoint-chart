@@ -144,8 +144,8 @@ export interface ViewportState {
 }
 
 export interface SelectionState {
-  mode: "none" | "rect" | "lasso" | "mirror";
-  shape: "freehand" | "rect";
+  mode: "none" | "rect" | "circle" | "lasso" | "mirror";
+  shape: "freehand" | "rect" | "circle";
   rect: GridRect | null;
   lassoPoints: SelectionPoint[];
   mirrorAxis: "horizontal" | "vertical" | null;

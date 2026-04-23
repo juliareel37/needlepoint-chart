@@ -43,7 +43,7 @@ export function useSelectionDrag({
         event.clientY,
       );
       const point =
-        rawPoint && selectionShape === "rect"
+        rawPoint && (selectionShape === "rect" || selectionShape === "circle")
           ? {
               x: Math.floor(rawPoint.x),
               y: Math.floor(rawPoint.y),
@@ -60,7 +60,7 @@ export function useSelectionDrag({
         event.clientY,
       );
       const point =
-        rawPoint && selectionShape === "rect"
+        rawPoint && (selectionShape === "rect" || selectionShape === "circle")
           ? {
               x: Math.floor(rawPoint.x),
               y: Math.floor(rawPoint.y),
@@ -111,7 +111,7 @@ export function useSelectionDrag({
     }
 
     const normalizedPoint =
-      selectionShape === "rect"
+      selectionShape === "rect" || selectionShape === "circle"
         ? {
             x: Math.floor(point.x),
             y: Math.floor(point.y),

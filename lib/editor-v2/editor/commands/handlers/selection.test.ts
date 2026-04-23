@@ -64,4 +64,45 @@ describe("selection command handlers", () => {
       preview: null,
     });
   });
+
+  it("builds a circular selection when the shape is circle", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "lasso";
+    initial.session.selection.shape = "circle";
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-1",
+      kind: "selection.start",
+      payload: { point: { x: 2, y: 3 } },
+      meta: { source: "canvas", timestamp: 1, history: { mode: "skip" } },
+    });
+
+    store.dispatch({
+      id: "cmd-2",
+      kind: "selection.update",
+      payload: { point: { x: 5, y: 7 } },
+      meta: { source: "canvas", timestamp: 2, history: { mode: "skip" } },
+    });
+
+    store.dispatch({
+      id: "cmd-3",
+      kind: "selection.commit",
+      payload: { point: { x: 5, y: 7 } },
+      meta: { source: "canvas", timestamp: 3, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "circle",
+      shape: "circle",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
 });

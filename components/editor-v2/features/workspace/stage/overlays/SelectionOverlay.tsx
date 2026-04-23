@@ -39,8 +39,14 @@ export function SelectionOverlay({
     selection.mode === "rect" &&
     !selection.preview &&
     Boolean(selection.rect);
+  const hasCommittedCircleSelection =
+    selection.mode === "circle" &&
+    !selection.preview &&
+    Boolean(selection.rect);
   const hasCommittedSelection =
-    hasCommittedFreehandSelection || hasCommittedRectSelection;
+    hasCommittedFreehandSelection ||
+    hasCommittedRectSelection ||
+    hasCommittedCircleSelection;
   const shouldDimCanvas =
     activeTool === "lasso" ||
     activeTool === "mirror" ||
@@ -62,7 +68,10 @@ export function SelectionOverlay({
   return (
     <>
       {shouldDimCanvas ? (
-        hasCommittedFreehandSelection || hasCommittedRectSelection || hasCommittedMirrorSelection ? (
+        hasCommittedFreehandSelection ||
+        hasCommittedRectSelection ||
+        hasCommittedCircleSelection ||
+        hasCommittedMirrorSelection ? (
           <svg
             aria-hidden="true"
             style={{
@@ -83,6 +92,9 @@ export function SelectionOverlay({
                 `M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z`,
                 hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
                 hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
+                hasCommittedCircleSelection && selection.rect
+                  ? buildEllipsePath(selection.rect, metrics.cellSize)
+                  : null,
                 hasCommittedMirrorSelection && mirrorCutoutPath ? mirrorCutoutPath : null,
               ]
                 .filter(Boolean)
@@ -168,6 +180,33 @@ export function SelectionOverlay({
         </svg>
       ) : null}
 
+      {selection.mode === "circle" && selection.rect ? (
+        <svg
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: "none",
+            overflow: "visible",
+          }}
+          width={metrics.surfaceWidth}
+          height={metrics.surfaceHeight}
+          viewBox={`0 0 ${metrics.surfaceWidth} ${metrics.surfaceHeight}`}
+        >
+          <ellipse
+            cx={(selection.rect.x + selection.rect.width / 2) * metrics.cellSize}
+            cy={(selection.rect.y + selection.rect.height / 2) * metrics.cellSize}
+            rx={(selection.rect.width * metrics.cellSize) / 2}
+            ry={(selection.rect.height * metrics.cellSize) / 2}
+            fill={selection.preview ? "rgba(15, 23, 42, 0.12)" : "none"}
+            stroke={SELECTION_STROKE}
+            strokeWidth={SELECTION_STROKE_WIDTH}
+            strokeDasharray={SELECTION_STROKE_DASH}
+          />
+        </svg>
+      ) : null}
+
       {mirrorSourceRect ? (
         <svg
           aria-hidden="true"
@@ -225,4 +264,16 @@ function buildRectPath(
   const height = rect.height * cellSize;
 
   return `M ${x} ${y} H ${x + width} V ${y + height} H ${x} Z`;
+}
+
+function buildEllipsePath(
+  rect: { x: number; y: number; width: number; height: number },
+  cellSize: number,
+): string {
+  const cx = (rect.x + rect.width / 2) * cellSize;
+  const cy = (rect.y + rect.height / 2) * cellSize;
+  const rx = (rect.width * cellSize) / 2;
+  const ry = (rect.height * cellSize) / 2;
+
+  return `M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
 }

@@ -32,6 +32,8 @@ export function SelectionSessionToolbar({
     ? "Selection ready. Fill, erase, or start a new selection."
     : selectionShape === "rect"
       ? "Drag to select canvas area."
+      : selectionShape === "circle"
+        ? "Drag to select a circular area."
       : "Drag across the canvas to create a freehand selection.";
 
   function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
@@ -74,22 +76,31 @@ export function SelectionSessionToolbar({
 
         <ToolbarButton
           type="button"
-          active={selectionShape === "freehand"}
-          aria-pressed={selectionShape === "freehand"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
-          {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
           active={selectionShape === "rect"}
           aria-pressed={selectionShape === "rect"}
           onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
         >
           <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
           {/* <ToolbarLabel>Rect</ToolbarLabel> */}
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          active={selectionShape === "circle"}
+          aria-pressed={selectionShape === "circle"}
+          onClick={() => dispatch(createSetSelectionShapeCommand("circle"))}
+        >
+          <ToolbarIcon icon="/icons/lucide/selection-circle.svg" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          active={selectionShape === "freehand"}
+          aria-pressed={selectionShape === "freehand"}
+          onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
+        >
+          <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
+          {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
         </ToolbarButton>
 
         {/* <ToolbarDivider /> */}

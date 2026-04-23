@@ -633,6 +633,15 @@ export function FloatingToolbar({
                 <ToolbarIcon icon="/icons/lucide/selection.svg" />
                 {/* <ToolbarLabel>Rectangle</ToolbarLabel> */}
               </ToolbarButton>
+
+              <ToolbarButton
+                type="button"
+                active={selectionShape === "circle"}
+                aria-pressed={selectionShape === "circle"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("circle"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/selection-circle.svg" />
+              </ToolbarButton>
       
               <ToolbarButton
                 type="button"

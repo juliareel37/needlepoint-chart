@@ -85,6 +85,25 @@ export function isCellInSelection(
     return isCellSelectedByLasso(selection.lassoPoints, cell.x, cell.y);
   }
 
+  if (selection.mode === "circle") {
+    const bounds = selection.rect;
+
+    if (!bounds) {
+      return false;
+    }
+
+    if (
+      cell.x < bounds.x ||
+      cell.y < bounds.y ||
+      cell.x >= bounds.x + bounds.width ||
+      cell.y >= bounds.y + bounds.height
+    ) {
+      return false;
+    }
+
+    return isCellSelectedByEllipse(bounds, cell.x, cell.y);
+  }
+
   if (!selection.rect) {
     return false;
   }
@@ -118,4 +137,36 @@ export function pointInPolygon(
   }
 
   return inside;
+}
+
+function isCellSelectedByEllipse(
+  bounds: GridRect,
+  cellX: number,
+  cellY: number,
+): boolean {
+  const radiusX = bounds.width / 2;
+  const radiusY = bounds.height / 2;
+
+  if (radiusX <= 0 || radiusY <= 0) {
+    return false;
+  }
+
+  const centerX = bounds.x + radiusX;
+  const centerY = bounds.y + radiusY;
+  let insideSamples = 0;
+
+  for (const offsetY of LASSO_CELL_SAMPLE_OFFSETS) {
+    for (const offsetX of LASSO_CELL_SAMPLE_OFFSETS) {
+      const sampleX = cellX + offsetX;
+      const sampleY = cellY + offsetY;
+      const normalizedX = (sampleX - centerX) / radiusX;
+      const normalizedY = (sampleY - centerY) / radiusY;
+
+      if (normalizedX * normalizedX + normalizedY * normalizedY <= 1) {
+        insideSamples += 1;
+      }
+    }
+  }
+
+  return insideSamples >= LASSO_MIN_SAMPLES_INSIDE;
 }
