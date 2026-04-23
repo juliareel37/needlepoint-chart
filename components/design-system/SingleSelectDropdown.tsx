@@ -20,7 +20,11 @@ import {
   type MenuTriggerVariant,
 } from "./Menu";
 
-type SingleSelectDropdownMenuPlacement = "bottom-start" | "top-start";
+type SingleSelectDropdownMenuPlacement =
+  | "bottom-start"
+  | "bottom-end"
+  | "top-start"
+  | "top-end";
 
 export interface SingleSelectDropdownProps<TItem> {
   ariaLabel: string;
@@ -109,20 +113,25 @@ export function SingleSelectDropdown<TItem>({
   const selectedItem =
     items.find((item) => getItemValue(item) === value) ?? null;
 
-  const chevronDirection = menuPlacement === "top-start" ? "up" : "down";
+  const chevronDirection =
+    menuPlacement === "top-start" || menuPlacement === "top-end" ? "up" : "down";
   const triggerZIndex = menuOverlapTrigger ? 1 : undefined;
   const menuPositionStyle: CSSProperties = menuPortalToViewport
     ? {}
-    : menuPlacement === "top-start"
+    : menuPlacement === "top-start" || menuPlacement === "top-end"
       ? {
+          position: "absolute",
           bottom: menuOverlapTrigger
             ? 0
             : `calc(100% + ${menuOffset}px)`,
-          left: 0,
+          left: menuPlacement === "top-start" ? 0 : "auto",
+          right: menuPlacement === "top-end" ? 0 : "auto",
         }
       : {
+          position: "absolute",
           top: menuOverlapTrigger ? 0 : `calc(100% + ${menuOffset}px)`,
-          left: 0,
+          left: menuPlacement === "bottom-start" ? 0 : "auto",
+          right: menuPlacement === "bottom-end" ? 0 : "auto",
         };
 
   const updatePortalStyle = useCallback(() => {
@@ -135,7 +144,10 @@ export function SingleSelectDropdown<TItem>({
     const menuRect = menuRef.current.getBoundingClientRect();
     const measuredMenuWidth = menuRect.width || triggerRect.width;
     const measuredMenuHeight = menuRect.height || 0;
-    const desiredLeft = triggerRect.left;
+    const desiredLeft =
+      menuPlacement === "top-end" || menuPlacement === "bottom-end"
+        ? triggerRect.right - measuredMenuWidth
+        : triggerRect.left;
     const maxLeft = Math.max(
       viewportPadding,
       window.innerWidth - measuredMenuWidth - viewportPadding,

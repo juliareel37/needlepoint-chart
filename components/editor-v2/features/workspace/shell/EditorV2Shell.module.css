@@ -724,6 +724,36 @@
   white-space: nowrap;
 }
 
+.headerOverflowMenu {
+  position: relative;
+}
+
+.headerOverflowTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 28px;
+  padding: 6px;
+  border-radius: 10px;
+  color: var(--text-primary);
+}
+
+.headerOverflowDots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  line-height: 1;
+  font-size: 20px;
+  font-weight: 700;
+  transform: translateY(-1px);
+}
+
+.headerOverflowSurface {
+  transform-origin: top right;
+}
+
 .headerHistoryButton {
   min-width: 32px;
   min-height: 28px;

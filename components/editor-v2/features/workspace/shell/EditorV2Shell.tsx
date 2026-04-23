@@ -17,6 +17,7 @@ import {
 import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import {
   Button,
+  SingleSelectDropdown,
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
@@ -145,6 +146,10 @@ export function EditorV2Shell({
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
+  const mobileHeaderMenuItems = useMemo(
+    () => [{ id: "export", label: "Export design" }],
+    [],
+  );
   const gridMetrics = useMemo(
     () =>
       createGridWorldMetrics(
@@ -514,11 +519,44 @@ export function EditorV2Shell({
               >
                 <ToolbarIcon icon="/icons/lucide/redo.svg" />
               </ToolbarButton>
+              {isBottomPanelLayout ? (
+                <SingleSelectDropdown
+                  ariaLabel="More actions"
+                  items={mobileHeaderMenuItems}
+                  value=""
+                  placeholder="More actions"
+                  triggerLabel={<span className={styles.headerOverflowDots}>⋮</span>}
+                  triggerVariant="ghost"
+                  showChevron={false}
+                  menuPortalToViewport
+                  menuPlacement="bottom-end"
+                  minWidth="auto"
+                  menuWidth={176}
+                  getItemValue={(item) => item.id}
+                  getItemLabel={(item) =>
+                    item.id === "export" && exportButtonState === "exporting"
+                      ? "Exporting..."
+                      : item.label
+                  }
+                  getItemDisabled={(item) =>
+                    item.id === "export" && exportButtonState === "exporting"
+                  }
+                  onValueChange={(value) => {
+                    if (value === "export") {
+                      void onExportDocument(document);
+                    }
+                  }}
+                  wrapperClassName={styles.headerOverflowMenu}
+                  triggerClassName={styles.headerOverflowTrigger}
+                  menuClassName={styles.headerOverflowSurface}
+                  triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+                />
+              ) : null}
             </div>,
             headerHistoryTarget,
           )
         : null}
-      {!setupModalOpen && headerActionsTarget
+      {!setupModalOpen && headerActionsTarget && !isBottomPanelLayout
         ? createPortal(
             <Button
               type="button"
