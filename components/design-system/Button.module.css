@@ -150,6 +150,7 @@
 
 .ghostV2 {
   background: transparent;
+  color: var(--text-primary)
 }
 
 .ghostV2:hover:not(:disabled) {

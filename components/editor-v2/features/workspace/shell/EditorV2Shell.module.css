@@ -352,8 +352,8 @@
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--swatch-border);
+  box-shadow: inset 0 0 0 1px var(--swatch-detail-inset);
 }
 
 .sidebarSubsectionHeader {
@@ -541,7 +541,7 @@
   border: 0;
   border-radius: 16px;
   background: transparent;
-  color: var(--brand-600);
+  color: var(--text-secondary);
   text-align: center;
   box-shadow: none;
   font-weight: 600;
@@ -652,7 +652,7 @@
 }
 
 .libraryPopoverSwatch {
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
     transform 160ms ease,
@@ -665,10 +665,10 @@
 .libraryPopoverSwatchTrigger:focus-visible .libraryPopoverSwatch,
 .libraryPopoverSwatchTrigger[data-active="true"] .libraryPopoverSwatch {
   transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
+  border-color: var(--swatch-border-strong);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
 }
 
 .iconPlacementSwatchList {
@@ -692,10 +692,10 @@
 .iconPlacementSwatchButton:hover .libraryPopoverSwatch,
 .iconPlacementSwatchButton:focus-visible .libraryPopoverSwatch {
   transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
+  border-color: var(--swatch-border-strong);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
 }
 
 .historyButton {
@@ -813,7 +813,7 @@
   width: 25px;
   height: 25px;
   border-radius: 25%;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
     transform 160ms ease,
@@ -1172,10 +1172,10 @@
 .usedColorSwatchButton:hover:not(:disabled) .swatch,
 .usedColorSwatchButton:focus-visible .swatch {
   transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
+  border-color: var(--swatch-border-strong);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
 }
 
 .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon,
@@ -1242,7 +1242,7 @@
   width: 25px;
   height: 25px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   flex: 0 0 auto;
 }
 
