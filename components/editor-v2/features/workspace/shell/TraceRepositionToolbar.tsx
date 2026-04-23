@@ -7,6 +7,8 @@ import type { EditorStore, TraceDocument } from "@/lib/editor-v2/editor/store";
 import {
   createCancelTraceRepositionCommand,
   createCommitTraceRepositionCommand,
+  createSetActiveSidebarSectionCommand,
+  createSetSidebarCollapsedCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
@@ -21,11 +23,30 @@ export function TraceRepositionToolbar({
   trace,
 }: TraceRepositionToolbarProps) {
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   const normalizedImageOpacity = Math.min(Math.max(trace.opacity, 0), 1);
   const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
 
   usePointerUpDismiss(opacityTooltipVisible, setOpacityTooltipVisible);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 1080px)");
+    const update = () => setIsCompactViewport(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
 
   return (
     <Toolbar className={styles.floatingToolbar}>
@@ -47,49 +68,69 @@ export function TraceRepositionToolbar({
           <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
         </ToolbarButton> */}
 
-        <Button
-          type="button"
-          onClick={() => {
-            dispatch(
-              createUpdateTraceCommand(
-                { visible: !trace.visible },
-                { history: { mode: "skip" } },
-              ),
-            );
-          }}
-        >
-          <ButtonIcon icon="/icons/lucide/eye.svg" />
-          <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
-        </Button>
+        {isCompactViewport ? (
+          <>
+            <Button
+              type="button"
+              variant="ghostV2"
+              onClick={() => {
+                dispatch(createSetActiveSidebarSectionCommand("trace"));
+                dispatch(createSetSidebarCollapsedCommand(false));
+              }}
+            >
+              <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+              <ToolbarLabel>Display settings</ToolbarLabel>
+            </Button>
 
-        <ToolbarDivider />
+            <ToolbarDivider />
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              onClick={() => {
+                dispatch(
+                  createUpdateTraceCommand(
+                    { visible: !trace.visible },
+                    { history: { mode: "skip" } },
+                  ),
+                );
+              }}
+            >
+              <ButtonIcon icon="/icons/lucide/eye.svg" />
+              <ToolbarLabel>{trace.visible ? "Visible" : "Hidden"}</ToolbarLabel>
+            </Button>
 
-        <TraceToolbarSliderField
-          ariaLabel="Image opacity"
-          disabled={!trace.visible}
-          icon="/icons/lucide/blend.svg"
-          label="Opacity"
-          labelMuted={!trace.visible}
-          tooltipLabel={imageOpacityLabel}
-          tooltipLeftPercent={normalizedImageOpacity * 100}
-          tooltipVisible={opacityTooltipVisible && trace.visible}
-          value={normalizedImageOpacity}
-          min="0"
-          max="1"
-          step="0.05"
-          valueText={`${imageOpacityLabel} image opacity`}
-          onTooltipVisibleChange={setOpacityTooltipVisible}
-          onChange={(event) => {
-            dispatch(
-              createUpdateTraceCommand(
-                { opacity: Number(event.currentTarget.value) },
-                { history: { mode: "skip" } },
-              ),
-            );
-          }}
-        />
+            <ToolbarDivider />
 
-        <ToolbarDivider />
+            <TraceToolbarSliderField
+              ariaLabel="Image opacity"
+              disabled={!trace.visible}
+              icon="/icons/lucide/blend.svg"
+              label="Opacity"
+              labelMuted={!trace.visible}
+              tooltipLabel={imageOpacityLabel}
+              tooltipLeftPercent={normalizedImageOpacity * 100}
+              tooltipVisible={opacityTooltipVisible && trace.visible}
+              value={normalizedImageOpacity}
+              min="0"
+              max="1"
+              step="0.05"
+              valueText={`${imageOpacityLabel} image opacity`}
+              onTooltipVisibleChange={setOpacityTooltipVisible}
+              onChange={(event) => {
+                dispatch(
+                  createUpdateTraceCommand(
+                    { opacity: Number(event.currentTarget.value) },
+                    { history: { mode: "skip" } },
+                  ),
+                );
+              }}
+            />
+
+            <ToolbarDivider />
+          </>
+        )}
 
        
       <div

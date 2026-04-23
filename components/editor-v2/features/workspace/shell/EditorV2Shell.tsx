@@ -141,6 +141,7 @@ export function EditorV2Shell({
   const mobileTextPlacementWasActiveRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
+  const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
@@ -276,6 +277,27 @@ export function EditorV2Shell({
     const update = () => {
       setIsBottomPanelLayout(mediaQuery.matches);
       setLayoutModeResolved(true);
+    };
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 1000px)");
+    const update = () => {
+      setIsCompactHistoryLayout(mediaQuery.matches);
     };
 
     update();
@@ -563,7 +585,7 @@ export function EditorV2Shell({
             topBannerTarget,
           )
         : null}
-      {!setupModalOpen && headerHistoryTarget
+      {!setupModalOpen && headerHistoryTarget && isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerHistoryControls}>
               <ToolbarButton
@@ -661,26 +683,52 @@ export function EditorV2Shell({
         : null}
       {!setupModalOpen && headerActionsTarget && !isBottomPanelLayout
         ? createPortal(
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className={styles.headerExportButton}
-              disabled={exportButtonState === "exporting"}
-              onClick={() => onExportDocument(document)}
-            >
-              {exportButtonState === "exporting" ? (
-                <>
-                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                  Exporting
-                </>
-              ) : (
-                <>
-                  <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
-                  Export
-                </>
-              )}
-            </Button>,
+            <div className={styles.headerActionGroup}>
+              {isCompactHistoryLayout ? (
+                <div className={styles.headerHistoryControls}>
+                  <ToolbarButton
+                    type="button"
+                    disabled={!canUndo}
+                    aria-label="Undo"
+                    title="Undo"
+                    className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                    onClick={() => dispatch(createUndoCommand())}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/undo.svg" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    disabled={!canRedo}
+                    aria-label="Redo"
+                    title="Redo"
+                    className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                    onClick={() => dispatch(createRedoCommand())}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/redo.svg" />
+                  </ToolbarButton>
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className={styles.headerExportButton}
+                disabled={exportButtonState === "exporting"}
+                onClick={() => onExportDocument(document)}
+              >
+                {exportButtonState === "exporting" ? (
+                  <>
+                    <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                    Exporting
+                  </>
+                ) : (
+                  <>
+                    <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
+                    Export
+                  </>
+                )}
+              </Button>
+            </div>,
             headerActionsTarget,
           )
         : null}

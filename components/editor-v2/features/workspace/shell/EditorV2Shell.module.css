@@ -779,6 +779,24 @@
   flex: 0 0 auto;
 }
 
+.headerActionGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1000px) {
+  .headerHistoryControls {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .toolbarHistoryControl,
+  .toolbarHistoryDivider {
+    display: none;
+  }
+}
+
 .headerExportButton {
   white-space: nowrap;
 }
@@ -1958,10 +1976,8 @@
 
   .floatingToolbar {
     position: static;
-    width: 60%;
+    /* width: 60%; */
     flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
   }
 
   .floatingToolbarContextual {
@@ -2006,6 +2022,7 @@
   .floatingToolbar {
     max-width: min-content;
     width: 90%;
+    overflow: auto hidden;
   }
 
   .iconSelectionSummary {
@@ -2035,16 +2052,6 @@
 
   .iconSelectionAction {
     align-self: stretch;
-  }
-
-  .headerHistoryControls {
-    display: inline-flex;
-    gap: 6px;
-  }
-
-  .toolbarHistoryControl,
-  .toolbarHistoryDivider {
-    display: none;
   }
 
   /* .headerSaveStatus {
