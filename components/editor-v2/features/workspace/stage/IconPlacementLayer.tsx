@@ -115,6 +115,7 @@ export function IconPlacementLayer({
     [mobileDisplayStageBounds, stageBounds.left, stageBounds.top],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
+  const mobilePreviewIconRef = useRef<HTMLDivElement | null>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
   const primitiveColors = useMemo(
     () =>
@@ -150,12 +151,43 @@ export function IconPlacementLayer({
       primitiveColors,
     ],
   );
+  const projectMobileStageBounds = useCallback(
+    (
+      nextTransform: IconPlacementTransform,
+      nextBaseRect: typeof baseRect,
+    ) => {
+      const nextBounds = getIconPlacementBounds(nextBaseRect, nextTransform);
+
+      return {
+        left: worldBounds.left - stageBounds.left + nextBounds.left * viewport.zoom,
+        top: worldBounds.top - stageBounds.top + nextBounds.top * viewport.zoom,
+        width: nextBounds.width * viewport.zoom,
+        height: nextBounds.height * viewport.zoom,
+      };
+    },
+    [
+      stageBounds.left,
+      stageBounds.top,
+      viewport.zoom,
+      worldBounds.left,
+      worldBounds.top,
+    ],
+  );
   const [previewSrc, setPreviewSrc] = useState<string | null>(
     placement.primitiveKind ? null : placement.src,
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (coarsePointer && portalHost) {
-      setMobilePreviewTransform(nextTransform);
+      const mobilePreviewIcon = mobilePreviewIconRef.current;
+      if (!mobilePreviewIcon) {
+        return;
+      }
+
+      const nextBounds = projectMobileStageBounds(nextTransform, baseRect);
+      mobilePreviewIcon.style.left = `${nextBounds.left}px`;
+      mobilePreviewIcon.style.top = `${nextBounds.top}px`;
+      mobilePreviewIcon.style.width = `${nextBounds.width}px`;
+      mobilePreviewIcon.style.height = `${nextBounds.height}px`;
       return;
     }
 
@@ -179,11 +211,7 @@ export function IconPlacementLayer({
     coarsePointer,
     placement.primitiveKind,
     portalHost,
-    placement.strokeWidthScale,
-    placement.primitivePatternScale,
-    placement.primitiveSpacingScale,
-    previewColor,
-    primitiveColors,
+    projectMobileStageBounds,
   ]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform, _transactionKey?: string) => {
@@ -198,28 +226,6 @@ export function IconPlacementLayer({
       setMobilePreviewTransform(nextTransform);
     },
     [dispatch],
-  );
-  const projectMobileStageBounds = useCallback(
-    (
-      nextTransform: IconPlacementTransform,
-      nextBaseRect: typeof baseRect,
-    ) => {
-      const nextBounds = getIconPlacementBounds(nextBaseRect, nextTransform);
-
-      return {
-        left: worldBounds.left - stageBounds.left + nextBounds.left * viewport.zoom,
-        top: worldBounds.top - stageBounds.top + nextBounds.top * viewport.zoom,
-        width: nextBounds.width * viewport.zoom,
-        height: nextBounds.height * viewport.zoom,
-      };
-    },
-    [
-      stageBounds.left,
-      stageBounds.top,
-      viewport.zoom,
-      worldBounds.left,
-      worldBounds.top,
-    ],
   );
 
   useEffect(() => {
@@ -339,6 +345,7 @@ export function IconPlacementLayer({
           }}
         >
           <div
+            ref={mobilePreviewIconRef}
             style={{
               position: "absolute",
               top: `${mobileOverlayBounds.top}px`,
