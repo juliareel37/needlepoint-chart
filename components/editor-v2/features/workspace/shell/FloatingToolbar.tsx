@@ -522,6 +522,7 @@ export function FloatingToolbar({
             active={colorLibraryOpen}
             aria-pressed={colorLibraryOpen}
             aria-label="Open color library"
+            data-tooltip="Open color library"
             title="Open color library"
             className={styles.libraryPopoverSwatchTrigger}
             onClick={() => {
@@ -574,6 +575,7 @@ export function FloatingToolbar({
             inertWhenActive
             aria-pressed={activeTool === "pan"}
             aria-label="Pan"
+            data-tooltip="Pan"
             title="Pan"
             onClick={() => {
               closeColorLibrary();
@@ -591,6 +593,7 @@ export function FloatingToolbar({
           active={activeTool === "eyedropper"}
           aria-pressed={activeTool === "eyedropper"}
           aria-label="Eyedropper"
+          data-tooltip="Eyedropper"
           title="Eyedropper"
           disabled={selectionLockedToolsDisabled}
           onClick={() => {
@@ -608,6 +611,7 @@ export function FloatingToolbar({
           active={activeTool === "fill"}
           aria-pressed={activeTool === "fill"}
           aria-label="Fill"
+          data-tooltip="Fill"
           title="Fill"
           onClick={() => {
             closeColorLibrary();
@@ -633,6 +637,7 @@ export function FloatingToolbar({
             active={activeTool === "paint"}
             aria-pressed={activeTool === "paint"}
             aria-label="Brush"
+            data-tooltip="Brush"
             title="Brush"
             disabled={selectionLockedToolsDisabled}
             onClick={() => {
@@ -657,6 +662,7 @@ export function FloatingToolbar({
             active={activeTool === "erase"}
             aria-pressed={activeTool === "erase"}
             aria-label="Erase"
+            data-tooltip="Erase"
             title="Erase"
             disabled={selectionLockedToolsDisabled}
             onClick={() => {
@@ -758,6 +764,7 @@ export function FloatingToolbar({
           active={activeTool === "mirror"}
           aria-pressed={activeTool === "mirror"}
           aria-label="Mirror"
+          data-tooltip="Mirror"
           title="Mirror"
           disabled={selectionLockedToolsDisabled}
           onClick={() => {
@@ -778,6 +785,7 @@ export function FloatingToolbar({
             active={selectionVisible || selectOpen}
             aria-pressed={selectionVisible || selectOpen}
             aria-label="Select"
+            data-tooltip="Select"
             title="Select"
             onClick={handleSelectionButtonClick}
           >
@@ -907,6 +915,7 @@ export function FloatingToolbar({
           active={imageOpen}
           aria-pressed={imageOpen}
           aria-label="Image"
+          data-tooltip="Image"
           title="Image"
           disabled={selectionLockedToolsDisabled}
           onClick={() => {
@@ -1103,6 +1112,7 @@ export function FloatingToolbar({
           type="button"
           disabled={!canUndo}
           aria-label="Undo"
+          data-tooltip="Undo"
           title="Undo"
           className={[styles.historyButton, styles.toolbarHistoryControl].join(" ")}
           onClick={() => {
@@ -1116,6 +1126,7 @@ export function FloatingToolbar({
           type="button"
           disabled={!canRedo}
           aria-label="Redo"
+          data-tooltip="Redo"
           title="Redo"
           className={[styles.historyButton, styles.toolbarHistoryControl].join(" ")}
           onClick={() => {
@@ -1134,6 +1145,7 @@ export function FloatingToolbar({
           type="button"
           disabled={!hasPaintedCells}
           aria-label="Clear canvas"
+          data-tooltip="Clear canvas"
           title="Clear canvas"
           onClick={() => {
             closeColorLibrary();
