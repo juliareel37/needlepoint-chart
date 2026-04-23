@@ -140,11 +140,13 @@ export function EditorV2SetupModal({
     width: draftWidth,
     height: draftHeight,
   });
+  const selectedLargeGridPreset = getLargeGridPreset(draftWidth, draftHeight);
+  const selectedInchSizePreset = getInchSizePreset(draftWidthInches, draftHeightInches);
   const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
   const createDisabled =
     draftSizingMode === "inches"
-      ? inchSizing.error !== null
-      : stitchSizing.widthError !== null || stitchSizing.heightError !== null;
+      ? !inchSizing.canCreate
+      : !stitchSizing.canCreate;
 
   return (
     <div
@@ -263,23 +265,39 @@ export function EditorV2SetupModal({
                     Quick presets
                   </p>
                   <div className={styles.presetGrid}>
-                    {LARGE_GRID_PRESETS.map((preset) => (
-                      <Button
-                        key={preset.label}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className={styles.presetButton}
-                        onClick={() => {
-                          onDraftWidthChange(String(preset.width));
-                          onDraftHeightChange(String(preset.height));
-                        }}
-                      >
-                        {preset.label}
-                      </Button>
-                    ))}
+                    {LARGE_GRID_PRESETS.map((preset) => {
+                      const active = selectedLargeGridPreset?.label === preset.label;
+
+                      return (
+                        <Button
+                          key={preset.label}
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className={styles.presetButton}
+                          active={active}
+                          inertWhenActive={active}
+                          aria-pressed={active}
+                          onClick={() => {
+                            onDraftWidthChange(String(preset.width));
+                            onDraftHeightChange(String(preset.height));
+                          }}
+                        >
+                          {preset.label}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
+
+                {stitchSizing.alert ? (
+                  <Notification
+                    tone="destructive"
+                    title={stitchSizing.alertTitle}
+                    description={stitchSizing.alert}
+                    layout="compact"
+                  />
+                ) : null}
               </>
             ) : (
               <>
@@ -324,6 +342,8 @@ export function EditorV2SetupModal({
                     </p>
                     <div className={styles.inlineOptionGrid}>
                       {INCH_SIZE_PRESETS.map((preset) => {
+                        const active = selectedInchSizePreset?.label === preset.label;
+
                         return (
                           <Button
                             key={preset.label}
@@ -331,6 +351,9 @@ export function EditorV2SetupModal({
                             variant="secondary"
                             size="sm"
                             className={styles.compactPresetButton}
+                            active={active}
+                            inertWhenActive={active}
+                            aria-pressed={active}
                             onClick={() => {
                               onDraftWidthInchesChange(String(preset.width));
                               onDraftHeightInchesChange(String(preset.height));
@@ -612,12 +635,29 @@ function resolveStitchSizing({
   width: string;
   height: string;
 }): {
+  canCreate: boolean;
+  alertTitle: string | null;
+  alert: string | null;
   widthError: string | null;
   heightError: string | null;
 } {
+  const parsedWidth = parseRequiredPositiveNumber(width);
+  const parsedHeight = parseRequiredPositiveNumber(height);
+  const hasEmptyField =
+    parsedWidth.kind === "empty" || parsedHeight.kind === "empty";
+  const hasInvalidField =
+    parsedWidth.kind === "invalid" || parsedHeight.kind === "invalid";
+  const widthError = getStitchSizeMaxError(width);
+  const heightError = getStitchSizeMaxError(height);
+
   return {
-    widthError: getStitchSizeMaxError(width),
-    heightError: getStitchSizeMaxError(height),
+    canCreate: !hasEmptyField && !hasInvalidField && widthError === null && heightError === null,
+    alertTitle: hasInvalidField ? "Check your grid size" : null,
+    alert: hasInvalidField
+      ? "Enter values greater than 0 for length and height."
+      : null,
+    widthError,
+    heightError,
   };
 }
 
@@ -629,6 +669,21 @@ function getStitchSizeMaxError(value: string): string | null {
   }
 
   return `Max ${EDITOR_V2_MAX_GRID_SIZE} cells.`;
+}
+
+function getLargeGridPreset(width: string, height: string) {
+  const parsedWidth = Number(width);
+  const parsedHeight = Number(height);
+
+  if (!Number.isFinite(parsedWidth) || !Number.isFinite(parsedHeight)) {
+    return null;
+  }
+
+  return (
+    LARGE_GRID_PRESETS.find(
+      (preset) => preset.width === parsedWidth && preset.height === parsedHeight,
+    ) ?? null
+  );
 }
 
 function parsePositiveDecimal(value: string): number | null {
@@ -643,6 +698,23 @@ function parsePositiveDecimal(value: string): number | null {
   }
 
   return parsed;
+}
+
+function parseRequiredPositiveNumber(value: string):
+  | { kind: "empty" }
+  | { kind: "invalid" }
+  | { kind: "valid"; value: number } {
+  if (value.trim().length === 0) {
+    return { kind: "empty" };
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return { kind: "invalid" };
+  }
+
+  return { kind: "valid", value: parsed };
 }
 
 function normalizeDecimalInput(value: string): string {
@@ -660,6 +732,21 @@ function getCellsPerInchPreset(value: string): (typeof CELLS_PER_INCH_PRESETS)[n
   return CELLS_PER_INCH_PRESETS.find((preset) => preset === parsed) ?? null;
 }
 
+function getInchSizePreset(widthInches: string, heightInches: string) {
+  const parsedWidth = parsePositiveDecimal(widthInches);
+  const parsedHeight = parsePositiveDecimal(heightInches);
+
+  if (parsedWidth === null || parsedHeight === null) {
+    return null;
+  }
+
+  return (
+    INCH_SIZE_PRESETS.find(
+      (preset) => preset.width === parsedWidth && preset.height === parsedHeight,
+    ) ?? null
+  );
+}
+
 function resolveInchSizing({
   widthInches,
   heightInches,
@@ -672,6 +759,7 @@ function resolveInchSizing({
   | {
       errorTitle: string;
       error: string;
+      canCreate: false;
       width: null;
       height: null;
       widthInches: null;
@@ -681,24 +769,36 @@ function resolveInchSizing({
   | {
       errorTitle: null;
       error: null;
+      canCreate: false;
+      width: null;
+      height: null;
+      widthInches: null;
+      heightInches: null;
+      meshCount: null;
+    }
+  | {
+      errorTitle: null;
+      error: null;
+      canCreate: true;
       width: number;
       height: number;
       widthInches: number;
       heightInches: number;
       meshCount: number;
     } {
-  const parsedWidthInches = parsePositiveDecimal(widthInches);
-  const parsedHeightInches = parsePositiveDecimal(heightInches);
-  const parsedMeshCount = parsePositiveDecimal(meshCount);
+  const parsedWidthInches = parseRequiredPositiveNumber(widthInches);
+  const parsedHeightInches = parseRequiredPositiveNumber(heightInches);
+  const parsedMeshCount = parseRequiredPositiveNumber(meshCount);
 
   if (
-    parsedWidthInches === null ||
-    parsedHeightInches === null ||
-    parsedMeshCount === null
+    parsedWidthInches.kind === "empty" ||
+    parsedHeightInches.kind === "empty" ||
+    parsedMeshCount.kind === "empty"
   ) {
     return {
-      errorTitle: "Check your dimensions",
-      error: "Enter positive values for width, height, and cells per inch.",
+      errorTitle: null,
+      error: null,
+      canCreate: false,
       width: null,
       height: null,
       widthInches: null,
@@ -707,23 +807,40 @@ function resolveInchSizing({
     };
   }
 
-  const widthCellCount = parsedWidthInches * parsedMeshCount;
-  const heightCellCount = parsedHeightInches * parsedMeshCount;
-  const sizeErrors = [
-    getInchSizeMaxError("Length", widthCellCount),
-    getInchSizeMaxError("Height", heightCellCount),
-  ].filter((error): error is string => error !== null);
-
-  if (sizeErrors.length > 0) {
+  if (
+    parsedWidthInches.kind === "invalid" ||
+    parsedHeightInches.kind === "invalid" ||
+    parsedMeshCount.kind === "invalid"
+  ) {
     return {
-      errorTitle: getInchSizeMaxErrorTitle(
-        widthCellCount > EDITOR_V2_MAX_GRID_SIZE,
-        heightCellCount > EDITOR_V2_MAX_GRID_SIZE,
-      ),
+      errorTitle: "Check your dimensions",
+      error: "Enter values greater than 0 for width, height, and cells per inch.",
+      canCreate: false,
+      width: null,
+      height: null,
+      widthInches: null,
+      heightInches: null,
+      meshCount: null,
+    };
+  }
+
+  const widthInchesValue = parsedWidthInches.value;
+  const heightInchesValue = parsedHeightInches.value;
+  const meshCountValue = parsedMeshCount.value;
+
+  const widthCellCount = widthInchesValue * meshCountValue;
+  const heightCellCount = heightInchesValue * meshCountValue;
+  const widthExceeded = widthCellCount > EDITOR_V2_MAX_GRID_SIZE;
+  const heightExceeded = heightCellCount > EDITOR_V2_MAX_GRID_SIZE;
+
+  if (widthExceeded || heightExceeded) {
+    return {
+      errorTitle: getInchSizeMaxErrorTitle(widthExceeded, heightExceeded),
       error: `Maximum canvas size is ${EDITOR_V2_MAX_GRID_SIZE} x ${EDITOR_V2_MAX_GRID_SIZE} cells. Please input ${getInchSizeMaxSuggestion(
-        widthCellCount > EDITOR_V2_MAX_GRID_SIZE,
-        heightCellCount > EDITOR_V2_MAX_GRID_SIZE,
+        widthExceeded,
+        heightExceeded,
       )} or choose a lower mesh count.`,
+      canCreate: false,
       width: null,
       height: null,
       widthInches: null,
@@ -738,11 +855,12 @@ function resolveInchSizing({
   return {
     errorTitle: null,
     error: null,
+    canCreate: true,
     width,
     height,
-    widthInches: parsedWidthInches,
-    heightInches: parsedHeightInches,
-    meshCount: parsedMeshCount,
+    widthInches: widthInchesValue,
+    heightInches: heightInchesValue,
+    meshCount: meshCountValue,
   };
 }
 
@@ -760,16 +878,4 @@ function getInchSizeMaxSuggestion(widthExceeded: boolean, heightExceeded: boolea
   }
 
   return widthExceeded ? "a smaller length" : "a smaller height";
-}
-
-function getInchSizeMaxError(label: string, cellCount: number): string | null {
-  if (cellCount <= EDITOR_V2_MAX_GRID_SIZE) {
-    return null;
-  }
-
-  return `${label} creates ${formatCellCount(cellCount)} cells, over the ${EDITOR_V2_MAX_GRID_SIZE} max.`;
-}
-
-function formatCellCount(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
