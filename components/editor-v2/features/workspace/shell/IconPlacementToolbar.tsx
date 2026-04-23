@@ -125,6 +125,71 @@ function IconToolbarPortalPopover({
   );
 }
 
+interface IconColorSlotSwatchPopoverProps {
+  activeColorId: string | null;
+  assignedColorHex: string;
+  colors: PaletteColor[];
+  isOpen: boolean;
+  isSelected: boolean;
+  label: string;
+  onColorSelect: (colorId: string) => void;
+  onOpenChange: (open: boolean) => void;
+}
+
+function IconColorSlotSwatchPopover({
+  activeColorId,
+  assignedColorHex,
+  colors,
+  isOpen,
+  isSelected,
+  label,
+  onColorSelect,
+  onOpenChange,
+}: IconColorSlotSwatchPopoverProps) {
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+
+  return (
+    <ToolbarAnchor ref={anchorRef} role="listitem">
+      <ToolbarButton
+        type="button"
+        swatch
+        active={isOpen || isSelected}
+        aria-pressed={isOpen}
+        aria-label={label}
+        title={label}
+        className={styles.libraryPopoverSwatchTrigger}
+        onClick={() => onOpenChange(!isOpen)}
+      >
+        <ToolbarSwatch
+          color={assignedColorHex}
+          className={styles.libraryPopoverSwatch}
+        />
+      </ToolbarButton>
+
+      {isOpen ? (
+        <IconToolbarPortalPopover
+          anchorRef={anchorRef}
+          onRequestClose={() => onOpenChange(false)}
+          role="dialog"
+          aria-label={label}
+          className={styles.colorLibraryPopover}
+          style={{ whiteSpace: "normal" }}
+        >
+          <ColorLibrary
+            activeColorId={activeColorId}
+            className={styles.toolbarColorLibrary}
+            colors={colors}
+            onColorSelect={(colorId) => {
+              onColorSelect(colorId);
+              onOpenChange(false);
+            }}
+          />
+        </IconToolbarPortalPopover>
+      ) : null}
+    </ToolbarAnchor>
+  );
+}
+
 interface IconPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
@@ -143,6 +208,7 @@ export function IconPlacementToolbar({
   placement,
 }: IconPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
+  const [openColorSlotId, setOpenColorSlotId] = useState<string | null>(null);
   const [strokeWidthOpen, setStrokeWidthOpen] = useState(false);
   const [strokeWidthTooltipVisible, setStrokeWidthTooltipVisible] = useState(false);
   const [patternOpen, setPatternOpen] = useState(false);
@@ -207,6 +273,30 @@ export function IconPlacementToolbar({
   );
   const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
 
+  function closeColorPickers() {
+    setColorLibraryOpen(false);
+    setOpenColorSlotId(null);
+  }
+
+  function updateSelectedColorSlot(slotId: string) {
+    dispatch(
+      createUpdateIconPlacementCommand({
+        selectedColorSlotId: slotId,
+      }),
+    );
+  }
+
+  function updateSlotColor(slotId: string, colorId: string) {
+    dispatch(
+      createUpdateIconPlacementCommand({
+        selectedColorSlotId: slotId,
+        colorSlots: placement.colorSlots.map((slot) =>
+          slot.id === slotId ? { ...slot, paletteColorId: colorId } : slot,
+        ),
+      }),
+    );
+  }
+
   async function handleConvert() {
     if (isConverting) {
       return;
@@ -246,61 +336,55 @@ export function IconPlacementToolbar({
 
   return (
     <Toolbar className={styles.floatingToolbar}>
-      <ToolbarGroup>
-        <ToolbarAnchor ref={colorAnchorRef}>
-          <ToolbarButton
-            type="button"
-            swatch
-            active={colorLibraryOpen}
-            aria-pressed={colorLibraryOpen}
-            aria-label="Open color library"
-            title="Open color library"
-            className={styles.libraryPopoverSwatchTrigger}
-            disabled={placement.colorSlots.length > 0 && !selectedSlot}
-            onClick={() => setColorLibraryOpen((current) => !current)}
-          >
-            <ToolbarSwatch
-              color={triggerColorHex}
-              className={styles.libraryPopoverSwatch}
-            />
-          </ToolbarButton>
-
-          {colorLibraryOpen ? (
-            <IconToolbarPortalPopover
-              anchorRef={colorAnchorRef}
-              onRequestClose={() => setColorLibraryOpen(false)}
-              role="dialog"
-              aria-label="Color library"
-              className={styles.colorLibraryPopover}
-              style={{ whiteSpace: "normal" }}
-            >
-              <ColorLibrary
-                activeColorId={selectedSlot?.paletteColorId ?? activeColorId}
-                className={styles.toolbarColorLibrary}
-                colors={palette}
-                onColorSelect={(colorId) => {
-                  if (selectedSlot) {
-                    dispatch(
-                      createUpdateIconPlacementCommand({
-                        colorSlots: placement.colorSlots.map((slot) =>
-                          slot.id === selectedSlot.id
-                            ? { ...slot, paletteColorId: colorId }
-                            : slot,
-                        ),
-                      }),
-                    );
-                  } else {
-                    dispatch(createSetActiveColorCommand(colorId));
-                  }
-                  setColorLibraryOpen(false);
+      {placement.colorSlots.length === 0 ? (
+        <>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={colorAnchorRef}>
+              <ToolbarButton
+                type="button"
+                swatch
+                active={colorLibraryOpen}
+                aria-pressed={colorLibraryOpen}
+                aria-label="Open color library"
+                title="Open color library"
+                className={styles.libraryPopoverSwatchTrigger}
+                onClick={() => {
+                  setOpenColorSlotId(null);
+                  setColorLibraryOpen((current) => !current);
                 }}
-              />
-            </IconToolbarPortalPopover>
-          ) : null}
-        </ToolbarAnchor>
-      </ToolbarGroup>
+              >
+                <ToolbarSwatch
+                  color={triggerColorHex}
+                  className={styles.libraryPopoverSwatch}
+                />
+              </ToolbarButton>
 
-      <ToolbarDivider />
+              {colorLibraryOpen ? (
+                <IconToolbarPortalPopover
+                  anchorRef={colorAnchorRef}
+                  onRequestClose={() => setColorLibraryOpen(false)}
+                  role="dialog"
+                  aria-label="Color library"
+                  className={styles.colorLibraryPopover}
+                  style={{ whiteSpace: "normal" }}
+                >
+                  <ColorLibrary
+                    activeColorId={activeColorId}
+                    className={styles.toolbarColorLibrary}
+                    colors={palette}
+                    onColorSelect={(colorId) => {
+                      dispatch(createSetActiveColorCommand(colorId));
+                      setColorLibraryOpen(false);
+                    }}
+                  />
+                </IconToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+        </>
+      ) : null}
 
       {placement.supportsStrokeWidth ? (
         <>
@@ -313,6 +397,7 @@ export function IconPlacementToolbar({
                 aria-label="Icon thickness"
                 title="Icon thickness"
                 onClick={() => setStrokeWidthOpen((current) => !current)}
+                onPointerDown={closeColorPickers}
               >
                 <ToolbarIcon icon="/icons/other/stroke-width.svg" />
               </ToolbarButton>
@@ -391,6 +476,7 @@ export function IconPlacementToolbar({
                 aria-label="Scallop spacing"
                 title="Scallop spacing"
                 onClick={() => setPatternOpen((current) => !current)}
+                onPointerDown={closeColorPickers}
               >
                 <ToolbarLabel>Wave</ToolbarLabel>
               </ToolbarButton>
@@ -469,6 +555,7 @@ export function IconPlacementToolbar({
                 aria-label="Frame spacing"
                 title="Frame spacing"
                 onClick={() => setSpacingOpen((current) => !current)}
+                onPointerDown={closeColorPickers}
               >
                 <ToolbarLabel>Gap</ToolbarLabel>
               </ToolbarButton>
@@ -547,27 +634,28 @@ export function IconPlacementToolbar({
                 const isSelected = slot.id === placement.selectedColorSlotId;
 
                 return (
-                  <button
+                  <IconColorSlotSwatchPopover
                     key={slot.id}
-                    type="button"
-                    role="listitem"
-                    className={styles.iconPlacementSwatchButton}
-                    data-selected={isSelected ? "true" : "false"}
-                    aria-pressed={isSelected}
-                    title={`Edit icon color ${slot.sourceHex}`}
-                    onClick={() =>
-                      dispatch(
-                        createUpdateIconPlacementCommand({
-                          selectedColorSlotId: slot.id,
-                        }),
-                      )
-                    }
-                  >
-                    <ToolbarSwatch
-                      color={assignedColor?.hex ?? slot.sourceHex}
-                      className={styles.libraryPopoverSwatch}
-                    />
-                  </button>
+                    activeColorId={slot.paletteColorId ?? null}
+                    assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
+                    colors={palette}
+                    isOpen={openColorSlotId === slot.id}
+                    isSelected={isSelected}
+                    label={`Edit icon color ${slot.sourceHex}`}
+                    onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setColorLibraryOpen(false);
+                        setOpenColorSlotId(slot.id);
+                        updateSelectedColorSlot(slot.id);
+                        return;
+                      }
+
+                      setOpenColorSlotId((current) =>
+                        current === slot.id ? null : current,
+                      );
+                    }}
+                  />
                 );
               })}
             </div>

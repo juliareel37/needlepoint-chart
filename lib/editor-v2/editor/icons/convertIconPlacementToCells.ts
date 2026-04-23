@@ -1,6 +1,5 @@
 import type { GridPoint, IconPlacementSession, PaletteColor } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
-import { findNearestIconColorSlot } from "./iconColorSlots";
 import { hexToRgb } from "../color-utils";
 import { getContainedRect } from "../positioning";
 import { getIconPlacementBounds } from "./iconPlacementGeometry";
@@ -253,33 +252,41 @@ function resolvePlacementColorId(
     return fallbackColorId;
   }
 
-  if (placement.primitiveKind) {
-    let bestSlot = placement.colorSlots[0] ?? null;
-    let bestDistance = Number.POSITIVE_INFINITY;
+  const slot = findNearestResolvedIconColorSlot(
+    placement.colorSlots,
+    pixel,
+    paletteById,
+  );
+  return slot?.paletteColorId ?? fallbackColorId;
+}
 
-    for (const slot of placement.colorSlots) {
-      const resolvedHex = slot.paletteColorId
-        ? paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex
-        : slot.sourceHex;
-      const resolvedRgb = hexToRgb(resolvedHex);
-      if (!resolvedRgb) {
-        continue;
-      }
+function findNearestResolvedIconColorSlot(
+  slots: IconPlacementSession["colorSlots"],
+  pixel: { r: number; g: number; b: number },
+  paletteById: Record<string, PaletteColor>,
+) {
+  let bestSlot = slots[0] ?? null;
+  let bestDistance = Number.POSITIVE_INFINITY;
 
-      const dr = resolvedRgb.r - pixel.r;
-      const dg = resolvedRgb.g - pixel.g;
-      const db = resolvedRgb.b - pixel.b;
-      const distance = dr * dr + dg * dg + db * db;
-
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestSlot = slot;
-      }
+  for (const slot of slots) {
+    const resolvedHex = slot.paletteColorId
+      ? paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex
+      : slot.sourceHex;
+    const resolvedRgb = hexToRgb(resolvedHex);
+    if (!resolvedRgb) {
+      continue;
     }
 
-    return bestSlot?.paletteColorId ?? fallbackColorId;
+    const dr = resolvedRgb.r - pixel.r;
+    const dg = resolvedRgb.g - pixel.g;
+    const db = resolvedRgb.b - pixel.b;
+    const distance = dr * dr + dg * dg + db * db;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestSlot = slot;
+    }
   }
 
-  const slot = findNearestIconColorSlot(placement.colorSlots, pixel);
-  return slot?.paletteColorId ?? fallbackColorId;
+  return bestSlot;
 }
