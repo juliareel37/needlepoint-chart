@@ -111,6 +111,7 @@ export function EditorV2Shell({
   const previewMode = state.ui.preferences.previewMode;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
+  const hasUnsavedChanges = state.session.persistence.dirty;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
@@ -457,6 +458,7 @@ export function EditorV2Shell({
         ? createPortal(
             <HeaderSaveStatus
               hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
@@ -702,11 +704,17 @@ export function EditorV2Shell({
 
 function HeaderSaveStatus({
   hasSavedDesignAccess,
+  hasUnsavedChanges,
   saveMessage,
 }: {
   hasSavedDesignAccess: boolean;
+  hasUnsavedChanges: boolean;
   saveMessage: string;
 }) {
+  if (!saveMessage && hasSavedDesignAccess && !hasUnsavedChanges) {
+    return null;
+  }
+
   const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
   const message =
     !hasSavedDesignAccess && !saveMessage
