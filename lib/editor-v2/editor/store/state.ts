@@ -420,7 +420,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
       },
       selection: {
         mode: "none",
-        shape: "freehand",
+        shape: "rect",
         rect: null,
         lassoPoints: [],
         mirrorAxis: null,

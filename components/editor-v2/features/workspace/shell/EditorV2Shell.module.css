@@ -625,6 +625,11 @@
   overflow: hidden;
 }
 
+/* .floatingToolbar button {
+  padding: 50px;
+} */
+
+
 .floatingToolbar {
   position: relative;
   overflow: visible;

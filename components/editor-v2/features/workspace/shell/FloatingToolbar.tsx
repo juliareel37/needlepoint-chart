@@ -549,9 +549,29 @@ export function FloatingToolbar({
         </ToolbarAnchor>
       </ToolbarGroup>
 
-      <ToolbarDivider />
+
 
       <ToolbarGroup>
+      <ToolbarDivider />
+        <ToolbarButton
+          type="button"
+          active={activeTool === "eyedropper"}
+          aria-pressed={activeTool === "eyedropper"}
+          aria-label="Eyedropper"
+          data-tooltip="Eyedropper"
+          title="Eyedropper"
+          disabled={selectionLockedToolsDisabled}
+          onClick={() => {
+            closeColorLibrary();
+            closeDrawMenu();
+            closeImageMenu();
+            dispatch(createSetToolCommand("eyedropper"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/dropper.svg" />
+        </ToolbarButton>
+
+
         {touchPrimaryInput ? null : (
           <ToolbarButton
             type="button"
@@ -571,24 +591,151 @@ export function FloatingToolbar({
             <ToolbarIcon icon="/icons/lucide/pan.svg" />
           </ToolbarButton>
         )}
+   <ToolbarAnchor ref={selectAnchorRef}>
+          <ToolbarButton
+            type="button"
+            active={selectionVisible || selectOpen}
+            aria-pressed={selectionVisible || selectOpen}
+            aria-label="Select"
+            data-tooltip="Select"
+            title="Select"
+            onClick={handleSelectionButtonClick}
+          >
+            <ToolbarIcon icon="/icons/lucide/selection.svg" />
+          </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={activeTool === "eyedropper"}
-          aria-pressed={activeTool === "eyedropper"}
-          aria-label="Eyedropper"
-          data-tooltip="Eyedropper"
-          title="Eyedropper"
-          disabled={selectionLockedToolsDisabled}
-          onClick={() => {
-            closeColorLibrary();
-            closeDrawMenu();
-            closeImageMenu();
-            dispatch(createSetToolCommand("eyedropper"));
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/dropper.svg" />
-        </ToolbarButton>
+          {selectOpen ? (
+            <FloatingToolbarPortalPopover
+              align="center"
+              anchorRef={selectAnchorRef}
+              clampToViewport
+              subtoolbar
+              role="dialog"
+              aria-label="Selection tools"
+            >
+              {/* <ToolbarButton
+                type="button"
+                active={selectionShape === "freehand"}
+                aria-pressed={selectionShape === "freehand"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
+                <ToolbarLabel>Lasso</ToolbarLabel>
+              </ToolbarButton> */}
+
+              <ToolbarButton
+                type="button"
+                // variant="ghostV2"
+                active={selectionShape === "rect"}
+                aria-pressed={selectionShape === "rect"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/selection.svg" />
+                {/* <ToolbarLabel>Rectangle</ToolbarLabel> */}
+              </ToolbarButton>
+      
+              <ToolbarButton
+                type="button"
+                // variant="ghostV2"
+                active={selectionShape === "freehand"}
+                aria-pressed={selectionShape === "freehand"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/lasso.svg" />
+                {/* <ToolbarLabel>Lasso</ToolbarLabel> */}
+              </ToolbarButton>
+              {/* <ToolbarButton
+                type="button"
+                active={selectionShape === "rect"}
+                aria-pressed={selectionShape === "rect"}
+                onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
+              >
+                <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
+                <ToolbarLabel>Rectangle</ToolbarLabel>
+              </ToolbarButton> */}
+
+              <ToolbarDivider />
+
+              <Button
+                type="button"
+                variant="ghostV2"
+                active={mirrorSessionActive}
+                aria-pressed={mirrorSessionActive}
+                disabled={!canMirrorSelection}
+                onClick={() => {
+                  if (!canMirrorSelection) {
+                    return;
+                  }
+
+                  dispatch(createBeginMirrorFromSelectionCommand());
+                }}
+              >
+                <ToolbarIcon icon="/icons/flip.svg" />
+                <ToolbarLabel>Mirror</ToolbarLabel>
+              </Button>
+
+              <ToolbarDivider />
+
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!selectionCommitted}
+                onClick={handleNewSelection}
+              >
+                Unselect
+                {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+              </Button>
+
+              <ToolbarDivider />
+{/* 
+              <ToolbarButton
+                type="button"
+                disabled={!canEraseSelection}
+                onClick={() => {
+                  if (!selectionBounds) {
+                    return;
+                  }
+
+                  dispatch(
+                    createEraseCellsCommand(
+                      buildSelectionCandidateCells(selectionBounds),
+                    ),
+                  );
+                }}
+              >
+                <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                <ToolbarLabel>Erase</ToolbarLabel>
+              </ToolbarButton> */}
+
+              {/* <ToolbarDivider /> */}
+
+              {/* <Button
+                type="button"
+                variant="secondary"
+                onClick={handleExitSelection}
+              >
+                Cancel
+              </Button> */}
+
+              {/* <Button
+                type="button"
+                variant="primary"
+                onClick={handleDoneSelection}
+              >
+                Done
+              </Button> */}
+
+               <Button
+                type="button"
+                variant="toolbarX"
+                onClick={handleExitSelection}
+              >
+                <ButtonIcon icon="/icons/lucide/x.svg" />
+              </Button>
+
+            </FloatingToolbarPortalPopover>
+          ) : null}
+        </ToolbarAnchor>
 
         <ToolbarButton
           type="button"
@@ -745,155 +892,11 @@ export function FloatingToolbar({
 
       </ToolbarGroup>
 
-      <ToolbarGroup>
-        <ToolbarAnchor ref={selectAnchorRef}>
-          <ToolbarButton
-            type="button"
-            active={selectionVisible || selectOpen}
-            aria-pressed={selectionVisible || selectOpen}
-            aria-label="Select"
-            data-tooltip="Select"
-            title="Select"
-            onClick={handleSelectionButtonClick}
-          >
-            <ToolbarIcon icon="/icons/lucide/lasso.svg" />
-          </ToolbarButton>
+      {/* <ToolbarGroup> */}
+     
+      {/* </ToolbarGroup> */}
 
-          {selectOpen ? (
-            <FloatingToolbarPortalPopover
-              align="center"
-              anchorRef={selectAnchorRef}
-              clampToViewport
-              subtoolbar
-              role="dialog"
-              aria-label="Selection tools"
-            >
-              {/* <ToolbarButton
-                type="button"
-                active={selectionShape === "freehand"}
-                aria-pressed={selectionShape === "freehand"}
-                onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
-              >
-                <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
-                <ToolbarLabel>Lasso</ToolbarLabel>
-              </ToolbarButton> */}
-
-              <Button
-                type="button"
-                variant="ghostV2"
-                active={selectionShape === "freehand"}
-                aria-pressed={selectionShape === "freehand"}
-                onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
-              >
-                <ToolbarIcon icon="/icons/lucide/lasso.svg" />
-                <ToolbarLabel>Lasso</ToolbarLabel>
-              </Button>
-      
-              <Button
-                type="button"
-                variant="ghostV2"
-                active={selectionShape === "rect"}
-                aria-pressed={selectionShape === "rect"}
-                onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
-              >
-                <ToolbarIcon icon="/icons/lucide/selection.svg" />
-                <ToolbarLabel>Rectangle</ToolbarLabel>
-              </Button>
-              {/* <ToolbarButton
-                type="button"
-                active={selectionShape === "rect"}
-                aria-pressed={selectionShape === "rect"}
-                onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
-              >
-                <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
-                <ToolbarLabel>Rectangle</ToolbarLabel>
-              </ToolbarButton> */}
-
-              <ToolbarDivider />
-
-              <Button
-                type="button"
-                variant="ghostV2"
-                active={mirrorSessionActive}
-                aria-pressed={mirrorSessionActive}
-                disabled={!canMirrorSelection}
-                onClick={() => {
-                  if (!canMirrorSelection) {
-                    return;
-                  }
-
-                  dispatch(createBeginMirrorFromSelectionCommand());
-                }}
-              >
-                <ToolbarIcon icon="/icons/flip.svg" />
-                <ToolbarLabel>Mirror</ToolbarLabel>
-              </Button>
-
-              <ToolbarDivider />
-
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!selectionCommitted}
-                onClick={handleNewSelection}
-              >
-                Unselect
-                {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
-              </Button>
-
-              <ToolbarDivider />
-{/* 
-              <ToolbarButton
-                type="button"
-                disabled={!canEraseSelection}
-                onClick={() => {
-                  if (!selectionBounds) {
-                    return;
-                  }
-
-                  dispatch(
-                    createEraseCellsCommand(
-                      buildSelectionCandidateCells(selectionBounds),
-                    ),
-                  );
-                }}
-              >
-                <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-                <ToolbarLabel>Erase</ToolbarLabel>
-              </ToolbarButton> */}
-
-              {/* <ToolbarDivider /> */}
-
-              {/* <Button
-                type="button"
-                variant="secondary"
-                onClick={handleExitSelection}
-              >
-                Cancel
-              </Button> */}
-
-              {/* <Button
-                type="button"
-                variant="primary"
-                onClick={handleDoneSelection}
-              >
-                Done
-              </Button> */}
-
-               <Button
-                type="button"
-                variant="toolbarX"
-                onClick={handleExitSelection}
-              >
-                <ButtonIcon icon="/icons/lucide/x.svg" />
-              </Button>
-
-            </FloatingToolbarPortalPopover>
-          ) : null}
-        </ToolbarAnchor>
-      </ToolbarGroup>
-
-      <ToolbarDivider />
+      {/* <ToolbarDivider /> */}
  
       <ToolbarGroup>
         <ToolbarAnchor ref={imageAnchorRef}>
