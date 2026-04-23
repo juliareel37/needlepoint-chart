@@ -23,6 +23,10 @@ import {
   findClosestColorIdFromCandidates,
   hexToRgb,
 } from "@/lib/editor-v2/editor/color-utils";
+import {
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
 function getSwatchIconColor(hex: string) {
@@ -58,9 +62,11 @@ function UsedColorsPortalPopover({
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
     top: number;
-    left: number;
+    left: number | "auto";
+    right: number | "auto";
     direction: "up" | "down";
     maxHeight: number;
+    transform: string;
   } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
@@ -82,6 +88,12 @@ function UsedColorsPortalPopover({
     const spaceAbove = Math.max(rect.top - viewportPadding, 0);
     const spaceBelow = Math.max(window.innerHeight - rect.bottom - viewportPadding, 0);
     const popoverHeight = popoverRef.current?.scrollHeight ?? 0;
+    const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
+    const horizontalPosition = getToolbarPopoverHorizontalPosition({
+      anchorRect: rect,
+      popoverWidth,
+      viewportPadding,
+    });
     const direction =
       preferredDirection === "auto"
         ? popoverHeight > 0
@@ -96,9 +108,14 @@ function UsedColorsPortalPopover({
 
     setPosition({
       top: direction === "up" ? rect.top - gap : rect.bottom + gap,
-      left: rect.left - 12,
+      left: horizontalPosition.left,
+      right: horizontalPosition.right,
       direction,
       maxHeight: Math.max(availableSpace - gap, 140),
+      transform:
+        direction === "up"
+          ? `${horizontalPosition.transform} translateY(-100%)`.trim()
+          : horizontalPosition.transform,
     });
   }, [anchorRef, preferredDirection]);
 
@@ -166,8 +183,10 @@ function UsedColorsPortalPopover({
         position: "fixed",
         top: position.top,
         left: position.left,
+        right: position.right,
         zIndex: 40,
-        transform: position.direction === "up" ? "translateY(-100%)" : "none",
+        transform: position.transform,
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         ["--used-colors-popover-max-height" as string]: `${position.maxHeight}px`,
       }}
     >

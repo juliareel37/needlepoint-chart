@@ -32,6 +32,10 @@ import {
   createSetActiveColorCommand,
   createUpdateTextPlacementCommand,
 } from "../workspaceCommands";
+import {
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
 function TextToolbarPortalPopover({
@@ -44,9 +48,12 @@ function TextToolbarPortalPopover({
   onRequestClose?: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number | "auto";
+    right: number | "auto";
+    transform: string;
+  } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -67,18 +74,28 @@ function TextToolbarPortalPopover({
       }
 
       const rect = anchor.getBoundingClientRect();
+      const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
+      const horizontalPosition = getToolbarPopoverHorizontalPosition({
+        anchorRect: rect,
+        popoverWidth,
+      });
       setPosition({
         top: rect.bottom + 8,
-        left: rect.left - 12,
+        left: horizontalPosition.left,
+        right: horizontalPosition.right,
+        transform: horizontalPosition.transform,
       });
     }
 
     updatePosition();
 
+    const frame = window.requestAnimationFrame(updatePosition);
+
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
@@ -120,8 +137,10 @@ function TextToolbarPortalPopover({
         position: "fixed",
         top: position.top,
         left: position.left,
+        right: position.right,
         zIndex: 40,
-        transform: "none",
+        transform: position.transform,
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
       }}
     >
       {children}

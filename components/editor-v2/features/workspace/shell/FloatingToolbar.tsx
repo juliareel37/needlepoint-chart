@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
@@ -45,13 +45,18 @@ import {
   createUndoCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
+import {
+  getToolbarPopoverMeasuredWidth,
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
 function FloatingToolbarPortalPopover({
   anchorRef,
   align = "start",
   children,
-  clampToViewport = false,
+  clampToViewport = true,
   onRequestClose,
   subtoolbar = false,
   ...props
@@ -64,68 +69,90 @@ function FloatingToolbarPortalPopover({
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
     top: number;
-    left: number;
+    left: number | "auto";
+    right: number | "auto";
     transform: string;
   } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      setPosition(null);
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const popoverWidth = getToolbarPopoverMeasuredWidth(popoverRef.current);
+    const viewportPadding = TOOLBAR_POPOVER_VIEWPORT_PADDING;
+    const horizontalPosition = clampToViewport
+      ? getToolbarPopoverHorizontalPosition({
+          align,
+          anchorRect: rect,
+          popoverWidth,
+          viewportPadding,
+        })
+      : {
+          left: align === "center" ? rect.left + rect.width / 2 : rect.left - 12,
+          right: "auto" as const,
+          transform: align === "center" ? "translateX(-50%)" : "none",
+        };
+
+    setPosition({
+      top: rect.bottom + 8,
+      left: horizontalPosition.left,
+      right: horizontalPosition.right,
+      transform: horizontalPosition.transform,
+    });
+  }, [align, anchorRef, clampToViewport]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    updatePosition();
+  }, [mounted, updatePosition, children]);
+
+  useEffect(() => {
+    if (!mounted || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const popover = popoverRef.current;
+    const anchor = anchorRef.current;
+
+    if (!popover || !anchor) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      window.requestAnimationFrame(updatePosition);
+    });
+
+    observer.observe(popover);
+
+    return () => observer.disconnect();
+  }, [anchorRef, mounted, updatePosition]);
 
   useEffect(() => {
     if (!mounted) {
       return;
     }
 
-    function updatePosition() {
-      const anchor = anchorRef.current;
-
-      if (!anchor) {
-        setPosition(null);
-        return;
-      }
-
-      const rect = anchor.getBoundingClientRect();
-      const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
-      const viewportPadding = 12;
-      const centeredLeft = rect.left + rect.width / 2;
-      const startLeft = rect.left - 12;
-
-      let left = align === "center" ? centeredLeft : startLeft;
-      let transform = align === "center" ? "translateX(-50%)" : "none";
-
-      if (clampToViewport && popoverWidth > 0) {
-        const desiredLeft =
-          align === "center" ? centeredLeft - popoverWidth / 2 : startLeft;
-        const maxLeft = Math.max(
-          viewportPadding,
-          window.innerWidth - viewportPadding - popoverWidth,
-        );
-        left = Math.min(Math.max(desiredLeft, viewportPadding), maxLeft);
-        transform = "none";
-      }
-
-      setPosition({
-        top: rect.bottom + 8,
-        left,
-        transform,
-      });
-    }
-
-    updatePosition();
-
-    const frame = window.requestAnimationFrame(updatePosition);
-
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
-      window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [align, anchorRef, clampToViewport, mounted]);
+  }, [mounted, updatePosition]);
 
   useEffect(() => {
     if (!mounted || !onRequestClose) {
@@ -150,7 +177,7 @@ function FloatingToolbarPortalPopover({
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [anchorRef, mounted, onRequestClose]);
 
-  if (!mounted || !position) {
+  if (!mounted) {
     return null;
   }
 
@@ -162,10 +189,15 @@ function FloatingToolbarPortalPopover({
       style={{
         ...props.style,
         position: "fixed",
-        top: position.top,
-        left: position.left,
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        right: position?.right ?? "auto",
         zIndex: 40,
-        transform: position.transform,
+        transform: position?.transform ?? "none",
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
+        overflowX: subtoolbar ? "auto" : undefined,
+        overflowY: subtoolbar ? "hidden" : undefined,
+        visibility: position ? "visible" : "hidden",
       }}
     >
       {children}
