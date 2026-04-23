@@ -242,14 +242,6 @@ export function UsedColorsSummary({
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
 
-  useEffect(() => {
-    if (!isSelecting) {
-      return;
-    }
-
-    onHighlightColorChange(null);
-  }, [isSelecting, onHighlightColorChange]);
-
   useEffect(
     () => () => {
       onHighlightColorChange(null);
@@ -417,13 +409,14 @@ export function UsedColorsSummary({
             title="Exit used colors tool"
             onClick={exitToolMode}
           >
-            <ButtonIcon icon="/icons/lucide/x.svg" />
+            {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+            Cancel
           </Button>
         ) : usedColors.length > 0 ? (
           <div className={styles.usedColorsToolButtons}>
             <Button
               type="button"
-              variant="secondary"
+              variant="ghostV2"
               size="sm"
               className={styles.usedColorsEditButton}
               onClick={enterToolMode}
@@ -458,11 +451,14 @@ export function UsedColorsSummary({
               }
             >
             {usedColors.map((entry) => (
-              <li key={entry.colorId}>
+              <li
+                key={entry.colorId}
+                className={styles.usedColorsRow}
+                data-selectable={isSelecting ? "true" : "false"}
+                data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
+              >
                 <div
                   className={styles.usedColorsItem}
-                  data-selectable={isSelecting ? "true" : "false"}
-                  data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                   role={isSelecting ? "button" : undefined}
                   tabIndex={isSelecting ? 0 : undefined}
                   style={typographyStyles.p2}
@@ -592,33 +588,34 @@ export function UsedColorsSummary({
                     <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
                     <span className={styles.usedColorsItemCount}>×{entry.count}</span>
                   </button>
-
-                  {!isSelecting ? (
-                    <button
-                      type="button"
-                      className={styles.usedColorsHighlightButton}
-                      aria-label={
-                        highlightedColorId === entry.colorId
-                          ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                          : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                      }
-                      aria-pressed={highlightedColorId === entry.colorId}
-                      title={
-                        highlightedColorId === entry.colorId
-                          ? "Stop highlight"
-                          : "Highlight on canvas"
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onHighlightColorChange(
-                          highlightedColorId === entry.colorId ? null : entry.colorId,
-                        );
-                      }}
-                    >
-                      <ButtonIcon icon="/icons/lucide/search.svg" />
-                    </button>
-                  ) : null}
                 </div>
+
+                <button
+                  type="button"
+                  className={styles.usedColorsHighlightButton}
+                  aria-label={
+                    highlightedColorId === entry.colorId
+                      ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                      : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                  }
+                  aria-pressed={highlightedColorId === entry.colorId}
+                  title={
+                    highlightedColorId === entry.colorId
+                      ? "Stop highlight"
+                      : "Highlight on canvas"
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onHighlightColorChange(
+                      highlightedColorId === entry.colorId ? null : entry.colorId,
+                    );
+                  }}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <ButtonIcon icon="/icons/lucide/search.svg" />
+                </button>
               </li>
             ))}
             </ul>
