@@ -1,12 +1,15 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Field } from "./Field";
 import {
   MenuChevronIcon,
@@ -33,6 +36,7 @@ export interface SingleSelectDropdownProps<TItem> {
   menuOffset?: number;
   menuOverlapTrigger?: boolean;
   menuPlacement?: SingleSelectDropdownMenuPlacement;
+  menuPortalToViewport?: boolean;
   menuStyle?: CSSProperties;
   menuWidth?: string | number;
   minWidth?: string | number;
@@ -62,6 +66,7 @@ export function SingleSelectDropdown<TItem>({
   menuOffset = 4,
   menuOverlapTrigger = false,
   menuPlacement = "bottom-start",
+  menuPortalToViewport = false,
   menuStyle,
   menuWidth = "max-content",
   minWidth = 200,
@@ -77,7 +82,14 @@ export function SingleSelectDropdown<TItem>({
   wrapperStyle,
 }: SingleSelectDropdownProps<TItem>) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -96,8 +108,9 @@ export function SingleSelectDropdown<TItem>({
 
   const chevronDirection = menuPlacement === "top-start" ? "up" : "down";
   const triggerZIndex = menuOverlapTrigger ? 1 : undefined;
-  const menuPositionStyle: CSSProperties =
-    menuPlacement === "top-start"
+  const menuPositionStyle: CSSProperties = menuPortalToViewport
+    ? {}
+    : menuPlacement === "top-start"
       ? {
           bottom: menuOverlapTrigger
             ? 0
@@ -108,6 +121,133 @@ export function SingleSelectDropdown<TItem>({
           top: menuOverlapTrigger ? 0 : `calc(100% + ${menuOffset}px)`,
           left: 0,
         };
+
+  const updatePortalStyle = useCallback(() => {
+    if (!menuPortalToViewport || !rootRef.current || !menuRef.current) {
+      return;
+    }
+
+    const viewportPadding = 8;
+    const triggerRect = rootRef.current.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const measuredMenuWidth = menuRect.width || triggerRect.width;
+    const measuredMenuHeight = menuRect.height || 0;
+    const desiredLeft = triggerRect.left;
+    const maxLeft = Math.max(
+      viewportPadding,
+      window.innerWidth - measuredMenuWidth - viewportPadding,
+    );
+    const left = Math.min(Math.max(desiredLeft, viewportPadding), maxLeft);
+    const top =
+      menuPlacement === "top-start"
+        ? Math.max(
+            viewportPadding,
+            triggerRect.top -
+              (menuOverlapTrigger ? triggerRect.height : menuOffset) -
+              measuredMenuHeight,
+          )
+        : Math.min(
+            triggerRect.bottom + (menuOverlapTrigger ? -triggerRect.height : menuOffset),
+            window.innerHeight - measuredMenuHeight - viewportPadding,
+          );
+    const maxHeight =
+      menuPlacement === "top-start"
+        ? Math.max(triggerRect.top - menuOffset - viewportPadding, 120)
+        : Math.max(window.innerHeight - triggerRect.bottom - menuOffset - viewportPadding, 120);
+
+    setPortalStyle({
+      position: "fixed",
+      top,
+      left,
+      zIndex: 200,
+      width: menuWidth,
+      minWidth: Math.max(triggerRect.width, Number(minWidth) || 0),
+      maxWidth: menuMaxWidth,
+      maxHeight: Math.min(menuMaxHeight, maxHeight),
+      overflowY: "auto",
+    });
+  }, [
+    menuMaxHeight,
+    menuMaxWidth,
+    menuOffset,
+    menuOverlapTrigger,
+    menuPlacement,
+    menuPortalToViewport,
+    menuWidth,
+    minWidth,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!open || !menuPortalToViewport) {
+      return;
+    }
+
+    updatePortalStyle();
+  }, [open, menuPortalToViewport, updatePortalStyle]);
+
+  useEffect(() => {
+    if (!open || !menuPortalToViewport) {
+      return;
+    }
+
+    const syncPosition = () => updatePortalStyle();
+
+    window.addEventListener("resize", syncPosition);
+    window.addEventListener("scroll", syncPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", syncPosition);
+      window.removeEventListener("scroll", syncPosition, true);
+    };
+  }, [open, menuPortalToViewport, updatePortalStyle]);
+
+  const menuContent = open ? (
+    <MenuSurface
+      ref={menuRef}
+      role="menu"
+      aria-label={ariaLabel}
+      className={menuClassName}
+      style={{
+        zIndex: 10,
+        width: menuWidth,
+        maxWidth: menuMaxWidth,
+        maxHeight: menuMaxHeight,
+        overflowY: "auto",
+        ...menuPositionStyle,
+        ...portalStyle,
+        ...menuStyle,
+      }}
+    >
+      {items.length ? (
+        items.map((item) => {
+          const itemValue = getItemValue(item);
+          const active = itemValue === value;
+          return (
+            <MenuItem
+              key={itemValue}
+              type="button"
+              role="menuitemradio"
+              aria-checked={active}
+              active={active}
+              disabled={getItemDisabled?.(item)}
+              layout="trailing"
+              trailing={<MenuTrailingCheck active={active} />}
+              onClick={() => {
+                onValueChange(itemValue, item);
+                setOpen(false);
+              }}
+            >
+              {getItemLabel(item)}
+            </MenuItem>
+          );
+        })
+      ) : (
+        <MenuItem type="button" disabled>
+          {emptyLabel}
+        </MenuItem>
+      )}
+    </MenuSurface>
+  ) : null;
 
   const control = (
     <div
@@ -146,54 +286,18 @@ export function SingleSelectDropdown<TItem>({
         ) : null}
       </MenuTrigger>
 
-      {open ? (
-        <MenuSurface
-          role="menu"
-          aria-label={ariaLabel}
-          className={menuClassName}
-          style={{
-            position: "absolute",
-            zIndex: 10,
-            width: menuWidth,
-            maxWidth: menuMaxWidth,
-            maxHeight: menuMaxHeight,
-            overflowY: "auto",
-            ...menuPositionStyle,
-            ...menuStyle,
-          }}
-        >
-          {items.length ? (
-            items.map((item) => {
-              const itemValue = getItemValue(item);
-              const active = itemValue === value;
-              return (
-                <MenuItem
-                  key={itemValue}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={active}
-                  active={active}
-                  disabled={getItemDisabled?.(item)}
-                  layout="trailing"
-                  trailing={<MenuTrailingCheck active={active} />}
-                  onClick={() => {
-                    onValueChange(itemValue, item);
-                    setOpen(false);
-                  }}
-                >
-                  {getItemLabel(item)}
-                </MenuItem>
-              );
-            })
-          ) : (
-            <MenuItem type="button" disabled>
-              {emptyLabel}
-            </MenuItem>
-          )}
-        </MenuSurface>
-      ) : null}
+      {!menuPortalToViewport ? menuContent : null}
     </div>
   );
+
+  if (menuPortalToViewport && mounted && menuContent) {
+    return (
+      <>
+        {label ? <Field label={label}>{control}</Field> : control}
+        {createPortal(menuContent, document.body)}
+      </>
+    );
+  }
 
   if (!label) {
     return control;

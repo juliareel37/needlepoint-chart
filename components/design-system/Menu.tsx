@@ -1,6 +1,11 @@
 "use client";
 
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import styles from "./Menu.module.css";
 
@@ -56,22 +61,20 @@ export interface MenuSurfaceProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function MenuSurface({
-  children,
-  className,
-  style,
-  ...props
-}: MenuSurfaceProps) {
-  return (
-    <div
-      {...props}
-      className={[styles.surface, className].filter(Boolean).join(" ")}
-      style={style}
-    >
-      {children}
-    </div>
-  );
-}
+export const MenuSurface = forwardRef<HTMLDivElement, MenuSurfaceProps>(
+  function MenuSurface({ children, className, style, ...props }, ref) {
+    return (
+      <div
+        {...props}
+        ref={ref}
+        className={[styles.surface, className].filter(Boolean).join(" ")}
+        style={style}
+      >
+        {children}
+      </div>
+    );
+  },
+);
 
 export interface MenuItemProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {

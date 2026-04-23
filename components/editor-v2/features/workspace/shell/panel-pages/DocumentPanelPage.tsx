@@ -1,7 +1,7 @@
 "use client";
 
 import { SignInButton } from "@clerk/nextjs";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   ButtonIcon,
@@ -224,18 +224,39 @@ function SavedDesignSingleSelect({
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }) {
+  const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+    const updatePlacement = () => {
+      setUseTopDropdownPlacement(mediaQuery.matches);
+    };
+
+    updatePlacement();
+    mediaQuery.addEventListener("change", updatePlacement);
+
+    return () => mediaQuery.removeEventListener("change", updatePlacement);
+  }, []);
+
   return (
-    <SingleSelectDropdown
-      ariaLabel="Saved designs"
-      emptyLabel="No saved designs"
-      getItemLabel={formatSavedDesignLabel}
-      getItemValue={(record) => record.storageId}
-      items={savedDocuments}
-      label="Choose a design"
-      onValueChange={setSelectedStorageId}
-      placeholder="Load saved design"
-      value={selectedStorageId}
-    />
+    <>
+      <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
+        Choose a design
+      </p>
+      <SingleSelectDropdown
+        ariaLabel="Saved designs"
+        emptyLabel="No saved designs"
+        getItemLabel={formatSavedDesignLabel}
+        getItemValue={(record) => record.storageId}
+        items={savedDocuments}
+        menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
+        menuPortalToViewport={useTopDropdownPlacement}
+        onValueChange={setSelectedStorageId}
+        placeholder="Load saved design"
+        value={selectedStorageId}
+      />
+    </>
   );
 }
 

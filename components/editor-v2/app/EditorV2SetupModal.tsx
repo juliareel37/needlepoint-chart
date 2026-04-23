@@ -478,13 +478,15 @@ export function EditorV2SetupModal({
 
             {hasSavedDesignAccess ? (
               <>
+                <p className={styles.helper} style={typographyStyles.p2}>
+                  Choose a design
+                </p>
                 <SingleSelectDropdown
                   ariaLabel="Saved designs"
                   emptyLabel="No saved designs"
                   getItemLabel={formatSavedDesignLabel}
                   getItemValue={(record) => record.storageId}
                   items={savedDocuments}
-                  label="Choose a design"
                   menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
                   onValueChange={setSelectedStorageId}
                   placeholder="Load saved design"
