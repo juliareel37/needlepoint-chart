@@ -280,6 +280,11 @@
 .editableTitleTrigger:focus-visible .titleHoverIcon {
   opacity: 0.65;
 }
+.loadDesignButtonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .sidebarSubsection {
   display: flex;
@@ -460,9 +465,10 @@
 }
 
 .iconLibraryGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
   gap: 12px;
+  display: grid;
 }
 
 .iconLibraryCard {
@@ -1667,7 +1673,12 @@
     width: 72px;
     height: 72px;
   }
-
+.loadDesignButtonRow {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  gap: 12px;
+}
   /* .iconLibraryGrid {
     grid-template-columns: 1fr;
   } */

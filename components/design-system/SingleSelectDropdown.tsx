@@ -94,7 +94,10 @@ export function SingleSelectDropdown<TItem>({
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
       const target = event.target as Node | null;
-      if (!target || !rootRef.current?.contains(target)) {
+      const clickedTrigger = Boolean(target && rootRef.current?.contains(target));
+      const clickedMenu = Boolean(target && menuRef.current?.contains(target));
+
+      if (!target || (!clickedTrigger && !clickedMenu)) {
         setOpen(false);
       }
     }

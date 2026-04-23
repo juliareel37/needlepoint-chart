@@ -152,8 +152,11 @@ export function DocumentPanelPage({
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Saved designs</h3>
           </div>
+        
           {hasSavedDesignAccess ? (
             <>
+            <div className={styles.loadDesignButtonRow}>
+
               <SavedDesignSingleSelect
                 savedDocuments={savedDocuments}
                 selectedStorageId={selectedStorageId}
@@ -168,6 +171,8 @@ export function DocumentPanelPage({
               >
                 Load
               </Button>
+                          </div>
+
             </>
           ) : (
             <>
@@ -181,6 +186,7 @@ export function DocumentPanelPage({
               </SignInButton>
             </>
           )}
+
         </div>
       </div>
     </section>
@@ -241,6 +247,8 @@ function SavedDesignSingleSelect({
 
   return (
     <>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
         Choose a design
       </p>
@@ -256,7 +264,9 @@ function SavedDesignSingleSelect({
         placeholder="Load saved design"
         value={selectedStorageId}
       />
+          </div>
     </>
+
   );
 }
 
