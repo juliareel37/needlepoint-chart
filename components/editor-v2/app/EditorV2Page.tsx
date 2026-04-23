@@ -38,7 +38,7 @@ export function EditorV2Page() {
   );
   const [draftWidthInches, setDraftWidthInches] = useState("8");
   const [draftHeightInches, setDraftHeightInches] = useState("8");
-  const [draftMeshCount, setDraftMeshCount] = useState("18");
+  const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
   const [savedDocumentsLoading, setSavedDocumentsLoading] = useState(false);
   const [designConfig, setDesignConfig] =

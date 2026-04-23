@@ -61,6 +61,27 @@
   color: var(--status-destructive-base);
 }
 
+.errorText,
+.fieldError {
+  color: var(--status-destructive-strong);
+}
+
+.fieldError {
+  display: block;
+}
+
+.invalidInput {
+  border-color: var(--status-destructive-base);
+  color: var(--status-destructive-strong);
+}
+
+.invalidInput:hover,
+.invalidInput:focus-visible,
+.invalidInput:focus-within {
+  border-color: var(--status-destructive-strong);
+  box-shadow: 0 0 0 2px var(--status-destructive-soft);
+}
+
 .content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

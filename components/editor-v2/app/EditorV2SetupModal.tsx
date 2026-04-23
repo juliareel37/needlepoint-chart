@@ -26,7 +26,6 @@ const LARGE_GRID_PRESETS = [
   { label: "200 x 200", width: 200, height: 200 },
   { label: "240 x 240", width: 240, height: 240 },
   { label: "300 x 300", width: 300, height: 300 },
-  { label: "400 x 400", width: 400, height: 400 },
 ] as const;
 const INCH_SIZE_PRESETS = [
   { label: '6" x 10"', width: 6, height: 10 },
@@ -137,9 +136,15 @@ export function EditorV2SetupModal({
     heightInches: draftHeightInches,
     meshCount: draftMeshCount,
   });
+  const stitchSizing = resolveStitchSizing({
+    width: draftWidth,
+    height: draftHeight,
+  });
   const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
   const createDisabled =
-    draftSizingMode === "inches" && inchSizing.error !== null;
+    draftSizingMode === "inches"
+      ? inchSizing.error !== null
+      : stitchSizing.widthError !== null || stitchSizing.heightError !== null;
 
   return (
     <div
@@ -203,20 +208,50 @@ export function EditorV2SetupModal({
             {draftSizingMode === "stitches" ? (
               <>
                 <div className={styles.fieldGrid}>
-                  <Field label="Length">
+                  <Field
+                    label={
+                      <span className={stitchSizing.widthError ? styles.errorText : undefined}>
+                        Length
+                      </span>
+                    }
+                    hint={
+                      stitchSizing.widthError ? (
+                        <span className={styles.fieldError}>
+                          {stitchSizing.widthError}
+                        </span>
+                      ) : null
+                    }
+                  >
                     <FieldInput
                       type="number"
                       min={EDITOR_V2_MIN_GRID_SIZE}
                       max={EDITOR_V2_MAX_GRID_SIZE}
+                      aria-invalid={stitchSizing.widthError ? "true" : undefined}
+                      className={stitchSizing.widthError ? styles.invalidInput : undefined}
                       value={draftWidth}
                       onChange={(event) => onDraftWidthChange(event.target.value)}
                     />
                   </Field>
-                  <Field label="Height">
+                  <Field
+                    label={
+                      <span className={stitchSizing.heightError ? styles.errorText : undefined}>
+                        Height
+                      </span>
+                    }
+                    hint={
+                      stitchSizing.heightError ? (
+                        <span className={styles.fieldError}>
+                          {stitchSizing.heightError}
+                        </span>
+                      ) : null
+                    }
+                  >
                     <FieldInput
                       type="number"
                       min={EDITOR_V2_MIN_GRID_SIZE}
                       max={EDITOR_V2_MAX_GRID_SIZE}
+                      aria-invalid={stitchSizing.heightError ? "true" : undefined}
+                      className={stitchSizing.heightError ? styles.invalidInput : undefined}
                       value={draftHeight}
                       onChange={(event) => onDraftHeightChange(event.target.value)}
                     />
@@ -426,6 +461,10 @@ export function EditorV2SetupModal({
                     return;
                   }
 
+                  if (stitchSizing.widthError || stitchSizing.heightError) {
+                    return;
+                  }
+
                   const width = clampGridSize(draftWidth);
                   const height = clampGridSize(draftHeight);
 
@@ -564,6 +603,32 @@ function clampGridSize(value: string): number {
     EDITOR_V2_MIN_GRID_SIZE,
     Math.min(EDITOR_V2_MAX_GRID_SIZE, Math.floor(parsed)),
   );
+}
+
+function resolveStitchSizing({
+  width,
+  height,
+}: {
+  width: string;
+  height: string;
+}): {
+  widthError: string | null;
+  heightError: string | null;
+} {
+  return {
+    widthError: getStitchSizeMaxError(width),
+    heightError: getStitchSizeMaxError(height),
+  };
+}
+
+function getStitchSizeMaxError(value: string): string | null {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= EDITOR_V2_MAX_GRID_SIZE) {
+    return null;
+  }
+
+  return `Max ${EDITOR_V2_MAX_GRID_SIZE} cells.`;
 }
 
 function parsePositiveDecimal(value: string): number | null {
