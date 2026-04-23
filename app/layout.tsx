@@ -39,7 +39,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const appShellStyle: CSSProperties & Record<"--app-header-height", string> = {
+const appShellStyle: CSSProperties &
+  Record<"--app-header-height" | "--app-top-banner-height" | "--app-top-offset", string> = {
   position: "relative",
   width: "100%",
   padding: 0,
@@ -47,6 +48,8 @@ const appShellStyle: CSSProperties & Record<"--app-header-height", string> = {
   display: "flex",
   flexDirection: "column",
   "--app-header-height": "52px",
+  "--app-top-banner-height": "0px",
+  "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
 };
 
 const headerUtilityLinkStyle: CSSProperties = {
@@ -90,7 +93,8 @@ export default function RootLayout({
           <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         </head>
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
-          <div style={appShellStyle}>
+          <div id="app-shell-root" style={appShellStyle}>
+            <div id="app-top-banner" className="app-top-banner-slot" />
             <div
               className="app-shell-header"
               style={{
@@ -138,6 +142,7 @@ export default function RootLayout({
                 </div>
                 <div id="app-header-history-right" />
                 <HeaderAuth />
+                <div id="app-header-overflow-right" />
               </div>
             </div>
             <div style={{ flex: "1 1 auto", minHeight: 0 }}>

@@ -11,7 +11,12 @@ export default function AuthButtons() {
       </SignedIn>
       <SignedOut>
         <SignInButton mode="modal">
-          <Button type="button" variant="secondary" size="md">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            className="app-header-sign-in-button"
+          >
             Sign in
           </Button>
         </SignInButton>

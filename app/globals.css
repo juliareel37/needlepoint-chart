@@ -840,6 +840,23 @@ button:disabled {
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
 }
+
+#app-header-file-left:empty,
+#app-header-file-right:empty,
+#app-header-actions:empty,
+#app-header-autosave:empty,
+#app-header-history:empty,
+#app-header-history-right:empty,
+#app-header-overflow-right:empty,
+#app-top-banner:empty {
+  display: none;
+}
+
+.app-top-banner-slot {
+  position: relative;
+  z-index: 210;
+}
+
 .gridline-menu-trigger {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
@@ -981,7 +998,7 @@ input[type="number"] {
     z-index: 2;
   }
   .app-shell-header-right {
-    gap: 16px !important;
+    gap: 8px !important;
     z-index: 3;
     min-width: 0;
   }
@@ -991,6 +1008,9 @@ input[type="number"] {
   .app-header-auth {
     display: flex !important;
     flex: 0 0 auto;
+  }
+  #app-shell-root[data-mobile-header-overflow-auth="true"] .app-header-sign-in-button {
+    display: none !important;
   }
   .app-header-title-slot {
     position: static !important;

@@ -100,7 +100,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 4px;
+  /* padding: 10px 4px; */
+  padding: 6px;
   border-radius: 14px;
   /* background: color-mix(in srgb, var(--surface-card) 72%, white); */
 }
@@ -186,9 +187,9 @@
 }
 
 @media (max-width: 560px) {
-  .fieldGrid {
+  /* .fieldGrid {
     grid-template-columns: 1fr;
-  }
+  } */
 
   .presetGrid,
   .optionGrid {

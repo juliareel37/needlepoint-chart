@@ -314,9 +314,9 @@ export function EditorV2SetupModal({
               </h2>
                   {/* <div className={styles.presetBlock} > */}
 
-                    <p className={styles.presetLabel} style={typographyStyles.p2}>
+                    {/* <p className={styles.presetLabel} style={typographyStyles.p2}>
                       The number of holes per inch of your canvas.
-                    </p>
+                    </p> */}
                     <div 
                     className={styles.inlineOptionGrid}
                     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
@@ -101,6 +102,7 @@ export function EditorV2Shell({
   setupModalOpen: boolean;
   successNotification: EditorV2SuccessNotification | null;
 }) {
+  const clerk = useClerk();
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
 
@@ -143,12 +145,21 @@ export function EditorV2Shell({
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
+  const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
+  const [headerOverflowTarget, setHeaderOverflowTarget] = useState<HTMLElement | null>(null);
+  const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const mobileHeaderMenuItems = useMemo(
-    () => [{ id: "export", label: "Export design" }],
-    [],
+    () =>
+      hasSavedDesignAccess
+        ? [{ id: "export", label: "Export design" }]
+        : [
+            { id: "export", label: "Export design" },
+            { id: "sign-in", label: "Sign in" },
+          ],
+    [hasSavedDesignAccess],
   );
   const gridMetrics = useMemo(
     () =>
@@ -458,7 +469,49 @@ export function EditorV2Shell({
     setHeaderActionsTarget(window.document.getElementById("app-header-actions"));
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
     setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
+    setHeaderOverflowTarget(window.document.getElementById("app-header-overflow-right"));
+    setTopBannerTarget(window.document.getElementById("app-top-banner"));
   }, []);
+
+  const showSaveStatus = Boolean(saveMessage || hasUnsavedChanges);
+  const useTopSaveBanner = isBottomPanelLayout && showSaveStatus;
+  const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
+
+  useEffect(() => {
+    setSaveBannerDismissed(false);
+  }, [hasUnsavedChanges, saveMessage]);
+
+  useEffect(() => {
+    const appShellRoot = window.document.getElementById("app-shell-root");
+    if (!appShellRoot) {
+      return;
+    }
+
+    appShellRoot.style.setProperty(
+      "--app-top-banner-height",
+      showTopSaveBanner ? "30px" : "0px",
+    );
+
+    return () => {
+      appShellRoot.style.setProperty("--app-top-banner-height", "0px");
+    };
+  }, [showTopSaveBanner]);
+
+  useEffect(() => {
+    const appShellRoot = window.document.getElementById("app-shell-root");
+    if (!appShellRoot) {
+      return;
+    }
+
+    appShellRoot.setAttribute(
+      "data-mobile-header-overflow-auth",
+      isBottomPanelLayout ? "true" : "false",
+    );
+
+    return () => {
+      appShellRoot.removeAttribute("data-mobile-header-overflow-auth");
+    };
+  }, [isBottomPanelLayout]);
 
   useEffect(() => {
     if (!errorNotification) {
@@ -486,14 +539,28 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
-      {!setupModalOpen && headerAutosaveTarget
+      {!setupModalOpen && !useTopSaveBanner && headerAutosaveTarget
         ? createPortal(
             <HeaderSaveStatus
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
+              layout="header"
+              onDismiss={null}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
+          )
+        : null}
+      {!setupModalOpen && showTopSaveBanner && topBannerTarget
+        ? createPortal(
+            <HeaderSaveStatus
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              layout="banner"
+              onDismiss={() => setSaveBannerDismissed(true)}
+              saveMessage={saveMessage}
+            />,
+            topBannerTarget,
           )
         : null}
       {!setupModalOpen && headerHistoryTarget
@@ -519,41 +586,77 @@ export function EditorV2Shell({
               >
                 <ToolbarIcon icon="/icons/lucide/redo.svg" />
               </ToolbarButton>
-              {isBottomPanelLayout ? (
-                <SingleSelectDropdown
-                  ariaLabel="More actions"
-                  items={mobileHeaderMenuItems}
-                  value=""
-                  placeholder="More actions"
-                  triggerLabel={<span className={styles.headerOverflowDots}>⋮</span>}
-                  triggerVariant="ghost"
-                  showChevron={false}
-                  menuPortalToViewport
-                  menuPlacement="bottom-end"
-                  minWidth="auto"
-                  menuWidth={176}
-                  getItemValue={(item) => item.id}
-                  getItemLabel={(item) =>
-                    item.id === "export" && exportButtonState === "exporting"
-                      ? "Exporting..."
-                      : item.label
-                  }
-                  getItemDisabled={(item) =>
-                    item.id === "export" && exportButtonState === "exporting"
-                  }
-                  onValueChange={(value) => {
-                    if (value === "export") {
-                      void onExportDocument(document);
-                    }
-                  }}
-                  wrapperClassName={styles.headerOverflowMenu}
-                  triggerClassName={styles.headerOverflowTrigger}
-                  menuClassName={styles.headerOverflowSurface}
-                  triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
-                />
-              ) : null}
             </div>,
             headerHistoryTarget,
+          )
+        : null}
+      {!setupModalOpen && headerOverflowTarget && isBottomPanelLayout
+        ? createPortal(
+            <SingleSelectDropdown
+              ariaLabel="More actions"
+              items={mobileHeaderMenuItems}
+              value=""
+              placeholder="More actions"
+              triggerLabel={<span className={styles.headerOverflowDots}>⋮</span>}
+              triggerVariant="ghost"
+              showChevron={false}
+              menuPortalToViewport
+              menuPlacement="bottom-end"
+              minWidth="auto"
+              menuWidth={176}
+              getItemValue={(item) => item.id}
+              getItemLabel={(item) => {
+                if (item.id === "export") {
+                  return (
+                    <span className={styles.headerOverflowItemLabel}>
+                      {exportButtonState === "exporting" ? (
+                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                      ) : (
+                        <ButtonIcon
+                          icon="/icons/lucide/download.svg"
+                          className={styles.saveButtonIcon}
+                        />
+                      )}
+                      <span>
+                        {exportButtonState === "exporting" ? "Exporting..." : item.label}
+                      </span>
+                    </span>
+                  );
+                }
+
+                if (item.id === "sign-in") {
+                  return (
+                    <span className={styles.headerOverflowItemLabel}>
+                      <ButtonIcon
+                        icon="/icons/lucide/log-in.svg"
+                        className={styles.saveButtonIcon}
+                      />
+                      <span>{item.label}</span>
+                    </span>
+                  );
+                }
+
+                return item.label;
+              }}
+              getItemDisabled={(item) =>
+                item.id === "export" && exportButtonState === "exporting"
+              }
+              onValueChange={(value) => {
+                if (value === "export") {
+                  void onExportDocument(document);
+                  return;
+                }
+
+                if (value === "sign-in") {
+                  void clerk.openSignIn();
+                }
+              }}
+              wrapperClassName={styles.headerOverflowMenu}
+              triggerClassName={styles.headerOverflowTrigger}
+              menuClassName={styles.headerOverflowSurface}
+              triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+            />,
+            headerOverflowTarget,
           )
         : null}
       {!setupModalOpen && headerActionsTarget && !isBottomPanelLayout
@@ -814,12 +917,18 @@ export function EditorV2Shell({
 function HeaderSaveStatus({
   hasSavedDesignAccess,
   hasUnsavedChanges,
+  layout,
+  onDismiss,
   saveMessage,
 }: {
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
+  layout: "header" | "banner";
+  onDismiss: (() => void) | null;
   saveMessage: string;
 }) {
+  const clerk = useClerk();
+
   if (!saveMessage && !hasUnsavedChanges) {
     return null;
   }
@@ -843,6 +952,7 @@ function HeaderSaveStatus({
   return (
     <div
       className={styles.headerSaveStatus}
+      data-layout={layout}
       data-state={state}
       role="status"
       aria-live="polite"
@@ -854,6 +964,26 @@ function HeaderSaveStatus({
       <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
         {message}
       </p>
+      {layout === "banner" && !hasSavedDesignAccess ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => void clerk.openSignIn()}
+        >
+          Sign in
+        </Button>
+      ) : null}
+      {layout === "banner" && onDismiss ? (
+        <button
+          type="button"
+          className={styles.headerSaveStatusDismiss}
+          aria-label="Dismiss save status"
+          onClick={onDismiss}
+        >
+          <ButtonIcon icon="/icons/lucide/x.svg" className={styles.headerSaveStatusDismissIcon} />
+        </button>
+      ) : null}
     </div>
   );
 }
