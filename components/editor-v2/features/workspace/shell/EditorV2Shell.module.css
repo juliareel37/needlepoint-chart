@@ -874,21 +874,53 @@
   min-width: 0;
 }
 
-.mobileSelectionDock {
+.selectionToolbarPopover {
   width: fit-content;
   max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
   min-width: 0;
-  display: flex;
-  justify-content: flex-start;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
   padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible !important;
+}
+
+.selectionToolbarPopoverDocked {
+  width: fit-content;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+}
+
+.selectionToolbarCluster {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.selectionToolbarMainViewport,
+.selectionToolbarCloseViewport {
   border-radius: 16px;
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
+}
+
+.selectionToolbarMainViewport {
+  flex: 1 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
+}
+
+.selectionToolbarCloseViewport {
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .stageToolbarBottomRight {
