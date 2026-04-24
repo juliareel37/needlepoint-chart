@@ -490,6 +490,14 @@ export function GridWorldSurface({
           />
         ) : null}
 
+        <SelectionOverlay
+          activeTool={activeTool}
+          metrics={metrics}
+          mirrorInteraction={mirrorInteraction}
+          selection={selection}
+          viewport={viewport}
+        />
+
         <div
           ref={worldRef}
           style={{
@@ -565,13 +573,6 @@ export function GridWorldSurface({
               isZoomInteractionActive={isZoomInteracting}
             />
           </div>
-
-          <SelectionOverlay
-            activeTool={activeTool}
-            metrics={metrics}
-            mirrorInteraction={mirrorInteraction}
-            selection={selection}
-          />
 
           {textPlacement ? (
             <TextPlacementLayer
