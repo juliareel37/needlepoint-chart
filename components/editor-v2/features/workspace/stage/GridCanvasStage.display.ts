@@ -6,7 +6,6 @@ import type {
   TraceDocument,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
-import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import type {
@@ -66,6 +65,8 @@ export function renderDisplayCanvas(options: {
   highlightedColorId?: string | null;
   metrics: GridWorldMetrics;
   paintOpacity: number;
+  previewMode?: boolean;
+  isZoomInteractionActive?: boolean;
   showGridlines: boolean;
   showSymbols: boolean;
   stageSize: { width: number; height: number };
@@ -88,6 +89,8 @@ export function renderDisplayCanvas(options: {
     highlightedColorId = null,
     metrics,
     paintOpacity,
+    previewMode = false,
+    isZoomInteractionActive = false,
     showGridlines,
     showSymbols,
     stageSize,
@@ -115,6 +118,7 @@ export function renderDisplayCanvas(options: {
   const drawY = drawRect.y;
   const drawWidth = drawRect.width;
   const drawHeight = drawRect.height;
+  const renderedCellSize = metrics.cellSize * viewport.zoom;
 
   context.fillStyle = backgroundColor;
   context.fillRect(drawX, drawY, drawWidth, drawHeight);
@@ -167,6 +171,10 @@ export function renderDisplayCanvas(options: {
   if (!deferPaintUntilTraceReady) {
     context.save();
     context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
+    context.imageSmoothingEnabled = previewMode;
+    if (previewMode) {
+      context.imageSmoothingQuality = isZoomInteractionActive ? "low" : "medium";
+    }
     context.drawImage(sourceCanvas, drawX, drawY, drawWidth, drawHeight);
     context.restore();
   }
@@ -318,7 +326,7 @@ function drawHighlightedCells(
 }
 
 function getHighlightLiftAlpha(hex: string): number {
-  const rgb = hexToRgb(hex);
+  const rgb = parseHexColor(hex);
 
   if (!rgb) {
     return 0.22;
@@ -347,6 +355,23 @@ function getHighlightLiftAlpha(hex: string): number {
   }
 
   return 0.04;
+}
+
+function parseHexColor(hex: string) {
+  const normalizedHex = hex.replace("#", "");
+  if (normalizedHex.length !== 6) {
+    return null;
+  }
+
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+
+  if ([red, green, blue].some((channel) => Number.isNaN(channel))) {
+    return null;
+  }
+
+  return { r: red, g: green, b: blue };
 }
 
 function snapRectToDevicePixels(

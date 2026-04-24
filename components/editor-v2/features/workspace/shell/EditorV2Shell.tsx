@@ -36,6 +36,7 @@ import type {
 import {
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
+  createSetPreviewModeCommand,
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
@@ -57,6 +58,15 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
+
+interface PreviewSessionSnapshot {
+  sidebarCollapsed: boolean;
+  viewport: {
+    zoom: number;
+    offsetX: number;
+    offsetY: number;
+  };
+}
 
 export function EditorV2Shell({
   canvasLoading,
@@ -139,6 +149,8 @@ export function EditorV2Shell({
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
+  const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
+  const previewFitPendingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
@@ -158,7 +170,9 @@ export function EditorV2Shell({
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
-        ? [{ id: "export", label: "Export design" }]
+        ? [
+            { id: "export", label: "Export design" },
+          ]
         : [
             { id: "export", label: "Export design" },
             { id: "sign-in", label: "Sign in" },
@@ -265,6 +279,68 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+  ]);
+
+  const enterPreviewMode = useCallback(() => {
+    if (previewMode) {
+      return;
+    }
+
+    previewSessionSnapshotRef.current = {
+      sidebarCollapsed,
+      viewport: {
+        zoom: viewport.zoom,
+        offsetX: viewport.offsetX,
+        offsetY: viewport.offsetY,
+      },
+    };
+    previewFitPendingRef.current = true;
+
+    dispatch(createSetPreviewModeCommand(true));
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+  }, [
+    dispatch,
+    previewMode,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+    viewport.zoom,
+  ]);
+
+  const exitPreviewMode = useCallback(() => {
+    if (!previewMode) {
+      return;
+    }
+
+    const snapshot = previewSessionSnapshotRef.current;
+    previewFitPendingRef.current = false;
+    dispatch(createSetPreviewModeCommand(false));
+
+    if (!snapshot) {
+      return;
+    }
+
+    if (sidebarCollapsed !== snapshot.sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+    }
+
+    dispatch(createSetViewportZoomCommand(snapshot.viewport.zoom));
+    dispatch(
+      createPanViewportCommand(
+        snapshot.viewport.offsetX - viewport.offsetX,
+        snapshot.viewport.offsetY - viewport.offsetY,
+      ),
+    );
+
+    previewSessionSnapshotRef.current = null;
+  }, [
+    dispatch,
+    previewMode,
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
@@ -407,6 +483,41 @@ export function EditorV2Shell({
     fitZoom,
     isBottomPanelLayout,
     layoutModeResolved,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (
+      !previewMode ||
+      !previewFitPendingRef.current ||
+      !sidebarCollapsed ||
+      fitZoom <= 0 ||
+      canvasWorldSize.width <= 0 ||
+      canvasWorldSize.height <= 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      fitToGrid();
+      previewFitPendingRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    fitToGrid,
+    fitZoom,
+    previewMode,
     sidebarCollapsed,
   ]);
 
@@ -931,21 +1042,36 @@ export function EditorV2Shell({
               </div>
             )}
 
-            <div className={styles.stageToolbarBottomRight}>
-              <ViewportToolbar
-                dispatch={dispatch}
-                fitZoom={fitZoom}
-                onFitToGrid={fitToGrid}
-                zoomAnchor={zoomAnchor}
-                viewport={viewport}
-              />
-            </div>
+            {previewMode ? null : (
+              <div className={styles.stageToolbarBottomRight}>
+                <ViewportToolbar
+                  dispatch={dispatch}
+                  fitZoom={fitZoom}
+                  onFitToGrid={fitToGrid}
+                  zoomAnchor={zoomAnchor}
+                  viewport={viewport}
+                />
+              </div>
+            )}
 
             <div
               ref={canvasWorldRef}
               className={styles.canvasWorld}
               data-loading={canvasLoading ? "true" : "false"}
             >
+              {previewMode ? (
+                <div className={styles.previewDoneButtonWrap}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    className={styles.previewDoneButton}
+                    onClick={exitPreviewMode}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : null}
               <GridWorldSurface
                 activeColorId={activeColorId}
                 activeTool={activeTool}

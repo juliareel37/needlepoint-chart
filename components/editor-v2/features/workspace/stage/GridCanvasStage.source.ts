@@ -59,7 +59,6 @@ export function configureSourceCanvas(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
   metrics: GridWorldMetrics,
-  viewportZoom: number,
   stageSize: { width: number; height: number },
   options: {
     isZoomInteractionActive?: boolean;
@@ -75,7 +74,7 @@ export function configureSourceCanvas(
     stageSize.width <= MOBILE_LAYOUT_MAX_WIDTH_PX;
   const targetPixelRatio = options.isZoomInteractionActive && isMobileLayout
     ? MOBILE_INTERACTION_TARGET_PIXEL_RATIO
-    : (window.devicePixelRatio || 1) * Math.max(viewportZoom, MIN_CANVAS_PIXEL_RATIO);
+    : window.devicePixelRatio || 1;
   const effectivePixelRatio = getEffectiveSourceCanvasPixelRatio(
     width,
     height,
@@ -135,6 +134,7 @@ export function redrawSourceCanvas(options: {
   colorsById: Record<string, PaletteColor>;
   gridWidth: number;
   metrics: GridWorldMetrics;
+  stitchStyleVersion: number;
   threadView: boolean;
   stitchCanvasCache: Map<string, HTMLCanvasElement>;
 }) {
@@ -144,6 +144,7 @@ export function redrawSourceCanvas(options: {
     colorsById,
     gridWidth,
     metrics,
+    stitchStyleVersion,
     threadView,
     stitchCanvasCache,
   } = options;
@@ -157,6 +158,7 @@ export function redrawSourceCanvas(options: {
       colorsById,
       gridWidth,
       index,
+      stitchStyleVersion,
       stitchCanvasCache,
       threadView,
     });
@@ -170,6 +172,7 @@ export function drawChangedSourceCells(options: {
   colorsById: Record<string, PaletteColor>;
   gridWidth: number;
   cellSize: number;
+  stitchStyleVersion: number;
   threadView: boolean;
   stitchCanvasCache: Map<string, HTMLCanvasElement>;
 }) {
@@ -179,6 +182,7 @@ export function drawChangedSourceCells(options: {
     colorsById,
     gridWidth,
     cellSize,
+    stitchStyleVersion,
     threadView,
     stitchCanvasCache,
   } = options;
@@ -246,6 +250,7 @@ export function drawChangedSourceCells(options: {
           colorsById,
           gridWidth,
           index,
+          stitchStyleVersion,
           stitchCanvasCache,
           threadView,
         });
@@ -296,6 +301,7 @@ function drawCell(
     colorsById: Record<string, PaletteColor>;
     gridWidth: number;
     index: number;
+    stitchStyleVersion: number;
     stitchCanvasCache: Map<string, HTMLCanvasElement>;
     threadView: boolean;
   },
@@ -306,6 +312,7 @@ function drawCell(
     colorsById,
     gridWidth,
     index,
+    stitchStyleVersion,
     stitchCanvasCache,
     threadView,
   } = options;
@@ -327,7 +334,7 @@ function drawCell(
       color.hex,
       Math.max(width, height),
       stitchCanvasCache,
-      1,
+      stitchStyleVersion,
     );
     context.drawImage(stitchCanvas, x0, y0, width, height);
     return;

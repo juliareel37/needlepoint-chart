@@ -554,6 +554,7 @@ export function GridWorldSurface({
                   : null
               }
               paintOpacity={gridOpacity}
+              previewMode={previewMode}
               displayTrace={showDisplayTrace ? trace : null}
               frameOrigin={frameOrigin}
               getGridPointFromClient={getGridPointFromClient}
