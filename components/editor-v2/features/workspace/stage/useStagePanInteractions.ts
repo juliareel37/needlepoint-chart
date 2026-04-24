@@ -51,6 +51,7 @@ export function useStagePanInteractions({
   const [isZoomInteracting, setIsZoomInteracting] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const touchPanPointerIdRef = useRef<number | null>(null);
   const touchGestureRef = useRef<{
     centerX: number;
     centerY: number;
@@ -140,6 +141,7 @@ export function useStagePanInteractions({
 
   const stopPanDragging = useEffectEvent(() => {
     panDragRef.current = null;
+    touchPanPointerIdRef.current = null;
     touchGestureRef.current = null;
     setIsPanDragging(false);
   });
@@ -245,6 +247,19 @@ export function useStagePanInteractions({
 
       if (!geometry) {
         return;
+      }
+
+      if (touchPanPointerIdRef.current !== null) {
+        try {
+          if (stageElement.hasPointerCapture(touchPanPointerIdRef.current)) {
+            stageElement.releasePointerCapture(touchPanPointerIdRef.current);
+          }
+        } catch {
+          // Ignore release errors while transitioning from touch pan to pinch.
+        }
+        panDragRef.current = null;
+        touchPanPointerIdRef.current = null;
+        setIsPanDragging(false);
       }
 
       event.preventDefault();
@@ -395,6 +410,14 @@ export function useStagePanInteractions({
         return;
       }
 
+      if (
+        event.pointerType === "touch" &&
+        touchPanPointerIdRef.current !== null &&
+        event.pointerId !== touchPanPointerIdRef.current
+      ) {
+        return;
+      }
+
       const deltaX = event.clientX - dragState.lastX;
       const deltaY = event.clientY - dragState.lastY;
 
@@ -491,9 +514,33 @@ export function useStagePanInteractions({
       return;
     }
 
+    if (touchGestureRef.current) {
+      return;
+    }
+
+    if (
+      event.pointerType === "touch" &&
+      touchPanPointerIdRef.current !== null &&
+      touchPanPointerIdRef.current !== event.pointerId
+    ) {
+      try {
+        if (event.currentTarget.hasPointerCapture(touchPanPointerIdRef.current)) {
+          event.currentTarget.releasePointerCapture(touchPanPointerIdRef.current);
+        }
+      } catch {
+        // Ignore release errors while upgrading to a gesture interaction.
+      }
+
+      panDragRef.current = null;
+      touchPanPointerIdRef.current = null;
+      setIsPanDragging(false);
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    touchPanPointerIdRef.current = event.pointerId;
 
     panDragRef.current = {
       lastX: event.clientX,
