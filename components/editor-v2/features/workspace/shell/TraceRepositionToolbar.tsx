@@ -21,42 +21,72 @@ export function TraceRepositionToolbar({
   trace: _trace,
 }: TraceRepositionToolbarProps) {
   return (
-    <div className={styles.floatingToolbarViewport}>
-      <Toolbar className={styles.floatingToolbar}>
-        <ToolbarGroup>
+    <div className={styles.selectionToolbarCluster}>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
-            labelled
-            onClick={() => {
-              dispatch(createSetActiveSidebarSectionCommand("trace"));
-              dispatch(createSetSidebarCollapsedCommand(false));
-            }}
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            onClick={() => dispatch(createCancelTraceRepositionCommand())}
           >
-            <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-            <ToolbarLabel>Display settings</ToolbarLabel>
+            <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
+        </Toolbar>
+      </div>
 
-          <ToolbarDivider />
-          <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
+      <div className={styles.selectionToolbarMainViewport}>
+        <Toolbar className={styles.floatingToolbar}>
+          <ToolbarGroup>
             <ToolbarButton
               type="button"
-              variant="secondary"
               labelled
-              onClick={() => dispatch(createCancelTraceRepositionCommand())}
+              onClick={() => {
+                dispatch(createSetActiveSidebarSectionCommand("trace"));
+                dispatch(createSetSidebarCollapsedCommand(false));
+              }}
             >
-              Cancel
+              <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+              <ToolbarLabel>Display settings</ToolbarLabel>
             </ToolbarButton>
-            <ToolbarButton
-              type="button"
-              variant="primary"
-              labelled
-              onClick={() => dispatch(createCommitTraceRepositionCommand())}
-            >
-              Done
-            </ToolbarButton>
+{/* 
+            <ToolbarDivider />
+            <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
+              <ToolbarButton
+                type="button"
+                variant="secondary"
+                labelled
+                onClick={() => dispatch(createCancelTraceRepositionCommand())}
+              >
+                Cancel
+              </ToolbarButton>
+              <ToolbarButton
+                type="button"
+                variant="primary"
+                labelled
+                onClick={() => dispatch(createCommitTraceRepositionCommand())}
+              >
+                Done
+              </ToolbarButton>
+            </ToolbarGroup> */}
           </ToolbarGroup>
-        </ToolbarGroup>
-      </Toolbar>
+        </Toolbar>
+      </div>
+
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+          <ToolbarButton
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            onClick={() => dispatch(createCommitTraceRepositionCommand())}
+          >
+            <ToolbarIcon icon="/icons/lucide/check.svg" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
     </div>
   );
 }

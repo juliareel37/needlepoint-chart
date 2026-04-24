@@ -833,6 +833,20 @@ export function FloatingToolbar({
                 .join(" ")}
             >
               <div className={styles.selectionToolbarCluster}>
+                {/* <div className={styles.selectionToolbarCloseViewport}>
+                  <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+                    <ToolbarButton
+                      type="button"
+                      variant="ghost"
+                      iconOnly
+                      className={styles.selectionToolbarCloseButton}
+                      onClick={handleExitSelection}
+                    >
+                      <ToolbarIcon icon="/icons/lucide/x.svg" />
+                    </ToolbarButton>
+                  </Toolbar>
+                </div> */}
+
                 <div className={styles.selectionToolbarMainViewport}>
                   <Toolbar className={styles.floatingToolbar}>
                     {selectionToolbarControls}
