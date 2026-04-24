@@ -644,6 +644,10 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: visible;
+  border-radius: 16px;
+  border: 1px solid var(--toolbar-border);
+  background: var(--surface-primary);
+  box-shadow: var(--ui-shadow-md);
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
 }
@@ -655,6 +659,9 @@
   width: max-content;
   max-width: none;
   min-width: max-content;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: visible;
   isolation: isolate;
 }
