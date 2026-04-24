@@ -823,6 +823,7 @@
   width: 100%;
   padding: 0px;
   border-radius: 0;
+  height: 400px;
 }
 
 .libraryPopoverSwatchTrigger {
@@ -1160,8 +1161,17 @@
   color: var(--text-secondary);
 }
 
+.activeColorRow {
+  margin-bottom: 16px;
+}
+
 .activeColorValue {
   color: var(--text-primary);
+}
+
+.activeColorSwatch {
+  width: 32px !important;
+  height: 32px !important;
 }
 
 .swatch {
@@ -2394,7 +2404,9 @@
     min-height: calc(100vh - var(--app-top-offset, 52px));
     min-height: calc(100dvh - var(--app-top-offset, 52px));
   }
-
+  .sidebarColorLibrary.sidebarColorLibrary {
+    height: 280px;
+  }
 
   .sidePanelOverlay {
     width: 100%;

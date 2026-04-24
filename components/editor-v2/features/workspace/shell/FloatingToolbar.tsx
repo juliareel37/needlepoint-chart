@@ -287,6 +287,8 @@ interface FloatingToolbarProps {
   trace: TraceDocument | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
 }
 
 export function FloatingToolbar({
@@ -307,6 +309,8 @@ export function FloatingToolbar({
   trace,
   mirrorSessionActive,
   isBottomPanelLayout,
+  showSymbols,
+  symbolAssignments,
 }: FloatingToolbarProps) {
   const [activeTooltip, setActiveTooltip] = useState<{
     label: string;
@@ -814,6 +818,8 @@ export function FloatingToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 featuredColorIds={featuredColorIds}
+                showFeaturedSymbols={showSymbols}
+                symbolAssignments={symbolAssignments}
                 onColorSelect={(colorId) => {
                   dispatch(
                     selectionVisible

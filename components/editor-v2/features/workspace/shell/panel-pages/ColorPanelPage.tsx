@@ -206,8 +206,15 @@ export function ColorPanelPage({
 
 
             <div className={styles.sidebarSubsection}>
-              <div className={styles.metaRow} style={typographyStyles.p2}>
-                <span>Active:</span>
+              <div
+                className={[styles.metaRow, styles.activeColorRow].join(" ")}
+                style={typographyStyles.p2}
+              >
+                <span
+                  aria-hidden="true"
+                  className={[styles.swatch, styles.activeColorSwatch].join(" ")}
+                  style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
+                />
                 <strong className={styles.activeColorValue}>
                   {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
                 </strong>

@@ -890,6 +890,8 @@ export function EditorV2Shell({
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={textPlacement}
+                    showSymbols={showSymbols}
+                    symbolAssignments={document.palette.symbolAssignments}
                   />
                 ) : iconPlacement ? (
                   <IconPlacementToolbar
@@ -900,6 +902,8 @@ export function EditorV2Shell({
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={iconPlacement}
+                    showSymbols={showSymbols}
+                    symbolAssignments={document.palette.symbolAssignments}
                   />
                 ) : (
                   <FloatingToolbar
@@ -920,6 +924,8 @@ export function EditorV2Shell({
                     trace={trace}
                     mirrorSessionActive={Boolean(mirrorSession)}
                     isBottomPanelLayout={isBottomPanelLayout}
+                    showSymbols={showSymbols}
+                    symbolAssignments={document.palette.symbolAssignments}
                   />
                 )}
               </div>

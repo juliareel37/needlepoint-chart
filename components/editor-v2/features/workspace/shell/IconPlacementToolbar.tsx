@@ -155,6 +155,8 @@ interface IconColorSlotSwatchPopoverProps {
   label: string;
   onColorSelect: (colorId: string) => void;
   onOpenChange: (open: boolean) => void;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
 }
 
 function IconColorSlotSwatchPopover({
@@ -167,6 +169,8 @@ function IconColorSlotSwatchPopover({
   label,
   onColorSelect,
   onOpenChange,
+  showSymbols,
+  symbolAssignments,
 }: IconColorSlotSwatchPopoverProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -202,6 +206,8 @@ function IconColorSlotSwatchPopover({
             className={styles.toolbarColorLibrary}
             colors={colors}
             featuredColorIds={featuredColorIds}
+            showFeaturedSymbols={showSymbols}
+            symbolAssignments={symbolAssignments}
             onColorSelect={(colorId) => {
               onColorSelect(colorId);
               onOpenChange(false);
@@ -221,6 +227,8 @@ interface IconPlacementToolbarProps {
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: IconPlacementSession;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
 }
 
 export function IconPlacementToolbar({
@@ -231,6 +239,8 @@ export function IconPlacementToolbar({
   gridMetrics,
   palette,
   placement,
+  showSymbols,
+  symbolAssignments,
 }: IconPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [openColorSlotId, setOpenColorSlotId] = useState<string | null>(null);
@@ -398,6 +408,8 @@ export function IconPlacementToolbar({
                     className={styles.toolbarColorLibrary}
                     colors={palette}
                     featuredColorIds={featuredColorIds}
+                    showFeaturedSymbols={showSymbols}
+                    symbolAssignments={symbolAssignments}
                     onColorSelect={(colorId) => {
                       dispatch(createSetActiveColorCommand(colorId));
                       setColorLibraryOpen(false);
@@ -670,6 +682,8 @@ export function IconPlacementToolbar({
                     isSelected={isSelected}
                     label={`Edit icon color ${slot.sourceHex}`}
                     onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
+                    showSymbols={showSymbols}
+                    symbolAssignments={symbolAssignments}
                     onOpenChange={(open) => {
                       if (open) {
                         setColorLibraryOpen(false);

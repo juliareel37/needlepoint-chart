@@ -599,7 +599,6 @@ export function UsedColorsSummary({
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
                           featuredColorIds={featuredColorIds}
-                          showAllSymbols={showSymbols}
                           showFeaturedSymbols={showSymbols}
                           symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
@@ -768,7 +767,6 @@ export function UsedColorsSummary({
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
                                 featuredColorIds={featuredColorIds}
-                                showAllSymbols={showSymbols}
                                 showFeaturedSymbols={showSymbols}
                                 symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {

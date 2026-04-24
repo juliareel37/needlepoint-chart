@@ -156,6 +156,8 @@ interface TextPlacementToolbarProps {
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: TextPlacementSession;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
 }
 
 export function TextPlacementToolbar({
@@ -166,6 +168,8 @@ export function TextPlacementToolbar({
   gridMetrics,
   palette,
   placement,
+  showSymbols,
+  symbolAssignments,
 }: TextPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -251,6 +255,8 @@ export function TextPlacementToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 featuredColorIds={featuredColorIds}
+                showFeaturedSymbols={showSymbols}
+                symbolAssignments={symbolAssignments}
                 onColorSelect={(colorId) => {
                   dispatch(createSetActiveColorCommand(colorId));
                   setColorLibraryOpen(false);
