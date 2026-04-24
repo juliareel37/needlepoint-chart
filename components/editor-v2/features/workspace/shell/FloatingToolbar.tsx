@@ -81,8 +81,10 @@ function FloatingToolbarPortalPopover({
   clampToViewport = true,
   dockedToBottom = false,
   ignoreRefs = [],
+  matchAnchorMinWidth = false,
   onRequestClose,
   subtoolbar = false,
+  verticalPlacement = "bottom",
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
   anchorRef: React.RefObject<HTMLDivElement | null>;
@@ -90,10 +92,13 @@ function FloatingToolbarPortalPopover({
   clampToViewport?: boolean;
   dockedToBottom?: boolean;
   ignoreRefs?: Array<React.RefObject<HTMLElement | null>>;
+  matchAnchorMinWidth?: boolean;
   onRequestClose?: () => void;
+  verticalPlacement?: "bottom" | "top";
 }) {
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
+    anchorWidth: number;
     top: number;
     left: number | "auto";
     right: number | "auto";
@@ -104,6 +109,7 @@ function FloatingToolbarPortalPopover({
   const updatePosition = useCallback(() => {
     if (dockedToBottom) {
       setPosition({
+        anchorWidth: 0,
         top: 0,
         left: 0,
         right: 0,
@@ -121,6 +127,7 @@ function FloatingToolbarPortalPopover({
 
     const rect = anchor.getBoundingClientRect();
     const popoverWidth = getToolbarPopoverMeasuredWidth(popoverRef.current);
+    const popoverHeight = popoverRef.current?.getBoundingClientRect().height ?? 0;
     const viewportPadding = TOOLBAR_POPOVER_VIEWPORT_PADDING;
     const horizontalPosition = clampToViewport
       ? getToolbarPopoverHorizontalPosition({
@@ -136,12 +143,16 @@ function FloatingToolbarPortalPopover({
         };
 
     setPosition({
-      top: rect.bottom + 8,
+      anchorWidth: rect.width,
+      top:
+        verticalPlacement === "top"
+          ? Math.max(viewportPadding, rect.top - popoverHeight - 8)
+          : rect.bottom + 8,
       left: horizontalPosition.left,
       right: horizontalPosition.right,
       transform: horizontalPosition.transform,
     });
-  }, [align, anchorRef, clampToViewport, dockedToBottom]);
+  }, [align, anchorRef, clampToViewport, dockedToBottom, verticalPlacement]);
 
   useEffect(() => {
     setMounted(true);
@@ -245,6 +256,10 @@ function FloatingToolbarPortalPopover({
           : `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         overflowX: subtoolbar ? "auto" : undefined,
         overflowY: subtoolbar ? "hidden" : undefined,
+        minWidth:
+          matchAnchorMinWidth && !dockedToBottom
+            ? (position?.anchorWidth ?? undefined)
+            : props.style?.minWidth,
         visibility: position ? "visible" : "hidden",
       }}
     >
@@ -314,6 +329,7 @@ export function FloatingToolbar({
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectAnchorRef = useRef<HTMLDivElement | null>(null);
+  const selectionShapeAnchorRef = useRef<HTMLDivElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
   const drawOpen = drawPopoverTool !== null;
@@ -591,7 +607,7 @@ export function FloatingToolbar({
   const selectionToolbarControls = (
     <>
       <ToolbarGroup>
-        <ToolbarAnchor>
+        <ToolbarAnchor ref={selectionShapeAnchorRef}>
           <ToolbarButton
             type="button"
             labelled
@@ -607,10 +623,17 @@ export function FloatingToolbar({
           </ToolbarButton>
 
           {selectionShapeMenuOpen ? (
-            <ToolbarPopover
+            <FloatingToolbarPortalPopover
+              align="start"
+              anchorRef={selectionShapeAnchorRef}
+              clampToViewport
+              ignoreRefs={[toolbarRef, selectAnchorRef]}
+              matchAnchorMinWidth
+              onRequestClose={() => setSelectionShapeMenuOpen(false)}
+              className={styles.selectionShapeMenu}
               role="menu"
               aria-label="Selection type"
-              className={styles.selectionShapeMenu}
+              verticalPlacement={mobileSelectionDocked ? "top" : "bottom"}
             >
               {selectionShapeOptions.map((option) => (
                 <ToolbarButton
@@ -630,7 +653,7 @@ export function FloatingToolbar({
                   <ToolbarLabel>{option.label}</ToolbarLabel>
                 </ToolbarButton>
               ))}
-            </ToolbarPopover>
+            </FloatingToolbarPortalPopover>
           ) : null}
         </ToolbarAnchor>
 
