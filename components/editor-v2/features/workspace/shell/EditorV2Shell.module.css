@@ -875,14 +875,20 @@
 }
 
 .mobileSelectionDock {
+  width: fit-content;
+  max-width: min(90%, 100%);
+  min-width: 0;
   display: flex;
   justify-content: center;
   overflow-x: auto !important;
   overflow-y: hidden !important;
-  padding: 8px;
+  padding: 0;
   border-radius: 16px;
   border: 1px solid var(--toolbar-border);
+  background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .stageToolbarBottomRight {
