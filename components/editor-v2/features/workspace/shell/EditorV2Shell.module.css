@@ -638,31 +638,35 @@
 } */
 
 
+.floatingToolbarViewport {
+  width: fit-content;
+  max-width: min(90%, 100%);
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
 .floatingToolbar {
   position: relative;
   display: flex;
   flex-wrap: nowrap;
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
+  overflow: visible;
   isolation: isolate;
 }
 
-.floatingToolbar button[data-tooltip]::before,
-.floatingToolbar button[data-tooltip]::after {
-  position: absolute;
-  left: 50%;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-  z-index: 220;
-}
-
-.floatingToolbar button[data-tooltip]::before {
-  content: attr(data-tooltip);
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
+.floatingToolbarTooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 260;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 8px;
   border-radius: 8px;
   background: var(--brand-primary);
@@ -672,36 +676,20 @@
   line-height: 16px;
   font-weight: 500;
   white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
 }
 
-.floatingToolbar button[data-tooltip]::after {
+.floatingToolbarTooltip::after {
   content: "";
-  bottom: calc(100% + 2px);
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 4px);
   width: 8px;
   height: 8px;
   background: var(--brand-primary);
   transform: translateX(-50%) rotate(45deg);
   border-radius: 2px;
-}
-
-.floatingToolbar button[data-tooltip]:focus-visible {
-  z-index: 221;
-}
-
-.floatingToolbar button[data-tooltip]:focus-visible::before,
-.floatingToolbar button[data-tooltip]:focus-visible::after {
-  opacity: 1;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .floatingToolbar button[data-tooltip]:hover {
-    z-index: 221;
-  }
-
-  .floatingToolbar button[data-tooltip]:hover::before,
-  .floatingToolbar button[data-tooltip]:hover::after {
-    opacity: 1;
-  }
 }
 
 .floatingToolbarContextual {

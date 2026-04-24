@@ -271,6 +271,12 @@ export function FloatingToolbar({
   mirrorSessionActive,
   isBottomPanelLayout,
 }: FloatingToolbarProps) {
+  const [activeTooltip, setActiveTooltip] = useState<{
+    label: string;
+    left: number;
+    top: number;
+    target: HTMLButtonElement;
+  } | null>(null);
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [drawPopoverTool, setDrawPopoverTool] = useState<"paint" | "erase" | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
@@ -303,6 +309,24 @@ export function FloatingToolbar({
   const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
 
+  const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
+    const label = target.dataset.tooltip;
+
+    if (!label) {
+      setActiveTooltip(null);
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+
+    setActiveTooltip({
+      label,
+      left: rect.left + rect.width / 2,
+      top: rect.top,
+      target,
+    });
+  }, []);
+
   function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
     const cells: GridPoint[] = [];
 
@@ -322,6 +346,29 @@ export function FloatingToolbar({
 
     setBrushSizeSliderValue(normalizedBrushSize);
   }, [brushSizeSliderDragging, normalizedBrushSize]);
+
+  useEffect(() => {
+    if (!activeTooltip) {
+      return;
+    }
+
+    const update = () => {
+      if (!document.body.contains(activeTooltip.target)) {
+        setActiveTooltip(null);
+        return;
+      }
+
+      updateTooltipPosition(activeTooltip.target);
+    };
+
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [activeTooltip, updateTooltipPosition]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -502,7 +549,56 @@ export function FloatingToolbar({
 
   return (
     <>
-      <div ref={toolbarRef}>
+      <div
+        ref={toolbarRef}
+        className={styles.floatingToolbarViewport}
+        onMouseOver={(event) => {
+          const target = event.target instanceof Element
+            ? event.target.closest("button[data-tooltip]")
+            : null;
+
+          if (!(target instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          updateTooltipPosition(target);
+        }}
+        onMouseOut={(event) => {
+          const relatedTarget = event.relatedTarget;
+
+          if (
+            relatedTarget instanceof Node &&
+            event.currentTarget.contains(relatedTarget)
+          ) {
+            return;
+          }
+
+          setActiveTooltip((current) => (current?.target.matches(":focus-visible") ? current : null));
+        }}
+        onFocusCapture={(event) => {
+          const target = event.target instanceof Element
+            ? event.target.closest("button[data-tooltip]")
+            : null;
+
+          if (!(target instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          updateTooltipPosition(target);
+        }}
+        onBlurCapture={(event) => {
+          const relatedTarget = event.relatedTarget;
+
+          if (
+            relatedTarget instanceof Node &&
+            event.currentTarget.contains(relatedTarget)
+          ) {
+            return;
+          }
+
+          setActiveTooltip(null);
+        }}
+      >
       <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
         <ToolbarAnchor ref={colorAnchorRef}>
@@ -1065,6 +1161,21 @@ export function FloatingToolbar({
       </ToolbarGroup>
       </Toolbar>
       </div>
+
+      {activeTooltip
+        ? createPortal(
+            <div
+              className={styles.floatingToolbarTooltip}
+              style={{
+                left: activeTooltip.left,
+                top: activeTooltip.top,
+              }}
+            >
+              {activeTooltip.label}
+            </div>,
+            document.body,
+          )
+        : null}
 
       <Modal
         isOpen={clearCanvasModalOpen}
