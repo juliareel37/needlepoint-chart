@@ -29,6 +29,7 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createCancelMirrorCommand,
   createBeginTraceRepositionCommand,
   createBeginMirrorFromSelectionCommand,
   createClearCanvasCommand,
@@ -777,6 +778,12 @@ export function FloatingToolbar({
                 disabled={!canMirrorSelection}
                 onClick={() => {
                   if (!canMirrorSelection) {
+                    return;
+                  }
+
+                  if (mirrorSessionActive) {
+                    dispatch(createCancelMirrorCommand());
+                    dispatch(createSetToolCommand("lasso"));
                     return;
                   }
 

@@ -65,6 +65,18 @@ export function SelectionOverlay({
   const mirrorCutoutPath = mirrorSourceRect
     ? buildRectPath(mirrorSourceRect, metrics.cellSize)
     : null;
+  const dimmedCanvasCutoutPaths = [
+    hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
+    hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
+    hasCommittedCircleSelection && selection.rect
+      ? buildEllipsePath(selection.rect, metrics.cellSize)
+      : null,
+    hasCommittedMirrorSelection &&
+    mirrorCutoutPath &&
+    mirrorCutoutPath !== selectionRectPath
+      ? mirrorCutoutPath
+      : null,
+  ].filter(Boolean);
 
   return (
     <>
@@ -91,12 +103,7 @@ export function SelectionOverlay({
               fillRule="evenodd"
               d={[
                 `M 0 0 H ${metrics.surfaceWidth} V ${metrics.surfaceHeight} H 0 Z`,
-                hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
-                hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
-                hasCommittedCircleSelection && selection.rect
-                  ? buildEllipsePath(selection.rect, metrics.cellSize)
-                  : null,
-                hasCommittedMirrorSelection && mirrorCutoutPath ? mirrorCutoutPath : null,
+                ...dimmedCanvasCutoutPaths,
               ]
                 .filter(Boolean)
                 .join(" ")}
