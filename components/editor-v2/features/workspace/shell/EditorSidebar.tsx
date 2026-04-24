@@ -55,6 +55,7 @@ interface EditorSidebarProps {
   dispatch: EditorStore["dispatch"];
   textPlacement: TextPlacementSession | null;
   iconPlacement: IconPlacementSession | null;
+  isBottomPanelLayout: boolean;
   onHighlightColorChange: (colorId: string | null) => void;
   textViewportCenter: WorldPoint | null;
 }
@@ -90,6 +91,7 @@ export function EditorSidebar({
   dispatch,
   textPlacement,
   iconPlacement,
+  isBottomPanelLayout,
   onHighlightColorChange,
   textViewportCenter,
 }: EditorSidebarProps) {
@@ -198,6 +200,7 @@ export function EditorSidebar({
               colorsById={colorsById}
               dispatch={dispatch}
               highlightedColorId={highlightedColorId}
+              isBottomPanelLayout={isBottomPanelLayout}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
               palette={palette}

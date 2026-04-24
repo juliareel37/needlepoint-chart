@@ -854,6 +854,7 @@ export function EditorV2Shell({
                 traceRepositionOrigin={traceRepositionOrigin}
                 textPlacement={textPlacement}
                 iconPlacement={iconPlacement}
+                isBottomPanelLayout={isBottomPanelLayout}
                 usedColors={usedColors}
                 document={document}
                 dispatch={dispatch}
