@@ -202,6 +202,8 @@ export function UsedColorsSummary({
   highlightedColorId,
   palette,
   onHighlightColorChange,
+  showSymbols,
+  symbolAssignments,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
@@ -211,6 +213,8 @@ export function UsedColorsSummary({
   highlightedColorId: string | null;
   palette: PaletteColor[];
   onHighlightColorChange: (colorId: string | null) => void;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -535,6 +539,9 @@ export function UsedColorsSummary({
                     >
                       {(() => {
                         const swatchColor = colorsById[entry.colorId]?.hex ?? "#ffffff";
+                        const swatchSymbol = showSymbols
+                          ? symbolAssignments[entry.colorId]
+                          : null;
 
                         return (
                       <span
@@ -544,6 +551,14 @@ export function UsedColorsSummary({
                           backgroundColor: swatchColor,
                         }}
                       >
+                        {swatchSymbol ? (
+                          <span
+                            className={styles.usedColorSwatchSymbol}
+                            style={{ color: getSwatchIconColor(swatchColor) }}
+                          >
+                            {swatchSymbol}
+                          </span>
+                        ) : null}
                         {!isSelecting ? (
                           <span
                             className={styles.usedColorSwatchSwapIcon}
@@ -571,6 +586,8 @@ export function UsedColorsSummary({
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
                           featuredColorIds={featuredColorIds}
+                          showFeaturedSymbols={showSymbols}
+                          symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
                             if (colorId !== entry.colorId) {
                               onSwapColor(entry.colorId, colorId);
@@ -725,6 +742,8 @@ export function UsedColorsSummary({
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
                                 featuredColorIds={featuredColorIds}
+                                showFeaturedSymbols={showSymbols}
+                                symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {
                                   setMergeTargetColorId(colorId);
                                   setMergePickerOpen(false);

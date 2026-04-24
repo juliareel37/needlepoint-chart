@@ -201,6 +201,8 @@ export function EditorSidebar({
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
               palette={palette}
+              showSymbols={showSymbols}
+              symbolAssignments={document.palette.symbolAssignments}
               usedColors={usedColors}
               view={colorPanelView}
             />

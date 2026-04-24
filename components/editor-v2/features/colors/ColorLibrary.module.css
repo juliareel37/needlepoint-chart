@@ -51,6 +51,14 @@
   background: transparent;
 }
 
+.colorButton[data-active="true"] .swatch {
+  transform: scale(1.14);
+  border-color: var(--swatch-border-strong);
+  box-shadow:
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
+}
+
 .swatch {
   display: inline-flex;
   align-items: center;
@@ -77,6 +85,12 @@
 
 .swatchCheck {
   font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.swatchSymbol {
+  font-size: 13px;
   line-height: 1;
   font-weight: 700;
 }

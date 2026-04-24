@@ -29,6 +29,8 @@ interface ColorPanelPageProps {
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
   palette: PaletteColor[];
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
   usedColors: Array<{ colorId: string; count: number }>;
   view: ColorPanelView;
 }
@@ -42,6 +44,8 @@ export function ColorPanelPage({
   onViewChange,
   onHighlightColorChange,
   palette,
+  showSymbols,
+  symbolAssignments,
   usedColors,
   view,
 }: ColorPanelPageProps) {
@@ -67,6 +71,8 @@ export function ColorPanelPage({
                 colors={palette}
                 featuredColorIds={usedColors.map((entry) => entry.colorId)}
                 onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                showFeaturedSymbols={showSymbols}
+                symbolAssignments={symbolAssignments}
               />
               </div>
 
@@ -113,6 +119,8 @@ export function ColorPanelPage({
               highlightedColorId={highlightedColorId}
               palette={palette}
               onHighlightColorChange={onHighlightColorChange}
+              showSymbols={showSymbols}
+              symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }

@@ -1046,6 +1046,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 25px;
   height: 25px;
   border-radius: 25%;
@@ -1463,11 +1464,27 @@
 }
 
 .usedColorSwatchSwapIcon {
+  position: absolute;
+  inset: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transform: scale(0.92);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.usedColorSwatchSymbol {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
   transition:
     opacity 140ms ease,
     transform 140ms ease;
@@ -1494,6 +1511,12 @@
 .usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSwapIcon {
   opacity: 1;
   transform: scale(1);
+}
+
+.usedColorSwatchButton:focus-visible .usedColorSwatchSymbol,
+.usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSymbol {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 .usedColorsItemCount {
@@ -2016,6 +2039,11 @@
   .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon {
     opacity: 1;
     transform: scale(1);
+  }
+
+  .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSymbol {
+    opacity: 0;
+    transform: scale(0.92);
   }
 
   .usedColorsRow:hover .usedColorsHighlightButton {

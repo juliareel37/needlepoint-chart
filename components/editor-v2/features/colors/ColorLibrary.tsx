@@ -17,12 +17,26 @@ function getSwatchCheckColor(hex: string) {
   return luminance > 0.6 ? "#111111" : "#ffffff";
 }
 
+function getSwatchSymbolColor(hex: string) {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return "#111827";
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  return luminance > 0.68 ? "#111827" : "#f8fafc";
+}
+
 interface ColorLibraryProps {
   activeColorId: string | null;
   className?: string;
   colors: PaletteColor[];
   featuredColorIds?: string[];
   onColorSelect: (colorId: string) => void;
+  showFeaturedSymbols?: boolean;
+  symbolAssignments?: Record<string, string>;
 }
 
 export function ColorLibrary({
@@ -31,12 +45,16 @@ export function ColorLibrary({
   colors,
   featuredColorIds = [],
   onColorSelect,
+  showFeaturedSymbols = false,
+  symbolAssignments = {},
 }: ColorLibraryProps) {
   const featuredColorIdSet = new Set(featuredColorIds);
   const featuredColors = colors.filter((color) => featuredColorIdSet.has(color.id));
 
-  function renderColorButton(color: PaletteColor) {
+  function renderColorButton(color: PaletteColor, options?: { showSymbol?: boolean }) {
     const selected = color.id === activeColorId;
+    const showSymbol = options?.showSymbol ?? false;
+    const symbol = showSymbol ? symbolAssignments[color.id] : null;
 
     return (
       <Button
@@ -56,7 +74,15 @@ export function ColorLibrary({
           className={styles.swatch}
           style={{ backgroundColor: color.hex }}
         >
-          {selected ? (
+          {symbol ? (
+            <span
+              aria-hidden="true"
+              className={styles.swatchSymbol}
+              style={{ color: getSwatchSymbolColor(color.hex) }}
+            >
+              {symbol}
+            </span>
+          ) : selected ? (
             <span
               aria-hidden="true"
               className={styles.swatchCheck}
@@ -76,7 +102,11 @@ export function ColorLibrary({
         <section className={styles.section} aria-label="Design colors">
           <div className={styles.sectionContent}>
             <h3 className={styles.sectionHeader}>Design Colors</h3>
-            <div className={styles.sectionGrid}>{featuredColors.map(renderColorButton)}</div>
+            <div className={styles.sectionGrid}>
+              {featuredColors.map((color) =>
+                renderColorButton(color, { showSymbol: showFeaturedSymbols }),
+              )}
+            </div>
           </div>
         </section>
       ) : null}
@@ -84,7 +114,7 @@ export function ColorLibrary({
       <section className={styles.section} aria-label="All colors">
         <div className={styles.sectionContent}>
           <h3 className={styles.sectionHeader}>All Colors</h3>
-          <div className={styles.sectionGrid}>{colors.map(renderColorButton)}</div>
+          <div className={styles.sectionGrid}>{colors.map((color) => renderColorButton(color))}</div>
         </div>
       </section>
     </div>
