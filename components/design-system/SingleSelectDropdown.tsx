@@ -114,13 +114,16 @@ export function SingleSelectDropdown<TItem>({
 
   const selectedItem =
     items.find((item) => getItemValue(item) === value) ?? null;
+  const isTopPlacement =
+    menuPlacement === "top-start" || menuPlacement === "top-end";
+  const orderedItems = isTopPlacement ? [...items].reverse() : items;
 
   const chevronDirection =
-    menuPlacement === "top-start" || menuPlacement === "top-end" ? "up" : "down";
+    isTopPlacement ? "up" : "down";
   const triggerZIndex = menuOverlapTrigger ? 1 : undefined;
   const menuPositionStyle: CSSProperties = menuPortalToViewport
     ? {}
-    : menuPlacement === "top-start" || menuPlacement === "top-end"
+    : isTopPlacement
       ? {
           position: "absolute",
           bottom: menuOverlapTrigger
@@ -156,7 +159,7 @@ export function SingleSelectDropdown<TItem>({
     );
     const left = Math.min(Math.max(desiredLeft, viewportPadding), maxLeft);
     const top =
-      menuPlacement === "top-start"
+      isTopPlacement
         ? Math.max(
             viewportPadding,
             triggerRect.top -
@@ -168,7 +171,7 @@ export function SingleSelectDropdown<TItem>({
             window.innerHeight - measuredMenuHeight - viewportPadding,
           );
     const maxHeight =
-      menuPlacement === "top-start"
+      isTopPlacement
         ? Math.max(triggerRect.top - menuOffset - viewportPadding, 120)
         : Math.max(window.innerHeight - triggerRect.bottom - menuOffset - viewportPadding, 120);
 
@@ -203,6 +206,14 @@ export function SingleSelectDropdown<TItem>({
     updatePortalStyle();
   }, [open, menuPortalToViewport, updatePortalStyle]);
 
+  useLayoutEffect(() => {
+    if (!open || !isTopPlacement || !menuRef.current) {
+      return;
+    }
+
+    menuRef.current.scrollTop = menuRef.current.scrollHeight;
+  }, [isTopPlacement, open]);
+
   useEffect(() => {
     if (!open || !menuPortalToViewport) {
       return;
@@ -236,8 +247,8 @@ export function SingleSelectDropdown<TItem>({
         ...menuStyle,
       }}
     >
-      {items.length ? (
-        items.map((item) => {
+      {orderedItems.length ? (
+        orderedItems.map((item) => {
           const itemValue = getItemValue(item);
           const active = itemValue === value;
           return (
