@@ -60,17 +60,22 @@ export const setActiveToolCommandHandler: EditorCommandHandler<SetActiveToolComm
   handle(state, command) {
     const nextTool = command.payload.tool === "none" ? "pan" : command.payload.tool;
     const currentTool = state.session.activeTool.tool;
-    const hasCommittedSelection = Boolean(
-      state.session.selection.rect && !state.session.selection.preview,
-    );
+    const hasSelection = state.session.selection.mode !== "none";
     const normalizedCurrentTool =
       currentTool === "mirror" || currentTool === "eyedropper"
         ? "pan"
         : currentTool;
+    const selectionActionTools = new Set<ActiveTool>([
+      "lasso",
+      "paint",
+      "erase",
+      "fill",
+      "eyedropper",
+    ]);
     const shouldPreserveSelectionForSelectionActionTool =
-      hasCommittedSelection &&
-      ((currentTool === "lasso" && (nextTool === "fill" || nextTool === "erase")) ||
-        ((currentTool === "fill" || currentTool === "erase") && nextTool === "lasso"));
+      hasSelection &&
+      selectionActionTools.has(currentTool) &&
+      selectionActionTools.has(nextTool);
     const nextSelection =
       (currentTool === "lasso" || currentTool === "fill" || currentTool === "erase") &&
       nextTool !== currentTool &&

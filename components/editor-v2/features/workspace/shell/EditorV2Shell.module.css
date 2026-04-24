@@ -640,7 +640,12 @@
 
 .floatingToolbar {
   position: relative;
-  overflow: visible;
+  display: flex;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   isolation: isolate;
 }
 
@@ -858,17 +863,31 @@
 .stageToolbarTop {
   position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(var(--stage-toolbar-left-inset, 0px) + 24px);
+  right: 24px;
   z-index: 220;
   display: flex;
   justify-content: center;
-  width: calc(100% - 48px);
+  width: auto;
+  min-width: 0;
   pointer-events: none;
 }
 
 .stageToolbarTop > * {
   pointer-events: auto;
+  max-width: min(90%, 100%);
+  min-width: 0;
+}
+
+.mobileSelectionDock {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--toolbar-border);
+  box-shadow: var(--ui-shadow-md);
 }
 
 .stageToolbarBottomRight {
@@ -1984,8 +2003,6 @@
 
   .floatingToolbar {
     position: static;
-    /* width: 60%; */
-    flex-wrap: nowrap;
   }
 
   .floatingToolbarContextual {
@@ -2028,9 +2045,6 @@
 
 @media (max-width: 768px) {
   .floatingToolbar {
-    max-width: min-content;
-    width: 90%;
-    overflow: auto hidden;
   }
 
   .iconSelectionSummary {
@@ -2069,16 +2083,21 @@
   .viewportToolbar {
     display: none;
   }
+
   .stageToolbarTop {
-    width: 100%;
-    position: absolute;
-    left: 50% !important;
+    left: 12px;
+    right: 12px;
   }
+
   .rail {
     grid-row: 2;
     width: 100%;
     min-width: 0;
     overflow: hidden;
+  }
+
+  .shellContent[data-mobile-selection-docked="true"] .rail {
+    display: none;
   }
   .railSurface {
     flex-direction: row;

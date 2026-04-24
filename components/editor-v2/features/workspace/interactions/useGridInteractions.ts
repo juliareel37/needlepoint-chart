@@ -99,12 +99,6 @@ export function useGridInteractions({
       return;
     }
 
-    if (activeTool === "erase") {
-      if (handleSelectionErasePointerDown(point)) {
-        return;
-      }
-    }
-
     if (!paintDisabled && paintStroke.handlePointerDown(point)) {
       return;
     }
@@ -125,6 +119,14 @@ export function useGridInteractions({
   }
 
   function handleEyedropperPointerDown(point: GridPoint): void {
+    const hasCommittedSelection = Boolean(
+      getSelectionBounds(state) && !state.session.selection.preview,
+    );
+
+    if (hasCommittedSelection && !isCellInSelection(state, point)) {
+      return;
+    }
+
     const returnTool = state.session.eyedropperReturnTool ?? "pan";
     // const returnTool = "draw";
 
@@ -177,23 +179,6 @@ export function useGridInteractions({
     if (fillCells.length > 0) {
       dispatch(createPaintCellsCommand(activeColorId, fillCells));
     }
-  }
-
-  function handleSelectionErasePointerDown(point: GridPoint): boolean {
-    if (paintDisabled) {
-      return false;
-    }
-
-    const selectionCells = getSelectedRegionCells(state, point);
-
-    if (selectionCells.length === 0) {
-      return false;
-    }
-
-    dispatch(createEraseCellsCommand(selectionCells));
-    dispatch(createClearSelectionCommand("canvas"));
-    dispatch(createSetToolCommand("lasso"));
-    return true;
   }
 }
 

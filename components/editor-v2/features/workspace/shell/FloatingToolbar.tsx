@@ -22,6 +22,7 @@ import {
 import type {
   ActiveTool,
   EditorStore,
+  GridPoint,
   GridRect,
   PaletteColor,
   SelectionState,
@@ -32,6 +33,7 @@ import {
   createBeginMirrorFromSelectionCommand,
   createClearCanvasCommand,
   createClearSelectionCommand,
+  createEraseCellsCommand,
   createRedoCommand,
   createSetActiveColorCommand,
   createSetActiveSidebarSectionCommand,
@@ -55,6 +57,8 @@ function FloatingToolbarPortalPopover({
   align = "start",
   children,
   clampToViewport = true,
+  dockedToBottom = false,
+  ignoreRefs = [],
   onRequestClose,
   subtoolbar = false,
   ...props
@@ -62,6 +66,8 @@ function FloatingToolbarPortalPopover({
   anchorRef: React.RefObject<HTMLDivElement | null>;
   align?: "start" | "center";
   clampToViewport?: boolean;
+  dockedToBottom?: boolean;
+  ignoreRefs?: Array<React.RefObject<HTMLElement | null>>;
   onRequestClose?: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -74,6 +80,16 @@ function FloatingToolbarPortalPopover({
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const updatePosition = useCallback(() => {
+    if (dockedToBottom) {
+      setPosition({
+        top: 0,
+        left: 0,
+        right: 0,
+        transform: "none",
+      });
+      return;
+    }
+
     const anchor = anchorRef.current;
 
     if (!anchor) {
@@ -103,7 +119,7 @@ function FloatingToolbarPortalPopover({
       right: horizontalPosition.right,
       transform: horizontalPosition.transform,
     });
-  }, [align, anchorRef, clampToViewport]);
+  }, [align, anchorRef, clampToViewport, dockedToBottom]);
 
   useEffect(() => {
     setMounted(true);
@@ -168,12 +184,16 @@ function FloatingToolbarPortalPopover({
         return;
       }
 
+      if (ignoreRefs.some((ref) => ref.current?.contains(target))) {
+        return;
+      }
+
       onRequestClose?.();
     }
 
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [anchorRef, mounted, onRequestClose]);
+  }, [anchorRef, ignoreRefs, mounted, onRequestClose]);
 
   if (!mounted) {
     return null;
@@ -187,12 +207,20 @@ function FloatingToolbarPortalPopover({
       style={{
         ...props.style,
         position: "fixed",
-        top: position?.top ?? 0,
-        left: position?.left ?? 0,
-        right: position?.right ?? "auto",
+        top: dockedToBottom ? "auto" : (position?.top ?? 0),
+        bottom: dockedToBottom
+          ? "calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          : "auto",
+        left: dockedToBottom ? "50%" : (position?.left ?? 0),
+        right: dockedToBottom ? "auto" : (position?.right ?? "auto"),
         zIndex: 230,
-        transform: position?.transform ?? "none",
-        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
+        transform: dockedToBottom
+          ? "translateX(-50%)"
+          : (position?.transform ?? "none"),
+        width: dockedToBottom ? "90%" : undefined,
+        maxWidth: dockedToBottom
+          ? "calc(100vw - 24px)"
+          : `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         overflowX: subtoolbar ? "auto" : undefined,
         overflowY: subtoolbar ? "hidden" : undefined,
         visibility: position ? "visible" : "hidden",
@@ -221,6 +249,7 @@ interface FloatingToolbarProps {
   selectionShape: SelectionState["shape"];
   trace: TraceDocument | null;
   mirrorSessionActive: boolean;
+  isBottomPanelLayout: boolean;
 }
 
 export function FloatingToolbar({
@@ -240,6 +269,7 @@ export function FloatingToolbar({
   selectionShape,
   trace,
   mirrorSessionActive,
+  isBottomPanelLayout,
 }: FloatingToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [drawPopoverTool, setDrawPopoverTool] = useState<"paint" | "erase" | null>(null);
@@ -255,6 +285,7 @@ export function FloatingToolbar({
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectAnchorRef = useRef<HTMLDivElement | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
   const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
   const drawOpen = drawPopoverTool !== null;
 
@@ -267,8 +298,22 @@ export function FloatingToolbar({
     ((brushSizeSliderValue - 1) / 9) * 100;
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
-  const selectionLockedToolsDisabled = Boolean(selectionCommitted && selectionBounds);
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
+  const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
+  const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
+  const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
+
+  function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
+    const cells: GridPoint[] = [];
+
+    for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
+      for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
+        cells.push({ x, y });
+      }
+    }
+
+    return cells;
+  }
 
   useEffect(() => {
     if (brushSizeSliderDragging) {
@@ -457,6 +502,7 @@ export function FloatingToolbar({
 
   return (
     <>
+      <div ref={toolbarRef}>
       <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
         <ToolbarAnchor ref={colorAnchorRef}>
@@ -520,7 +566,6 @@ export function FloatingToolbar({
           aria-label="Eyedropper"
           data-tooltip="Eyedropper"
           title="Eyedropper"
-          disabled={selectionLockedToolsDisabled}
           onClick={() => {
             closeColorLibrary();
             closeDrawMenu();
@@ -569,9 +614,12 @@ export function FloatingToolbar({
               align="center"
               anchorRef={selectAnchorRef}
               clampToViewport
+              dockedToBottom={mobileSelectionDocked}
+              ignoreRefs={[toolbarRef]}
               subtoolbar
               role="dialog"
               aria-label="Selection tools"
+              className={mobileSelectionDocked ? styles.mobileSelectionDock : undefined}
             >
               {/* <ToolbarButton
                 type="button"
@@ -643,19 +691,8 @@ export function FloatingToolbar({
                 <ToolbarLabel>Mirror</ToolbarLabel>
               </ToolbarButton>
 
-              {/* <ToolbarDivider /> */}
-
-              {/* <Button
-                type="button"
-                variant="secondary"
-                disabled={!selectionCommitted}
-                onClick={handleNewSelection}
-              >
-                Unselect
-              </Button> */}
-
               <ToolbarDivider />
-{/* 
+
               <ToolbarButton
                 type="button"
                 disabled={!canEraseSelection}
@@ -672,8 +709,8 @@ export function FloatingToolbar({
                 }}
               >
                 <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-                <ToolbarLabel>Erase</ToolbarLabel>
-              </ToolbarButton> */}
+                <ToolbarLabel>Erase all</ToolbarLabel>
+              </ToolbarButton>
 
               {/* <ToolbarDivider /> */}
 
@@ -738,7 +775,6 @@ export function FloatingToolbar({
             aria-label="Brush"
             data-tooltip="Brush"
             title="Brush"
-            disabled={selectionLockedToolsDisabled}
             onClick={() => {
               closeColorLibrary();
               closeImageMenu();
@@ -748,7 +784,11 @@ export function FloatingToolbar({
               }
 
               dispatch(createSetToolCommand("paint"));
-              setDrawPopoverTool("paint");
+              if (!selectionToolSessionActive) {
+                setDrawPopoverTool("paint");
+              } else {
+                closeDrawMenu();
+              }
             }}
           >
             <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
@@ -763,7 +803,6 @@ export function FloatingToolbar({
             aria-label="Erase"
             data-tooltip="Erase"
             title="Erase"
-            disabled={selectionLockedToolsDisabled}
             onClick={() => {
               closeColorLibrary();
               closeImageMenu();
@@ -773,7 +812,11 @@ export function FloatingToolbar({
               }
 
               dispatch(createSetToolCommand("erase"));
-              setDrawPopoverTool("erase");
+              if (!selectionToolSessionActive) {
+                setDrawPopoverTool("erase");
+              } else {
+                closeDrawMenu();
+              }
             }}
           >
             <ToolbarIcon icon="/icons/lucide/eraser.svg" />
@@ -875,7 +918,7 @@ export function FloatingToolbar({
           aria-label="Image"
           data-tooltip="Image"
           title="Image"
-          disabled={selectionLockedToolsDisabled}
+          disabled={Boolean(selectionCommitted && selectionBounds)}
           onClick={() => {
               closeColorLibrary();
               if (imageOpen) {
@@ -1021,6 +1064,7 @@ export function FloatingToolbar({
         </ToolbarButton>
       </ToolbarGroup>
       </Toolbar>
+      </div>
 
       <Modal
         isOpen={clearCanvasModalOpen}

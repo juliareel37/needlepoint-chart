@@ -152,6 +152,9 @@ export function EditorV2Shell({
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
   const [headerOverflowTarget, setHeaderOverflowTarget] = useState<HTMLElement | null>(null);
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
+  const mobileSelectionDocked =
+    isBottomPanelLayout &&
+    (Boolean(selectionBounds) || activeTool === "lasso");
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
@@ -789,6 +792,7 @@ export function EditorV2Shell({
       <div
         className={styles.shellContent}
         data-modal-open={setupModalOpen ? "true" : "false"}
+        data-mobile-selection-docked={mobileSelectionDocked ? "true" : "false"}
       >
         <EditorRail
           activeSection={activeSidebarSection}
@@ -865,9 +869,10 @@ export function EditorV2Shell({
               <div
                 className={styles.stageToolbarTop}
                 style={{
-                  left: sidebarCollapsed || isBottomPanelLayout
-                    ? "50%"
-                    : `calc(50% + ${EXPANDED_SIDEBAR_WIDTH / 2}px)`,
+                  ["--stage-toolbar-left-inset" as string]:
+                    sidebarCollapsed || isBottomPanelLayout
+                      ? "0px"
+                      : `${EXPANDED_SIDEBAR_WIDTH}px`,
                 }}
               >
                 {traceRepositionActive && trace ? (
@@ -913,6 +918,7 @@ export function EditorV2Shell({
                     selectionShape={state.session.selection.shape}
                     trace={trace}
                     mirrorSessionActive={Boolean(mirrorSession)}
+                    isBottomPanelLayout={isBottomPanelLayout}
                   />
                 )}
               </div>

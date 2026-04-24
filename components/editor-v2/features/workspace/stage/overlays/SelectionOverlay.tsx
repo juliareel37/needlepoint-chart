@@ -47,17 +47,18 @@ export function SelectionOverlay({
     hasCommittedFreehandSelection ||
     hasCommittedRectSelection ||
     hasCommittedCircleSelection;
+  const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
+  const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
   const shouldDimCanvas =
     activeTool === "lasso" ||
     activeTool === "mirror" ||
     Boolean(mirrorSession) ||
-    ((activeTool === "fill" || activeTool === "erase") && hasCommittedSelection);
+    hasCommittedSelection ||
+    hasCommittedMirrorSelection;
   const selectionRectPath = selection.rect
     ? buildRectPath(selection.rect, metrics.cellSize)
     : null;
-  const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
   const appliedMirrorDirection = mirrorSession?.appliedDirection ?? null;
-  const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
   const mirrorTargets = mirrorSourceRect
     ? getMirrorTargetRects(mirrorSourceRect, metrics.width, metrics.height)
     : [];
