@@ -415,7 +415,7 @@ export function UsedColorsSummary({
       <div className={styles.usedColorsBlock}>
       <div className={styles.usedColorsHeaderRow}>
         <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-          {`Colors in canvas (${usedColors.length})`}
+          {`Colors used (${usedColors.length})`}
         </p>
         {isSelecting ? (
           <Button

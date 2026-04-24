@@ -135,30 +135,11 @@ export function ColorPanelPage({
       <div className={styles.sidebarPageBody}>
         {view === "overview" ? (
           <>
-            <div className={styles.sidebarSubsection}>
-              <div className={styles.metaRow} style={typographyStyles.p2}>
-                <span>Active:</span>
-                <strong className={styles.activeColorValue}>
-                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
-                </strong>
-              </div>
-              <div className={styles.sidebarColorLibraryCard}>
-                <ColorLibrary
-                  activeColorId={activeColorId}
-                  className={styles.sidebarColorLibrary}
-                  colors={palette}
-                  featuredColorIds={usedColors.map((entry) => entry.colorId)}
-                  onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
-                  showFeaturedSymbols={showSymbols}
-                  symbolAssignments={symbolAssignments}
-                />
-              </div>
-            </div>
 
             <div className={styles.sidebarSubsection}>
               <div className={styles.sidebarSubsectionHeaderRow}>
                 <div className={styles.sidebarSubsectionHeader}>
-                  <h3 style={typographyStyles.h5}>Design Colors</h3>
+                  <h3 style={typographyStyles.h5}>Design colors </h3>
                   <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
                     {usedColors.length === 0
                       ? "Review, replace, merge, or delete the colors used in this design."
@@ -212,6 +193,30 @@ export function ColorPanelPage({
                 </div>
               ) : null}
             </div>
+
+                      <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+
+            <div className={styles.sidebarSubsection}>
+              <div className={styles.metaRow} style={typographyStyles.p2}>
+                <span>Active:</span>
+                <strong className={styles.activeColorValue}>
+                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
+                </strong>
+              </div>
+              <div className={styles.sidebarColorLibraryCard}>
+                <ColorLibrary
+                  activeColorId={activeColorId}
+                  className={styles.sidebarColorLibrary}
+                  colors={palette}
+                  featuredColorIds={usedColors.map((entry) => entry.colorId)}
+                  onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  showFeaturedSymbols={showSymbols}
+                  symbolAssignments={symbolAssignments}
+                />
+              </div>
+            </div>
+
           </>
         ) : (
           <div className={styles.sidebarSubsection}>

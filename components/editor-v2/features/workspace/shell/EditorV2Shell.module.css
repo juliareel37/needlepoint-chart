@@ -458,6 +458,10 @@
   line-height: 1;
 }
 
+.sidebarColorPreviewMoreBadge:hover {
+  background: none !important;
+}
+
 .sidebarHeaderAction {
   min-width: 32px;
   padding-inline: 8px;

@@ -3,7 +3,7 @@
   --color-library-grid-gap: 6px;
   display: flex;
   flex-direction: column;
-  height: 250px;
+  /* height: 250px; */
   overflow: auto;
   padding: 16px;
   gap: 10px;

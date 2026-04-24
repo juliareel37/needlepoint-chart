@@ -126,7 +126,7 @@ export function EditorSidebar({
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
               </button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
-                Design Colors
+                Design colors
               </span>
             </div>
           ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
