@@ -477,14 +477,6 @@ export function FloatingToolbar({
   }, [toolbarTooltipsEnabled]);
 
   useEffect(() => {
-    if (!touchPrimaryInput || activeTool !== "pan") {
-      return;
-    }
-
-    dispatch(createSetToolCommand("paint"));
-  }, [activeTool, dispatch, touchPrimaryInput]);
-
-  useEffect(() => {
     if (!brushSizeTooltipVisible) {
       return;
     }
@@ -856,25 +848,23 @@ export function FloatingToolbar({
         </ToolbarButton>
 
 
-        {touchPrimaryInput ? null : (
-          <ToolbarButton
-            type="button"
-            active={activeTool === "pan"}
-            inertWhenActive
-            aria-pressed={activeTool === "pan"}
-            aria-label="Pan"
-            data-tooltip="Pan"
-            title="Pan"
-            onClick={() => {
-              closeColorLibrary();
-              closeDrawMenu();
-              closeImageMenu();
-              dispatch(createSetToolCommand("pan"));
-            }}
-          >
-            <ToolbarIcon icon="/icons/lucide/pan.svg" />
-          </ToolbarButton>
-        )}
+        <ToolbarButton
+          type="button"
+          active={activeTool === "pan"}
+          inertWhenActive
+          aria-pressed={activeTool === "pan"}
+          aria-label="Pan"
+          data-tooltip="Pan"
+          title="Pan"
+          onClick={() => {
+            closeColorLibrary();
+            closeDrawMenu();
+            closeImageMenu();
+            dispatch(createSetToolCommand("pan"));
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/pan.svg" />
+        </ToolbarButton>
    <ToolbarAnchor ref={selectAnchorRef}>
           <ToolbarButton
             type="button"
