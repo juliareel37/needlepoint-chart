@@ -1,7 +1,7 @@
 "use client";
 
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
-import { Button, ButtonIcon, Toolbar, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
+import { Button, ButtonIcon, Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
   createCancelTraceRepositionCommand,
@@ -23,9 +23,9 @@ export function TraceRepositionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-        <Button
+        <ToolbarButton
           type="button"
-          variant="ghostV2"
+          // variant="ghostV2"
           onClick={() => {
             dispatch(createSetActiveSidebarSectionCommand("trace"));
             dispatch(createSetSidebarCollapsedCommand(false));
@@ -33,41 +33,30 @@ export function TraceRepositionToolbar({
         >
           <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
           <ToolbarLabel>Display settings</ToolbarLabel>
-        </Button>
+        </ToolbarButton>
 
         <ToolbarDivider />
-
-       
-      <div
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "center",
-        flexWrap: "nowrap",
-      }}>
-        {/* <Button
-            type="button"
-            variant="secondary"
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}>
+        <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => dispatch(createCancelTraceRepositionCommand())}
+        >
+          {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
           Cancel
-        </Button> */}
-        <Button 
-            type="button" 
-            variant="primary" 
-            onClick={() => dispatch(createCommitTraceRepositionCommand())}>
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={() => dispatch(createCommitTraceRepositionCommand())}
+        >
           Done
         </Button>
-        
-        <ToolbarDivider />
+        </ToolbarGroup>
 
-         <Button
-            type="button"
-            variant="toolbarX"
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}>
-          <ButtonIcon icon="/icons/lucide/x.svg" />
-        </Button>
-      </div>
-         
+
+        {/* <ToolbarDivider /> */}
+
 
       </ToolbarGroup>
     </Toolbar>

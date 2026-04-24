@@ -625,9 +625,9 @@ export function FloatingToolbar({
 
               <ToolbarDivider />
 
-              <Button
+              <ToolbarButton
                 type="button"
-                variant="ghostV2"
+                // variant="ghostV2"
                 active={mirrorSessionActive}
                 aria-pressed={mirrorSessionActive}
                 disabled={!canMirrorSelection}
@@ -641,7 +641,7 @@ export function FloatingToolbar({
               >
                 <ToolbarIcon icon="/icons/flip.svg" />
                 <ToolbarLabel>Mirror</ToolbarLabel>
-              </Button>
+              </ToolbarButton>
 
               {/* <ToolbarDivider /> */}
 
@@ -914,9 +914,9 @@ export function FloatingToolbar({
 
                   <ToolbarDivider />
 
-                  <Button
+
+                  <ToolbarButton
                     type="button"
-                    variant="ghostV2"
                     aria-label="Reposition trace"
                     title="Reposition trace"
                     onClick={() => {
@@ -929,7 +929,7 @@ export function FloatingToolbar({
                   >
                     <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
                     Reposition
-                  </Button>
+                  </ToolbarButton>
 
                   {/*
                   <ToolbarButton type="button" disabled>
