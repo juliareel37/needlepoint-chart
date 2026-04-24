@@ -264,6 +264,7 @@ function drawHighlightedCells(
     return;
   }
 
+  const devicePixelRatio = window.devicePixelRatio || 1;
   const highlightLiftAlpha = getHighlightLiftAlpha(color.hex);
   const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
   const stitchCanvas = threadView
@@ -282,25 +283,36 @@ function drawHighlightedCells(
 
     const x = index % gridWidth;
     const y = Math.floor(index / gridWidth);
-    const cellX = drawX + x * renderedCellSize;
-    const cellY = drawY + y * renderedCellSize;
+    const cellRect = snapRectToDevicePixels(
+      {
+        x: drawX + x * renderedCellSize,
+        y: drawY + y * renderedCellSize,
+        width: renderedCellSize,
+        height: renderedCellSize,
+      },
+      devicePixelRatio,
+    );
+
+    if (cellRect.width <= 0 || cellRect.height <= 0) {
+      continue;
+    }
 
     context.fillStyle = color.hex;
-    context.fillRect(cellX, cellY, renderedCellSize, renderedCellSize);
+    context.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
 
     if (threadView && stitchCanvas) {
       context.drawImage(
         stitchCanvas,
-        cellX,
-        cellY,
-        renderedCellSize,
-        renderedCellSize,
+        cellRect.x,
+        cellRect.y,
+        cellRect.width,
+        cellRect.height,
       );
     }
 
     if (highlightLiftAlpha > 0) {
       context.fillStyle = `rgba(255, 255, 255, ${highlightLiftAlpha})`;
-      context.fillRect(cellX, cellY, renderedCellSize, renderedCellSize);
+      context.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
     }
   }
 }
