@@ -120,6 +120,14 @@
   margin: 0;
 }
 
+.sidebarPanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
+  min-width: 0;
+}
+
 .sidebarPanelBackRow {
   display: inline-flex;
   align-items: center;
@@ -2131,6 +2139,28 @@
     opacity: 1;
     transition: transform 180ms ease, opacity 180ms ease;
     width: 100%;
+  }
+
+  .sidebarSurface {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sidebarPanelHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 14px 20px 10px;
+    background: var(--surface-primary);
+    box-shadow: 0 1px 0 var(--ui-border-subtle);
+  }
+
+  .sidebarPanelBody {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 20px 24px;
   }
 
   .modalOverlay {

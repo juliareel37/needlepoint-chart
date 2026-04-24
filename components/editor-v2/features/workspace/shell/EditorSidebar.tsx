@@ -173,78 +173,80 @@ export function EditorSidebar({
           </Button>
         </div>
 
-        {activeSection === "document" ? (
-          <DocumentPanelPage
-            dispatch={dispatch}
-            document={document}
-            documentTitle={documentTitle}
-            hasSavedDesignAccess={hasSavedDesignAccess}
-            onLoadSelected={onLoadSelected}
-            onSaveDocument={onSaveDocument}
-            onStartOver={onStartOver}
-            saveButtonState={saveButtonState}
-            savedDocuments={savedDocuments}
-            savedDocumentsLoading={savedDocumentsLoading}
-            selectedStorageId={selectedStorageId}
-            setSelectedStorageId={setSelectedStorageId}
-          />
-        ) : null}
+        <div className={styles.sidebarPanelBody}>
+          {activeSection === "document" ? (
+            <DocumentPanelPage
+              dispatch={dispatch}
+              document={document}
+              documentTitle={documentTitle}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              onLoadSelected={onLoadSelected}
+              onSaveDocument={onSaveDocument}
+              onStartOver={onStartOver}
+              saveButtonState={saveButtonState}
+              savedDocuments={savedDocuments}
+              savedDocumentsLoading={savedDocumentsLoading}
+              selectedStorageId={selectedStorageId}
+              setSelectedStorageId={setSelectedStorageId}
+            />
+          ) : null}
 
-        {activeSection === "color" ? (
-          <ColorPanelPage
-            activeColor={activeColor}
-            activeColorId={activeColorId}
-            colorsById={colorsById}
-            dispatch={dispatch}
-            highlightedColorId={highlightedColorId}
-            onViewChange={setColorPanelView}
-            onHighlightColorChange={onHighlightColorChange}
-            palette={palette}
-            usedColors={usedColors}
-            view={colorPanelView}
-          />
-        ) : null}
+          {activeSection === "color" ? (
+            <ColorPanelPage
+              activeColor={activeColor}
+              activeColorId={activeColorId}
+              colorsById={colorsById}
+              dispatch={dispatch}
+              highlightedColorId={highlightedColorId}
+              onViewChange={setColorPanelView}
+              onHighlightColorChange={onHighlightColorChange}
+              palette={palette}
+              usedColors={usedColors}
+              view={colorPanelView}
+            />
+          ) : null}
 
-        {activeSection === "trace" ? (
-          <TracePanelPage
-            dispatch={dispatch}
-            repositionActive={traceRepositionActive}
-            repositionOrigin={traceRepositionOrigin}
-            trace={trace}
-          />
-        ) : null}
+          {activeSection === "trace" ? (
+            <TracePanelPage
+              dispatch={dispatch}
+              repositionActive={traceRepositionActive}
+              repositionOrigin={traceRepositionOrigin}
+              trace={trace}
+            />
+          ) : null}
 
-        {activeSection === "text" ? (
-          <TextPanelPage
-            activeColorId={activeColorId}
-            dispatch={dispatch}
-            gridMetrics={gridMetrics}
-            palette={palette}
-            placement={textPlacement}
-            viewportCenter={textViewportCenter}
-          />
-        ) : null}
+          {activeSection === "text" ? (
+            <TextPanelPage
+              activeColorId={activeColorId}
+              dispatch={dispatch}
+              gridMetrics={gridMetrics}
+              palette={palette}
+              placement={textPlacement}
+              viewportCenter={textViewportCenter}
+            />
+          ) : null}
 
-        {activeSection === "icons" ? (
-          <IconsPanelPage
-            dispatch={dispatch}
-            gridMetrics={gridMetrics}
-            onViewChange={setIconsPanelView}
-            placement={iconPlacement}
-            view={iconsPanelView}
-            viewportCenter={textViewportCenter}
-          />
-        ) : null}
+          {activeSection === "icons" ? (
+            <IconsPanelPage
+              dispatch={dispatch}
+              gridMetrics={gridMetrics}
+              onViewChange={setIconsPanelView}
+              placement={iconPlacement}
+              view={iconsPanelView}
+              viewportCenter={textViewportCenter}
+            />
+          ) : null}
 
-        {activeSection === "settings" ? (
-          <SettingsPanelPage
-            dispatch={dispatch}
-            previewMode={previewMode}
-            showGridlines={showGridlines}
-            showRuler={showRuler}
-            showSymbols={showSymbols}
-          />
-        ) : null}
+          {activeSection === "settings" ? (
+            <SettingsPanelPage
+              dispatch={dispatch}
+              previewMode={previewMode}
+              showGridlines={showGridlines}
+              showRuler={showRuler}
+              showSymbols={showSymbols}
+            />
+          ) : null}
+        </div>
       </div>
     </aside>
   );

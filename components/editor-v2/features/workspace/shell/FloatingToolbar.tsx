@@ -683,17 +683,16 @@ export function FloatingToolbar({
                 <ToolbarLabel>Mirror</ToolbarLabel>
               </Button>
 
-              <ToolbarDivider />
+              {/* <ToolbarDivider /> */}
 
-              <Button
+              {/* <Button
                 type="button"
                 variant="secondary"
                 disabled={!selectionCommitted}
                 onClick={handleNewSelection}
               >
                 Unselect
-                {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
-              </Button>
+              </Button> */}
 
               <ToolbarDivider />
 {/* 
