@@ -307,8 +307,14 @@ export function FloatingToolbar({
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
+  const toolbarTooltipsEnabled = !isBottomPanelLayout;
 
   const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
+    if (!toolbarTooltipsEnabled) {
+      setActiveTooltip(null);
+      return;
+    }
+
     const label = target.dataset.tooltip;
 
     if (!label) {
@@ -324,7 +330,7 @@ export function FloatingToolbar({
       top: rect.top,
       target,
     });
-  }, []);
+  }, [toolbarTooltipsEnabled]);
 
   function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
     const cells: GridPoint[] = [];
@@ -414,6 +420,14 @@ export function FloatingToolbar({
       cleanups.forEach((cleanup) => cleanup());
     };
   }, []);
+
+  useEffect(() => {
+    if (toolbarTooltipsEnabled) {
+      return;
+    }
+
+    setActiveTooltip(null);
+  }, [toolbarTooltipsEnabled]);
 
   useEffect(() => {
     if (!touchPrimaryInput || activeTool !== "pan") {
@@ -552,6 +566,10 @@ export function FloatingToolbar({
         ref={toolbarRef}
         className={styles.floatingToolbarViewport}
         onMouseOver={(event) => {
+          if (!toolbarTooltipsEnabled) {
+            return;
+          }
+
           const target = event.target instanceof Element
             ? event.target.closest("button[data-tooltip]")
             : null;
@@ -563,6 +581,10 @@ export function FloatingToolbar({
           updateTooltipPosition(target);
         }}
         onMouseOut={(event) => {
+          if (!toolbarTooltipsEnabled) {
+            return;
+          }
+
           const relatedTarget = event.relatedTarget;
 
           if (
@@ -575,6 +597,10 @@ export function FloatingToolbar({
           setActiveTooltip((current) => (current?.target.matches(":focus-visible") ? current : null));
         }}
         onFocusCapture={(event) => {
+          if (!toolbarTooltipsEnabled) {
+            return;
+          }
+
           const target = event.target instanceof Element
             ? event.target.closest("button[data-tooltip]")
             : null;
@@ -586,6 +612,10 @@ export function FloatingToolbar({
           updateTooltipPosition(target);
         }}
         onBlurCapture={(event) => {
+          if (!toolbarTooltipsEnabled) {
+            return;
+          }
+
           const relatedTarget = event.relatedTarget;
 
           if (
@@ -1267,7 +1297,7 @@ export function FloatingToolbar({
       </Toolbar>
       </div>
 
-      {activeTooltip
+      {toolbarTooltipsEnabled && activeTooltip
         ? createPortal(
             <div
               className={styles.floatingToolbarTooltip}
