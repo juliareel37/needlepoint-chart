@@ -36,11 +36,13 @@ import {
 import styles from "./EditorV2Shell.module.css";
 
 function IconToolbarPortalPopover({
+  align = "start",
   anchorRef,
   children,
   onRequestClose,
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
+  align?: "start" | "center";
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onRequestClose?: () => void;
 }) {
@@ -73,6 +75,7 @@ function IconToolbarPortalPopover({
       const rect = anchor.getBoundingClientRect();
       const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
       const horizontalPosition = getToolbarPopoverHorizontalPosition({
+        align,
         anchorRect: rect,
         popoverWidth,
       });
@@ -96,7 +99,7 @@ function IconToolbarPortalPopover({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchorRef, mounted]);
+  }, [align, anchorRef, mounted]);
 
   useEffect(() => {
     if (!mounted || !onRequestClose) {
@@ -134,7 +137,7 @@ function IconToolbarPortalPopover({
         top: position.top,
         left: position.left,
         right: position.right,
-        zIndex: 40,
+        zIndex: 240,
         transform: position.transform,
         maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
       }}
@@ -194,6 +197,7 @@ function IconColorSlotSwatchPopover({
 
       {isOpen ? (
         <IconToolbarPortalPopover
+          align="center"
           anchorRef={anchorRef}
           onRequestClose={() => onOpenChange(false)}
           role="dialog"
@@ -307,6 +311,12 @@ export function IconPlacementToolbar({
     Math.min(100, ((normalizedSpacingScale - 0.5) / (2 - 0.5)) * 100),
   );
   const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
+  const hasColorSlots = placement.colorSlots.length > 0;
+  const showDividerAfterBaseColor =
+    placement.supportsStrokeWidth || supportsPatternScale || supportsSpacingScale || hasColorSlots;
+  const showDividerAfterStrokeWidth = supportsPatternScale || supportsSpacingScale || hasColorSlots;
+  const showDividerAfterPattern = supportsSpacingScale || hasColorSlots;
+  const showDividerAfterSpacing = hasColorSlots;
 
   function closeColorPickers() {
     setColorLibraryOpen(false);
@@ -370,362 +380,377 @@ export function IconPlacementToolbar({
   }
 
   return (
-    <Toolbar className={styles.floatingToolbar}>
-      {placement.colorSlots.length === 0 ? (
-        <>
-          <ToolbarGroup>
-            <ToolbarAnchor ref={colorAnchorRef}>
-              <ToolbarButton
-                type="button"
-                swatch
-                active={colorLibraryOpen}
-                aria-pressed={colorLibraryOpen}
-                aria-label="Open color library"
-                title="Open color library"
-                className={styles.libraryPopoverSwatchTrigger}
-                onClick={() => {
-                  setOpenColorSlotId(null);
-                  setColorLibraryOpen((current) => !current);
-                }}
-              >
-                <ToolbarSwatch
-                  color={triggerColorHex}
-                  className={styles.libraryPopoverSwatch}
-                />
-              </ToolbarButton>
+    <div className={styles.selectionToolbarCluster}>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+          <ToolbarButton
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            onClick={() => dispatch(createCancelIconPlacementCommand())}
+          >
+            <ToolbarIcon icon="/icons/lucide/x.svg" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
 
-              {colorLibraryOpen ? (
-                <IconToolbarPortalPopover
-                  anchorRef={colorAnchorRef}
-                  onRequestClose={() => setColorLibraryOpen(false)}
-                  role="dialog"
-                  aria-label="Color library"
-                  className={styles.colorLibraryPopover}
-                  style={{ whiteSpace: "normal" }}
-                >
-                  <ColorLibrary
-                    activeColorId={activeColorId}
-                    className={styles.toolbarColorLibrary}
-                    colors={palette}
-                    featuredColorIds={featuredColorIds}
-                    showFeaturedSymbols={showSymbols}
-                    symbolAssignments={symbolAssignments}
-                    onColorSelect={(colorId) => {
-                      dispatch(createSetActiveColorCommand(colorId));
-                      setColorLibraryOpen(false);
+      <div className={styles.selectionToolbarMainViewport}>
+        <Toolbar className={styles.floatingToolbar}>
+          {placement.colorSlots.length === 0 ? (
+            <>
+              <ToolbarGroup>
+                <ToolbarAnchor ref={colorAnchorRef}>
+                  <ToolbarButton
+                    type="button"
+                    swatch
+                    active={colorLibraryOpen}
+                    aria-pressed={colorLibraryOpen}
+                    aria-label="Open color library"
+                    title="Open color library"
+                    className={styles.libraryPopoverSwatchTrigger}
+                    onClick={() => {
+                      setOpenColorSlotId(null);
+                      setColorLibraryOpen((current) => !current);
                     }}
-                  />
-                </IconToolbarPortalPopover>
-              ) : null}
-            </ToolbarAnchor>
-          </ToolbarGroup>
+                  >
+                    <ToolbarSwatch
+                      color={triggerColorHex}
+                      className={styles.libraryPopoverSwatch}
+                    />
+                  </ToolbarButton>
 
-          <ToolbarDivider />
-        </>
-      ) : null}
+                  {colorLibraryOpen ? (
+                    <IconToolbarPortalPopover
+                      align="center"
+                      anchorRef={colorAnchorRef}
+                      onRequestClose={() => setColorLibraryOpen(false)}
+                      role="dialog"
+                      aria-label="Color library"
+                      className={styles.colorLibraryPopover}
+                      style={{ whiteSpace: "normal" }}
+                    >
+                      <ColorLibrary
+                        activeColorId={activeColorId}
+                        className={styles.toolbarColorLibrary}
+                        colors={palette}
+                        featuredColorIds={featuredColorIds}
+                        showFeaturedSymbols={showSymbols}
+                        symbolAssignments={symbolAssignments}
+                        onColorSelect={(colorId) => {
+                          dispatch(createSetActiveColorCommand(colorId));
+                          setColorLibraryOpen(false);
+                        }}
+                      />
+                    </IconToolbarPortalPopover>
+                  ) : null}
+                </ToolbarAnchor>
+              </ToolbarGroup>
 
-      {placement.supportsStrokeWidth ? (
-        <>
-          <ToolbarGroup>
-            <ToolbarAnchor ref={strokeWidthAnchorRef}>
-              <ToolbarButton
-                type="button"
-                active={strokeWidthOpen}
-                aria-pressed={strokeWidthOpen}
-                aria-label="Icon thickness"
-                title="Icon thickness"
-                onClick={() => setStrokeWidthOpen((current) => !current)}
-                onPointerDown={closeColorPickers}
-              >
-                <ToolbarIcon icon="/icons/other/stroke-width.svg" />
-              </ToolbarButton>
+              {showDividerAfterBaseColor ? <ToolbarDivider /> : null}
+            </>
+          ) : null}
 
-              {strokeWidthOpen ? (
-                <IconToolbarPortalPopover
-                  anchorRef={strokeWidthAnchorRef}
-                  onRequestClose={() => setStrokeWidthOpen(false)}
-                  role="dialog"
+          {placement.supportsStrokeWidth ? (
+            <>
+              <ToolbarGroup>
+                <ToolbarAnchor ref={strokeWidthAnchorRef}>
+                <ToolbarButton
+                  type="button"
+                  labelled
+                  active={strokeWidthOpen}
+                  aria-pressed={strokeWidthOpen}
                   aria-label="Icon thickness"
+                  title="Icon thickness"
+                  onClick={() => setStrokeWidthOpen((current) => !current)}
+                  onPointerDown={closeColorPickers}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 15,
-                      alignItems: "center",
-                      flexWrap: "nowrap",
-                      padding: "6px 8px",
-                    }}
-                  >
-                    <ToolbarLabel>Thickness</ToolbarLabel>
-                    <div
-                      className={styles.traceSliderTooltipWrap}
-                      style={{ width: 96, flexShrink: 0 }}
+                  <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+                  <ToolbarLabel>Thickness</ToolbarLabel>
+                </ToolbarButton>
+
+                  {strokeWidthOpen ? (
+                    <IconToolbarPortalPopover
+                      anchorRef={strokeWidthAnchorRef}
+                      onRequestClose={() => setStrokeWidthOpen(false)}
+                      role="dialog"
+                      aria-label="Icon thickness"
                     >
                       <div
-                        className={[
-                          styles.traceSliderTooltip,
-                          strokeWidthTooltipVisible
-                            ? styles.traceSliderTooltipVisible
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        aria-hidden="true"
-                        style={{ left: `${strokeWidthTooltipPercent}%` }}
-                      >
-                        {strokeWidthLabel}
-                      </div>
-                      <Slider
-                        min={strokeWidthMin}
-                        max={strokeWidthMax}
-                        step={0.1}
-                        value={normalizedStrokeWidth}
-                        aria-label="Icon thickness"
-                        aria-valuetext={`${strokeWidthLabel} line thickness`}
-                        onPointerDown={() => setStrokeWidthTooltipVisible(true)}
-                        onBlur={() => setStrokeWidthTooltipVisible(false)}
-                        onChange={(event) => {
-                          dispatch(
-                            createUpdateIconPlacementCommand({
-                              strokeWidthScale: Number(event.currentTarget.value),
-                            }),
-                          );
+                        style={{
+                          display: "flex",
+                          gap: 15,
+                          alignItems: "center",
+                          flexWrap: "nowrap",
+                          padding: "6px 8px",
                         }}
-                        style={{ width: "100%", maxWidth: "none" }}
-                      />
-                    </div>
-                  </div>
-                </IconToolbarPortalPopover>
-              ) : null}
-            </ToolbarAnchor>
-          </ToolbarGroup>
-          <ToolbarDivider />
-        </>
-      ) : null}
+                      >
+                        <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+                        <div
+                          className={styles.traceSliderTooltipWrap}
+                          style={{ width: 96, flexShrink: 0 }}
+                        >
+                          <div
+                            className={[
+                              styles.traceSliderTooltip,
+                              strokeWidthTooltipVisible
+                                ? styles.traceSliderTooltipVisible
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            aria-hidden="true"
+                            style={{ left: `${strokeWidthTooltipPercent}%` }}
+                          >
+                            {strokeWidthLabel}
+                          </div>
+                          <Slider
+                            min={strokeWidthMin}
+                            max={strokeWidthMax}
+                            step={0.1}
+                            value={normalizedStrokeWidth}
+                            aria-label="Icon thickness"
+                            aria-valuetext={`${strokeWidthLabel} line thickness`}
+                            onPointerDown={() => setStrokeWidthTooltipVisible(true)}
+                            onBlur={() => setStrokeWidthTooltipVisible(false)}
+                            onChange={(event) => {
+                              dispatch(
+                                createUpdateIconPlacementCommand({
+                                  strokeWidthScale: Number(event.currentTarget.value),
+                                }),
+                              );
+                            }}
+                            style={{ width: "100%", maxWidth: "none" }}
+                          />
+                        </div>
+                      </div>
+                    </IconToolbarPortalPopover>
+                  ) : null}
+                </ToolbarAnchor>
+              </ToolbarGroup>
+              {showDividerAfterStrokeWidth ? <ToolbarDivider /> : null}
+            </>
+          ) : null}
 
-      {supportsPatternScale ? (
-        <>
-          <ToolbarGroup>
-            <ToolbarAnchor ref={patternAnchorRef}>
-              <ToolbarButton
-                type="button"
-                active={patternOpen}
-                aria-pressed={patternOpen}
-                aria-label="Scallop spacing"
-                title="Scallop spacing"
-                onClick={() => setPatternOpen((current) => !current)}
-                onPointerDown={closeColorPickers}
-              >
-                <ToolbarLabel>Wave</ToolbarLabel>
-              </ToolbarButton>
-
-              {patternOpen ? (
-                <IconToolbarPortalPopover
-                  anchorRef={patternAnchorRef}
-                  onRequestClose={() => setPatternOpen(false)}
-                  role="dialog"
-                  aria-label="Scallop spacing"
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 15,
-                      alignItems: "center",
-                      flexWrap: "nowrap",
-                      padding: "6px 8px",
-                    }}
+          {supportsPatternScale ? (
+            <>
+              <ToolbarGroup>
+                <ToolbarAnchor ref={patternAnchorRef}>
+                  <ToolbarButton
+                    type="button"
+                    active={patternOpen}
+                    aria-pressed={patternOpen}
+                    aria-label="Scallop spacing"
+                    title="Scallop spacing"
+                    onClick={() => setPatternOpen((current) => !current)}
+                    onPointerDown={closeColorPickers}
                   >
-                    <ToolbarLabel>Spacing</ToolbarLabel>
-                    <div
-                      className={styles.traceSliderTooltipWrap}
-                      style={{ width: 96, flexShrink: 0 }}
+                    <ToolbarLabel>Wave</ToolbarLabel>
+                  </ToolbarButton>
+
+                  {patternOpen ? (
+                    <IconToolbarPortalPopover
+                      anchorRef={patternAnchorRef}
+                      onRequestClose={() => setPatternOpen(false)}
+                      role="dialog"
+                      aria-label="Scallop spacing"
                     >
                       <div
-                        className={[
-                          styles.traceSliderTooltip,
-                          patternTooltipVisible
-                            ? styles.traceSliderTooltipVisible
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        aria-hidden="true"
-                        style={{ left: `${patternTooltipPercent}%` }}
-                      >
-                        {patternLabel}
-                      </div>
-                      <Slider
-                        min={0.5}
-                        max={2.5}
-                        step={0.1}
-                        value={normalizedPatternScale}
-                        aria-label="Scallop spacing"
-                        aria-valuetext={`${patternLabel} scallop spacing`}
-                        onPointerDown={() => setPatternTooltipVisible(true)}
-                        onBlur={() => setPatternTooltipVisible(false)}
-                        onChange={(event) => {
-                          dispatch(
-                            createUpdateIconPlacementCommand({
-                              primitivePatternScale: Number(event.currentTarget.value),
-                            }),
-                          );
+                        style={{
+                          display: "flex",
+                          gap: 15,
+                          alignItems: "center",
+                          flexWrap: "nowrap",
+                          padding: "6px 8px",
                         }}
-                        style={{ width: "100%", maxWidth: "none" }}
-                      />
-                    </div>
-                  </div>
-                </IconToolbarPortalPopover>
-              ) : null}
-            </ToolbarAnchor>
-          </ToolbarGroup>
-          <ToolbarDivider />
-        </>
-      ) : null}
+                      >
+                        <ToolbarLabel>Spacing</ToolbarLabel>
+                        <div
+                          className={styles.traceSliderTooltipWrap}
+                          style={{ width: 96, flexShrink: 0 }}
+                        >
+                          <div
+                            className={[
+                              styles.traceSliderTooltip,
+                              patternTooltipVisible
+                                ? styles.traceSliderTooltipVisible
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            aria-hidden="true"
+                            style={{ left: `${patternTooltipPercent}%` }}
+                          >
+                            {patternLabel}
+                          </div>
+                          <Slider
+                            min={0.5}
+                            max={2.5}
+                            step={0.1}
+                            value={normalizedPatternScale}
+                            aria-label="Scallop spacing"
+                            aria-valuetext={`${patternLabel} scallop spacing`}
+                            onPointerDown={() => setPatternTooltipVisible(true)}
+                            onBlur={() => setPatternTooltipVisible(false)}
+                            onChange={(event) => {
+                              dispatch(
+                                createUpdateIconPlacementCommand({
+                                  primitivePatternScale: Number(event.currentTarget.value),
+                                }),
+                              );
+                            }}
+                            style={{ width: "100%", maxWidth: "none" }}
+                          />
+                        </div>
+                      </div>
+                    </IconToolbarPortalPopover>
+                  ) : null}
+                </ToolbarAnchor>
+              </ToolbarGroup>
+              {showDividerAfterPattern ? <ToolbarDivider /> : null}
+            </>
+          ) : null}
 
-      {supportsSpacingScale ? (
-        <>
-          <ToolbarGroup>
-            <ToolbarAnchor ref={spacingAnchorRef}>
-              <ToolbarButton
-                type="button"
-                active={spacingOpen}
-                aria-pressed={spacingOpen}
-                aria-label="Frame spacing"
-                title="Frame spacing"
-                onClick={() => setSpacingOpen((current) => !current)}
-                onPointerDown={closeColorPickers}
-              >
-                <ToolbarLabel>Gap</ToolbarLabel>
-              </ToolbarButton>
-
-              {spacingOpen ? (
-                <IconToolbarPortalPopover
-                  anchorRef={spacingAnchorRef}
-                  onRequestClose={() => setSpacingOpen(false)}
-                  role="dialog"
-                  aria-label="Frame spacing"
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 15,
-                      alignItems: "center",
-                      flexWrap: "nowrap",
-                      padding: "6px 8px",
-                    }}
+          {supportsSpacingScale ? (
+            <>
+              <ToolbarGroup>
+                <ToolbarAnchor ref={spacingAnchorRef}>
+                  <ToolbarButton
+                    type="button"
+                    active={spacingOpen}
+                    aria-pressed={spacingOpen}
+                    aria-label="Frame spacing"
+                    title="Frame spacing"
+                    onClick={() => setSpacingOpen((current) => !current)}
+                    onPointerDown={closeColorPickers}
                   >
-                    <ToolbarLabel>Spacing</ToolbarLabel>
-                    <div
-                      className={styles.traceSliderTooltipWrap}
-                      style={{ width: 96, flexShrink: 0 }}
+                    <ToolbarLabel>Gap</ToolbarLabel>
+                  </ToolbarButton>
+
+                  {spacingOpen ? (
+                    <IconToolbarPortalPopover
+                      anchorRef={spacingAnchorRef}
+                      onRequestClose={() => setSpacingOpen(false)}
+                      role="dialog"
+                      aria-label="Frame spacing"
                     >
                       <div
-                        className={[
-                          styles.traceSliderTooltip,
-                          spacingTooltipVisible
-                            ? styles.traceSliderTooltipVisible
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        aria-hidden="true"
-                        style={{ left: `${spacingTooltipPercent}%` }}
+                        style={{
+                          display: "flex",
+                          gap: 15,
+                          alignItems: "center",
+                          flexWrap: "nowrap",
+                          padding: "6px 8px",
+                        }}
                       >
-                        {spacingLabel}
+                        <ToolbarLabel>Spacing</ToolbarLabel>
+                        <div
+                          className={styles.traceSliderTooltipWrap}
+                          style={{ width: 96, flexShrink: 0 }}
+                        >
+                          <div
+                            className={[
+                              styles.traceSliderTooltip,
+                              spacingTooltipVisible
+                                ? styles.traceSliderTooltipVisible
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            aria-hidden="true"
+                            style={{ left: `${spacingTooltipPercent}%` }}
+                          >
+                            {spacingLabel}
+                          </div>
+                          <Slider
+                            min={0.5}
+                            max={2}
+                            step={0.1}
+                            value={normalizedSpacingScale}
+                            aria-label="Frame spacing"
+                            aria-valuetext={`${spacingLabel} frame spacing`}
+                            onPointerDown={() => setSpacingTooltipVisible(true)}
+                            onBlur={() => setSpacingTooltipVisible(false)}
+                            onChange={(event) => {
+                              dispatch(
+                                createUpdateIconPlacementCommand({
+                                  primitiveSpacingScale: Number(event.currentTarget.value),
+                                }),
+                              );
+                            }}
+                            style={{ width: "100%", maxWidth: "none" }}
+                          />
+                        </div>
                       </div>
-                      <Slider
-                        min={0.5}
-                        max={2}
-                        step={0.1}
-                        value={normalizedSpacingScale}
-                        aria-label="Frame spacing"
-                        aria-valuetext={`${spacingLabel} frame spacing`}
-                        onPointerDown={() => setSpacingTooltipVisible(true)}
-                        onBlur={() => setSpacingTooltipVisible(false)}
-                        onChange={(event) => {
-                          dispatch(
-                            createUpdateIconPlacementCommand({
-                              primitiveSpacingScale: Number(event.currentTarget.value),
-                            }),
+                    </IconToolbarPortalPopover>
+                  ) : null}
+                </ToolbarAnchor>
+              </ToolbarGroup>
+              {showDividerAfterSpacing ? <ToolbarDivider /> : null}
+            </>
+          ) : null}
+
+          {placement.colorSlots.length > 0 ? (
+            <>
+              <ToolbarGroup>
+                <div className={styles.iconPlacementSwatchList} role="list" aria-label="Icon colors">
+                  {placement.colorSlots.map((slot) => {
+                    const assignedColor = slot.paletteColorId
+                      ? palette.find((color) => color.id === slot.paletteColorId) ?? null
+                      : null;
+                    const isSelected = slot.id === placement.selectedColorSlotId;
+
+                    return (
+                      <IconColorSlotSwatchPopover
+                        key={slot.id}
+                        activeColorId={slot.paletteColorId ?? null}
+                        assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
+                        colors={palette}
+                        featuredColorIds={featuredColorIds}
+                        isOpen={openColorSlotId === slot.id}
+                        isSelected={isSelected}
+                        label={`Edit icon color ${slot.sourceHex}`}
+                        onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
+                        showSymbols={showSymbols}
+                        symbolAssignments={symbolAssignments}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setColorLibraryOpen(false);
+                            setOpenColorSlotId(slot.id);
+                            updateSelectedColorSlot(slot.id);
+                            return;
+                          }
+
+                          setOpenColorSlotId((current) =>
+                            current === slot.id ? null : current,
                           );
                         }}
-                        style={{ width: "100%", maxWidth: "none" }}
                       />
-                    </div>
-                  </div>
-                </IconToolbarPortalPopover>
-              ) : null}
-            </ToolbarAnchor>
-          </ToolbarGroup>
-          <ToolbarDivider />
-        </>
-      ) : null}
+                    );
+                  })}
+                </div>
+              </ToolbarGroup>
+            </>
+          ) : null}
+        </Toolbar>
+      </div>
 
-      {placement.colorSlots.length > 0 ? (
-        <>
-          <ToolbarGroup>
-            <div className={styles.iconPlacementSwatchList} role="list" aria-label="Icon colors">
-              {placement.colorSlots.map((slot) => {
-                const assignedColor = slot.paletteColorId
-                  ? palette.find((color) => color.id === slot.paletteColorId) ?? null
-                  : null;
-                const isSelected = slot.id === placement.selectedColorSlotId;
-
-                return (
-                  <IconColorSlotSwatchPopover
-                    key={slot.id}
-                    activeColorId={slot.paletteColorId ?? null}
-                    assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
-                    colors={palette}
-                    featuredColorIds={featuredColorIds}
-                    isOpen={openColorSlotId === slot.id}
-                    isSelected={isSelected}
-                    label={`Edit icon color ${slot.sourceHex}`}
-                    onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
-                    showSymbols={showSymbols}
-                    symbolAssignments={symbolAssignments}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        setColorLibraryOpen(false);
-                        setOpenColorSlotId(slot.id);
-                        updateSelectedColorSlot(slot.id);
-                        return;
-                      }
-
-                      setOpenColorSlotId((current) =>
-                        current === slot.id ? null : current,
-                      );
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </ToolbarGroup>
-          <ToolbarDivider />
-        </>
-      ) : null}
-
-      <ToolbarGroup>
-        <ToolbarButton
-          type="button"
-          variant="secondary"
-          labelled
-          onClick={() => dispatch(createCancelIconPlacementCommand())}
-        >
-          Cancel
-        </ToolbarButton>
-        <ToolbarButton
-          type="button"
-          variant="primary"
-          labelled
-          disabled={!canConvert}
-          onClick={() => {
-            void handleConvert();
-          }}
-        >
-          {isConverting ? "Converting..." : "Convert"}
-        </ToolbarButton>
-      </ToolbarGroup>
-    </Toolbar>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+          <ToolbarButton
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            disabled={!canConvert}
+            onClick={() => {
+              void handleConvert();
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/check.svg" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
+    </div>
   );
 }

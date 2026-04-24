@@ -38,11 +38,13 @@ import {
 import styles from "./EditorV2Shell.module.css";
 
 function TextToolbarPortalPopover({
+  align = "start",
   anchorRef,
   children,
   onRequestClose,
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
+  align?: "start" | "center";
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onRequestClose?: () => void;
 }) {
@@ -75,6 +77,7 @@ function TextToolbarPortalPopover({
       const rect = anchor.getBoundingClientRect();
       const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
       const horizontalPosition = getToolbarPopoverHorizontalPosition({
+        align,
         anchorRect: rect,
         popoverWidth,
       });
@@ -98,7 +101,7 @@ function TextToolbarPortalPopover({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchorRef, mounted]);
+  }, [align, anchorRef, mounted]);
 
   useEffect(() => {
     if (!mounted || !onRequestClose) {
@@ -259,6 +262,7 @@ export function TextPlacementToolbar({
 
               {colorLibraryOpen ? (
                 <TextToolbarPortalPopover
+                  align="center"
                   anchorRef={colorAnchorRef}
                   onRequestClose={() => setColorLibraryOpen(false)}
                   role="dialog"
