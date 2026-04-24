@@ -248,8 +248,6 @@ export function FloatingToolbar({
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [brushSizeSliderValue, setBrushSizeSliderValue] = useState(1);
   const [brushSizeSliderDragging, setBrushSizeSliderDragging] = useState(false);
-  const [imageOpacityTooltipVisible, setImageOpacityTooltipVisible] = useState(false);
-  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -267,11 +265,6 @@ export function FloatingToolbar({
   const brushFootprintLabel = `${brushFootprintSize}x${brushFootprintSize}`;
   const brushSizeTooltipPercent =
     ((brushSizeSliderValue - 1) / 9) * 100;
-  const normalizedImageOpacity = trace
-    ? Math.min(Math.max(trace.opacity, 0), 1)
-    : 0;
-  const imageOpacityLabel = `${Math.round(normalizedImageOpacity * 100)}%`;
-
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const selectionLockedToolsDisabled = Boolean(selectionCommitted && selectionBounds);
@@ -284,25 +277,6 @@ export function FloatingToolbar({
 
     setBrushSizeSliderValue(normalizedBrushSize);
   }, [brushSizeSliderDragging, normalizedBrushSize]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(max-width: 1080px)");
-    const update = () => setIsCompactViewport(mediaQuery.matches);
-
-    update();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", update);
-      return () => mediaQuery.removeEventListener("change", update);
-    }
-
-    mediaQuery.addListener(update);
-    return () => mediaQuery.removeListener(update);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -373,19 +347,6 @@ export function FloatingToolbar({
   }, [brushSizeTooltipVisible]);
 
   useEffect(() => {
-    if (!imageOpacityTooltipVisible) {
-      return;
-    }
-
-    function handlePointerUp() {
-      setImageOpacityTooltipVisible(false);
-    }
-
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => window.removeEventListener("pointerup", handlePointerUp);
-  }, [imageOpacityTooltipVisible]);
-
-  useEffect(() => {
     if (!selectionVisible) {
       setSelectOpen(false);
     }
@@ -448,7 +409,6 @@ export function FloatingToolbar({
 
   function closeImageMenu(): void {
     setImageOpen(false);
-    setImageOpacityTooltipVisible(false);
   }
 
   function closeDrawMenu(): void {
@@ -941,114 +901,18 @@ export function FloatingToolbar({
             >
               {trace ? (
                 <>
-                  {isCompactViewport ? (
-                    <>
-                      <ToolbarButton
-                        type="button"
-                        onClick={() => {
-                          openSidebarSection("trace");
-                          closeImageMenu();
-                        }}
-                      >
-                        <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-                        <ToolbarLabel>Display settings</ToolbarLabel>
-                      </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    onClick={() => {
+                      openSidebarSection("trace");
+                      closeImageMenu();
+                    }}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+                    <ToolbarLabel>Display settings</ToolbarLabel>
+                  </ToolbarButton>
 
-                      <ToolbarDivider />
-                    </>
-                  ) : (
-                    <>
-
-                      <Button
-                        type="button"
-                        variant="ghostV2"
-                        onClick={() => {
-                          dispatch(
-                            createUpdateTraceCommand(
-                              { visible: !trace.visible },
-                              { history: { mode: "skip" } },
-                            ),
-                          );
-                        }}
-                      >
-                        <ToolbarIcon
-                          icon={trace.visible ? "/icons/eye.svg" : "/icons/eye_off.svg"}
-                        />
-                        <ToolbarLabel>
-                          {trace.visible ? "Visible" : "Hidden"}
-                        </ToolbarLabel>
-
-                      </Button>
-
-                      <ToolbarDivider />
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 10,
-                          alignItems: "center",
-                          flexWrap: "nowrap",
-                          padding: "6px 8px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            color: trace.visible ? "inherit" : "var(--text-secondary)",
-                            opacity: trace.visible ? 1 : 0.45,
-                          }}
-                        >
-                          <ToolbarIcon icon="/icons/lucide/blend.svg" />
-                          <ToolbarLabel>Opacity</ToolbarLabel>
-                        </span>
-                        <div
-                          className={styles.traceSliderTooltipWrap}
-                          style={{ width: 80, flexShrink: 0 }}
-                        >
-                          <div
-                            className={[
-                              styles.traceSliderTooltip,
-                              imageOpacityTooltipVisible && trace.visible
-                                ? styles.traceSliderTooltipVisible
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            aria-hidden="true"
-                            style={{ left: `${normalizedImageOpacity * 100}%` }}
-                          >
-                            {imageOpacityLabel}
-                          </div>
-                          <Slider
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={normalizedImageOpacity}
-                            disabled={!trace.visible}
-                            aria-label="Image opacity"
-                            aria-valuetext={`${imageOpacityLabel} image opacity`}
-                            onPointerDown={() => setImageOpacityTooltipVisible(true)}
-                            onBlur={() => setImageOpacityTooltipVisible(false)}
-                            onChange={(event) =>
-                              dispatch(
-                                createUpdateTraceCommand(
-                                  {
-                                    opacity: Number(event.currentTarget.value),
-                                  },
-                                  { history: { mode: "skip" } },
-                                ),
-                              )
-                            }
-                            style={{ width: "100%", maxWidth: "none" }}
-                          />
-                        </div>
-                      </div>
-
-                      <ToolbarDivider />
-                    </>
-                  )}
+                  <ToolbarDivider />
 
                   <Button
                     type="button"
