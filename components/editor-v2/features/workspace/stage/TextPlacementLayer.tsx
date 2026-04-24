@@ -196,8 +196,12 @@ export function TextPlacementLayer({
     }
 
     textarea.focus();
-    const length = textarea.value.length;
-    textarea.setSelectionRange(length, length);
+
+    const frame = window.requestAnimationFrame(() => {
+      textarea.select();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [isEditing]);
 
   useEffect(() => {

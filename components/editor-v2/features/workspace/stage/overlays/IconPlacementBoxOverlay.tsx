@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { PositioningDragMode, PositioningRect } from "@/lib/editor-v2/editor/positioning";
 import {
   getHandleLeft,
@@ -42,12 +47,18 @@ interface DragSession {
   mode: PositioningDragMode;
   transactionKey: string;
   drag: IconPlacementDragState;
+  dragThreshold: number;
   dragged: boolean;
   startClientX: number;
   startClientY: number;
   pendingClientX: number;
   pendingClientY: number;
   rafId: number | null;
+}
+
+interface HandleElements {
+  hit: HTMLDivElement | null;
+  visible: HTMLDivElement | null;
 }
 
 interface PinchSession {
@@ -58,6 +69,8 @@ interface PinchSession {
 }
 
 const DRAG_THRESHOLD = 4;
+const TOUCH_HANDLE_TARGET_SIZE = 36;
+const TOUCH_HANDLE_DRAG_THRESHOLD = 2;
 
 export function IconPlacementBoxOverlay({
   ariaLabel,
@@ -73,12 +86,13 @@ export function IconPlacementBoxOverlay({
   zoom,
 }: IconPlacementBoxOverlayProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const handleRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const handleRefs = useRef<Record<string, HandleElements>>({});
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
   const pinchSessionRef = useRef<PinchSession | null>(null);
   const frameIdRef = useRef<number | null>(null);
   const touchPointsRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
+  const [coarsePointer, setCoarsePointer] = useState(false);
   const latestBoundsRef = useRef(interactionBounds ?? bounds);
   const latestBaseRectRef = useRef(baseRect);
   const latestTransformRef = useRef(transform);
@@ -88,6 +102,9 @@ export function IconPlacementBoxOverlay({
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
+  const handleHitSize = coarsePointer
+    ? Math.max(handleSize, TOUCH_HANDLE_TARGET_SIZE)
+    : handleSize;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
 
@@ -96,11 +113,36 @@ export function IconPlacementBoxOverlay({
   }, [baseRect]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
+
+  useEffect(() => {
     latestBoundsRef.current = interactionBounds ?? bounds;
     if (!dragSessionRef.current) {
-      applyPreviewBounds(overlayRef.current, handleRefs.current, bounds, handleSize);
+      applyPreviewBounds(
+        overlayRef.current,
+        handleRefs.current,
+        bounds,
+        handleSize,
+        handleHitSize,
+      );
     }
-  }, [bounds, handleSize, interactionBounds]);
+  }, [bounds, handleHitSize, handleSize, interactionBounds]);
 
   useEffect(() => {
     latestTransformRef.current = transform;
@@ -211,7 +253,7 @@ export function IconPlacementBoxOverlay({
     if (
       !session.dragged &&
       Math.hypot(nextClientX - session.startClientX, nextClientY - session.startClientY) >=
-        DRAG_THRESHOLD
+        session.dragThreshold
     ) {
       session.dragged = true;
       if (session.mode === "move" && overlayRef.current) {
@@ -241,7 +283,13 @@ export function IconPlacementBoxOverlay({
 
     latestTransformRef.current = nextTransform;
     latestBoundsRef.current = nextInteractionBounds;
-    applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    applyPreviewBounds(
+      overlayRef.current,
+      handleRefs.current,
+      nextBounds,
+      handleSize,
+      handleHitSize,
+    );
     latestOnTransformPreviewRef.current?.(nextTransform);
 
     return nextTransform;
@@ -292,7 +340,13 @@ export function IconPlacementBoxOverlay({
 
     latestTransformRef.current = nextTransform;
     latestBoundsRef.current = nextInteractionBounds;
-    applyPreviewBounds(overlayRef.current, handleRefs.current, nextBounds, handleSize);
+    applyPreviewBounds(
+      overlayRef.current,
+      handleRefs.current,
+      nextBounds,
+      handleSize,
+      handleHitSize,
+    );
     latestOnTransformPreviewRef.current?.(nextTransform);
 
     return nextTransform;
@@ -388,6 +442,10 @@ export function IconPlacementBoxOverlay({
         startBounds: latestBoundsRef.current,
         transactionKey,
       },
+      dragThreshold:
+        event.pointerType === "touch" && mode !== "move"
+          ? TOUCH_HANDLE_DRAG_THRESHOLD
+          : DRAG_THRESHOLD,
       dragged: false,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -490,26 +548,53 @@ export function IconPlacementBoxOverlay({
       />
 
       {POSITIONING_HANDLES.map((handle) => (
-        <div
-          key={handle.id}
-          ref={(node) => {
-            handleRefs.current[handle.id] = node;
-          }}
-          role="presentation"
-          aria-hidden="true"
-          onPointerDown={(event) => beginDrag(event, handle.id)}
-          style={{
-            position: "absolute",
-            left: `${getHandleLeft(handle.id, bounds.width, handleSize)}px`,
-            top: `${getHandleTop(handle.id, bounds.height, handleSize)}px`,
-            width: `${handleSize}px`,
-            height: `${handleSize}px`,
-            borderRadius: handle.kind === "edge" ? `${4 * controlScale}px` : "999px",
-            background: "#ffffff",
-            border: `${handleBorderWidth}px solid #2563eb`,
-            cursor: handle.cursor,
-          }}
-        />
+        <div key={handle.id}>
+          <div
+            ref={(node) => {
+              const existing = handleRefs.current[handle.id] ?? {
+                hit: null,
+                visible: null,
+              };
+              handleRefs.current[handle.id] = { ...existing, hit: node };
+            }}
+            role="presentation"
+            aria-hidden="true"
+            onPointerDown={(event) => beginDrag(event, handle.id)}
+            style={{
+              position: "absolute",
+              left: `${getHandleLeft(handle.id, bounds.width, handleSize) - (handleHitSize - handleSize) / 2}px`,
+              top: `${getHandleTop(handle.id, bounds.height, handleSize) - (handleHitSize - handleSize) / 2}px`,
+              width: `${handleHitSize}px`,
+              height: `${handleHitSize}px`,
+              cursor: handle.cursor,
+              WebkitTapHighlightColor: "transparent",
+              background: "transparent",
+            }}
+          />
+          <div
+            ref={(node) => {
+              const existing = handleRefs.current[handle.id] ?? {
+                hit: null,
+                visible: null,
+              };
+              handleRefs.current[handle.id] = { ...existing, visible: node };
+            }}
+            role="presentation"
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: `${getHandleLeft(handle.id, bounds.width, handleSize)}px`,
+              top: `${getHandleTop(handle.id, bounds.height, handleSize)}px`,
+              width: `${handleSize}px`,
+              height: `${handleSize}px`,
+              borderRadius: handle.kind === "edge" ? `${4 * controlScale}px` : "999px",
+              background: "#ffffff",
+              border: `${handleBorderWidth}px solid #2563eb`,
+              cursor: handle.cursor,
+              pointerEvents: "none",
+            }}
+          />
+        </div>
       ))}
     </div>
   );
@@ -517,9 +602,10 @@ export function IconPlacementBoxOverlay({
 
 function applyPreviewBounds(
   overlayElement: HTMLDivElement | null,
-  handleRefs: Record<string, HTMLDivElement | null>,
+  handleRefs: Record<string, HandleElements>,
   bounds: PositioningRect,
   handleSize: number,
+  handleHitSize: number,
 ) {
   if (!overlayElement) {
     return;
@@ -531,12 +617,21 @@ function applyPreviewBounds(
   overlayElement.style.height = `${bounds.height}px`;
 
   for (const handle of POSITIONING_HANDLES) {
-    const handleElement = handleRefs[handle.id];
-    if (!handleElement) {
-      continue;
+    const handleElements = handleRefs[handle.id];
+    const visibleElement = handleElements?.visible;
+    const hitElement = handleElements?.hit;
+    const visibleLeft = getHandleLeft(handle.id, bounds.width, handleSize);
+    const visibleTop = getHandleTop(handle.id, bounds.height, handleSize);
+    const hitInset = (handleHitSize - handleSize) / 2;
+
+    if (visibleElement) {
+      visibleElement.style.left = `${visibleLeft}px`;
+      visibleElement.style.top = `${visibleTop}px`;
     }
 
-    handleElement.style.left = `${getHandleLeft(handle.id, bounds.width, handleSize)}px`;
-    handleElement.style.top = `${getHandleTop(handle.id, bounds.height, handleSize)}px`;
+    if (hitElement) {
+      hitElement.style.left = `${visibleLeft - hitInset}px`;
+      hitElement.style.top = `${visibleTop - hitInset}px`;
+    }
   }
 }
