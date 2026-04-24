@@ -270,10 +270,14 @@ function SavedDesignSingleSelect({
         getItemLabel={formatSavedDesignLabel}
         getItemValue={(record) => record.storageId}
         items={savedDocuments}
+        menuMaxHeight={240}
+        menuMatchTriggerWidth
         menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
         menuPortalToViewport={useTopDropdownPlacement}
+        minWidth={0}
         onValueChange={setSelectedStorageId}
         placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
+        wrapperStyle={{ width: "100%" }}
         value={selectedStorageId}
       />
           </div>

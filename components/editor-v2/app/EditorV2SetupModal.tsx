@@ -561,6 +561,7 @@ export function EditorV2SetupModal({
                       </span>
                     ) : "No saved designs"
                   }
+                  menuMaxHeight={220}
                   getItemLabel={formatSavedDesignLabel}
                   getItemValue={(record) => record.storageId}
                   items={savedDocuments}

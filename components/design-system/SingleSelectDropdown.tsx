@@ -37,6 +37,7 @@ export interface SingleSelectDropdownProps<TItem> {
   menuClassName?: string;
   menuMaxHeight?: number;
   menuMaxWidth?: string | number;
+  menuMatchTriggerWidth?: boolean;
   menuOffset?: number;
   menuOverlapTrigger?: boolean;
   menuPlacement?: SingleSelectDropdownMenuPlacement;
@@ -67,6 +68,7 @@ export function SingleSelectDropdown<TItem>({
   menuClassName,
   menuMaxHeight = 300,
   menuMaxWidth = "min(320px, calc(100vw - 32px))",
+  menuMatchTriggerWidth = false,
   menuOffset = 4,
   menuOverlapTrigger = false,
   menuPlacement = "bottom-start",
@@ -175,7 +177,7 @@ export function SingleSelectDropdown<TItem>({
       top,
       left,
       zIndex: 200,
-      width: menuWidth,
+      width: menuMatchTriggerWidth ? triggerRect.width : menuWidth,
       minWidth: Math.max(triggerRect.width, Number(minWidth) || 0),
       maxWidth: menuMaxWidth,
       maxHeight: Math.min(menuMaxHeight, maxHeight),
@@ -184,6 +186,7 @@ export function SingleSelectDropdown<TItem>({
   }, [
     menuMaxHeight,
     menuMaxWidth,
+    menuMatchTriggerWidth,
     menuOffset,
     menuOverlapTrigger,
     menuPlacement,
@@ -224,7 +227,7 @@ export function SingleSelectDropdown<TItem>({
       className={menuClassName}
       style={{
         zIndex: 10,
-        width: menuWidth,
+        width: menuMatchTriggerWidth ? "100%" : menuWidth,
         maxWidth: menuMaxWidth,
         maxHeight: menuMaxHeight,
         overflowY: "auto",
