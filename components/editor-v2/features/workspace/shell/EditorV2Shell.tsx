@@ -1,9 +1,9 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import {
   getActiveColor,
   getActiveColorId,
@@ -111,7 +111,7 @@ export function EditorV2Shell({
   setupModalOpen: boolean;
   successNotification: EditorV2SuccessNotification | null;
 }) {
-  const clerk = useClerk();
+  const openSignIn = useOpenSignIn();
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
 
@@ -698,6 +698,7 @@ export function EditorV2Shell({
               hasUnsavedChanges={hasUnsavedChanges}
               layout="header"
               onDismiss={null}
+              onSignIn={openSignIn}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
@@ -710,6 +711,7 @@ export function EditorV2Shell({
               hasUnsavedChanges={hasUnsavedChanges}
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
+              onSignIn={openSignIn}
               saveMessage={saveMessage}
             />,
             topBannerTarget,
@@ -800,7 +802,7 @@ export function EditorV2Shell({
                 }
 
                 if (value === "sign-in") {
-                  void clerk.openSignIn();
+                  openSignIn();
                 }
               }}
               wrapperClassName={styles.headerOverflowMenu}
@@ -1126,16 +1128,16 @@ function HeaderSaveStatus({
   hasUnsavedChanges,
   layout,
   onDismiss,
+  onSignIn,
   saveMessage,
 }: {
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
   layout: "header" | "banner";
   onDismiss: (() => void) | null;
+  onSignIn: () => void;
   saveMessage: string;
 }) {
-  const clerk = useClerk();
-
   if (!saveMessage && !hasUnsavedChanges) {
     return null;
   }
@@ -1176,7 +1178,7 @@ function HeaderSaveStatus({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => void clerk.openSignIn()}
+          onClick={onSignIn}
         >
           Sign in
         </Button>
