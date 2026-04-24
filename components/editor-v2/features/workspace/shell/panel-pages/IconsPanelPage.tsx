@@ -277,7 +277,7 @@ export function IconsPanelPage({
 
   return (
     <section className={styles.sidebarSection}>
-      <div className={styles.sidebarPageBody}>
+      <div className={styles.iconsPanelPageBody}>
 
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>

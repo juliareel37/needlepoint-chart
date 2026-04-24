@@ -45,7 +45,7 @@
   position: relative;
   height: 100%;
   min-height: 0;
-  z-index: 20;
+  z-index: var(--z-editor-rail);
 }
 
 .railSurface {
@@ -219,6 +219,12 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.iconsPanelPageBody {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 
@@ -858,7 +864,7 @@
   width: 100%;
   padding: 0px;
   border-radius: 0;
-  height: 400px;
+  height: 370px;
 }
 
 .libraryPopoverSwatchTrigger {
@@ -2477,6 +2483,11 @@
     height: 280px;
   }
 
+  .colorPanelPageBody,
+  .iconsPanelPageBody {
+    padding-bottom: 0;
+  }
+
   .sidePanelOverlay {
     width: 100%;
     top: 25%;
@@ -2514,11 +2525,18 @@
     flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 20px 24px;
+    padding: 20px 20px 24px;
   }
 
   .modalOverlay {
     padding: 12px;
     place-items: start center;
+  }
+}
+
+@media (min-width: 769px) {
+  .colorPanelPageBody,
+  .iconsPanelPageBody {
+    padding-bottom: 28px;
   }
 }
