@@ -215,6 +215,17 @@
   }
 }
 :root {
+  /* Layer Tokens */
+  --z-app-header: 200;
+  --z-app-top-banner: 210;
+  --z-editor-stage-toolbar: 220;
+  --z-editor-side-panel: 225;
+  --z-editor-popover: 230;
+  --z-editor-popover-high: 240;
+  --z-editor-tooltip: 260;
+  --z-modal: 300;
+  --z-notification: 9999;
+
   /* Color Tokens */
   --neutral-0: #ffffff;
   --neutral-100: #fafaf9;
@@ -776,7 +787,7 @@ button:disabled {
 
 .app-top-banner-slot {
   position: relative;
-  z-index: 210;
+  z-index: var(--z-app-top-banner);
 }
 
 .gridline-menu-trigger {

@@ -246,7 +246,7 @@ function FloatingToolbarPortalPopover({
           : "auto",
         left: dockedToBottom ? "50%" : (position?.left ?? 0),
         right: dockedToBottom ? "auto" : (position?.right ?? "auto"),
-        zIndex: 230,
+        zIndex: "var(--z-editor-popover)",
         transform: dockedToBottom
           ? "translateX(-50%)"
           : (position?.transform ?? "none"),

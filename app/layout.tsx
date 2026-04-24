@@ -106,7 +106,7 @@ export default function RootLayout({
                 background: "var(--surface-primary)",
                 borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
-                zIndex: 200,
+                zIndex: "var(--z-app-header)",
               }}
             >
               <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>

@@ -140,7 +140,7 @@ function TextToolbarPortalPopover({
         top: position.top,
         left: position.left,
         right: position.right,
-        zIndex: 40,
+        zIndex: "var(--z-editor-popover)",
         transform: position.transform,
         maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
       }}

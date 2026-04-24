@@ -179,7 +179,7 @@ export function SingleSelectDropdown<TItem>({
       position: "fixed",
       top,
       left,
-      zIndex: 200,
+      zIndex: "var(--z-editor-popover)",
       width: menuMatchTriggerWidth ? triggerRect.width : menuWidth,
       minWidth: Math.max(triggerRect.width, Number(minWidth) || 0),
       maxWidth: menuMaxWidth,

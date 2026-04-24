@@ -137,7 +137,7 @@ function IconToolbarPortalPopover({
         top: position.top,
         left: position.left,
         right: position.right,
-        zIndex: 240,
+        zIndex: "var(--z-editor-popover-high)",
         transform: position.transform,
         maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
       }}
