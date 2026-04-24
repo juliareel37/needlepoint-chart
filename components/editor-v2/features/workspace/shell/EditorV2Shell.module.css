@@ -214,6 +214,15 @@
   gap: 24px;
 }
 
+
+.colorPanelPageBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+
+
 .sidebarTitleBlock {
   display: flex;
   flex-direction: column;
@@ -414,6 +423,16 @@
   margin: 0;
 }
 
+.sidebarColorPreviewSection {
+  cursor: pointer;
+}
+
+.sidebarColorPreviewSection:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
 .sidebarSubsectionHint {
   margin: 0;
   color: var(--text-secondary);
@@ -426,9 +445,17 @@
   flex-wrap: wrap;
 }
 
+.sidebarColorPreviewButton {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
 .sidebarColorPreviewGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16px, 16px));
+  grid-template-columns: repeat(auto-fit, minmax(14px, 14px));
   justify-content: start;
   gap: 6px 4px;
 }
@@ -443,8 +470,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   margin: auto;
   border-radius: 25%;
   border: 1px solid var(--swatch-border);
@@ -452,9 +479,12 @@
 }
 
 .sidebarColorPreviewMoreBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  min-height: 16px;
-  height: 16px;
+  min-height: 14px;
+  height: 14px;
   padding: 0 6px;
   border-radius: 999px;
   /* border: 1px solid var(--ui-border-subtle); */
@@ -465,8 +495,10 @@
   line-height: 1;
 }
 
-.sidebarColorPreviewMoreBadge:hover {
-  background: none !important;
+@media (hover: hover) and (pointer: fine) {
+  .sidebarColorPreviewButton:hover .sidebarColorPreviewMoreBadge {
+    background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
+  }
 }
 
 .sidebarColorPreviewCountBadge {
@@ -490,6 +522,9 @@
 }
 
 .sidebarHeaderAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 32px;
   padding-inline: 8px;
   align-self: center;
@@ -1162,7 +1197,7 @@
 }
 
 .activeColorRow {
-  margin-bottom: 16px;
+  /* margin-bottom: 16px; */
 }
 
 .activeColorValue {

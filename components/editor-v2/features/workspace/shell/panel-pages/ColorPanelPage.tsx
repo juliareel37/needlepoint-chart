@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon } from "@/components/design-system";
+import { ButtonIcon } from "@/components/design-system";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import type { EditorStore, PaletteColor } from "@/lib/editor-v2/editor/store";
 import {
@@ -16,10 +16,8 @@ import styles from "../EditorV2Shell.module.css";
 
 export type ColorPanelView = "overview" | "design-colors";
 
-const COLOR_PREVIEW_ROWS = 1;
-const COLOR_PREVIEW_SWATCH_SIZE = 16;
-const COLOR_PREVIEW_COLUMN_GAP = 4;
-const COLOR_PREVIEW_MORE_BADGE_COLUMNS = 3;
+const SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES = 14;
+const BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES = 16;
 
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
@@ -53,41 +51,9 @@ export function ColorPanelPage({
   view,
 }: ColorPanelPageProps) {
   const pageRef = useRef<HTMLElement | null>(null);
-  const previewGridRef = useRef<HTMLDivElement | null>(null);
-  const [previewColumnCount, setPreviewColumnCount] = useState(1);
-
-  useEffect(() => {
-    const node = previewGridRef.current;
-
-    if (!node) {
-      return;
-    }
-
-    const updateColumnCount = () => {
-      const nextColumnCount = Math.max(
-        1,
-        Math.floor(
-          (node.clientWidth + COLOR_PREVIEW_COLUMN_GAP) /
-            (COLOR_PREVIEW_SWATCH_SIZE + COLOR_PREVIEW_COLUMN_GAP),
-        ),
-      );
-      setPreviewColumnCount((current) =>
-        current === nextColumnCount ? current : nextColumnCount,
-      );
-    };
-
-    updateColumnCount();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateColumnCount();
-    });
-
-    resizeObserver.observe(node);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [isBottomPanelLayout, view]);
+  const colorPreviewMaxSwatches = isBottomPanelLayout
+    ? BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES
+    : SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES;
 
   useEffect(() => {
     if (view !== "design-colors") {
@@ -120,23 +86,54 @@ export function ColorPanelPage({
     };
   }, [view]);
 
-  const previewCapacity = previewColumnCount * COLOR_PREVIEW_ROWS;
-  const hiddenBadgeSpan = Math.min(COLOR_PREVIEW_MORE_BADGE_COLUMNS, previewColumnCount);
+  const hiddenBadgeSpan = 3;
   const visiblePreviewCount =
-    usedColors.length > previewCapacity
-      ? Math.max(previewCapacity - hiddenBadgeSpan, 0)
+    usedColors.length > colorPreviewMaxSwatches
+      ? Math.max(colorPreviewMaxSwatches - hiddenBadgeSpan, 0)
       : usedColors.length;
   const previewItems = usedColors.slice(0, visiblePreviewCount);
   const hiddenCount = Math.max(usedColors.length - visiblePreviewCount, 0);
   const showMoreButton = hiddenCount > 0;
+  const openDesignColorsView = () => onViewChange("design-colors");
 
   return (
     <section ref={pageRef} className={styles.sidebarSection}>
-      <div className={styles.sidebarPageBody}>
+      <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
+              <div
+                className={[styles.metaRow, styles.activeColorRow].join(" ")}
+                style={typographyStyles.p2}
+              >
+                <span
+                  aria-hidden="true"
+                  className={[styles.swatch, styles.activeColorSwatch].join(" ")}
+                  style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
+                />
+                <strong className={styles.activeColorValue}>
+                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
+                </strong>
+              </div>
 
-            <div className={styles.sidebarSubsection}>
+
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+
+            <div
+              className={[styles.sidebarSubsection, styles.sidebarColorPreviewSection].join(" ")}
+              role="button"
+              tabIndex={0}
+              aria-label="View all design colors"
+              onClick={openDesignColorsView}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                  return;
+                }
+
+                event.preventDefault();
+                openDesignColorsView();
+              }}
+            >
               <div className={styles.sidebarSubsectionHeaderRow}>
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
@@ -154,71 +151,48 @@ export function ColorPanelPage({
                     Review, replace, merge, or delete the colors used in this design.
                   </p> */}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghostV2"
-                  size="sm"
-                  className={styles.sidebarHeaderAction}
-                  aria-label="View all design colors"
-                  title="View all design colors"
-                  onClick={() => onViewChange("design-colors")}
-                >
+                <span className={styles.sidebarHeaderAction} aria-hidden="true">
                   <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                </Button>
+                </span>
               </div>
 
               {usedColors.length > 0 ? (
-                <div ref={previewGridRef} className={styles.sidebarColorPreviewGrid}>
+                <div className={styles.sidebarColorPreviewButton}>
+                  <span className={styles.sidebarColorPreviewGrid}>
                   {previewItems.map((entry) => {
                     const color = colorsById[entry.colorId];
 
                     return (
-                      <div
+                      <span
                         key={entry.colorId}
                         className={styles.sidebarColorPreviewSwatch}
                         aria-label={color ? `${color.name} (${color.code})` : "Design color"}
                         title={color ? `${color.name} (${color.code})` : "Design color"}
                         role="img"
                         style={{ backgroundColor: color?.hex ?? "#ffffff" }}
-                      >
-                      </div>
+                      />
                     );
                   })}
                   {showMoreButton ? (
-                    <Button
-                      type="button"
-                      variant="ghostV2"
-                      size="sm"
+                    <span
                       className={styles.sidebarColorPreviewMoreBadge}
-                      aria-label={`View ${hiddenCount} more design colors`}
-                      title={`View ${hiddenCount} more design colors`}
-                      onClick={() => onViewChange("design-colors")}
                       style={{ gridColumn: `span ${hiddenBadgeSpan}` }}
                     >
                       + {hiddenCount} more
-                    </Button>
+                    </span>
                   ) : null}
+                  </span>
                 </div>
               ) : null}
             </div>
 
-                      <div className={styles.traceSectionDivider} aria-hidden="true" />
+          <div className={styles.traceSectionDivider} aria-hidden="true" />
 
 
             <div className={styles.sidebarSubsection}>
-              <div
-                className={[styles.metaRow, styles.activeColorRow].join(" ")}
-                style={typographyStyles.p2}
-              >
-                <span
-                  aria-hidden="true"
-                  className={[styles.swatch, styles.activeColorSwatch].join(" ")}
-                  style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
-                />
-                <strong className={styles.activeColorValue}>
-                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
-                </strong>
-              </div>
+              
+              <h3 style={typographyStyles.h5}>All colors</h3>
+
               <div className={styles.sidebarColorLibraryCard}>
                 <ColorLibrary
                   activeColorId={activeColorId}
@@ -226,6 +200,7 @@ export function ColorPanelPage({
                   colors={palette}
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  showAllSectionHeader={false}
                   showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
                   symbolAssignments={symbolAssignments}
