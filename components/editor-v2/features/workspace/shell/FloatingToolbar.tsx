@@ -190,7 +190,7 @@ function FloatingToolbarPortalPopover({
         top: position?.top ?? 0,
         left: position?.left ?? 0,
         right: position?.right ?? "auto",
-        zIndex: 40,
+        zIndex: 230,
         transform: position?.transform ?? "none",
         maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         overflowX: subtoolbar ? "auto" : undefined,
