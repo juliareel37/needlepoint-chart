@@ -307,7 +307,7 @@ export function FloatingToolbar({
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
-  const toolbarTooltipsEnabled = !isBottomPanelLayout;
+  const toolbarTooltipsEnabled = !touchPrimaryInput;
 
   const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
     if (!toolbarTooltipsEnabled) {
