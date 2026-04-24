@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
-  Button,
   Slider,
   Toolbar,
   ToolbarAnchor,
@@ -693,25 +692,25 @@ export function IconPlacementToolbar({
       ) : null}
 
       <ToolbarGroup>
-        <Button
+        <ToolbarButton
           type="button"
           variant="secondary"
-          size="sm"
+          labelled
           onClick={() => dispatch(createCancelIconPlacementCommand())}
         >
           Cancel
-        </Button>
-        <Button
+        </ToolbarButton>
+        <ToolbarButton
           type="button"
           variant="primary"
-          size="sm"
+          labelled
           disabled={!canConvert}
           onClick={() => {
             void handleConvert();
           }}
         >
           {isConverting ? "Converting..." : "Convert"}
-        </Button>
+        </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>
   );

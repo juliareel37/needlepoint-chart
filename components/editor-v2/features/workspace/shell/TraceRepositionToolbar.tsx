@@ -1,7 +1,7 @@
 "use client";
 
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
-import { Button, ButtonIcon, Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
+import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
   createCancelTraceRepositionCommand,
@@ -25,7 +25,7 @@ export function TraceRepositionToolbar({
       <ToolbarGroup>
         <ToolbarButton
           type="button"
-          // variant="ghostV2"
+          labelled
           onClick={() => {
             dispatch(createSetActiveSidebarSectionCommand("trace"));
             dispatch(createSetSidebarCollapsedCommand(false));
@@ -37,27 +37,23 @@ export function TraceRepositionToolbar({
 
         <ToolbarDivider />
         <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => dispatch(createCancelTraceRepositionCommand())}
-        >
-          {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => dispatch(createCommitTraceRepositionCommand())}
-        >
-          Done
-        </Button>
+          <ToolbarButton
+            type="button"
+            variant="secondary"
+            labelled
+            onClick={() => dispatch(createCancelTraceRepositionCommand())}
+          >
+            Cancel
+          </ToolbarButton>
+          <ToolbarButton
+            type="button"
+            variant="primary"
+            labelled
+            onClick={() => dispatch(createCommitTraceRepositionCommand())}
+          >
+            Done
+          </ToolbarButton>
         </ToolbarGroup>
-
-
-        {/* <ToolbarDivider /> */}
-
-
       </ToolbarGroup>
     </Toolbar>
   );

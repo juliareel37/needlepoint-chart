@@ -4,8 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
-  Button,
-  ButtonIcon,
   Modal,
   Slider,
   Toolbar,
@@ -727,6 +725,8 @@ export function FloatingToolbar({
                 <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
                 <ToolbarLabel>Lasso</ToolbarLabel>
               </ToolbarButton> */}
+            
+            <ToolbarGroup>
 
               <ToolbarButton
                 type="button"
@@ -772,6 +772,7 @@ export function FloatingToolbar({
 
               <ToolbarButton
                 type="button"
+                labelled
                 // variant="ghostV2"
                 active={mirrorSessionActive}
                 aria-pressed={mirrorSessionActive}
@@ -794,10 +795,13 @@ export function FloatingToolbar({
                 <ToolbarLabel>Mirror</ToolbarLabel>
               </ToolbarButton>
 
+          </ToolbarGroup>
+
               <ToolbarDivider />
 
               <ToolbarButton
                 type="button"
+                labelled
                 disabled={!canEraseSelection}
                 onClick={() => {
                   if (!selectionBounds) {
@@ -815,7 +819,7 @@ export function FloatingToolbar({
                 <ToolbarLabel>Erase all</ToolbarLabel>
               </ToolbarButton>
 
-              {/* <ToolbarDivider /> */}
+              <ToolbarDivider />
 
               {/* <Button
                 type="button"
@@ -833,13 +837,14 @@ export function FloatingToolbar({
                 Done
               </Button> */}
 
-               <Button
+              <ToolbarButton
                 type="button"
-                variant="toolbarX"
+                variant="ghost"
+                iconOnly
                 onClick={handleExitSelection}
               >
-                <ButtonIcon icon="/icons/lucide/x.svg" />
-              </Button>
+                <ToolbarIcon icon="/icons/lucide/x.svg" />
+              </ToolbarButton>
 
             </FloatingToolbarPortalPopover>
           ) : null}
@@ -1043,6 +1048,7 @@ export function FloatingToolbar({
               {trace ? (
                 <>
                   <ToolbarButton
+                  labelled
                     type="button"
                     onClick={() => {
                       openSidebarSection("trace");
@@ -1058,6 +1064,7 @@ export function FloatingToolbar({
 
                   <ToolbarButton
                     type="button"
+                    labelled
                     aria-label="Reposition trace"
                     title="Reposition trace"
                     onClick={() => {
@@ -1072,36 +1079,21 @@ export function FloatingToolbar({
                     Reposition
                   </ToolbarButton>
 
-                  {/*
-                  <ToolbarButton type="button" disabled>
-                    <ToolbarIcon icon="/icons/lucide/crop.svg" />
-                    <ToolbarLabel>Crop</ToolbarLabel>
-                  </ToolbarButton>
-                  */}
                 </>
               ) : (
-                // <ToolbarButton
-                //   type="button"
-                //   primary
-                //   onClick={() => {
-                //     openSidebarSection("trace");
-                //     closeImageMenu();
-                //   }}
-                // >
-                //   <ToolbarIcon icon="/icons/lucide/image.svg" />
-                //   <ToolbarLabel>Add image</ToolbarLabel>
-                //   </ToolbarButton>
 
-                  <Button 
-                    type="button" 
-                    variant="ghostV2" 
+                  <ToolbarButton
+                    type="button"
+                    // variant="secondary"
+                    labelled
                     onClick={() => {
                       openSidebarSection("trace");
                       closeImageMenu();
-                    }}                  >
-                    <ButtonIcon icon="/icons/lucide/image.svg" />
+                    }}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/image.svg" />
                     Upload image
-                  </Button>
+                  </ToolbarButton>
                 )}
             </FloatingToolbarPortalPopover>
           ) : null}

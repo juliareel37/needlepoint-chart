@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
+import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore, GridPoint, GridRect, PaletteColor, SelectionState } from "@/lib/editor-v2/editor/store";
 import {
   createClearSelectionCommand,
@@ -60,18 +60,17 @@ export function SelectionSessionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-
-          <Button
-            type="button"            
-            variant="ghostV2"
-            aria-label="Exit selection"
-            title="Exit selection"
-            onClick={handleExitSelection}
-          >
+        <ToolbarButton
+          type="button"
+          variant="ghost"
+          iconOnly
+          aria-label="Exit selection"
+          title="Exit selection"
+          onClick={handleExitSelection}
+        >
             <ToolbarIcon icon="/icons/lucide/arrow-left.svg" />
+        </ToolbarButton>
 
-          </Button>
-          
         <ToolbarDivider />
 
         <ToolbarButton
@@ -112,19 +111,21 @@ export function SelectionSessionToolbar({
           <ToolbarLabel>Clear selection</ToolbarLabel>
         </ToolbarButton> */}
 
-        <Button
+        <ToolbarButton
           type="button"
           variant="secondary"
+          labelled
           disabled={!canPaintSelection}
           onClick={handleNewSelection}
         >
           Select new
-        </Button>
+        </ToolbarButton>
 
         <ToolbarDivider />
 
         <ToolbarButton
           type="button"
+          labelled
           disabled={!canPaintSelection}
           onClick={() => {
             if (!selectionBounds || !activeColor) {
@@ -145,6 +146,7 @@ export function SelectionSessionToolbar({
 
         <ToolbarButton
           type="button"
+          labelled
           disabled={!canEraseSelection}
           onClick={() => {
             if (!selectionBounds) {
@@ -164,22 +166,14 @@ export function SelectionSessionToolbar({
 
         <ToolbarDivider />
 
-        <Button
+        <ToolbarButton
           type="button"
           variant="primary"
+          labelled
           onClick={handleExitSelection}
         >
           Done
-        </Button>
-
-        {/* <ToolbarButton
-          type="button"
-          aria-label="Exit selection"
-          title="Exit selection"
-          onClick={handleExitSelection}
-        >
-          <ToolbarIcon icon="/icons/lucide/x.svg" />
-        </ToolbarButton> */}
+        </ToolbarButton>
 
       </ToolbarGroup>
     </Toolbar>

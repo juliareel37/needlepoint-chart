@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
-  Button,
   SingleSelectDropdown,
   Toolbar,
   ToolbarAnchor,
@@ -329,34 +328,23 @@ export function TextPlacementToolbar({
       <ToolbarDivider />
 
       <ToolbarGroup actions style={{ marginLeft: 6, gap: 8 }}>
-        {/* <ToolbarButton
+        <ToolbarButton
           type="button"
-          onClick={() => dispatch(createCancelTextPlacementCommand())}
-        >
-          <ToolbarLabel>Cancel</ToolbarLabel>
-        </ToolbarButton> */}
-        <Button 
-          type="button" 
-          variant="secondary" 
+          variant="secondary"
+          labelled
           onClick={() => dispatch(createCancelTextPlacementCommand())}
         >
           Cancel
-        </Button>
-        {/* <Button
+        </ToolbarButton>
+        <ToolbarButton
           type="button"
-          primary
+          variant="primary"
+          labelled
           disabled={!canConvert}
           onClick={handleConvert}
         >
-          <ToolbarLabel>Convert</ToolbarLabel>
-        </Button> */}
-
-        <Button 
-          type="button" 
-          variant="primary" 
-          onClick={handleConvert}>
-        Convert
-      </Button>
+          Convert
+        </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>
   );

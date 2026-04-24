@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonIcon, Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
+import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore, MirrorSessionState } from "@/lib/editor-v2/editor/store";
 import {
   createCancelMirrorCommand,
@@ -26,18 +26,6 @@ export function MirrorSessionToolbar({
   return (
     <Toolbar className={styles.floatingToolbar}>
       <ToolbarGroup>
-          {/* <Button
-            type="button"
-            variant="ghostV2"
-            aria-label="Cancel mirror session"
-            onClick={() => dispatch(createCancelMirrorCommand())}
-          >
-            <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-
-          </Button> */}
-          
-          {/* <ToolbarDivider /> */}
-
         <div
           style={{
             display: "flex",
@@ -50,80 +38,39 @@ export function MirrorSessionToolbar({
           <ToolbarLabel>{instruction}</ToolbarLabel>
         </div>
 
-
-        <Button
+        <ToolbarButton
           type="button"
           variant="secondary"
+          labelled
           disabled={!hasCommittedSelection}
           onClick={() => dispatch(createResetMirrorSelectionCommand())}
         >
           Select new
-          {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+        </ToolbarButton>
+        <ToolbarDivider />
 
-          
-        </Button>
-          <ToolbarDivider />
-
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,}}>
-
-          {/* <Button
-            type="button"
-            variant="secondary"
-            onClick={() => dispatch(createCancelMirrorCommand())}
-            style = {{padding:"8px 20px",}}
-
-          >
-            Cancel
-          </Button> */}
-
-          <Button
+        <div style={{ display: "flex", gap: 8 }}>
+          <ToolbarButton
             type="button"
             variant="primary"
+            labelled
             onClick={() => dispatch(createDoneMirrorCommand())}
-            style = {{padding:"8px 20px",}}
           >
             Done
-          </Button>
-
+          </ToolbarButton>
         </div>
 
+        <ToolbarDivider />
 
-          <ToolbarDivider />
-
-           <Button
-            type="button"
-            variant="toolbarX"
-            aria-label="Cancel mirror session"
-            onClick={() => dispatch(createCancelMirrorCommand())}
-          >
-            <ButtonIcon icon="/icons/lucide/x.svg" />
-
-          </Button>
-
-
-
-
-        {/* <Button
+        <ToolbarButton
           type="button"
-          variant="ghostV2"
+          variant="ghost"
+          iconOnly
           aria-label="Cancel mirror session"
           onClick={() => dispatch(createCancelMirrorCommand())}
         >
-          <ButtonIcon icon="/icons/lucide/x.svg" />
-        </Button> */}
-
-        {/* <ToolbarButton
-          type="button"
-          onClick={() => {
-            dispatch(createCancelMirrorCommand())
-          }}
-        >
           <ToolbarIcon icon="/icons/lucide/x.svg" />
-        </ToolbarButton> */}
+        </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>
   );

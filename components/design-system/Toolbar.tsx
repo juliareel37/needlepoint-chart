@@ -79,29 +79,38 @@ export function ToolbarButton({
   active = false,
   children,
   className,
+  iconOnly = false,
   inertWhenActive = false,
+  labelled = false,
   onClick,
   primary = false,
   style,
   swatch = false,
+  variant,
   wide = false,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
   children: ReactNode;
+  iconOnly?: boolean;
   inertWhenActive?: boolean;
+  labelled?: boolean;
   primary?: boolean;
   swatch?: boolean;
+  variant?: "toolbar" | "ghost" | "secondary" | "primary" | "destructive";
   wide?: boolean;
 }) {
   const isInertActive = active && inertWhenActive;
+  const resolvedVariant = variant ?? (primary ? "primary" : "toolbar");
 
   return (
     <button
       {...props}
       className={[
         styles.button,
-        primary ? styles.buttonPrimary : null,
+        styles[`buttonVariant${resolvedVariant[0].toUpperCase()}${resolvedVariant.slice(1)}`],
+        iconOnly ? styles.buttonIconOnly : null,
+        labelled ? styles.buttonLabelled : null,
         swatch ? styles.buttonSwatch : null,
         wide ? styles.buttonWide : null,
         className,
