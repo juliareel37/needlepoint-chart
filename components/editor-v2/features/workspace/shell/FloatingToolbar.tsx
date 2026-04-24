@@ -846,18 +846,13 @@ export function FloatingToolbar({
           data-tooltip="Fill"
           title="Fill"
           onClick={() => {
+            if (activeTool === "fill") {
+              return;
+            }
             closeColorLibrary();
             closeDrawMenu();
             closeImageMenu();
-            dispatch(
-              createSetToolCommand(
-                activeTool === "fill"
-                  ? selectionVisible
-                    ? "lasso"
-                    : "pan"
-                  : "fill",
-              ),
-            );
+            dispatch(createSetToolCommand("fill"));
           }}
         >
           <ToolbarIcon icon="/icons/lucide/paint_bucket.svg" />
