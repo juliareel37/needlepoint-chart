@@ -599,6 +599,7 @@ export function UsedColorsSummary({
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
                           featuredColorIds={featuredColorIds}
+                          showAllSymbols={showSymbols}
                           showFeaturedSymbols={showSymbols}
                           symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
@@ -737,6 +738,19 @@ export function UsedColorsSummary({
                               className={styles.libraryPopoverSwatch}
                               color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
                             />
+                            {showSymbols && mergeTargetColorId && symbolAssignments[mergeTargetColorId] ? (
+                              <span
+                                aria-hidden="true"
+                                className={styles.libraryPopoverSwatchSymbol}
+                                style={{
+                                  color: getSwatchIconColor(
+                                    colorsById[mergeTargetColorId]?.hex ?? "#ffffff",
+                                  ),
+                                }}
+                              >
+                                {symbolAssignments[mergeTargetColorId]}
+                              </span>
+                            ) : null}
                           </ToolbarButton>
 
                           {mergePickerOpen ? (
@@ -754,6 +768,7 @@ export function UsedColorsSummary({
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
                                 featuredColorIds={featuredColorIds}
+                                showAllSymbols={showSymbols}
                                 showFeaturedSymbols={showSymbols}
                                 symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {

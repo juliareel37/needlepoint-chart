@@ -6,7 +6,7 @@
   /* height: 250px; */
   overflow: auto;
   padding: 16px;
-  gap: 10px;
+  gap: 14px;
   border-radius: 16px;
 }
 
@@ -18,7 +18,7 @@
 .sectionContent {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
 }
 

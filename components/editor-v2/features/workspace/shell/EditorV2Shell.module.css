@@ -434,9 +434,9 @@
 }
 
 .sidebarColorLibraryCard {
-  border: 1px solid var(--ui-border-subtle);
+  /* border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;
-  background: var(--surface-card);
+  background: var(--surface-card); */
 }
 
 .sidebarColorPreviewSwatch {
@@ -821,9 +821,12 @@
 
 .sidebarColorLibrary.sidebarColorLibrary {
   width: 100%;
+  padding: 0px;
+  border-radius: 0;
 }
 
 .libraryPopoverSwatchTrigger {
+  position: relative;
   background: transparent !important;
 }
 
@@ -835,6 +838,18 @@
     box-shadow 160ms ease,
     border-color 160ms ease;
   transform: scale(1);
+}
+
+.libraryPopoverSwatchSymbol {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .libraryPopoverSwatchTrigger:focus-visible .libraryPopoverSwatch,

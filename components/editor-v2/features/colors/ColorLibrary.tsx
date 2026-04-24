@@ -35,6 +35,7 @@ interface ColorLibraryProps {
   colors: PaletteColor[];
   featuredColorIds?: string[];
   onColorSelect: (colorId: string) => void;
+  showAllSymbols?: boolean;
   showFeaturedSymbols?: boolean;
   symbolAssignments?: Record<string, string>;
 }
@@ -45,6 +46,7 @@ export function ColorLibrary({
   colors,
   featuredColorIds = [],
   onColorSelect,
+  showAllSymbols = false,
   showFeaturedSymbols = false,
   symbolAssignments = {},
 }: ColorLibraryProps) {
@@ -114,7 +116,9 @@ export function ColorLibrary({
       <section className={styles.section} aria-label="All colors">
         <div className={styles.sectionContent}>
           <h3 className={styles.sectionHeader}>All Colors</h3>
-          <div className={styles.sectionGrid}>{colors.map((color) => renderColorButton(color))}</div>
+          <div className={styles.sectionGrid}>
+            {colors.map((color) => renderColorButton(color, { showSymbol: showAllSymbols }))}
+          </div>
         </div>
       </section>
     </div>
