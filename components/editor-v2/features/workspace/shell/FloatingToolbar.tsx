@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
+  MenuChevronIcon,
   Modal,
   Slider,
   Toolbar,
@@ -50,6 +51,28 @@ import {
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
+
+const selectionShapeOptions: Array<{
+  shape: SelectionState["shape"];
+  label: string;
+  icon: string;
+}> = [
+  {
+    shape: "rect",
+    label: "Rectangle",
+    icon: "/icons/lucide/selection.svg",
+  },
+  {
+    shape: "circle",
+    label: "Circle",
+    icon: "/icons/lucide/selection-circle.svg",
+  },
+  {
+    shape: "freehand",
+    label: "Lasso",
+    icon: "/icons/lucide/lasso.svg",
+  },
+];
 
 function FloatingToolbarPortalPopover({
   anchorRef,
@@ -280,6 +303,7 @@ export function FloatingToolbar({
   const [drawPopoverTool, setDrawPopoverTool] = useState<"paint" | "erase" | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
+  const [selectionShapeMenuOpen, setSelectionShapeMenuOpen] = useState(false);
   const [brushSizeTooltipVisible, setBrushSizeTooltipVisible] = useState(false);
   const [brushSizeSliderValue, setBrushSizeSliderValue] = useState(1);
   const [brushSizeSliderDragging, setBrushSizeSliderDragging] = useState(false);
@@ -308,6 +332,9 @@ export function FloatingToolbar({
   const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
   const toolbarTooltipsEnabled = !touchPrimaryInput;
+  const activeSelectionShape =
+    selectionShapeOptions.find((option) => option.shape === selectionShape) ??
+    selectionShapeOptions[0];
 
   const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
     if (!toolbarTooltipsEnabled) {
@@ -453,7 +480,7 @@ export function FloatingToolbar({
 
   useEffect(() => {
     if (!selectionVisible) {
-      setSelectOpen(false);
+      closeSelectMenu();
     }
   }, [selectionVisible]);
 
@@ -528,6 +555,7 @@ export function FloatingToolbar({
 
   function closeSelectMenu(): void {
     setSelectOpen(false);
+    setSelectionShapeMenuOpen(false);
   }
 
   function handleSelectionButtonClick() {
@@ -563,32 +591,48 @@ export function FloatingToolbar({
   const selectionToolbarControls = (
     <>
       <ToolbarGroup>
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "rect"}
-          aria-pressed={selectionShape === "rect"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/selection.svg" />
-        </ToolbarButton>
+        <ToolbarAnchor>
+          <ToolbarButton
+            type="button"
+            labelled
+            active={selectionShapeMenuOpen}
+            aria-expanded={selectionShapeMenuOpen}
+            aria-haspopup="menu"
+            onClick={() => setSelectionShapeMenuOpen((open) => !open)}
+            className={styles.selectionShapeTrigger}
+          >
+            <ToolbarIcon icon={activeSelectionShape.icon} />
+            <ToolbarLabel>{activeSelectionShape.label}</ToolbarLabel>
+            <MenuChevronIcon open={selectionShapeMenuOpen} />
+          </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "circle"}
-          aria-pressed={selectionShape === "circle"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("circle"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/selection-circle.svg" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "freehand"}
-          aria-pressed={selectionShape === "freehand"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/lasso.svg" />
-        </ToolbarButton>
+          {selectionShapeMenuOpen ? (
+            <ToolbarPopover
+              role="menu"
+              aria-label="Selection type"
+              className={styles.selectionShapeMenu}
+            >
+              {selectionShapeOptions.map((option) => (
+                <ToolbarButton
+                  key={option.shape}
+                  type="button"
+                  labelled
+                  role="menuitemradio"
+                  active={selectionShape === option.shape}
+                  aria-checked={selectionShape === option.shape}
+                  onClick={() => {
+                    dispatch(createSetSelectionShapeCommand(option.shape));
+                    setSelectionShapeMenuOpen(false);
+                  }}
+                  className={styles.selectionShapeMenuItem}
+                >
+                  <ToolbarIcon icon={option.icon} />
+                  <ToolbarLabel>{option.label}</ToolbarLabel>
+                </ToolbarButton>
+              ))}
+            </ToolbarPopover>
+          ) : null}
+        </ToolbarAnchor>
 
         <ToolbarDivider />
 

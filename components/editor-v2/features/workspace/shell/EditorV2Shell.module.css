@@ -913,10 +913,8 @@
   width: fit-content;
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
 }
 
 .selectionToolbarCloseViewport {
@@ -942,6 +940,39 @@
   height: 24px;
   padding: 0;
   border-radius: 999px;
+}
+
+.selectionShapeTrigger {
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.selectionShapeTrigger svg {
+  color: currentColor;
+}
+
+.selectionShapeTrigger[data-active="true"] svg {
+  color: var(--toolbar-button-active-text);
+}
+
+.selectionShapeMenu {
+  left: 0;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+}
+
+.selectionShapeMenuItem {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.selectionShapeMenuItem[data-active="true"] {
+  background: var(--button-secondary-active);
+  color: var(--button-secondary-active-text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .stageToolbarBottomRight {

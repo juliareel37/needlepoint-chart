@@ -1,6 +1,17 @@
 "use client";
 
-import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
+import { useEffect, useRef, useState } from "react";
+import {
+  MenuChevronIcon,
+  Toolbar,
+  ToolbarAnchor,
+  ToolbarButton,
+  ToolbarDivider,
+  ToolbarGroup,
+  ToolbarIcon,
+  ToolbarLabel,
+  ToolbarPopover,
+} from "@/components/design-system";
 import type { EditorStore, GridPoint, GridRect, PaletteColor, SelectionState } from "@/lib/editor-v2/editor/store";
 import {
   createClearSelectionCommand,
@@ -10,6 +21,28 @@ import {
   createSetToolCommand,
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
+
+const selectionShapeOptions: Array<{
+  shape: SelectionState["shape"];
+  label: string;
+  icon: string;
+}> = [
+  {
+    shape: "rect",
+    label: "Rectangle",
+    icon: "/icons/lucide/square-mouse-pointer.svg",
+  },
+  {
+    shape: "circle",
+    label: "Circle",
+    icon: "/icons/lucide/selection-circle.svg",
+  },
+  {
+    shape: "freehand",
+    label: "Lasso",
+    icon: "/icons/lucide/lasso-select.svg",
+  },
+];
 
 interface SelectionSessionToolbarProps {
   activeColor: PaletteColor | null;
@@ -26,8 +59,13 @@ export function SelectionSessionToolbar({
   selectionCommitted,
   selectionShape,
 }: SelectionSessionToolbarProps) {
+  const [selectionShapeMenuOpen, setSelectionShapeMenuOpen] = useState(false);
+  const selectionShapeAnchorRef = useRef<HTMLDivElement | null>(null);
   const canPaintSelection = Boolean(selectionCommitted && selectionBounds && activeColor);
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
+  const activeSelectionShape =
+    selectionShapeOptions.find((option) => option.shape === selectionShape) ??
+    selectionShapeOptions[0];
   const instruction = selectionCommitted
     ? "Selection ready. Fill, erase, or start a new selection."
     : selectionShape === "rect"
@@ -35,6 +73,29 @@ export function SelectionSessionToolbar({
       : selectionShape === "circle"
         ? "Drag to select a circular area."
       : "Drag across the canvas to create a freehand selection.";
+
+  useEffect(() => {
+    if (!selectionShapeMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (selectionShapeAnchorRef.current?.contains(target)) {
+        return;
+      }
+
+      setSelectionShapeMenuOpen(false);
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [selectionShapeMenuOpen]);
 
   function buildSelectionCandidateCells(bounds: GridRect): GridPoint[] {
     const cells: GridPoint[] = [];
@@ -49,11 +110,13 @@ export function SelectionSessionToolbar({
   }
 
   function handleNewSelection() {
+    setSelectionShapeMenuOpen(false);
     dispatch(createClearSelectionCommand());
     dispatch(createSetToolCommand("lasso"));
   }
 
   function handleExitSelection() {
+    setSelectionShapeMenuOpen(false);
     dispatch(createClearSelectionCommand());
   }
 
@@ -73,34 +136,48 @@ export function SelectionSessionToolbar({
 
         <ToolbarDivider />
 
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "rect"}
-          aria-pressed={selectionShape === "rect"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("rect"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/square-mouse-pointer.svg" />
-          {/* <ToolbarLabel>Rect</ToolbarLabel> */}
-        </ToolbarButton>
+        <ToolbarAnchor ref={selectionShapeAnchorRef}>
+          <ToolbarButton
+            type="button"
+            labelled
+            active={selectionShapeMenuOpen}
+            aria-expanded={selectionShapeMenuOpen}
+            aria-haspopup="menu"
+            onClick={() => setSelectionShapeMenuOpen((open) => !open)}
+            className={styles.selectionShapeTrigger}
+          >
+            <ToolbarIcon icon={activeSelectionShape.icon} />
+            <ToolbarLabel>{activeSelectionShape.label}</ToolbarLabel>
+            <MenuChevronIcon open={selectionShapeMenuOpen} />
+          </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "circle"}
-          aria-pressed={selectionShape === "circle"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("circle"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/selection-circle.svg" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
-          active={selectionShape === "freehand"}
-          aria-pressed={selectionShape === "freehand"}
-          onClick={() => dispatch(createSetSelectionShapeCommand("freehand"))}
-        >
-          <ToolbarIcon icon="/icons/lucide/lasso-select.svg" />
-          {/* <ToolbarLabel>Freehand</ToolbarLabel> */}
-        </ToolbarButton>
+          {selectionShapeMenuOpen ? (
+            <ToolbarPopover
+              role="menu"
+              aria-label="Selection type"
+              className={styles.selectionShapeMenu}
+            >
+              {selectionShapeOptions.map((option) => (
+                <ToolbarButton
+                  key={option.shape}
+                  type="button"
+                  labelled
+                  role="menuitemradio"
+                  active={selectionShape === option.shape}
+                  aria-checked={selectionShape === option.shape}
+                  onClick={() => {
+                    dispatch(createSetSelectionShapeCommand(option.shape));
+                    setSelectionShapeMenuOpen(false);
+                  }}
+                  className={styles.selectionShapeMenuItem}
+                >
+                  <ToolbarIcon icon={option.icon} />
+                  <ToolbarLabel>{option.label}</ToolbarLabel>
+                </ToolbarButton>
+              ))}
+            </ToolbarPopover>
+          ) : null}
+        </ToolbarAnchor>
 
         {/* <ToolbarDivider /> */}
 
