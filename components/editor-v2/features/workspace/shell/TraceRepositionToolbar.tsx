@@ -21,40 +21,42 @@ export function TraceRepositionToolbar({
   trace: _trace,
 }: TraceRepositionToolbarProps) {
   return (
-    <Toolbar className={styles.floatingToolbar}>
-      <ToolbarGroup>
-        <ToolbarButton
-          type="button"
-          labelled
-          onClick={() => {
-            dispatch(createSetActiveSidebarSectionCommand("trace"));
-            dispatch(createSetSidebarCollapsedCommand(false));
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-          <ToolbarLabel>Display settings</ToolbarLabel>
-        </ToolbarButton>
+    <div className={styles.floatingToolbarViewport}>
+      <Toolbar className={styles.floatingToolbar}>
+        <ToolbarGroup>
+          <ToolbarButton
+            type="button"
+            labelled
+            onClick={() => {
+              dispatch(createSetActiveSidebarSectionCommand("trace"));
+              dispatch(createSetSidebarCollapsedCommand(false));
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+            <ToolbarLabel>Display settings</ToolbarLabel>
+          </ToolbarButton>
 
-        <ToolbarDivider />
-        <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
-          <ToolbarButton
-            type="button"
-            variant="secondary"
-            labelled
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}
-          >
-            Cancel
-          </ToolbarButton>
-          <ToolbarButton
-            type="button"
-            variant="primary"
-            labelled
-            onClick={() => dispatch(createCommitTraceRepositionCommand())}
-          >
-            Done
-          </ToolbarButton>
+          <ToolbarDivider />
+          <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
+            <ToolbarButton
+              type="button"
+              variant="secondary"
+              labelled
+              onClick={() => dispatch(createCancelTraceRepositionCommand())}
+            >
+              Cancel
+            </ToolbarButton>
+            <ToolbarButton
+              type="button"
+              variant="primary"
+              labelled
+              onClick={() => dispatch(createCommitTraceRepositionCommand())}
+            >
+              Done
+            </ToolbarButton>
+          </ToolbarGroup>
         </ToolbarGroup>
-      </ToolbarGroup>
-    </Toolbar>
+      </Toolbar>
+    </div>
   );
 }
