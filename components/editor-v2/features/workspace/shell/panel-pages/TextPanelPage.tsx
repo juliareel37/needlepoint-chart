@@ -25,6 +25,7 @@ interface TextPanelPageProps {
   palette: PaletteColor[];
   placement: TextPlacementSession | null;
   viewportCenter: WorldPoint | null;
+  viewportWidth: number | null;
 }
 
 export function TextPanelPage({
@@ -32,6 +33,7 @@ export function TextPanelPage({
   gridMetrics,
   placement,
   viewportCenter,
+  viewportWidth,
 }: TextPanelPageProps) {
   const placementActive = Boolean(placement);
   const helperText = useMemo(
@@ -78,10 +80,11 @@ export function TextPanelPage({
                   ...getInitialPlacementTransform({
                     intrinsicWidth: measured.width,
                     intrinsicHeight: measured.height,
-                  metrics: gridMetrics,
-                  viewportCenter,
-                  widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
-                }),
+                    metrics: gridMetrics,
+                    viewportCenter,
+                    viewportWidth,
+                    widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+                  }),
                 }),
               );
             }}

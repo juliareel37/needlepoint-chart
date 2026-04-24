@@ -247,6 +247,22 @@ export function EditorV2Shell({
       y: (zoomAnchor.y - viewport.offsetY) / viewport.zoom,
     };
   }, [viewport.offsetX, viewport.offsetY, viewport.zoom, zoomAnchor]);
+  const textViewportWidth = useMemo(() => {
+    if (viewport.zoom <= 0 || canvasWorldSize.width <= 0) {
+      return null;
+    }
+
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleCanvasWidth = Math.max(canvasWorldSize.width - visibleLeftInset, 1);
+
+    return visibleCanvasWidth / viewport.zoom;
+  }, [
+    canvasWorldSize.width,
+    isBottomPanelLayout,
+    sidebarCollapsed,
+    viewport.zoom,
+  ]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -974,6 +990,7 @@ export function EditorV2Shell({
                 showGridlines={showGridlines}
                 showSymbols={showSymbols}
                 textViewportCenter={textViewportCenter}
+                textViewportWidth={textViewportWidth}
               />
             </div>
 

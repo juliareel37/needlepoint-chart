@@ -522,6 +522,7 @@ export function IconPlacementBoxOverlay({
     <div
       ref={overlayRef}
       aria-label={ariaLabel}
+      data-touch-gesture-scope="element"
       role="presentation"
       style={{
         position: "absolute",

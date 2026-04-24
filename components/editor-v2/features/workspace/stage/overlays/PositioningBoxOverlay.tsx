@@ -581,6 +581,7 @@ export function PositioningBoxOverlay({
     <div
       ref={overlayRef}
       aria-label={ariaLabel}
+      data-touch-gesture-scope={interactive ? "element" : undefined}
       role="presentation"
       style={{
         position: "absolute",

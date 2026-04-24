@@ -216,8 +216,28 @@ export function useStagePanInteractions({
         y: clientY - rect.top - frameOriginY,
       };
     };
+    const touchStartsInInteractiveElement = (touches: TouchList) => {
+      if (typeof document.elementFromPoint !== "function") {
+        return false;
+      }
+
+      for (let index = 0; index < touches.length; index += 1) {
+        const touch = touches[index];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        if (target?.closest("[data-touch-gesture-scope='element']")) {
+          return true;
+        }
+      }
+
+      return false;
+    };
     const startTouchGesture = (event: TouchEvent) => {
-      if (dragPanningDisabled || event.touches.length !== 2) {
+      if (event.touches.length !== 2) {
+        return;
+      }
+
+      if (touchStartsInInteractiveElement(event.touches)) {
         return;
       }
 
