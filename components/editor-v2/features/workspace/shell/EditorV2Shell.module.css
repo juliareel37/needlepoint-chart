@@ -1361,6 +1361,7 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  cursor: pointer;
   width: 30px;
   height: 30px;
   margin-left: 4px;
