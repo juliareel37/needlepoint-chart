@@ -562,6 +562,7 @@ export function GridWorldSurface({
               gridWidth={grid.width}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
+              interactionEnabled={!paintDisabled}
               cancelPaintStroke={cancelPaintStroke}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}

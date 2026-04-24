@@ -43,6 +43,7 @@ interface GridCanvasStageProps {
   gridWidth: number;
   handlePointerDown: (point: GridPoint, selectionPoint: SelectionPoint) => void;
   handlePointerEnter: (point: GridPoint) => void;
+  interactionEnabled?: boolean;
   gridOverlayStep: number;
   showGridlines: boolean;
   showSymbols: boolean;
@@ -72,6 +73,7 @@ export function GridCanvasStage({
   gridWidth,
   handlePointerDown,
   handlePointerEnter,
+  interactionEnabled = true,
   gridOverlayStep,
   showGridlines,
   showSymbols,
@@ -480,6 +482,10 @@ export function GridCanvasStage({
       <div
         aria-label="Grid canvas"
         onPointerDown={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.add(event.pointerId);
 
@@ -537,6 +543,10 @@ export function GridCanvasStage({
           handlePointerDown(point, selectionPoint);
         }}
         onPointerMove={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (
             event.pointerType === "touch" &&
             (touchGestureLockedRef.current || activeTouchPointerIdsRef.current.size > 1)
@@ -583,6 +593,10 @@ export function GridCanvasStage({
           handlePointerEnter(point);
         }}
         onPointerUp={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.delete(event.pointerId);
 
@@ -610,6 +624,10 @@ export function GridCanvasStage({
           }
         }}
         onPointerCancel={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.delete(event.pointerId);
 
@@ -638,6 +656,7 @@ export function GridCanvasStage({
           zIndex: 2,
           background: "transparent",
           cursor: "inherit",
+          pointerEvents: interactionEnabled ? "auto" : "none",
           touchAction: "none",
         }}
       />
