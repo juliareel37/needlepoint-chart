@@ -326,11 +326,11 @@ export function useStagePanInteractions({
     stageElement.addEventListener("touchstart", startTouchGesture, {
       passive: false,
     });
-    stageElement.addEventListener("touchmove", updateTouchGesture, {
+    window.addEventListener("touchmove", updateTouchGesture, {
       passive: false,
     });
-    stageElement.addEventListener("touchend", endTouchGesture);
-    stageElement.addEventListener("touchcancel", endTouchGesture);
+    window.addEventListener("touchend", endTouchGesture);
+    window.addEventListener("touchcancel", endTouchGesture);
 
     return () => {
       if (zoomInteractionTimeoutRef.current !== null) {
@@ -345,9 +345,9 @@ export function useStagePanInteractions({
       stageElement.removeEventListener("mousedown", startNativeMiddlePanCapture, true);
       stageElement.removeEventListener("auxclick", preventNativeMiddleAuxClick, true);
       stageElement.removeEventListener("touchstart", startTouchGesture);
-      stageElement.removeEventListener("touchmove", updateTouchGesture);
-      stageElement.removeEventListener("touchend", endTouchGesture);
-      stageElement.removeEventListener("touchcancel", endTouchGesture);
+      window.removeEventListener("touchmove", updateTouchGesture);
+      window.removeEventListener("touchend", endTouchGesture);
+      window.removeEventListener("touchcancel", endTouchGesture);
     };
   }, [
     dispatch,
