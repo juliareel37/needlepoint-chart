@@ -8,7 +8,6 @@ import type {
 import {
   useCallback,
   useEffect,
-  useEffectEvent,
   useRef,
   useState,
 } from "react";
@@ -78,16 +77,16 @@ export function useStagePanInteractions({
     zoomAnchorRef.current = zoomAnchor;
   }, [zoomAnchor]);
 
-  const beginZoomInteraction = useEffectEvent(() => {
+  const beginZoomInteraction = useCallback(() => {
     if (zoomInteractionTimeoutRef.current !== null) {
       window.clearTimeout(zoomInteractionTimeoutRef.current);
       zoomInteractionTimeoutRef.current = null;
     }
 
     setIsZoomInteracting(true);
-  });
+  }, []);
 
-  const scheduleZoomInteractionEnd = useEffectEvent(() => {
+  const scheduleZoomInteractionEnd = useCallback(() => {
     if (zoomInteractionTimeoutRef.current !== null) {
       window.clearTimeout(zoomInteractionTimeoutRef.current);
     }
@@ -96,7 +95,7 @@ export function useStagePanInteractions({
       zoomInteractionTimeoutRef.current = null;
       setIsZoomInteracting(false);
     }, ZOOM_INTERACTION_SETTLE_DELAY_MS);
-  });
+  }, []);
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
@@ -139,26 +138,34 @@ export function useStagePanInteractions({
     [beginZoomInteraction, dispatch, metrics, scheduleZoomInteractionEnd, stageSize],
   );
 
-  const stopPanDragging = useEffectEvent(() => {
+  const stopPanDragging = useCallback(() => {
     panDragRef.current = null;
     touchPanPointerIdRef.current = null;
     touchGestureRef.current = null;
     setIsPanDragging(false);
-  });
-  const startPanDragging = useEffectEvent((clientX: number, clientY: number) => {
+  }, []);
+  const startPanDragging = useCallback((clientX: number, clientY: number) => {
     panDragRef.current = {
       lastX: clientX,
       lastY: clientY,
     };
     setIsPanDragging(true);
-  });
+  }, []);
 
   useEffect(() => {
     if (!dragPanningDisabled) {
       return;
     }
 
-    stopPanDragging();
+    panDragRef.current = null;
+    touchPanPointerIdRef.current = null;
+    touchGestureRef.current = null;
+
+    const timeoutId = window.setTimeout(() => {
+      setIsPanDragging(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [dragPanningDisabled, stopPanDragging]);
 
   useEffect(() => {
@@ -350,6 +357,7 @@ export function useStagePanInteractions({
       window.removeEventListener("touchcancel", endTouchGesture);
     };
   }, [
+    beginZoomInteraction,
     dispatch,
     dragPanningDisabled,
     handleWheel,
