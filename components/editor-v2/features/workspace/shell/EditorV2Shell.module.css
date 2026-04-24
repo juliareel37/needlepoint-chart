@@ -2426,6 +2426,7 @@
     width: 100%;
     min-width: 0;
     overflow: hidden;
+    z-index: var(--z-editor-mobile-rail);
   }
 
   .shellContent[data-mobile-selection-docked="true"] .rail {
