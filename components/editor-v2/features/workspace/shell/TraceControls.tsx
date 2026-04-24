@@ -13,7 +13,6 @@ import {
   Notification,
   SegmentedControl,
   Slider,
-  Toggle,
 } from "@/components/design-system";
 import type {
   EditorStore,
@@ -479,19 +478,32 @@ export function TraceControls({
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection title="Visibility">
-            <Toggle
-              aria-label="Show image"
-              checked={trace.visible}
-              label="Show image"
-              onChange={(next) =>
-                dispatch(
-                  createUpdateTraceCommand(
-                    { visible: next },
-                    { history: { mode: "skip" } },
-                  ),
-                )
-              }
-            />
+            <Field>
+              <div className={styles.traceInlineFieldRow}>
+                <span
+                  className={styles.traceInlineFieldLabel}
+                  style={typographyStyles.p2}
+                >
+                  Image
+                </span>
+                <SegmentedControl
+                  ariaLabel="Image visibility"
+                  value={trace.visible ? "show" : "hide"}
+                  onChange={(next) =>
+                    dispatch(
+                      createUpdateTraceCommand(
+                        { visible: next === "show" },
+                        { history: { mode: "skip" } },
+                      ),
+                    )
+                  }
+                  options={[
+                    { label: "Show", value: "show" },
+                    { label: "Hide", value: "hide" },
+                  ]}
+                />
+              </div>
+            </Field>
 
             <div
               className={styles.traceOpacityControls}
