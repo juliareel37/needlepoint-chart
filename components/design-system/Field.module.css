@@ -31,10 +31,6 @@
   opacity: 0.72;
 }
 
-.control:hover {
-  border-color: var(--brand-primary);
-}
-
 .control:focus {
   outline: none;
 }
@@ -50,4 +46,10 @@
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .control:hover {
+    border-color: var(--brand-primary);
+  }
 }

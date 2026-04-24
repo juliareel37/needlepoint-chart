@@ -1,6 +1,7 @@
 import type { EditorCommandExecution, EditorCommandHandler } from "./types";
 import type {
   ApplyMirrorCommand,
+  BeginMirrorFromSelectionCommand,
   CancelMirrorCommand,
   CommitMirrorCommand,
   DoneMirrorCommand,
@@ -21,6 +22,36 @@ import type {
 import { coalesceDocumentPatches, coalesceInverseDocumentPatches } from "../../store/patches";
 import { buildDirtySession } from "./gridMutationUtils";
 import { buildMirrorRect } from "../../selection/mirrorGeometry";
+
+export const beginMirrorFromSelectionCommandHandler: EditorCommandHandler<BeginMirrorFromSelectionCommand> = {
+  canHandle(command): command is BeginMirrorFromSelectionCommand {
+    return command.kind === "mirror.beginFromSelection";
+  },
+  handle(state, command) {
+    const selection = state.session.selection;
+
+    if (selection.mode !== "rect" || selection.preview || !selection.rect) {
+      return noop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        mirrorInteraction: {
+          session: buildCommittedMirrorSessionFromRect(
+            state.session.mirrorInteraction.session,
+            selection.rect,
+          ),
+        },
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: { type: "session", commandId: command.id },
+    };
+  },
+};
 
 export const startMirrorCommandHandler: EditorCommandHandler<StartMirrorCommand> = {
   canHandle(command): command is StartMirrorCommand {
@@ -112,6 +143,9 @@ export const applyMirrorCommandHandler: EditorCommandHandler<ApplyMirrorCommand>
   },
   handle(state, command) {
     const session = state.session.mirrorInteraction.session;
+    const finalizeImmediately =
+      state.session.activeTool.tool !== "mirror" &&
+      command.meta.history.mode !== "skip";
 
     if (!session?.sourceRect || session.dragAnchor) {
       return noop(state, command.id);
@@ -129,12 +163,16 @@ export const applyMirrorCommandHandler: EditorCommandHandler<ApplyMirrorCommand>
       return {
         nextSession: {
           ...state.session,
-          mirrorInteraction: {
-            session: {
-              ...session,
-              appliedDirection: command.payload.direction,
-            },
-          },
+          mirrorInteraction: finalizeImmediately
+            ? {
+                session: null,
+              }
+            : {
+                session: {
+                  ...session,
+                  appliedDirection: command.payload.direction,
+                },
+              },
         },
         nextUi: state.ui,
         patches: [],
@@ -147,24 +185,28 @@ export const applyMirrorCommandHandler: EditorCommandHandler<ApplyMirrorCommand>
     return {
       nextSession: {
         ...buildDirtySession(state),
-        mirrorInteraction: {
-          session: {
-            ...session,
-            appliedDirection: command.payload.direction,
-            forwardPatches: coalesceDocumentPatches([
-              ...session.forwardPatches,
-              ...patches,
-            ]),
-            inversePatches: coalesceInverseDocumentPatches([
-              ...session.inversePatches,
-              ...inversePatches,
-            ]),
-          },
-        },
+        mirrorInteraction: finalizeImmediately
+          ? {
+              session: null,
+            }
+          : {
+              session: {
+                ...session,
+                appliedDirection: command.payload.direction,
+                forwardPatches: coalesceDocumentPatches([
+                  ...session.forwardPatches,
+                  ...patches,
+                ]),
+                inversePatches: coalesceInverseDocumentPatches([
+                  ...session.inversePatches,
+                  ...inversePatches,
+                ]),
+              },
+            },
       },
       nextUi: state.ui,
       patches,
-      inversePatches: [],
+      inversePatches: finalizeImmediately ? inversePatches : [],
       effects: [],
       event: { type: "session", commandId: command.id },
     };
@@ -298,6 +340,28 @@ function buildStartedMirrorSession(
     ...existingSession,
     sourceRect,
     dragAnchor: point,
+    appliedDirection: null,
+  };
+}
+
+function buildCommittedMirrorSessionFromRect(
+  existingSession: MirrorSessionState | null,
+  sourceRect: GridRect,
+): MirrorSessionState {
+  if (!existingSession) {
+    return {
+      sourceRect,
+      dragAnchor: null,
+      appliedDirection: null,
+      forwardPatches: [],
+      inversePatches: [],
+    };
+  }
+
+  return {
+    ...existingSession,
+    sourceRect,
+    dragAnchor: null,
     appliedDirection: null,
   };
 }

@@ -161,8 +161,12 @@ function createStorageSafeDocument(
   }
 
   if (
-    trace.assetUrl.startsWith("data:") ||
-    trace.assetUrl.startsWith("blob:")
+    trace.previewUrl.startsWith("data:") ||
+    trace.previewUrl.startsWith("blob:") ||
+    trace.thumbnailUrl.startsWith("data:") ||
+    trace.thumbnailUrl.startsWith("blob:") ||
+    trace.originalUrl.startsWith("data:") ||
+    trace.originalUrl.startsWith("blob:")
   ) {
     return {
       ...document,

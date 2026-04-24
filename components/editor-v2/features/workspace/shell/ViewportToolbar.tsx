@@ -95,6 +95,7 @@ export function ViewportToolbar({
             showChevron={false}
             triggerLabel={<strong>{zoomLabel}</strong>}
             triggerVariant="ghost"
+            menuStyle={{ background: "var(--zoom-menu-bg)" }}
             menuPlacement="top-start"
             menuOffset={0}
             minWidth="auto"

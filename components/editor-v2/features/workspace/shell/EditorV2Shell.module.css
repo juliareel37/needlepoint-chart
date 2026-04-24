@@ -1,6 +1,5 @@
 .shell {
   position: relative;
-  isolation: isolate;
 }
 
 .shellContent {
@@ -8,8 +7,10 @@
   grid-template-columns: 70px minmax(0, 1fr);
   column-gap: 0;
   align-items: stretch;
-  height: calc(100vh - 52px);
-  min-height: calc(100vh - 52px);
+  height: calc(100vh - var(--app-top-offset, 52px));
+  height: calc(100dvh - var(--app-top-offset, 52px));
+  min-height: calc(100vh - var(--app-top-offset, 52px));
+  min-height: calc(100dvh - var(--app-top-offset, 52px));
   transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
 
@@ -22,12 +23,18 @@
 }
 
 .modalOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
+  position: fixed;
+  top: var(--app-top-offset, 52px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 150;
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.24), transparent 38%),
     rgba(10, 15, 26, 0.42);
@@ -35,9 +42,10 @@
 }
 
 .rail {
+  position: relative;
   height: 100%;
   min-height: 0;
-  z-index: 5;
+  z-index: 20;
 }
 
 .railSurface {
@@ -48,7 +56,7 @@
   height: 100%;
   max-height: 100%;
   padding: 16px 10px;
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   border-right: 1px solid var(--ui-border-reg);
   overflow-y: auto;
 }
@@ -95,7 +103,7 @@
   height: 100%;
   max-height: 100%;
   padding: 24px;
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   overflow-y: auto;
 }
 
@@ -110,6 +118,14 @@
 
 .sidebarPanelTitle {
   margin: 0;
+}
+
+.sidebarPanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .sidebarPanelBackRow {
@@ -135,7 +151,6 @@
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
-.sidebarPanelBackButton:hover,
 .sidebarPanelBackButton:focus-visible {
   background: var(--button-ghost-hover);
   color: var(--text-primary);
@@ -199,6 +214,15 @@
   gap: 24px;
 }
 
+
+.colorPanelPageBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+
+
 .sidebarTitleBlock {
   display: flex;
   flex-direction: column;
@@ -241,7 +265,6 @@
     box-shadow 140ms ease;
 }
 
-.editableTitleTrigger:hover,
 .editableTitleTrigger:focus-visible {
   border-color: transparent;
   background: transparent;
@@ -268,9 +291,13 @@
   height: 12px;
 }
 
-.editableTitleTrigger:hover .titleHoverIcon,
 .editableTitleTrigger:focus-visible .titleHoverIcon {
   opacity: 0.65;
+}
+.loadDesignButtonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .sidebarSubsection {
@@ -280,10 +307,7 @@
 }
 
 .sidebarDetailCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
   width: 100%;
   padding: 14px 16px;
   border: 1px solid var(--ui-border-subtle);
@@ -299,7 +323,6 @@
     transform 140ms ease;
 }
 
-.sidebarDetailCard:hover,
 .sidebarDetailCard:focus-visible {
   border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
   background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
@@ -319,8 +342,20 @@
   min-width: 0;
 }
 
+.sidebarDetailCardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .sidebarDetailCardTitle {
   margin: 0;
+}
+
+.sidebarDetailCardIcon {
+  color: var(--text-primary);
+  flex: 0 0 auto;
 }
 
 .sidebarDetailCardHint {
@@ -329,18 +364,46 @@
 
 .sidebarDetailSwatchGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16px, 16px));
-  gap: 6px;
   margin-top: 6px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.sidebarDetailSwatchGridCompact {
+  grid-template-columns: repeat(6, minmax(16px, 16px));
+}
+
+.sidebarDetailSwatchGridXWide {
+  grid-template-columns: repeat(16, minmax(20px, 20px));
 }
 
 .sidebarDetailSwatch {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 4px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--swatch-border);
+  /* box-shadow: inset 0 0 0 1px var(--swatch-detail-inset); */
+}
+
+.sidebarDetailMoreBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  min-height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border-subtle);
+  background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  grid-column: span 2;
 }
 
 .sidebarSubsectionHeader {
@@ -349,13 +412,310 @@
   gap: 4px;
 }
 
+.sidebarSubsectionHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .sidebarSubsectionHeader h3 {
   margin: 0;
+}
+
+.sidebarColorPreviewSection {
+  cursor: pointer;
+}
+
+.sidebarColorPreviewSection:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 4px;
+  border-radius: 12px;
 }
 
 .sidebarSubsectionHint {
   margin: 0;
   color: var(--text-secondary);
+}
+
+.sidebarColorPreviewTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sidebarColorPreviewButton {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.sidebarColorPreviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14px, 14px));
+  justify-content: start;
+  gap: 6px 4px;
+}
+
+.sidebarColorLibraryCard {
+  /* border: 1px solid var(--ui-border-subtle);
+  border-radius: 16px;
+  background: var(--surface-card); */
+}
+
+.sidebarColorPreviewSwatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin: auto;
+  border-radius: 25%;
+  border: 1px solid var(--swatch-border);
+  box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
+}
+
+.sidebarColorPreviewMoreBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 14px;
+  height: 14px;
+  padding: 0 6px;
+  border-radius: 999px;
+  /* border: 1px solid var(--ui-border-subtle); */
+  background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebarColorPreviewButton:hover .sidebarColorPreviewMoreBadge {
+    background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
+  }
+}
+
+.sidebarColorPreviewCountBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid var(--ui-border-reg);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 1px 2px rgba(15, 23, 42, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.sidebarHeaderAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding-inline: 8px;
+  align-self: center;
+}
+
+.sidebarSearchField {
+  position: relative;
+  color: var(--text-primary);
+}
+
+.sidebarSearchIcon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  opacity: 0.64;
+  pointer-events: none;
+  background: currentColor center / contain no-repeat;
+  -webkit-mask: url("/icons/lucide/search.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/search.svg") center / contain no-repeat;
+}
+
+.sidebarSearchInput {
+  padding-left: 38px;
+}
+
+.iconSelectionSummary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-card) 90%, white);
+}
+
+.iconSelectionPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  flex: 0 0 104px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.58)),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.1));
+  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 84%, white);
+}
+
+.iconSelectionPreviewImage {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.iconSelectionDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.iconSelectionLabel,
+.iconSelectionTitle,
+.iconSelectionHint {
+  margin: 0;
+}
+
+.iconSelectionLabel {
+  color: var(--text-secondary);
+}
+
+.iconSelectionHint {
+  color: var(--text-secondary);
+}
+
+.iconSelectionAction {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.iconLibraryGrid {
+
+  grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+  gap: 12px;
+  display: grid;
+}
+
+.iconLibraryCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card) 88%, var(--surface-card)),
+      color-mix(in srgb, var(--surface-card) 92%, transparent)
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--text-primary) 2%, transparent),
+      color-mix(in srgb, var(--text-primary) 8%, transparent)
+    );
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+:root[data-theme="dark"] .iconLibraryCard {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card) 58%, var(--surface-card)),
+      color-mix(in srgb, var(--surface-card) 100%, var(--surface-card))
+    );
+}
+
+.iconLibraryCard:focus-visible {
+  /* border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle)); */
+  background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+  box-shadow: var(--ui-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.iconLibraryCard:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+  outline-offset: 2px;
+}
+
+.iconLibraryCard[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--brand-400) 64%, var(--ui-border-subtle));
+  background: color-mix(in srgb, var(--surface-card) 76%, var(--brand-100));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-400) 40%, transparent),
+    var(--ui-shadow-sm);
+}
+
+.iconLibraryMoreButton {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 10px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: center;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.iconLibraryMoreButton:focus-visible {
+  background: color-mix(in srgb, var(--brand-100) 42%, transparent);
+  color: var(--brand-700);
+}
+
+.iconLibraryPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.iconLibraryPreviewPrimitive {
+  width: 82%;
+  height: 82%;
+}
+
+.iconLibraryPreviewImage {
+  width: 100%;
+  height: 100%;
+  max-width: 88px;
+  max-height: 88px;
+  object-fit: contain;
 }
 
 .sidebarDivider {
@@ -373,56 +733,6 @@
   color: var(--text-primary);
 }
 
-.sidebarSegmentedControl {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 2px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
-  border: 1px solid var(--ui-border-subtle);
-}
-
-.sidebarSegmentedItem {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 550;
-  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
-}
-
-.sidebarSegmentedItem:hover {
-  background: var(--button-ghost-hover);
-}
-
-.sidebarSegmentedItem[data-active="true"] {
-  background: var(--button-ghost-active);
-  cursor: default;
-}
-
-.sidebarSegmentedItem[data-active="true"]:hover {
-  background: var(--button-ghost-active);
-}
-
-.sidebarSegmentedItem:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 1px;
-}
-
 .canvasColumn {
   min-width: 0;
   display: flex;
@@ -436,7 +746,7 @@
   flex: 1 1 auto;
   min-height: 0;
   background: var(--canvas-stage-bg);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sidePanelOverlay {
@@ -451,6 +761,7 @@
 .sidePanelOverlay[data-collapsed="true"] .sidebar {
   transform: translateX(calc(-100% - 12px));
   opacity: 0;
+  pointer-events: none;
 }
 
 .canvasWorld {
@@ -464,8 +775,70 @@
   overflow: hidden;
 }
 
+/* .floatingToolbar button {
+  padding: 50px;
+} */
+
+
+.floatingToolbarViewport {
+  width: fit-content;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 16px;
+  border: 1px solid var(--toolbar-border);
+  background: var(--surface-primary);
+  box-shadow: var(--ui-shadow-md);
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
 .floatingToolbar {
   position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.floatingToolbarTooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 260;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--brand-primary);
+  color: var(--neutral-0);
+  box-shadow: var(--ui-tooltip-shadow);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.floatingToolbarTooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 4px);
+  width: 8px;
+  height: 8px;
+  background: var(--brand-primary);
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
 }
 
 .floatingToolbarContextual {
@@ -473,20 +846,28 @@
 }
 
 .colorLibraryPopover {
-  padding: 10px;
+  padding-top: 4px;
 }
 
-.toolbarColorLibrary {
+.toolbarColorLibrary.toolbarColorLibrary {
   width: min(260px, calc(100vw - 40px));
   height: min(250px, calc(100vh - 180px));
 }
 
+.sidebarColorLibrary.sidebarColorLibrary {
+  width: 100%;
+  padding: 0px;
+  border-radius: 0;
+  height: 400px;
+}
+
 .libraryPopoverSwatchTrigger {
+  position: relative;
   background: transparent !important;
 }
 
 .libraryPopoverSwatch {
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
     transform 160ms ease,
@@ -495,14 +876,51 @@
   transform: scale(1);
 }
 
-.libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch,
+.libraryPopoverSwatchSymbol {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .libraryPopoverSwatchTrigger:focus-visible .libraryPopoverSwatch,
 .libraryPopoverSwatchTrigger[data-active="true"] .libraryPopoverSwatch {
   transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
+  border-color: var(--swatch-border-strong);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
+}
+
+.iconPlacementSwatchList {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconPlacementSwatchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.iconPlacementSwatchButton[data-selected="true"] .libraryPopoverSwatch,
+.iconPlacementSwatchButton:focus-visible .libraryPopoverSwatch {
+  transform: scale(1.14);
+  border-color: var(--swatch-border-strong);
+  box-shadow:
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
 }
 
 .historyButton {
@@ -527,6 +945,64 @@
   flex: 0 0 auto;
 }
 
+.headerActionGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1000px) {
+  .headerHistoryControls {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .toolbarHistoryControl,
+  .toolbarHistoryDivider {
+    display: none;
+  }
+}
+
+.headerExportButton {
+  white-space: nowrap;
+}
+
+.headerOverflowMenu {
+  position: relative;
+}
+
+.headerOverflowTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 28px;
+  padding: 6px;
+  border-radius: 10px;
+  color: var(--text-primary);
+}
+
+.headerOverflowDots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  line-height: 1;
+  font-size: 20px;
+  font-weight: 700;
+  transform: translateY(-1px);
+}
+
+.headerOverflowSurface {
+  transform-origin: top right;
+}
+
+.headerOverflowItemLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .headerHistoryButton {
   min-width: 32px;
   min-height: 28px;
@@ -540,17 +1016,122 @@
 .stageToolbarTop {
   position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
+  left: calc(var(--stage-toolbar-left-inset, 0px) + 24px);
+  right: 24px;
+  z-index: 220;
   display: flex;
   justify-content: center;
-  width: calc(100% - 48px);
+  width: auto;
+  min-width: 0;
   pointer-events: none;
 }
 
 .stageToolbarTop > * {
   pointer-events: auto;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+  min-width: 0;
+}
+
+.selectionToolbarPopover {
+  width: fit-content;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible !important;
+  backdrop-filter: none;
+}
+
+.selectionToolbarPopoverDocked {
+  width: fit-content;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+}
+
+.selectionToolbarCluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.selectionToolbarMainViewport,
+.selectionToolbarCloseViewport {
+  border-radius: 16px;
+  border: 1px solid var(--toolbar-border);
+  background: var(--surface-primary);
+  box-shadow: var(--ui-shadow-md);
+}
+
+.selectionToolbarMainViewport {
+  flex: 1 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.selectionToolbarCloseViewport {
+  flex: 0 0 auto;
+  align-self: center;
+  overflow: visible;
+  border-radius: 999px;
+}
+
+.selectionToolbarCloseBar {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+}
+
+.selectionToolbarCloseButton {
+  min-width: 24px;
+  min-height: 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.selectionShapeTrigger {
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.selectionShapeTrigger svg {
+  color: currentColor;
+}
+
+.selectionShapeTrigger[data-active="true"] svg {
+  color: var(--toolbar-button-active-text);
+}
+
+.selectionShapeMenu {
+  left: 0;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+}
+
+.selectionShapeMenuItem {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.selectionShapeMenuItem[data-active="true"] {
+  background: var(--button-secondary-active);
+  color: var(--button-secondary-active-text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .stageToolbarBottomRight {
@@ -585,6 +1166,12 @@
   animation: saveButtonSpin 900ms linear infinite;
 }
 
+.loadingDropdownState {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .saveButtonIcon,
 .saveButtonIcon span {
   width: 14px;
@@ -609,18 +1196,28 @@
   color: var(--text-secondary);
 }
 
+.activeColorRow {
+  /* margin-bottom: 16px; */
+}
+
 .activeColorValue {
   color: var(--text-primary);
+}
+
+.activeColorSwatch {
+  width: 32px !important;
+  height: 32px !important;
 }
 
 .swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 25px;
-  height: 25px;
+  position: relative;
+  width: 36px;
+  height: 36px;
   border-radius: 25%;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
     transform 160ms ease,
@@ -738,11 +1335,19 @@
   color: var(--text-secondary);
 }
 
+.usedColorsTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .usedColorsHeaderRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 6px;
 }
 
 .usedColorsEditButton {
@@ -759,6 +1364,7 @@
 .usedColorsListFrame {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 12px;
 }
 
@@ -821,30 +1427,41 @@
 
 .usedColorsListCard {
   position: relative;
+  width: 100%;
 }
 
 .usedColorsList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
+  width: 100%;
+  gap: 4px;
+  /* margin: 0; */
   list-style: none;
   /* height: 350px; */
-  overflow: scroll;
+  /* overflow: scroll; */
   /* padding:8px; */
-  background:var(--surface-card);
+  /* background:var(--surface-card); */
   border-radius:12px;
 }
 
-.usedColorsList[data-selection-overlay="true"] {
-  padding-bottom: 120px;
+.usedColorsList[data-selection-mode="true"] {
+  margin-bottom: 75px;
+}
+
+.usedColorsRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
 }
 
 .usedColorsItem {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
   gap: 0;
   color: var(--text-primary);
   margin: 0;
@@ -874,15 +1491,9 @@
   outline-offset: 2px;
 }
 
-.usedColorsItem[data-selectable="true"][data-selected="false"]:hover:not(:disabled) {
-  background: var(--button-ghost2-hover);
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.usedColorsItem[data-selected="true"] {
-  background: var(--button-ghost2-active);
-  color: var(--button-ghost2-active-text);
+.usedColorsRow[data-selected="true"] .usedColorsItem {
+  background: var(--button-secondary-active);
+  color: var(--button-secondary-active-text);
   border-color: transparent;
   box-shadow: none;
 }
@@ -900,23 +1511,31 @@
   pointer-events: none;
 }
 
-.usedColorsItem[data-selected="true"] .usedColorsSelectionCheckbox input:not(:checked) {
+.usedColorsRow[data-selected="true"] .usedColorsSelectionCheckbox input:not(:checked) {
   border-color: var(--brand-primary);
   background: color-mix(in srgb, var(--brand-primary) 16%, var(--surface-card));
 }
 
 .usedColorsItemButton {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
+  align-self: stretch;
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
   gap: 10px;
   color: inherit;
   margin: 0;
-  padding: 2px 4px;
+  padding: 6px 8px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
   text-align: left;
   cursor: default;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .usedColorsItemButton:disabled {
@@ -927,6 +1546,101 @@
   cursor: pointer;
 }
 
+.usedColorsItemButton:not([data-selectable="true"]) {
+  cursor: pointer;
+}
+
+.usedColorsItemButton:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+.usedColorsRow[data-active-color="true"] .usedColorsItemButton {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.usedColorsRow[data-active-color="true"] .usedColorSwatchButton .swatch {
+  transform: scale(1.14);
+  border-color: var(--swatch-border-strong);
+  box-shadow:
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer) !important;
+}
+
+.usedColorsHighlightButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.usedColorsHighlightButton :global(.icon) {
+  width: 15px;
+  height: 15px;
+}
+
+.usedColorsHighlightButton :global(.glyph) {
+  background: currentColor;
+}
+
+.usedColorsHighlightButton[aria-pressed="true"] {
+  opacity: 1;
+  transform: scale(1);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(15, 23, 42, 0.12);
+  color: var(--text-primary);
+}
+
+.usedColorsRow[data-selected="true"] .usedColorsHighlightButton {
+  color: color-mix(in srgb, var(--button-secondary-active-text) 72%, transparent);
+}
+
+.usedColorsRow[data-selected="true"] .usedColorsHighlightButton[aria-pressed="true"] {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.16);
+  color: var(--button-secondary-active-text);
+}
+
+.usedColorsHighlightButton:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+  background: var(--surface-primary);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  color: var(--text-primary);
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .usedColorsHighlightButton {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .usedColorsItem[data-selectable="true"] .usedColorsItemButton {
   pointer-events: none;
 }
@@ -935,11 +1649,16 @@
   pointer-events: none;
 }
 
+.usedColorsRow[data-selectable="true"] .usedColorsHighlightButton {
+  pointer-events: auto;
+}
+
 .usedColorSwatchTriggerWrap {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  margin-right: 4px;
+  margin-left: 14px;
+  margin-right: 6px;
 }
 
 .usedColorSwatchButton {
@@ -957,11 +1676,27 @@
 }
 
 .usedColorSwatchSwapIcon {
+  position: absolute;
+  inset: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transform: scale(0.92);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.usedColorSwatchSymbol {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
   transition:
     opacity 140ms ease,
     transform 140ms ease;
@@ -976,25 +1711,38 @@
   background: currentColor;
 }
 
-.usedColorSwatchButton:hover:not(:disabled) .swatch,
 .usedColorSwatchButton:focus-visible .swatch {
   transform: scale(1.14);
-  border-color: rgba(15, 23, 42, 0.28);
+  border-color: var(--swatch-border-strong);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.72),
-    0 0 0 3px rgba(15, 23, 42, 0.14);
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer);
 }
 
-.usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon,
 .usedColorSwatchButton:focus-visible .usedColorSwatchSwapIcon,
 .usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSwapIcon {
   opacity: 1;
   transform: scale(1);
 }
 
-.usedColorsItemCount {
-  margin-left: auto;
-  color: var(--text-secondary);
+.usedColorSwatchButton:focus-visible .usedColorSwatchSymbol,
+.usedColorSwatchButton[aria-expanded="true"] .usedColorSwatchSymbol {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.usedColorSwatchCountBadge {
+  position: absolute;
+  top: 10%;
+  left: 25%;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 9px;
+  pointer-events: none;
+  transform: translate(-100%, -75%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .usedColorsSelectionBar {
@@ -1049,7 +1797,7 @@
   width: 25px;
   height: 25px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--swatch-border);
   flex: 0 0 auto;
 }
 
@@ -1059,39 +1807,56 @@
 }
 
 .headerSaveStatus {
+  --header-save-status-badge-bg: color-mix(in srgb, var(--neutral-900) 10%, transparent);
+  --header-save-status-icon-color: var(--neutral-700);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   max-width: min(260px, 32vw);
-  padding: 6px 10px;
-  border: 1px solid var(--ui-border-reg);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-card) 92%, transparent);
-  color: var(--text-secondary);
-  /* box-shadow: var(--ui-shadow-sm); */
+  padding: 4px 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 10px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-shadow-md);
+}
+
+.headerSaveStatus[data-layout="banner"] {
+  width: 100%;
+  max-width: none;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 12px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--surface-card) 90%, var(--brand-100));
 }
 
 .headerSaveStatus[data-state="ready"] {
-  color: var(--text-secondary);
+  --header-save-status-badge-bg: var(--brand-200);
+  --header-save-status-icon-color: var(--brand-600);
+}
+
+.headerSaveStatus[data-state="info"] {
+  --header-save-status-badge-bg: var(--status-warning-base);
+  --header-save-status-icon-color: var(--neutral-900);
 }
 
 .headerSaveStatus[data-state="alert"] {
-  color: color-mix(in srgb, var(--text-primary) 76%, #8a5a00);
-  background: color-mix(in srgb, var(--surface-card) 32%, #fff3cd);
-  border-color: color-mix(in srgb, #e0b84f 46%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--status-warning-base);
+  --header-save-status-icon-color: var(--neutral-900);
 }
 
 .headerSaveStatus[data-state="saved"] {
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--surface-card) 70%, var(--brand-100));
-  border-color: color-mix(in srgb, var(--brand-300) 48%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--brand-200);
+  --header-save-status-icon-color: var(--brand-600);
 }
 
 .headerSaveStatus[data-state="error"] {
-  color: color-mix(in srgb, var(--text-primary) 82%, #8a1c1c);
-  background: color-mix(in srgb, var(--surface-card) 62%, #fff1f1);
-  border-color: color-mix(in srgb, #d85c5c 40%, var(--ui-border-subtle));
+  --header-save-status-badge-bg: var(--status-destructive-base);
+  --header-save-status-icon-color: var(--neutral-0);
 }
 
 .headerSaveStatusIconWrap {
@@ -1099,13 +1864,17 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: inherit;
+  width: 22px;
+  height: 22px;
+  color: var(--header-save-status-icon-color);
+  border-radius: 999px;
+  background: var(--header-save-status-badge-bg);
 }
 
 .headerSaveStatusIcon,
 .headerSaveStatusIcon span {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .headerSaveStatusMessage {
@@ -1114,10 +1883,49 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.headerSaveStatus[data-layout="banner"] .headerSaveStatusMessage {
+  flex: 1 1 auto;
+}
+
+.headerSaveStatusDismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.headerSaveStatusDismiss:focus-visible {
+  background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
+  color: var(--text-primary);
+}
+
+.headerSaveStatusDismiss:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+  outline-offset: 1px;
+}
+
+.headerSaveStatusDismissIcon,
+.headerSaveStatusDismissIcon span {
+  width: 12px;
+  height: 12px;
 }
 
 .loadButton {
-  width: 100%;
+  /* width: 100%; */
 }
 
 
@@ -1193,7 +2001,7 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-sidebar) 82%, white);
+  background: color-mix(in srgb, var(--surface-primary) 82%, white);
   border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 72%, transparent);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transform: scale(1);
@@ -1235,19 +2043,16 @@
   background: currentColor;
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbFrame,
 .traceAttachmentButton:focus-visible .traceAttachmentThumbFrame {
   transform: scale(1.08);
   border-color: rgba(15, 23, 42, 0.18);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumb,
 .traceAttachmentButton:focus-visible .traceAttachmentThumb {
   filter: brightness(0.68);
 }
 
-.traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbOverlay,
 .traceAttachmentButton:focus-visible .traceAttachmentThumbOverlay {
   opacity: 1;
   transform: scale(1);
@@ -1294,7 +2099,6 @@
   color: color-mix(in srgb, var(--text-primary) 58%, transparent);
 }
 
-.traceAttachmentRemoveButton:hover:not(:disabled),
 .traceAttachmentRemoveButton:focus-visible {
   color: var(--text-primary);
 }
@@ -1307,29 +2111,6 @@
 
 .traceOpacityControls[data-disabled="true"] {
   opacity: 0.55;
-}
-
-.traceSegmentedControl {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 2px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
-  border: 1px solid var(--ui-border-subtle);
-}
-
-.traceSegmentedItem {
-  width: 100%;
-  min-height: 28px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
 }
 
 .traceSliderRow {
@@ -1410,6 +2191,122 @@
   gap: 12px;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .sidebarPanelBackButton:hover {
+    background: var(--button-ghost-hover);
+    color: var(--text-primary);
+  }
+
+  .editableTitleTrigger:hover {
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-primary);
+    box-shadow: none;
+  }
+
+  .editableTitleTrigger:hover .titleHoverIcon {
+    opacity: 0.65;
+  }
+
+  .sidebarDetailCard:hover {
+    border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
+    background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+    box-shadow: var(--ui-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .iconLibraryCard:hover {
+    /* border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle)); */
+    background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
+    box-shadow: var(--ui-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .iconLibraryMoreButton:hover {
+    background: color-mix(in srgb, var(--brand-100) 42%, transparent);
+    color: var(--brand-700);
+  }
+
+  .libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .iconPlacementSwatchButton:hover .libraryPopoverSwatch {
+    transform: scale(1.14);
+    border-color: var(--swatch-border-strong);
+    box-shadow:
+      0 0 0 1px var(--swatch-ring-inner),
+      0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .usedColorsRow[data-selectable="true"][data-selected="false"] .usedColorsItem:hover:not(:disabled) {
+    background: var(--button-secondary-hover);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .usedColorsRow:hover .usedColorSwatchButton:not(:disabled) .swatch {
+    transform: scale(1.14);
+  }
+
+  .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSymbol {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  .usedColorsRow:hover .usedColorsHighlightButton {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
+    background: color-mix(in srgb, var(--surface-primary) 94%, var(--brand-100));
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+    color: var(--text-primary);
+  }
+
+  .usedColorsRow[data-selected="true"] .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
+    background: color-mix(in srgb, white 92%, var(--brand-100));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 1px 2px rgba(15, 23, 42, 0.16);
+    color: var(--button-secondary-active-text);
+  }
+
+  .headerSaveStatusDismiss:hover {
+    background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
+    color: var(--text-primary);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbFrame {
+    transform: scale(1.08);
+    border-color: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumb {
+    filter: brightness(0.68);
+  }
+
+  .traceAttachmentButton:hover:not(:disabled) .traceAttachmentThumbOverlay {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .traceAttachmentRemoveButton:hover:not(:disabled) {
+    color: var(--text-primary);
+  }
+}
+
 @media (max-width: 1080px) {
   .shellContent {
     height: auto;
@@ -1438,10 +2335,6 @@
 
   .floatingToolbar {
     position: static;
-    width: 60%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
   }
 
   .floatingToolbarContextual {
@@ -1483,46 +2376,105 @@
 
 
 @media (max-width: 768px) {
-      .floatingToolbar {
-    max-width: min-content;
-    width: 90%;
-  }
-  .headerHistoryControls {
-    display: inline-flex;
-    gap: 6px;
+  .floatingToolbar {
   }
 
-  .toolbarHistoryControl,
-  .toolbarHistoryDivider {
-    display: none;
+  .iconSelectionSummary {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 
-  .headerSaveStatus {
-    display: none;
+  .iconSelectionPreview {
+    width: 88px;
+    height: 88px;
+    flex-basis: 88px;
   }
+
+  .iconSelectionPreviewImage {
+    width: 72px;
+    height: 72px;
+  }
+.loadDesignButtonRow {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  gap: 12px;
+}
+  /* .iconLibraryGrid {
+    grid-template-columns: 1fr;
+  } */
+
+  .iconSelectionAction {
+    align-self: stretch;
+  }
+
+  /* .headerSaveStatus {
+    display: none;
+  } */
 
   .viewportToolbar {
     display: none;
   }
+
   .stageToolbarTop {
-    width: 100%;
-    position: absolute;
-    left: 50% !important;
+    left: 12px;
+    right: 12px;
   }
+
   .rail {
     grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .shellContent[data-mobile-selection-docked="true"] .rail {
+    display: none;
   }
   .railSurface {
     flex-direction: row;
-  };
+    justify-content: space-around;
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+    border-right: none;
+    border-top: 1px solid var(--ui-border-reg);
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .railSurface::-webkit-scrollbar {
+    display: none;
+  }
+
+  .railNav {
+    flex: 0 0 auto;
+    width: max-content;
+    min-width: max-content;
+  }
+
+  .railTabs {
+    flex: 0 0 auto;
+    width: max-content;
+  }
   .shell {
     position: relative;
   }
   .shellContent {
     grid-template-columns: auto;
-    grid-template-rows: 1fr .1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: calc(100vh - var(--app-top-offset, 52px));
+    height: calc(100dvh - var(--app-top-offset, 52px));
+    min-height: calc(100vh - var(--app-top-offset, 52px));
+    min-height: calc(100dvh - var(--app-top-offset, 52px));
   }
-
+  .sidebarColorLibrary.sidebarColorLibrary {
+    height: 280px;
+  }
 
   .sidePanelOverlay {
     width: 100%;
@@ -1532,6 +2484,7 @@
   .sidePanelOverlay[data-collapsed="true"] .sidebar {
     transform: translateY(calc(100% + 12px));
     opacity: 0;
+    pointer-events: none;
   }
 
   .sidebar {
@@ -1541,7 +2494,30 @@
     width: 100%;
   }
 
+  .sidebarSurface {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sidebarPanelHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 14px 20px 10px;
+    background: var(--surface-primary);
+    box-shadow: 0 1px 0 var(--ui-border-subtle);
+  }
+
+  .sidebarPanelBody {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 20px 24px;
+  }
+
   .modalOverlay {
     padding: 12px;
+    place-items: start center;
   }
 }

@@ -21,6 +21,9 @@ export const startSelectionCommandHandler: EditorCommandHandler<StartSelectionCo
           command.payload.point,
           state.session.selection.shape,
         ),
+        mirrorInteraction: {
+          session: null,
+        },
       },
       nextUi: state.ui,
       patches: [],
@@ -110,6 +113,9 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
           mirrorAxis: null,
           preview: null,
         },
+        mirrorInteraction: {
+          session: null,
+        },
       },
       nextUi: state.ui,
       patches: [],
@@ -141,6 +147,9 @@ export const setSelectionShapeCommandHandler: EditorCommandHandler<SetSelectionS
           mirrorAxis: null,
           preview: null,
         },
+        mirrorInteraction: {
+          session: null,
+        },
       },
       nextUi: state.ui,
       patches: [],
@@ -158,12 +167,12 @@ function buildStartedSelection(
   point: StartSelectionCommand["payload"]["point"],
   shape: SelectionState["shape"],
 ): SelectionState {
-  if (shape === "rect") {
+  if (shape === "rect" || shape === "circle") {
     const normalizedPoint = normalizeRectPoint(point);
     const rect = buildRectSelectionBounds(normalizedPoint, normalizedPoint);
 
     return {
-      mode: "rect",
+      mode: shape === "circle" ? "circle" : "rect",
       shape,
       rect,
       lassoPoints: [normalizedPoint],
@@ -195,14 +204,14 @@ function appendLassoPoint(
   previous: SelectionState,
   point: UpdateSelectionCommand["payload"]["point"],
 ): SelectionState {
-  if (previous.shape === "rect") {
+  if (previous.shape === "rect" || previous.shape === "circle") {
     const anchor = previous.lassoPoints[0] ?? normalizeRectPoint(point);
     const currentPoint = normalizeRectPoint(point);
     const rect = buildRectSelectionBounds(anchor, currentPoint);
 
     return {
       ...previous,
-      mode: "rect",
+      mode: previous.shape === "circle" ? "circle" : "rect",
       rect,
       lassoPoints: [anchor, currentPoint],
       preview: {
@@ -234,7 +243,7 @@ function commitLassoSelection(
   previous: SelectionState,
   point: CommitSelectionCommand["payload"]["point"],
 ): SelectionState {
-  if (previous.shape === "rect") {
+  if (previous.shape === "rect" || previous.shape === "circle") {
     const anchor = previous.lassoPoints[0];
 
     if (!anchor) {
@@ -252,7 +261,7 @@ function commitLassoSelection(
 
     return {
       ...previous,
-      mode: "rect",
+      mode: previous.shape === "circle" ? "circle" : "rect",
       rect: buildRectSelectionBounds(anchor, currentPoint),
       lassoPoints: [anchor, currentPoint],
     };

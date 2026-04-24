@@ -5,8 +5,7 @@ import type { Rgb } from "@/lib/editor-v2/editor/color-utils";
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
 
 type CachedTraceSampler = {
-  assetUrl: string;
-  image: HTMLImageElement;
+  previewUrl: string;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   ready: boolean;
@@ -15,6 +14,26 @@ type CachedTraceSampler = {
 };
 
 const traceSamplerCache = new Map<string, CachedTraceSampler>();
+
+export function clearTraceSampler(previewUrl?: string): void {
+  if (typeof previewUrl === "string") {
+    const sampler = traceSamplerCache.get(previewUrl);
+    if (!sampler) {
+      return;
+    }
+
+    sampler.canvas.width = 0;
+    sampler.canvas.height = 0;
+    traceSamplerCache.delete(previewUrl);
+    return;
+  }
+
+  for (const [url, sampler] of traceSamplerCache) {
+    sampler.canvas.width = 0;
+    sampler.canvas.height = 0;
+    traceSamplerCache.delete(url);
+  }
+}
 
 export function sampleTraceRgbAtWorldPoint(
   trace: TraceDocument,
@@ -25,7 +44,7 @@ export function sampleTraceRgbAtWorldPoint(
     return null;
   }
 
-  const sampler = getOrCreateSampler(trace.assetUrl);
+  const sampler = getOrCreateSampler(trace.previewUrl);
   if (!sampler.ready || sampler.width <= 0 || sampler.height <= 0) {
     return null;
   }
@@ -56,7 +75,6 @@ export function sampleTraceRgbAtWorldPoint(
   const pixelX = clampInt(Math.round(u * sampler.width), 0, sampler.width - 1);
   const pixelY = clampInt(Math.round(v * sampler.height), 0, sampler.height - 1);
 
-  ensureCanvas(sampler);
   const data = sampler.context.getImageData(pixelX, pixelY, 1, 1).data;
   if (data[3] < 10) {
     return null;
@@ -65,8 +83,8 @@ export function sampleTraceRgbAtWorldPoint(
   return { r: data[0], g: data[1], b: data[2] };
 }
 
-function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
-  const cached = traceSamplerCache.get(assetUrl);
+function getOrCreateSampler(previewUrl: string): CachedTraceSampler {
+  const cached = traceSamplerCache.get(previewUrl);
   if (cached) {
     return cached;
   }
@@ -88,58 +106,57 @@ function getOrCreateSampler(assetUrl: string): CachedTraceSampler {
     }
 
     const sampler: CachedTraceSampler = {
-      assetUrl,
-      image,
+      previewUrl,
       canvas: fallbackCanvas,
       context: fallbackContext,
       ready: false,
       width: 0,
       height: 0,
     };
-    traceSamplerCache.set(assetUrl, sampler);
-    image.src = assetUrl;
+    traceSamplerCache.set(previewUrl, sampler);
+    image.src = previewUrl;
     image.onload = () => {
       sampler.width = image.naturalWidth;
       sampler.height = image.naturalHeight;
       sampler.ready = sampler.width > 0 && sampler.height > 0;
+      if (sampler.ready) {
+        sampler.canvas.width = sampler.width;
+        sampler.canvas.height = sampler.height;
+        sampler.context.clearRect(0, 0, sampler.width, sampler.height);
+        sampler.context.drawImage(image, 0, 0, sampler.width, sampler.height);
+      }
     };
     return sampler;
   }
 
   const sampler: CachedTraceSampler = {
-    assetUrl,
-    image,
+    previewUrl,
     canvas,
     context,
     ready: false,
     width: 0,
     height: 0,
   };
-  traceSamplerCache.set(assetUrl, sampler);
+  traceSamplerCache.set(previewUrl, sampler);
 
   image.onload = () => {
     sampler.width = image.naturalWidth;
     sampler.height = image.naturalHeight;
     sampler.ready = sampler.width > 0 && sampler.height > 0;
+    if (sampler.ready) {
+      sampler.canvas.width = sampler.width;
+      sampler.canvas.height = sampler.height;
+      sampler.context.clearRect(0, 0, sampler.width, sampler.height);
+      sampler.context.drawImage(image, 0, 0, sampler.width, sampler.height);
+    }
   };
   image.onerror = () => {
     sampler.ready = false;
   };
-  image.src = assetUrl;
+  image.src = previewUrl;
 
   return sampler;
 }
-
-function ensureCanvas(sampler: CachedTraceSampler): void {
-  if (sampler.canvas.width !== sampler.width || sampler.canvas.height !== sampler.height) {
-    sampler.canvas.width = sampler.width;
-    sampler.canvas.height = sampler.height;
-    sampler.context.clearRect(0, 0, sampler.width, sampler.height);
-    sampler.context.drawImage(sampler.image, 0, 0);
-  }
-}
-
 function clampInt(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
-

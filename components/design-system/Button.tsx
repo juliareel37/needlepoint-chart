@@ -9,9 +9,11 @@ import { assetPath } from "@/lib/assetPath";
 export type ButtonVariant =
   | "primary"
   | "secondary"
+  | "secondary2"
   | "destructive"
   | "ghost"
-  | "ghostV2";
+  | "ghostV2"
+  | "toolbarX";
 type ButtonSize = "sm" | "md" | "lg";
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {

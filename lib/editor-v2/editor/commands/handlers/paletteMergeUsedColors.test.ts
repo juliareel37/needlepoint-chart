@@ -103,6 +103,8 @@ function createMergeTestState(): EditorStoreState {
       activeTool: {
         tool: "paint",
         brushSize: 1,
+        paintBrushSize: 1,
+        eraseBrushSize: 1,
         colorId: "dmc:310",
       },
       eyedropperReturnTool: null,
@@ -154,6 +156,9 @@ function createMergeTestState(): EditorStoreState {
         draftFontStyle: "normal",
         draftFontWeight: 400,
         previewPosition: null,
+        placement: null,
+      },
+      iconInteraction: {
         placement: null,
       },
       inFlightCommand: null,

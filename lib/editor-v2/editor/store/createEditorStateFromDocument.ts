@@ -27,6 +27,9 @@ export function createEditorStateFromDocument(
     trace: document.trace
       ? {
           ...document.trace,
+          previewUrl: document.trace.previewUrl,
+          thumbnailUrl: document.trace.thumbnailUrl ?? document.trace.previewUrl,
+          originalUrl: document.trace.originalUrl ?? document.trace.previewUrl,
           fileName: document.trace.fileName ?? null,
           byteSize: document.trace.byteSize ?? null,
           mimeType: document.trace.mimeType ?? null,

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { upload } from "@vercel/blob/client";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
@@ -10,8 +11,8 @@ import {
   Field,
   Modal,
   Notification,
+  SegmentedControl,
   Slider,
-  Toggle,
 } from "@/components/design-system";
 import type {
   EditorStore,
@@ -47,7 +48,7 @@ export function TraceControls({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const traceUploadSequenceRef = useRef(0);
   const positioningPreviewRef = useRef<{
-    assetUrl: string;
+    previewUrl: string;
     blendMode: TraceBlendMode;
     opacity: number;
     visible: boolean;
@@ -91,14 +92,17 @@ export function TraceControls({
         }),
       );
       setTraceUploadStatus("idle");
-    } catch {
+    } catch (error) {
       if (sequence !== traceUploadSequenceRef.current) {
         return;
       }
 
       setTraceUploadStatus("error");
       setTraceUploadErrorMessage(
-        "Try signing in again or choose a smaller PNG, JPG, WEBP, or GIF.",
+        getErrorMessage(
+          error,
+          "Try signing in again or choose a smaller PNG, JPG, WEBP, or GIF.",
+        ),
       );
     }
   };
@@ -139,9 +143,9 @@ export function TraceControls({
     }
 
     if (positioningEnabled) {
-      if (positioningPreviewRef.current?.assetUrl !== trace.assetUrl) {
+      if (positioningPreviewRef.current?.previewUrl !== trace.previewUrl) {
         positioningPreviewRef.current = {
-          assetUrl: trace.assetUrl,
+          previewUrl: trace.previewUrl,
           blendMode: trace.blendMode,
           opacity: trace.opacity,
           visible: trace.visible,
@@ -187,7 +191,7 @@ export function TraceControls({
 
     const previewSnapshot = positioningPreviewRef.current;
 
-    if (!previewSnapshot || previewSnapshot.assetUrl !== trace.assetUrl) {
+    if (!previewSnapshot || previewSnapshot.previewUrl !== trace.previewUrl) {
       positioningPreviewRef.current = null;
       return;
     }
@@ -325,10 +329,26 @@ export function TraceControls({
               <span className={styles.traceAttachmentThumbFrame}>
                 {traceUploadStatus === "uploading" ? (
                   <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                ) : positioningEnabled ? (
+                  <span
+                    aria-hidden="true"
+                    className={styles.traceAttachmentThumbOverlay}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "var(--surface-subtle, rgba(148, 163, 184, 0.14))",
+                      opacity: 1,
+                    }}
+                  >
+                    <ButtonIcon icon="/icons/lucide/image.svg" />
+                  </span>
                 ) : (
                   <>
                     <img
-                      src={trace.assetUrl}
+                      src={trace.thumbnailUrl}
                       alt={traceFileName ? `Trace image ${traceFileName}` : "Trace image"}
                       className={styles.traceAttachmentThumb}
                     />
@@ -375,7 +395,7 @@ export function TraceControls({
             </button>
             <Button
               type="button"
-              variant="ghost"
+              variant="ghostV2"
               className={styles.traceAttachmentRemoveButton}
               aria-label="Remove trace image"
               title="Remove image"
@@ -458,19 +478,32 @@ export function TraceControls({
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection title="Visibility">
-            <Toggle
-              aria-label="Show image"
-              checked={trace.visible}
-              label="Show image"
-              onChange={(next) =>
-                dispatch(
-                  createUpdateTraceCommand(
-                    { visible: next },
-                    { history: { mode: "skip" } },
-                  ),
-                )
-              }
-            />
+            <Field>
+              <div className={styles.traceInlineFieldRow}>
+                <span
+                  className={styles.traceInlineFieldLabel}
+                  style={typographyStyles.p2}
+                >
+                  Image
+                </span>
+                <SegmentedControl
+                  ariaLabel="Image visibility"
+                  value={trace.visible ? "show" : "hide"}
+                  onChange={(next) =>
+                    dispatch(
+                      createUpdateTraceCommand(
+                        { visible: next === "show" },
+                        { history: { mode: "skip" } },
+                      ),
+                    )
+                  }
+                  options={[
+                    { label: "Show", value: "show" },
+                    { label: "Hide", value: "hide" },
+                  ]}
+                />
+              </div>
+            </Field>
 
             <div
               className={styles.traceOpacityControls}
@@ -484,45 +517,25 @@ export function TraceControls({
                   >
                     Blending
                   </span>
-                  <div
-                    className={styles.traceSegmentedControl}
-                    role="radiogroup"
-                    aria-label="Opacity blending mode"
-                    aria-disabled={!trace.visible}
-                  >
-                    <BlendModeButton
-                      active={trace.blendMode === "crossfade"}
-                      disabled={!trace.visible}
-                      label="Crossfade"
-                      mode="crossfade"
-                      onSelect={(mode) =>
-                        dispatch(
-                          createUpdateTraceCommand(
-                            {
-                              blendMode: mode,
-                            },
-                            { history: { mode: "skip" } },
-                          ),
-                        )
-                      }
-                    />
-                    <BlendModeButton
-                      active={(trace.blendMode ?? "image") === "image"}
-                      disabled={!trace.visible}
-                      label="Image only"
-                      mode="image"
-                      onSelect={(mode) =>
-                        dispatch(
-                          createUpdateTraceCommand(
-                            {
-                              blendMode: mode,
-                            },
-                            { history: { mode: "skip" } },
-                          ),
-                        )
-                      }
-                    />
-                  </div>
+                  <SegmentedControl
+                    ariaLabel="Opacity blending mode"
+                    disabled={!trace.visible}
+                    value={trace.blendMode ?? "image"}
+                    onChange={(mode) =>
+                      dispatch(
+                        createUpdateTraceCommand(
+                          {
+                            blendMode: mode,
+                          },
+                          { history: { mode: "skip" } },
+                        ),
+                      )
+                    }
+                    options={[
+                      { label: "Crossfade", value: "crossfade" },
+                      { label: "Image only", value: "image" },
+                    ]}
+                  />
                 </div>
               </Field>
 
@@ -589,61 +602,119 @@ export function TraceControls({
 }
 
 async function uploadTraceFile(file: File): Promise<{
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string;
   byteSize: number;
-  mimeType: string;
+  mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
 }> {
-  const { upload } = await import("@vercel/blob/client");
-  const [uploaded, dimensions] = await Promise.all([
-    upload(
-      `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}-${file.name}`,
-      file,
-      {
-        access: "public",
-        handleUploadUrl: "/api/upload-trace",
-      },
-    ),
-    getImageDimensions(file),
-  ]);
+  const pathname = createTraceUploadPath(file);
+  const uploadedOriginal = await upload(pathname, file, {
+    access: "public",
+    contentType: file.type || undefined,
+    handleUploadUrl: "/api/upload-trace",
+  });
+
+  const response = await fetch("/api/upload-trace/complete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type || null,
+      originalPathname: uploadedOriginal.pathname,
+      originalUrl: uploadedOriginal.url,
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text().catch(() => "");
+    const detail = getUploadErrorDetail(responseBody);
+    throw new Error(
+      detail
+        ? `Trace upload failed (${response.status}): ${detail}`
+        : `Trace upload failed with status ${response.status}`,
+    );
+  }
+
+  const uploaded = (await response.json()) as {
+    previewUrl: string;
+    thumbnailUrl: string;
+    originalUrl: string;
+    fileName: string;
+    byteSize: number;
+    mimeType: string | null;
+    imageWidth: number | null;
+    imageHeight: number | null;
+  };
 
   return {
-    assetUrl: uploaded.url,
-    fileName: file.name,
-    byteSize: file.size,
-    mimeType: file.type,
-    imageWidth: dimensions?.width ?? null,
-    imageHeight: dimensions?.height ?? null,
+    previewUrl: uploaded.previewUrl,
+    thumbnailUrl: uploaded.thumbnailUrl,
+    originalUrl: uploaded.originalUrl,
+    fileName: uploaded.fileName,
+    byteSize: uploaded.byteSize,
+    mimeType: uploaded.mimeType,
+    imageWidth: uploaded.imageWidth,
+    imageHeight: uploaded.imageHeight,
   };
 }
 
-async function getImageDimensions(
-  file: File,
-): Promise<{ width: number; height: number } | null> {
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await loadImage(objectUrl);
-    return {
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-    };
-  } catch {
-    return null;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
+function createTraceUploadPath(file: File): string {
+  const extension = getUploadFileExtension(file.name, file.type);
+  const uploadId = `editor-v2-trace-${Date.now()}-${crypto.randomUUID()}`;
+  return `${uploadId}/original.${extension}`;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Failed to load image"));
-    image.src = src;
-  });
+function getUploadFileExtension(fileName: string, mimeType: string): string {
+  const sanitized = fileName.trim().toLowerCase();
+  const lastDotIndex = sanitized.lastIndexOf(".");
+
+  if (lastDotIndex > 0 && lastDotIndex < sanitized.length - 1) {
+    return sanitized.slice(lastDotIndex + 1).replace(/[^a-z0-9]/g, "") || "bin";
+  }
+
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+
+  return "bin";
+}
+
+function getUploadErrorDetail(responseBody: string): string | null {
+  const trimmed = responseBody.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { error?: unknown; message?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error.trim();
+    }
+
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message.trim();
+    }
+  } catch {
+    // Ignore JSON parse failures and fall back to plain text below.
+  }
+
+  return trimmed;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function getTraceDisplayName(trace: TraceDocument): string {
@@ -651,7 +722,7 @@ function getTraceDisplayName(trace: TraceDocument): string {
     return trace.fileName;
   }
 
-  const assetUrl = trace.assetUrl;
+  const assetUrl = trace.originalUrl;
   const fallbackName = "Trace image";
 
   try {
@@ -692,43 +763,6 @@ function splitFileNameForDisplay(fileName: string): {
     baseName: trimmedFileName.slice(0, lastDotIndex),
     extension: trimmedFileName.slice(lastDotIndex),
   };
-}
-
-function BlendModeButton({
-  active,
-  disabled = false,
-  label,
-  mode,
-  onSelect,
-}: {
-  active: boolean;
-  disabled?: boolean;
-  label: string;
-  mode: TraceBlendMode;
-  onSelect: (mode: TraceBlendMode) => void;
-}) {
-  const isInertActive = active && !disabled;
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="md"
-      className={styles.traceSegmentedItem}
-      style={{ padding: "4px 8px" }}
-      disabled={disabled}
-      active={active}
-      inertWhenActive={isInertActive}
-      aria-pressed={active}
-      onClick={() => {
-        if (!disabled && !isInertActive) {
-          onSelect(mode);
-        }
-      }}
-    >
-      {label}
-    </Button>
-  );
 }
 
 function TraceSection({

@@ -220,18 +220,20 @@
   --neutral-100: #fafaf9;
   --neutral-200: #f2f2f2;
   --neutral-300: #e6e6e6;
-  --neutral-600: #747474;
-  --neutral-700: #585858;
-  --neutral-800: #3a3a3a;
+  --neutral-600: #616161;
+  --neutral-700: #484848;
+  --neutral-800: #2b2b2b;
   --neutral-900: #1c1c1c;
 
   --brand-50: #fcf7ff;
   --brand-100: #f9eefd;
-  --brand-200: #e9c4f5;
+  --brand-200: #f1dffb;
   --brand-300: #d08de3;
-  --brand-400: #b36dc8;
-  --brand-500: #954cad;
-  --brand-600: #4c205d;
+  --brand-400: #c57bda;
+  --brand-500: #ae60c3;
+  --brand-600: #850d9d;
+  --brand-700: #471d56;
+
   
   --status-success-soft: #e5f6ea;
   --status-success-base: #4ea56b;
@@ -254,7 +256,7 @@
   --font-primary: ui-sans-serif, system-ui, sans-serif;
   --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-800);
+  --text-secondary: var(--neutral-700);
 
   --control-secondary-bg: #f1f3f6;
   --canvas-surround-bg: #e2e2e2;
@@ -265,16 +267,19 @@
   --brand-lightest: var(--brand-50);
 
   --surface-app: var(--neutral-0);
-  --surface-card: var(--neutral-0);
-  --surface-card-alt: var(--neutral-100);
-  --surface-sidebar: var(--neutral-0);
-  --surface-header: var(--neutral-0);
+  --surface-primary: var(--neutral-0);
+  --surface-card: var(--neutral-100);
 
   --canvas-stage-bg: var(--neutral-100);
   --canvas-bg: var(--neutral-0);
 
-  --toolbar-bg: var(--neutral-0);
   --toolbar-border: var(--neutral-300);
+  --swatch-border: rgba(15, 23, 42, 0.12);
+  --swatch-border-strong: rgba(15, 23, 42, 0.28);
+  --swatch-border-inset: rgba(0, 0, 0, 0.14);
+  --swatch-ring-inner: rgba(255, 255, 255, 0.72);
+  --swatch-ring-outer: rgba(15, 23, 42, 0.14);
+  --swatch-detail-inset: rgba(255, 255, 255, 0.18);
 
   --ui-border-subtle: var(--neutral-200);
   --ui-border-reg: var(--neutral-300);
@@ -282,35 +287,32 @@
 
   /* Buttons */
   --button-primary-text: var(--neutral-0);
-  --button-primary-default: var(--brand-300);
-  --button-primary-hover: var(--brand-400);
+  --button-primary-default: var(--brand-400);
+  --button-primary-hover: var(--brand-500);
   --button-primary-active: var(--brand-500);
 
   --button-secondary-default: var(--neutral-200);
   --button-secondary-hover: var(--neutral-300);
-  --button-secondary-active: var(--brand-500);
-  --button-secondary-active-text: var(--neutral-0);
+  --button-secondary-active: var(--brand-200);
+
+  /* --button-secondary-active-text: var(--neutral); */
+
+  --button-secondary2-default: var(--neutral-0);
+  --button-secondary2-hover: var(--brand-50);
+  --button-secondary2-active: var(--brand-100);
+  --button-secondary2-active-text: var(--brand-600);
 
   --button-ghost-default: transparent;
-  --button-ghost-hover: var(--neutral-100);
-  --button-ghost-active: var(--neutral-200);
+  --button-ghost-hover: var(--neutral-0);
+  --button-ghost-active: var(--neutral-0);
 
   --button-ghost2-default: transparent;
   --button-ghost2-hover: var(--neutral-200);
+  /* --button-ghost2-hover: var(--brand-100); */
   --button-ghost2-active: var(--brand-100);
-  --button-ghost2-active-text: var(--brand-500);
+  --button-ghost2-active-text: var(--brand-600);
 
-  --toolbar-button-default: transparent;
-  --toolbar-button-hover: var(--neutral-200);
-  --toolbar-button-active: var(--brand-100);
-  --toolbar-button-active-text: var(--brand-500);
-
-  /* incorrectly assigned (legacy) */
-
-  /* --ui-hover-soft: var(--neutral-200); */
-  --ui-hover-soft: orange;
-  
-  --button-secondary-bg: var(--control-secondary-bg);
+  /* 
 
   /* UI components */
   --icon-on-bg-filter: invert(0);
@@ -325,7 +327,21 @@
   --slider-thumb-border: var(--brand-300);
 
   --menu-item-hover-bg: var(--brand-100);
+  
   --zoom-menu-bg: var(--surface-card);
+
+  --toolbar-button-hover-bg: var(--brand-100);
+  --toolbar-button-active-bg: var(--brand-400);
+  --toolbar-button-active-text: var(--neutral-0);
+  
+  --sidebar-button-hover-bg: var(--brand-100);
+  --sidebar-button-active-bg: var(--brand-100);
+  --sidebar-button-active-text: var(--brand-600);
+
+  --sidebar-segmented-control-bg: var(--surface-primary);
+
+
+    /* incorrectly assigned (legacy) */
 
 }
 
@@ -335,19 +351,30 @@
 
 :root[data-theme="dark"] {
   --neutral-0: #fffffff2;
-  --brand-700: #572669;
+  --brand-600: #523b5c;
+
+  /* --neutral-600: #616161;
+  --neutral-700: #484848; */
+  --neutral-600: #4d4d4d;
+  --neutral-700: #404040;
+
+  --neutral-800: #2b2b2b;
+  --neutral-900: #1c1c1c;
 
   --surface-app: var(--neutral-900);
+  --surface-primary: var(--neutral-800);
   --surface-card: var(--neutral-900);
-  --surface-card-alt: var(--neutral-800);
-  --surface-sidebar: var(--neutral-800);
-  --surface-header: var(--neutral-800);
 
-  --toolbar-bg: var(--neutral-800);
   --toolbar-border: var(--neutral-700);
+  --swatch-border: rgba(255, 255, 255, 0.28);
+  --swatch-border-strong: rgba(255, 255, 255, 0.48);
+  --swatch-border-inset: rgba(255, 255, 255, 0.24);
+  --swatch-ring-inner: rgba(28, 28, 28, 0.82);
+  --swatch-ring-outer: rgba(255, 255, 255, 0.22);
+  --swatch-detail-inset: rgba(255, 255, 255, 0.22);
 
   --canvas-stage-bg: var(--neutral-900);
-  --canvas-bg: var(--neutral-800);
+  --canvas-bg: var(--surface-primary);
 
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
@@ -357,33 +384,48 @@
   --ui-border-strong: var(--neutral-600);
 
   /* Buttons */
-  --button-primary-text: var(--neutral-0);
-  --button-primary-default: var(--brand-400);
-  --button-primary-hover: var(--brand-300);
-  --button-primary-active: var(--brand-500);
+
+  /* --button-secondary-default: var(--neutral-700);
+  --button-secondary-hover: var(--neutral-600);
+  --button-secondary-active: var(--brand-500);
+  --button-secondary-active-text: var(--neutral-0); */
+
+  --button-primary-default: var(--brand-500);
+  --button-primary-hover: var(--brand-400);
+  --button-primary-active: var(--brand-400);
 
   --button-secondary-default: var(--neutral-700);
   --button-secondary-hover: var(--neutral-600);
-  --button-secondary-active: var(--brand-500);
+  --button-secondary-active: var(--brand-600);
   --button-secondary-active-text: var(--neutral-0);
 
-  --button-ghost-default: transparent;
-  --button-ghost-hover: var(--neutral-700);
+  --button-secondary2-default: var(--neutral-700);
+  --button-secondary2-hover: var(--neutral-600);
+  --button-secondary2-active: var(--brand-600);
+  --button-secondary2-active-text: var(--brand-100);
+
+  --button-ghost-hover: var(--neutral-800);
   --button-ghost-active: var(--neutral-700);
 
-  --button-ghost2-default: transparent;
   --button-ghost2-hover: var(--neutral-700);
-  --button-ghost2-active: var(--brand-600);
-  --button-ghost2-active-text: var(--brand-100);
+  --button-ghost2-active: var(--brand-400);
+  --button-ghost2-active-text: var(--brand-200);
 
-  --toolbar-button-default: transparent;
-  --toolbar-button-hover: var(--neutral-700);
-  --toolbar-button-active: var(--brand-500);
-  --toolbar-button-active-text: var(--brand-100);
-
-  --menu-item-hover-bg: var(--brand-700);
+  --menu-item-hover-bg: var(--brand-600);
 
   --zoom-menu-bg: var(--neutral-800);
+  
+  --toolbar-button-hover-bg: var(--neutral-600);
+  --toolbar-button-active-bg: var(--brand-500);
+  --toolbar-button-active-text: var(--neutral-0);
+  
+  --sidebar-button-hover-bg: var(--neutral-700);
+  --sidebar-button-active-bg: var(--brand-600);
+  --sidebar-button-active-text: var(--neutral-0);
+
+
+  /* --status-warning-soft: #564110; */
+
 
   /* --neutral-0: #ffffff;
   --neutral-100: #fafaf9;
@@ -439,7 +481,7 @@
   --neutral-100: var(--neutral-100);
   --surface-elevated: var(--neutral-100);
   --canvas-surround-bg: #181818;
-  --surface-sidebar: var(--neutral-700);
+  --surface-primary: var(--neutral-700);
   --canvas-toolbar-bg: #252b34;
   --icon-on-bg-filter: invert(1);
   --icon-on-fg-filter: invert(0);
@@ -483,18 +525,6 @@ button {
   font-weight: 600;
   transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
 }
-.canvas-toolbar .toolbar-button.toolbar-toggle:hover:not(:disabled) {
-  filter: none !important;
-}
-.image-controls-lock:hover:not(:disabled) {
-  background: transparent !important;
-  border-color: transparent !important;
-  filter: none;
-}
-.image-controls-lock:hover:not(:disabled) span:first-child {
-  background: var(--toggle-track-on) !important;
-  border-color: var(--ui-border-strong) !important;
-}
 button:disabled {
   cursor: default;
 }
@@ -507,7 +537,7 @@ button:disabled {
   z-index: 2;
 }
 .pattern-sidebar {
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
   border-radius: 0;
   padding: 0;
   box-sizing: border-box;
@@ -518,7 +548,7 @@ button:disabled {
   will-change: width;
 }
 .pattern-sidebar-inner {
-  background: var(--surface-sidebar);
+  background: var(--surface-primary);
 }
 :root,
 :root * {
@@ -574,18 +604,10 @@ button:disabled {
   transition: opacity 140ms ease;
   z-index: 10;
 }
-.canvas-toolbar button[data-tooltip]:hover::after,
 .canvas-toolbar button[data-tooltip]:focus-visible::after,
-.zoom-row button[data-tooltip]:hover::after,
 .zoom-row button[data-tooltip]:focus-visible::after {
   opacity: 1;
   visibility: visible;
-}
-.canvas-toolbar button:hover:not(:disabled):not([data-active="true"]),
-.used-colors-toolbar button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--brand-200);
-  border-color: var(--brand-200);
-  filter: none;
 }
 .canvas-toolbar button[data-active="true"],
 .used-colors-toolbar button[data-active="true"] {
@@ -593,10 +615,6 @@ button:disabled {
   border-color: var(--brand-500);
   color: var(--brand-500);
   filter: none;
-}
-.canvas-toolbar button[data-active="true"]:hover:not(:disabled),
-.used-colors-toolbar button[data-active="true"]:hover:not(:disabled) {
-  background: var(--brand-200);
 }
 .canvas-toolbar button:focus-visible,
 .used-colors-toolbar button:focus-visible {
@@ -607,7 +625,6 @@ button:disabled {
   background: transparent;
   border-color: transparent;
 }
-.canvas-toolbar .toolbar-button:hover:not(:disabled),
 .canvas-toolbar .toolbar-button[data-active="true"] {
   background: transparent !important;
   border-color: transparent !important;
@@ -616,11 +633,6 @@ button:disabled {
 .used-colors-toolbar .toolbar-button {
   background: transparent;
   border-color: transparent;
-}
-.used-colors-toolbar .toolbar-button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--ui-hover-soft) !important;
-  border-color: transparent !important;
-  color: var(--text-primary);
 }
 .used-colors-toolbar .toolbar-button[data-active="true"] {
   background: var(--brand-200) !important;
@@ -651,24 +663,11 @@ button:disabled {
   border-radius: 5px;
   background: transparent !important;
 }
-.canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-toggle-icon,
 .canvas-toolbar .toolbar-button.toolbar-toggle[data-active="true"] .toolbar-toggle-icon {
   background: transparent !important;
 }
 .canvas-toolbar .toolbar-button.toolbar-toggle {
   align-self: center;
-}
-.canvas-toolbar[data-collapsed="true"]:hover {
-  --canvas-toolbar-bg: #eef2f5;
-}
-.canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
-  --canvas-toolbar-bg: rgba(255, 255, 255, 0.92);
-}
-:root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"]:hover {
-  --canvas-toolbar-bg: rgba(45, 53, 64, 0.94);
-}
-:root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
-  --canvas-toolbar-bg: rgba(58, 68, 82, 0.94);
 }
 .canvas-toolbar .canvas-toolbar-scroll {
   display: flex;
@@ -676,23 +675,11 @@ button:disabled {
   flex-wrap: wrap;
   align-items: flex-start;
 }
-.canvas-toolbar .toolbar-button.toolbar-toggle:hover,
-.canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-icon {
-  background: transparent !important;
-  border-color: transparent !important;
-  filter: none !important;
-}
 .canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--brand-200);
 }
 .used-colors-toolbar .toolbar-button .toolbar-icon {
   background: transparent;
-}
-.used-colors-filter-button:hover:not(:disabled) {
-  background: var(--ui-hover-soft);
-  border-color: var(--ui-border-reg);
-  color: var(--text-primary);
-  box-shadow: 0 1px 4px var(--ui-border-subtle);
 }
 .used-colors-filter-button[data-active="true"] {
   background: var(--surface-card);
@@ -708,15 +695,7 @@ button:disabled {
 .menu-tab-button {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
-.menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--ui-hover-soft);
-  box-shadow: 0 1px 3px var(--ui-border-subtle);
-}
 .menu-tab-button[data-active="true"] {
-  background: var(--surface-card);
-  box-shadow: 0 2px 6px var(--ui-border-subtle);
-}
-.menu-tab-button[data-active="true"]:hover:not(:disabled) {
   background: var(--surface-card);
   box-shadow: 0 2px 6px var(--ui-border-subtle);
 }
@@ -752,24 +731,10 @@ button:disabled {
   background: transparent !important;
   border-color: transparent !important;
 }
-.used-colors-toolbar .menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
-  background: var(--ui-hover-soft) !important;
-  border-color: transparent !important;
-  box-shadow: 0 1px 3px var(--ui-border-subtle) !important;
-}
 .used-colors-toolbar .menu-tab-button[data-active="true"] {
   background: var(--surface-card) !important;
   border-color: transparent !important;
   box-shadow: 0 2px 6px var(--ui-border-subtle) !important;
-}
-.used-colors-toolbar .menu-tab-button[data-active="true"]:hover:not(:disabled) {
-  background: var(--surface-card) !important;
-  border-color: transparent !important;
-  box-shadow: 0 2px 6px var(--ui-border-subtle) !important;
-}
-.autosave-ellipsis:hover {
-  background: var(--ui-hover-soft) !important;
-  border-color: var(--ui-border-strong) !important;
 }
 .loading-spinner {
   width: 22px;
@@ -790,7 +755,6 @@ button:disabled {
 .menu-item {
   background: transparent;
 }
-.menu-item:hover,
 .menu-item:focus-visible {
   background: var(--brand-200) !important;
 }
@@ -798,10 +762,26 @@ button:disabled {
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
 }
+
+#app-header-file-left:empty,
+#app-header-file-right:empty,
+#app-header-actions:empty,
+#app-header-autosave:empty,
+#app-header-history:empty,
+#app-header-history-right:empty,
+#app-header-overflow-right:empty,
+#app-top-banner:empty {
+  display: none;
+}
+
+.app-top-banner-slot {
+  position: relative;
+  z-index: 210;
+}
+
 .gridline-menu-trigger {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
-.gridline-menu-trigger:hover,
 .gridline-menu-trigger:focus-visible {
   background: var(--ui-hover-soft) !important;
 }
@@ -812,7 +792,6 @@ button:disabled {
 .zoom-action-button {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
-.zoom-action-button:hover:not(:disabled),
 .zoom-action-button:focus-visible {
   background: var(--brand-200) !important;
   box-shadow: 0 1px 3px var(--ui-border-subtle);
@@ -821,6 +800,128 @@ button:disabled {
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .canvas-toolbar .toolbar-button.toolbar-toggle:hover:not(:disabled) {
+    filter: none !important;
+  }
+
+  .image-controls-lock:hover:not(:disabled) {
+    background: transparent !important;
+    border-color: transparent !important;
+    filter: none;
+  }
+
+  .image-controls-lock:hover:not(:disabled) span:first-child {
+    background: var(--toggle-track-on) !important;
+    border-color: var(--ui-border-strong) !important;
+  }
+
+  .canvas-toolbar button[data-tooltip]:hover::after,
+  .zoom-row button[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .canvas-toolbar button:hover:not(:disabled):not([data-active="true"]),
+  .used-colors-toolbar button:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--brand-200);
+    border-color: var(--brand-200);
+    filter: none;
+  }
+
+  .canvas-toolbar button[data-active="true"]:hover:not(:disabled),
+  .used-colors-toolbar button[data-active="true"]:hover:not(:disabled) {
+    background: var(--brand-200);
+  }
+
+  .canvas-toolbar .toolbar-button:hover:not(:disabled) {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--text-primary);
+  }
+
+  .used-colors-toolbar .toolbar-button:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--ui-hover-soft) !important;
+    border-color: transparent !important;
+    color: var(--text-primary);
+  }
+
+  .canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-toggle-icon {
+    background: transparent !important;
+  }
+
+  .canvas-toolbar[data-collapsed="true"]:hover {
+    --canvas-toolbar-bg: #eef2f5;
+  }
+
+  .canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
+    --canvas-toolbar-bg: rgba(255, 255, 255, 0.92);
+  }
+
+  :root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"]:hover {
+    --canvas-toolbar-bg: rgba(45, 53, 64, 0.94);
+  }
+
+  :root[data-theme="dark"] .canvas-toolbar[data-collapsed="true"] .toolbar-button.toolbar-toggle:hover {
+    --canvas-toolbar-bg: rgba(58, 68, 82, 0.94);
+  }
+
+  .canvas-toolbar .toolbar-button.toolbar-toggle:hover,
+  .canvas-toolbar .toolbar-button.toolbar-toggle:hover .toolbar-icon {
+    background: transparent !important;
+    border-color: transparent !important;
+    filter: none !important;
+  }
+
+  .used-colors-filter-button:hover:not(:disabled) {
+    background: var(--ui-hover-soft);
+    border-color: var(--ui-border-reg);
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px var(--ui-border-subtle);
+  }
+
+  .menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--ui-hover-soft);
+    box-shadow: 0 1px 3px var(--ui-border-subtle);
+  }
+
+  .menu-tab-button[data-active="true"]:hover:not(:disabled) {
+    background: var(--surface-card);
+    box-shadow: 0 2px 6px var(--ui-border-subtle);
+  }
+
+  .used-colors-toolbar .menu-tab-button:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--ui-hover-soft) !important;
+    border-color: transparent !important;
+    box-shadow: 0 1px 3px var(--ui-border-subtle) !important;
+  }
+
+  .used-colors-toolbar .menu-tab-button[data-active="true"]:hover:not(:disabled) {
+    background: var(--surface-card) !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 6px var(--ui-border-subtle) !important;
+  }
+
+  .autosave-ellipsis:hover {
+    background: var(--ui-hover-soft) !important;
+    border-color: var(--ui-border-strong) !important;
+  }
+
+  .menu-item:hover {
+    background: var(--brand-200) !important;
+  }
+
+  .gridline-menu-trigger:hover {
+    background: var(--ui-hover-soft) !important;
+  }
+
+  .zoom-action-button:hover:not(:disabled) {
+    background: var(--brand-200) !important;
+    box-shadow: 0 1px 3px var(--ui-border-subtle);
+  }
+}
+
 .zoom-toolbar-divider {
   width: 1px;
   align-self: stretch;
@@ -939,7 +1040,7 @@ input[type="number"] {
     z-index: 2;
   }
   .app-shell-header-right {
-    gap: 16px !important;
+    gap: 8px !important;
     z-index: 3;
     min-width: 0;
   }
@@ -949,6 +1050,9 @@ input[type="number"] {
   .app-header-auth {
     display: flex !important;
     flex: 0 0 auto;
+  }
+  #app-shell-root[data-mobile-header-overflow-auth="true"] .app-header-sign-in-button {
+    display: none !important;
   }
   .app-header-title-slot {
     position: static !important;
@@ -1296,9 +1400,6 @@ input[type="number"] {
     }
   }
 }
-.canvas-toolbar:not([data-trace-adjust="true"]) .toolbar-button:hover .toolbar-icon {
-  background: var(--ui-hover-soft) !important;
-}
 .trace-image-row-action-button {
   background: rgba(15, 23, 42, 0.07) !important;
   border-color: transparent !important;
@@ -1313,38 +1414,57 @@ input[type="number"] {
   height: 16px;
   flex-shrink: 0;
 }
-.trace-image-row-action-button:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.12) !important;
-}
 .trace-image-row-action-button[data-active="true"] {
   background: var(--brand-200) !important;
-}
-.used-colors-toolbar .toolbar-button:hover .toolbar-icon {
-  background: transparent !important;
 }
 .custom-palette-swatch .custom-palette-swatch-remove {
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
-.custom-palette-swatch:hover .custom-palette-swatch-remove,
 .custom-palette-swatch:focus-within .custom-palette-swatch-remove {
   opacity: 1;
   pointer-events: auto;
 }
-.canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]),
-.canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon,
-.canvas-toolbar[data-trace-adjust="true"] .toolbar-button:hover .toolbar-icon {
-  background: transparent !important;
-  border-color: transparent !important;
-  filter: none !important;
-}
-.canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon,
-.canvas-toolbar .toolbar-button[data-active="true"]:hover .toolbar-icon {
+.canvas-toolbar .toolbar-button[data-active="true"] .toolbar-icon {
   background: var(--brand-200) !important;
 }
-.canvas-toolbar .toolbar-button[data-color-swatch="true"]:hover .toolbar-icon,
-.canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"] .toolbar-icon,
-.canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"]:hover .toolbar-icon {
+.canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"] .toolbar-icon {
   background: transparent !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .canvas-toolbar:not([data-trace-adjust="true"]) .toolbar-button:hover .toolbar-icon {
+    background: var(--ui-hover-soft) !important;
+  }
+
+  .trace-image-row-action-button:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.12) !important;
+  }
+
+  .used-colors-toolbar .toolbar-button:hover .toolbar-icon {
+    background: transparent !important;
+  }
+
+  .custom-palette-swatch:hover .custom-palette-swatch-remove {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]),
+  .canvas-toolbar[data-trace-adjust="true"] button:hover:not(:disabled):not([data-active="true"]) .toolbar-icon,
+  .canvas-toolbar[data-trace-adjust="true"] .toolbar-button:hover .toolbar-icon {
+    background: transparent !important;
+    border-color: transparent !important;
+    filter: none !important;
+  }
+
+  .canvas-toolbar .toolbar-button[data-active="true"]:hover .toolbar-icon {
+    background: var(--brand-200) !important;
+  }
+
+  .canvas-toolbar .toolbar-button[data-color-swatch="true"]:hover .toolbar-icon,
+  .canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"]:hover .toolbar-icon {
+    background: transparent !important;
+  }
 }

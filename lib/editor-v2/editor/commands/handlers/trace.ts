@@ -25,7 +25,9 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
   },
   handle(state, command) {
     const nextTrace: TraceDocument = {
-      assetUrl: command.payload.assetUrl,
+      previewUrl: command.payload.previewUrl,
+      thumbnailUrl: command.payload.thumbnailUrl,
+      originalUrl: command.payload.originalUrl,
       fileName: command.payload.fileName,
       byteSize: command.payload.byteSize,
       mimeType: command.payload.mimeType,

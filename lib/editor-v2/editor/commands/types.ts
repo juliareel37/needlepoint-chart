@@ -2,6 +2,7 @@ import type {
   ActiveTool,
   EditorSidebarSection,
   GridPoint,
+  IconPlacementSession,
   MirrorDirection,
   PanelUiState,
   SelectionState,
@@ -36,6 +37,7 @@ export type EditorCommandKind =
   | "selection.commit"
   | "selection.clear"
   | "selection.setShape"
+  | "mirror.beginFromSelection"
   | "mirror.start"
   | "mirror.update"
   | "mirror.commit"
@@ -47,6 +49,10 @@ export type EditorCommandKind =
   | "text.updatePlacement"
   | "text.previewPlacement"
   | "text.cancelPlacement"
+  | "icon.beginPlacement"
+  | "icon.updatePlacement"
+  | "icon.previewPlacement"
+  | "icon.cancelPlacement"
   | "trace.attach"
   | "trace.remove"
   | "trace.update"
@@ -145,6 +151,11 @@ export type SetSelectionShapeCommand = BaseEditorCommand<
   { shape: SelectionState["shape"] }
 >;
 
+export type BeginMirrorFromSelectionCommand = BaseEditorCommand<
+  "mirror.beginFromSelection",
+  object
+>;
+
 export type StartMirrorCommand = BaseEditorCommand<
   "mirror.start",
   { point: GridPoint }
@@ -212,11 +223,86 @@ export type UpdateTextPlacementCommand = BaseEditorCommand<
     fontStyle?: "normal" | "italic";
     fontWeight?: number;
     underline?: boolean;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
   }
 >;
 
 export type CancelTextPlacementCommand = BaseEditorCommand<
   "text.cancelPlacement",
+  object
+>;
+
+export type BeginIconPlacementCommand = BaseEditorCommand<
+  "icon.beginPlacement",
+  Pick<
+    IconPlacementSession,
+    | "iconId"
+    | "name"
+    | "src"
+    | "intrinsicWidth"
+    | "intrinsicHeight"
+    | "colorSlots"
+    | "primitiveKind"
+    | "lockAspectRatio"
+    | "primitiveStrokeReferenceSize"
+    | "supportsStrokeWidth"
+    | "strokeWidthScale"
+    | "primitivePatternScale"
+    | "primitiveSpacingScale"
+    | "selectedColorSlotId"
+  > & {
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
+    scaleX?: number;
+    scaleY?: number;
+  }
+>;
+
+export type PreviewIconPlacementCommand = BaseEditorCommand<
+  "icon.previewPlacement",
+  {
+    offsetX: number;
+    offsetY: number;
+    scale?: number;
+    scaleX?: number;
+    scaleY?: number;
+  }
+>;
+
+export type UpdateIconPlacementCommand = BaseEditorCommand<
+  "icon.updatePlacement",
+  Partial<
+    Pick<
+      IconPlacementSession,
+      | "iconId"
+      | "name"
+      | "src"
+      | "intrinsicWidth"
+      | "intrinsicHeight"
+      | "colorSlots"
+      | "primitiveKind"
+      | "lockAspectRatio"
+      | "primitiveStrokeReferenceSize"
+      | "supportsStrokeWidth"
+      | "strokeWidthScale"
+      | "primitivePatternScale"
+      | "primitiveSpacingScale"
+      | "selectedColorSlotId"
+      | "offsetX"
+      | "offsetY"
+      | "scaleX"
+      | "scaleY"
+    >
+  > & {
+    scale?: number;
+  }
+>;
+
+export type CancelIconPlacementCommand = BaseEditorCommand<
+  "icon.cancelPlacement",
   object
 >;
 
@@ -243,7 +329,9 @@ export type CommitTraceRepositionCommand = BaseEditorCommand<
 export type AttachTraceCommand = BaseEditorCommand<
   "trace.attach",
   {
-    assetUrl: string;
+    previewUrl: string;
+    thumbnailUrl: string;
+    originalUrl: string;
     fileName: string | null;
     byteSize: number | null;
     mimeType: string | null;
@@ -329,6 +417,7 @@ export type EditorCommand =
   | CommitSelectionCommand
   | ClearSelectionCommand
   | SetSelectionShapeCommand
+  | BeginMirrorFromSelectionCommand
   | StartMirrorCommand
   | UpdateMirrorCommand
   | CommitMirrorCommand
@@ -340,6 +429,10 @@ export type EditorCommand =
   | UpdateTextPlacementCommand
   | PreviewTextPlacementCommand
   | CancelTextPlacementCommand
+  | BeginIconPlacementCommand
+  | UpdateIconPlacementCommand
+  | PreviewIconPlacementCommand
+  | CancelIconPlacementCommand
   | BeginTraceRepositionCommand
   | PreviewTraceRepositionCommand
   | CancelTraceRepositionCommand

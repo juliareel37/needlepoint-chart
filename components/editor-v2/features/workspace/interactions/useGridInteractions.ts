@@ -10,7 +10,14 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { findClosestPaletteColorId } from "@/lib/editor-v2/editor/color-utils";
 import { getCell } from "@/lib/editor-v2/editor/selectors/document/getCell";
-import { createSetToolCommand, createSetToolWithColorCommand } from "../workspaceCommands";
+import { getSelectionBounds } from "@/lib/editor-v2/editor/selectors/session/getSelectionBounds";
+import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
+import {
+  createEraseCellsCommand,
+  createPaintCellsCommand,
+  createSetToolCommand,
+  createSetToolWithColorCommand,
+} from "../workspaceCommands";
 import { sampleTraceRgbAtWorldPoint } from "../trace/traceSampler";
 import { useClearSelectionOnEscape } from "./useClearSelectionOnEscape";
 import { useMirrorDrag } from "./useMirrorDrag";
@@ -28,6 +35,7 @@ interface UseGridInteractionsOptions {
   ) => SelectionPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
   metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
+  paintDisabled?: boolean;
   state: EditorStoreState;
   trace: TraceDocument | null;
 }
@@ -40,6 +48,7 @@ export function useGridInteractions({
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
   metrics,
+  paintDisabled = false,
   state,
   trace,
 }: UseGridInteractionsOptions) {
@@ -48,6 +57,7 @@ export function useGridInteractions({
     activeTool,
     brushSize,
     dispatch,
+    disabled: paintDisabled,
   });
   const selectionDrag = useSelectionDrag({
     activeTool,
@@ -72,6 +82,7 @@ export function useGridInteractions({
   });
 
   return {
+    cancelPaintStroke: paintStroke.cancelStroke,
     handlePointerDown,
     handlePointerEnter,
   };
@@ -82,7 +93,12 @@ export function useGridInteractions({
       return;
     }
 
-    if (paintStroke.handlePointerDown(point)) {
+    if (activeTool === "fill") {
+      handleFillPointerDown(point);
+      return;
+    }
+
+    if (!paintDisabled && paintStroke.handlePointerDown(point)) {
       return;
     }
 
@@ -94,10 +110,22 @@ export function useGridInteractions({
   }
 
   function handlePointerEnter(point: GridPoint): void {
+    if (paintDisabled) {
+      return;
+    }
+
     paintStroke.handlePointerEnter(point);
   }
 
   function handleEyedropperPointerDown(point: GridPoint): void {
+    const hasCommittedSelection = Boolean(
+      getSelectionBounds(state) && !state.session.selection.preview,
+    );
+
+    if (hasCommittedSelection && !isCellInSelection(state, point)) {
+      return;
+    }
+
     const returnTool = state.session.eyedropperReturnTool ?? "pan";
     // const returnTool = "draw";
 
@@ -126,4 +154,117 @@ export function useGridInteractions({
     // Miss: do not change active color, but always return to the previous tool.
     dispatch(createSetToolCommand(returnTool));
   }
+
+  function handleFillPointerDown(point: GridPoint): void {
+    if (paintDisabled || !activeColorId) {
+      return;
+    }
+
+    const selectionCells = getSelectedRegionCells(state, point);
+
+    if (selectionCells.length > 0) {
+      dispatch(createPaintCellsCommand(activeColorId, selectionCells));
+      dispatch(createSetToolCommand("lasso"));
+      return;
+    }
+
+    if (getCell(state, point.x, point.y)) {
+      return;
+    }
+
+    const fillCells = getFillRegion(state, point);
+
+    if (fillCells.length > 0) {
+      dispatch(createPaintCellsCommand(activeColorId, fillCells));
+    }
+  }
+}
+
+function getSelectedRegionCells(
+  state: EditorStoreState,
+  start: GridPoint,
+): GridPoint[] {
+  const selectionBounds = getSelectionBounds(state);
+
+  if (!selectionBounds || state.session.selection.preview) {
+    return [];
+  }
+
+  if (!isCellInSelection(state, start)) {
+    return [];
+  }
+
+  const cells: GridPoint[] = [];
+
+  for (let y = selectionBounds.y; y < selectionBounds.y + selectionBounds.height; y += 1) {
+    for (let x = selectionBounds.x; x < selectionBounds.x + selectionBounds.width; x += 1) {
+      const cell = { x, y };
+
+      if (isCellInSelection(state, cell)) {
+        cells.push(cell);
+      }
+    }
+  }
+
+  return cells;
+}
+
+function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
+  const { width, height } = state.document.grid;
+  const hasCommittedSelection = Boolean(
+    getSelectionBounds(state) && !state.session.selection.preview,
+  );
+
+  if (start.x < 0 || start.y < 0 || start.x >= width || start.y >= height) {
+    return [];
+  }
+
+  if (hasCommittedSelection && !isCellInSelection(state, start)) {
+    return [];
+  }
+
+  if (getCell(state, start.x, start.y)) {
+    return [];
+  }
+
+  const region: GridPoint[] = [];
+  const visited = new Set<string>();
+  const queue: GridPoint[] = [start];
+
+  while (queue.length > 0) {
+    const point = queue.shift();
+
+    if (!point) {
+      continue;
+    }
+
+    const key = `${point.x}:${point.y}`;
+    if (visited.has(key)) {
+      continue;
+    }
+    visited.add(key);
+
+    if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) {
+      continue;
+    }
+
+    if (hasCommittedSelection && !isCellInSelection(state, point)) {
+      continue;
+    }
+
+    if (getCell(state, point.x, point.y)) {
+      continue;
+    }
+
+    region.push(point);
+
+    queue.push(
+      { x: point.x - 1, y: point.y },
+      { x: point.x + 1, y: point.y },
+      { x: point.x, y: point.y - 1 },
+      { x: point.x, y: point.y + 1 },
+    );
+  }
+
+  return region;
 }

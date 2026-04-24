@@ -234,6 +234,15 @@ export function createSetSelectionShapeCommand(
   );
 }
 
+export function createBeginMirrorFromSelectionCommand(): EditorCommand {
+  return createCommand(
+    "mirror.beginFromSelection",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createStartMirrorSelectionCommand(point: GridPoint): EditorCommand {
   return createCommand(
     "mirror.start",
@@ -267,6 +276,17 @@ export function createApplyMirrorCommand(direction: "left" | "right" | "top" | "
     { direction },
     "canvas",
     { mode: "skip" },
+  );
+}
+
+export function createApplyMirrorFromSelectionCommand(
+  direction: "left" | "right" | "top" | "bottom",
+): EditorCommand {
+  return createCommand(
+    "mirror.apply",
+    { direction },
+    "canvas",
+    { mode: "push", label: "Mirror" },
   );
 }
 
@@ -341,6 +361,9 @@ export function createUpdateTextPlacementCommand(payload: {
   fontStyle?: "normal" | "italic";
   fontWeight?: number;
   underline?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
 }): EditorCommand {
   return createCommand(
     "text.updatePlacement",
@@ -353,6 +376,88 @@ export function createUpdateTextPlacementCommand(payload: {
 export function createCancelTextPlacementCommand(): EditorCommand {
   return createCommand(
     "text.cancelPlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createBeginIconPlacementCommand(payload: {
+  iconId: string;
+  name: string;
+  src: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  colorSlots: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
+  primitiveKind: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  lockAspectRatio: boolean;
+  primitiveStrokeReferenceSize: number | null;
+  supportsStrokeWidth: boolean;
+  strokeWidthScale: number;
+  primitivePatternScale: number;
+  primitiveSpacingScale: number;
+  selectedColorSlotId: string | null;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.beginPlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createPreviewIconPlacementCommand(payload: {
+  offsetX: number;
+  offsetY: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.previewPlacement",
+    payload,
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createUpdateIconPlacementCommand(payload: {
+  iconId?: string;
+  name?: string;
+  src?: string;
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
+  colorSlots?: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
+  primitiveKind?: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  lockAspectRatio?: boolean;
+  primitiveStrokeReferenceSize?: number | null;
+  supportsStrokeWidth?: boolean;
+  strokeWidthScale?: number;
+  primitivePatternScale?: number;
+  primitiveSpacingScale?: number;
+  selectedColorSlotId?: string | null;
+  offsetX?: number;
+  offsetY?: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
+}): EditorCommand {
+  return createCommand(
+    "icon.updatePlacement",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelIconPlacementCommand(): EditorCommand {
+  return createCommand(
+    "icon.cancelPlacement",
     {},
     "toolbar",
     { mode: "skip" },
@@ -402,7 +507,9 @@ export function createPreviewTraceRepositionCommand(payload: {
 }
 
 export function createAttachTraceCommand(payload: {
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;

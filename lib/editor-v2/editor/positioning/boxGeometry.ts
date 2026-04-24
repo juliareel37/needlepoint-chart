@@ -33,6 +33,13 @@ export interface PositioningDragState {
   transactionKey: string;
 }
 
+export interface PositioningPinchState {
+  anchorX: number;
+  anchorY: number;
+  startDistance: number;
+  startTransform: PositioningTransform;
+}
+
 export const POSITIONING_HANDLES: Array<{
   id: PositioningHandleId;
   kind: "corner" | "edge";
@@ -146,6 +153,28 @@ export function getTransformFromDrag(
   return {
     offsetX: nextBounds.left - baseRect.left,
     offsetY: nextBounds.top - baseRect.top,
+    scale: nextScale,
+  };
+}
+
+export function getTransformFromPinch(
+  pinchState: PositioningPinchState,
+  nextCenter: WorldPoint,
+  nextDistance: number,
+  baseRect: PositioningRect,
+): PositioningTransform {
+  const distanceRatio = nextDistance / Math.max(pinchState.startDistance, 0.0001);
+  const nextScale = clampPositioningScale(
+    pinchState.startTransform.scale * distanceRatio,
+  );
+  const nextWidth = baseRect.width * nextScale;
+  const nextHeight = baseRect.height * nextScale;
+  const nextLeft = nextCenter.x - pinchState.anchorX * nextWidth;
+  const nextTop = nextCenter.y - pinchState.anchorY * nextHeight;
+
+  return {
+    offsetX: nextLeft - baseRect.left,
+    offsetY: nextTop - baseRect.top,
     scale: nextScale,
   };
 }

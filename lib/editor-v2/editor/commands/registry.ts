@@ -5,6 +5,7 @@ import { gridPaintCommandHandler } from "./handlers/gridPaint";
 import { applyProjectServerStateCommandHandler } from "./handlers/applyProjectServerState";
 import {
   applyMirrorCommandHandler,
+  beginMirrorFromSelectionCommandHandler,
   cancelMirrorCommandHandler,
   commitMirrorCommandHandler,
   doneMirrorCommandHandler,
@@ -43,6 +44,12 @@ import {
   updateTraceCommandHandler,
 } from "./handlers/trace";
 import {
+  beginIconPlacementCommandHandler,
+  cancelIconPlacementCommandHandler,
+  previewIconPlacementCommandHandler,
+  updateIconPlacementCommandHandler,
+} from "./handlers/iconPlacement";
+import {
   beginTextPlacementCommandHandler,
   cancelTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,
@@ -64,6 +71,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   commitSelectionCommandHandler,
   clearSelectionCommandHandler,
   setSelectionShapeCommandHandler,
+  beginMirrorFromSelectionCommandHandler,
   startMirrorCommandHandler,
   updateMirrorCommandHandler,
   commitMirrorCommandHandler,
@@ -74,6 +82,10 @@ export const commandHandlers: EditorCommandHandler[] = [
   paletteSwapColorCommandHandler,
   paletteDeleteUsedColorsCommandHandler,
   paletteMergeUsedColorsCommandHandler,
+  beginIconPlacementCommandHandler,
+  updateIconPlacementCommandHandler,
+  previewIconPlacementCommandHandler,
+  cancelIconPlacementCommandHandler,
   beginTextPlacementCommandHandler,
   updateTextPlacementCommandHandler,
   previewTextPlacementCommandHandler,

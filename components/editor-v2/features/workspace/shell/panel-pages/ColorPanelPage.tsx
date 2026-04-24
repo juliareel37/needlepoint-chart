@@ -1,13 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import {
-  ButtonIcon,
-} from "@/components/design-system";
-import type {
-  EditorStore,
-  PaletteColor,
-} from "@/lib/editor-v2/editor/store";
+import { ButtonIcon } from "@/components/design-system";
+import { ColorLibrary } from "@/components/editor-v2/features/colors";
+import type { EditorStore, PaletteColor } from "@/lib/editor-v2/editor/store";
 import {
   createSetActiveColorCommand,
   createDeleteUsedColorsCommand,
@@ -15,18 +12,25 @@ import {
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
 import { UsedColorsSummary } from "../UsedColorsSummary";
-import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import styles from "../EditorV2Shell.module.css";
 
 export type ColorPanelView = "overview" | "design-colors";
+
+const SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES = 14;
+const BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES = 16;
 
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedColorId: string | null;
+  isBottomPanelLayout: boolean;
   onViewChange: (view: ColorPanelView) => void;
+  onHighlightColorChange: (colorId: string | null) => void;
   palette: PaletteColor[];
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
   usedColors: Array<{ colorId: string; count: number }>;
   view: ColorPanelView;
 }
@@ -36,73 +40,189 @@ export function ColorPanelPage({
   activeColorId,
   colorsById,
   dispatch,
+  highlightedColorId,
+  isBottomPanelLayout,
   onViewChange,
+  onHighlightColorChange,
   palette,
+  showSymbols,
+  symbolAssignments,
   usedColors,
   view,
 }: ColorPanelPageProps) {
+  const pageRef = useRef<HTMLElement | null>(null);
+  const colorPreviewMaxSwatches = isBottomPanelLayout
+    ? BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES
+    : SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES;
+
+  useEffect(() => {
+    if (view !== "design-colors") {
+      return;
+    }
+
+    const node = pageRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      let current: HTMLElement | null = node;
+
+      while (current) {
+        if (current.scrollHeight > current.clientHeight) {
+          const overflowY = window.getComputedStyle(current).overflowY;
+          if (overflowY === "auto" || overflowY === "scroll") {
+            current.scrollTop = 0;
+          }
+        }
+
+        current = current.parentElement;
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [view]);
+
+  const hiddenBadgeSpan = 3;
+  const visiblePreviewCount =
+    usedColors.length > colorPreviewMaxSwatches
+      ? Math.max(colorPreviewMaxSwatches - hiddenBadgeSpan, 0)
+      : usedColors.length;
+  const previewItems = usedColors.slice(0, visiblePreviewCount);
+  const hiddenCount = Math.max(usedColors.length - visiblePreviewCount, 0);
+  const showMoreButton = hiddenCount > 0;
+  const openDesignColorsView = () => onViewChange("design-colors");
+
   return (
-    <section className={styles.sidebarSection}>
-      <div className={styles.sidebarPageBody}>
+    <section ref={pageRef} className={styles.sidebarSection}>
+      <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
-            <div className={styles.sidebarSubsection}>
-              <div className={styles.metaRow} style={typographyStyles.p2}>
-                <span>Active:</span>
+              <div
+                className={[styles.metaRow, styles.activeColorRow].join(" ")}
+                style={typographyStyles.p2}
+              >
+                <span
+                  aria-hidden="true"
+                  className={[styles.swatch, styles.activeColorSwatch].join(" ")}
+                  style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
+                />
                 <strong className={styles.activeColorValue}>
                   {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
                 </strong>
               </div>
-              <div style={{"border": "solid 1px var(--ui-border-subtle)",
-                "borderRadius": "16px"}}>
-              <ColorLibrary
-                activeColorId={activeColorId}
-                colors={palette}
-                onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
-              />
+
+
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+
+            <div
+              className={[styles.sidebarSubsection, styles.sidebarColorPreviewSection].join(" ")}
+              role="button"
+              tabIndex={0}
+              aria-label="View all design colors"
+              onClick={openDesignColorsView}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                  return;
+                }
+
+                event.preventDefault();
+                openDesignColorsView();
+              }}
+            >
+              <div className={styles.sidebarSubsectionHeaderRow}>
+                <div className={styles.sidebarSubsectionHeader}>
+                  <div className={styles.sidebarColorPreviewTitleRow}>
+                    <h3 style={typographyStyles.h5}>Design colors</h3>
+                    {usedColors.length > 0 ? (
+                      <span
+                        className={styles.sidebarColorPreviewCountBadge}
+                        style={typographyStyles.p2}
+                      >
+                        {usedColors.length}
+                      </span>
+                    ) : null}
+                  </div>
+                  {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                    Review, replace, merge, or delete the colors used in this design.
+                  </p> */}
+                </div>
+                <span className={styles.sidebarHeaderAction} aria-hidden="true">
+                  <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                </span>
               </div>
 
-            </div>
+              {usedColors.length > 0 ? (
+                <div className={styles.sidebarColorPreviewButton}>
+                  <span className={styles.sidebarColorPreviewGrid}>
+                  {previewItems.map((entry) => {
+                    const color = colorsById[entry.colorId];
 
-            <div className={styles.sidebarSubsection}>
-              <button
-                type="button"
-                className={styles.sidebarDetailCard}
-                onClick={() => onViewChange("design-colors")}
-              >
-                <span className={styles.sidebarDetailCardBody}>
-                  <span className={styles.sidebarDetailCardTitle} style={typographyStyles.h5}>
-                    Design Colors
-                  </span>
-                  <span className={styles.sidebarDetailCardHint} style={typographyStyles.p2}>
-                    {usedColors.length === 0
-                      ? "Review, replace, merge, or delete the colors used in this design."
-                      : `${usedColors.length} colors used in this design.`}
-                  </span>
-                  {usedColors.length > 0 ? (
-                    <span className={styles.sidebarDetailSwatchGrid} aria-hidden="true">
-                      {usedColors.map((entry) => (
-                        <span
-                          key={entry.colorId}
-                          className={styles.sidebarDetailSwatch}
-                          style={{
-                            backgroundColor: colorsById[entry.colorId]?.hex ?? "#ffffff",
-                          }}
-                        />
-                      ))}
+                    return (
+                      <span
+                        key={entry.colorId}
+                        className={styles.sidebarColorPreviewSwatch}
+                        aria-label={color ? `${color.name} (${color.code})` : "Design color"}
+                        title={color ? `${color.name} (${color.code})` : "Design color"}
+                        role="img"
+                        style={{ backgroundColor: color?.hex ?? "#ffffff" }}
+                      />
+                    );
+                  })}
+                  {showMoreButton ? (
+                    <span
+                      className={styles.sidebarColorPreviewMoreBadge}
+                      style={{ gridColumn: `span ${hiddenBadgeSpan}` }}
+                    >
+                      + {hiddenCount} more
                     </span>
                   ) : null}
-                </span>
-                <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-              </button>
+                  </span>
+                </div>
+              ) : null}
             </div>
+
+          <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+
+            <div className={styles.sidebarSubsection}>
+              
+              <h3 style={typographyStyles.h5}>All colors</h3>
+
+              <div className={styles.sidebarColorLibraryCard}>
+                <ColorLibrary
+                  activeColorId={activeColorId}
+                  className={styles.sidebarColorLibrary}
+                  colors={palette}
+                  featuredColorIds={usedColors.map((entry) => entry.colorId)}
+                  onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  showAllSectionHeader={false}
+                  showFeaturedSection={false}
+                  showFeaturedSymbols={showSymbols}
+                  symbolAssignments={symbolAssignments}
+                />
+              </div>
+            </div>
+
           </>
         ) : (
           <div className={styles.sidebarSubsection}>
             <UsedColorsSummary
+              activeColorId={activeColorId}
               usedColors={usedColors}
               colorsById={colorsById}
+              highlightedColorId={highlightedColorId}
               palette={palette}
+              onActiveColorChange={(colorId) =>
+                dispatch(createSetActiveColorCommand(colorId))
+              }
+              onHighlightColorChange={onHighlightColorChange}
+              showSymbols={showSymbols}
+              symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }

@@ -1,7 +1,7 @@
 "use client";
 
 import { SignInButton } from "@clerk/nextjs";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   ButtonIcon,
@@ -25,6 +25,7 @@ interface DocumentPanelPageProps {
   onStartOver: () => void;
   saveButtonState: SaveButtonState;
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
@@ -39,6 +40,7 @@ export function DocumentPanelPage({
   onStartOver,
   saveButtonState,
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
@@ -152,22 +154,28 @@ export function DocumentPanelPage({
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Saved designs</h3>
           </div>
+        
           {hasSavedDesignAccess ? (
             <>
+            <div className={styles.loadDesignButtonRow}>
+
               <SavedDesignSingleSelect
                 savedDocuments={savedDocuments}
+                savedDocumentsLoading={savedDocumentsLoading}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
               />
               <Button
                 type="button"
                 variant="primary"
-                disabled={!selectedStorageId}
+                disabled={savedDocumentsLoading || !selectedStorageId}
                 onClick={onLoadSelected}
                 className={styles.loadButton}
               >
                 Load
               </Button>
+                          </div>
+
             </>
           ) : (
             <>
@@ -181,6 +189,7 @@ export function DocumentPanelPage({
               </SignInButton>
             </>
           )}
+
         </div>
       </div>
     </section>
@@ -217,25 +226,63 @@ function SaveButtonLabel({
 
 function SavedDesignSingleSelect({
   savedDocuments,
+  savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
 }: {
   savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }) {
+  const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+    const updatePlacement = () => {
+      setUseTopDropdownPlacement(mediaQuery.matches);
+    };
+
+    updatePlacement();
+    mediaQuery.addEventListener("change", updatePlacement);
+
+    return () => mediaQuery.removeEventListener("change", updatePlacement);
+  }, []);
+
   return (
-    <SingleSelectDropdown
-      ariaLabel="Saved designs"
-      emptyLabel="No saved designs"
-      getItemLabel={formatSavedDesignLabel}
-      getItemValue={(record) => record.storageId}
-      items={savedDocuments}
-      label="Choose a design"
-      onValueChange={setSelectedStorageId}
-      placeholder="Load saved design"
-      value={selectedStorageId}
-    />
+    <>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
+        Choose a design
+      </p>
+      <SingleSelectDropdown
+        ariaLabel="Saved designs"
+        emptyLabel={
+          savedDocumentsLoading ? (
+            <span className={styles.loadingDropdownState}>
+              <span className={styles.saveButtonSpinner} aria-hidden="true" />
+              Loading saved designs...
+            </span>
+          ) : "No saved designs"
+        }
+        getItemLabel={formatSavedDesignLabel}
+        getItemValue={(record) => record.storageId}
+        items={savedDocuments}
+        menuMaxHeight={240}
+        menuMatchTriggerWidth
+        menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
+        menuPortalToViewport={useTopDropdownPlacement}
+        minWidth={0}
+        onValueChange={setSelectedStorageId}
+        placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
+        wrapperStyle={{ width: "50vw" }}
+        value={selectedStorageId}
+      />
+          </div>
+    </>
+
   );
 }
 

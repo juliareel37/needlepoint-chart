@@ -37,13 +37,13 @@ export function useSelectionDrag({
       return;
     }
 
-    function handleWindowMouseUp(event: MouseEvent) {
+    function handleWindowPointerUp(event: PointerEvent) {
       const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
       );
       const point =
-        rawPoint && selectionShape === "rect"
+        rawPoint && (selectionShape === "rect" || selectionShape === "circle")
           ? {
               x: Math.floor(rawPoint.x),
               y: Math.floor(rawPoint.y),
@@ -54,13 +54,13 @@ export function useSelectionDrag({
       setIsLassoing(false);
     }
 
-    function handleWindowMouseMove(event: MouseEvent) {
+    function handleWindowPointerMove(event: PointerEvent) {
       const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
       );
       const point =
-        rawPoint && selectionShape === "rect"
+        rawPoint && (selectionShape === "rect" || selectionShape === "circle")
           ? {
               x: Math.floor(rawPoint.x),
               y: Math.floor(rawPoint.y),
@@ -85,11 +85,13 @@ export function useSelectionDrag({
       dispatch(createSelectionUpdateCommand(point));
     }
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
     return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
   }, [dispatch, getClampedSelectionPointFromClient, isLassoing, selectionShape]);
 
@@ -109,7 +111,7 @@ export function useSelectionDrag({
     }
 
     const normalizedPoint =
-      selectionShape === "rect"
+      selectionShape === "rect" || selectionShape === "circle"
         ? {
             x: Math.floor(point.x),
             y: Math.floor(point.y),

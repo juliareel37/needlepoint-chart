@@ -60,6 +60,72 @@ describe("mirror session flow", () => {
     expect(store.getState().session.mirrorInteraction.session).toBeNull();
     expect(store.getState().session.activeTool.tool).toBe("pan");
   });
+
+  it("begins a mirror session from a committed rectangular selection", () => {
+    const initial = createMirrorTestState();
+    initial.session.activeTool.tool = "lasso";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 0, y: 0, width: 2, height: 1 },
+      lassoPoints: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch(createCommand("mirror.beginFromSelection", {}, 1));
+
+    expect(store.getState().session.mirrorInteraction.session).toEqual({
+      sourceRect: { x: 0, y: 0, width: 2, height: 1 },
+      dragAnchor: null,
+      appliedDirection: null,
+      forwardPatches: [],
+      inversePatches: [],
+    });
+  });
+
+  it("records mirror-from-selection as an undoable action immediately", () => {
+    const initial = createMirrorTestState();
+    initial.session.activeTool.tool = "lasso";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 0, y: 0, width: 2, height: 1 },
+      lassoPoints: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch(createCommand("mirror.beginFromSelection", {}, 1));
+    store.dispatch(
+      createCommand("mirror.apply", { direction: "right" }, 2, {
+        mode: "push",
+        label: "Mirror",
+      }),
+    );
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc:310",
+      "dmc:321",
+      "dmc:321",
+      "dmc:310",
+    ]);
+    expect(store.getState().session.history.past).toHaveLength(1);
+    expect(store.getState().session.mirrorInteraction.session).toBeNull();
+
+    store.dispatch(createCommand("history.undo", {}, 3));
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc:310",
+      "dmc:321",
+      null,
+      null,
+    ]);
+  });
 });
 
 function createMirrorTestState() {

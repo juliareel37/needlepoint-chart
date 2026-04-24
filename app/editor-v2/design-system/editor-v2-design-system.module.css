@@ -43,11 +43,6 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 
-.tempLink:hover {
-  background: var(--neutral-100);
-  color: var(--text-primary);
-}
-
 .themeToggleWrap {
   display: inline-flex;
   align-items: center;
@@ -70,6 +65,13 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tempLink:hover {
+    background: var(--neutral-100);
+    color: var(--text-primary);
+  }
 }
 
 .paletteGrid,
@@ -383,7 +385,7 @@
   padding: 20px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 20px;
-  background: var(--surface-card);
+  background: var(--surface-primary);
   box-shadow: var(--ui-shadow-sm);
 }
 

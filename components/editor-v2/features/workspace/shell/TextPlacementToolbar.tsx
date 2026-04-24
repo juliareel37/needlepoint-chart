@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
-  Button,
   SingleSelectDropdown,
   Toolbar,
   ToolbarAnchor,
@@ -32,21 +31,30 @@ import {
   createSetActiveColorCommand,
   createUpdateTextPlacementCommand,
 } from "../workspaceCommands";
+import {
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
 function TextToolbarPortalPopover({
+  align = "start",
   anchorRef,
   children,
   onRequestClose,
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
+  align?: "start" | "center";
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onRequestClose?: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number | "auto";
+    right: number | "auto";
+    transform: string;
+  } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -67,22 +75,33 @@ function TextToolbarPortalPopover({
       }
 
       const rect = anchor.getBoundingClientRect();
+      const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
+      const horizontalPosition = getToolbarPopoverHorizontalPosition({
+        align,
+        anchorRect: rect,
+        popoverWidth,
+      });
       setPosition({
         top: rect.bottom + 8,
-        left: rect.left - 12,
+        left: horizontalPosition.left,
+        right: horizontalPosition.right,
+        transform: horizontalPosition.transform,
       });
     }
 
     updatePosition();
 
+    const frame = window.requestAnimationFrame(updatePosition);
+
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchorRef, mounted]);
+  }, [align, anchorRef, mounted]);
 
   useEffect(() => {
     if (!mounted || !onRequestClose) {
@@ -120,8 +139,10 @@ function TextToolbarPortalPopover({
         position: "fixed",
         top: position.top,
         left: position.left,
+        right: position.right,
         zIndex: 40,
-        transform: "none",
+        transform: position.transform,
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
       }}
     >
       {children}
@@ -134,18 +155,24 @@ interface TextPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
   dispatch: EditorStore["dispatch"];
+  featuredColorIds: string[];
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: TextPlacementSession;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
 }
 
 export function TextPlacementToolbar({
   activeColorHex,
   activeColorId,
   dispatch,
+  featuredColorIds,
   gridMetrics,
   palette,
   placement,
+  showSymbols,
+  symbolAssignments,
 }: TextPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -198,144 +225,150 @@ export function TextPlacementToolbar({
   }
 
   return (
-    <Toolbar className={styles.floatingToolbar}>
-      <ToolbarGroup>
-        <ToolbarAnchor ref={colorAnchorRef}>
+    <div className={styles.selectionToolbarCluster}>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
-            swatch
-            active={colorLibraryOpen}
-            aria-pressed={colorLibraryOpen}
-            aria-label="Open color library"
-            title="Open color library"
-            className={styles.libraryPopoverSwatchTrigger}
-            onClick={() => setColorLibraryOpen((current) => !current)}
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            onClick={() => dispatch(createCancelTextPlacementCommand())}
           >
-            <ToolbarSwatch
-              color={activeColorHex ?? "var(--neutral-400)"}
-              className={styles.libraryPopoverSwatch}
-            />
+            <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
+        </Toolbar>
+      </div>
 
-          {colorLibraryOpen ? (
-            <TextToolbarPortalPopover
-              anchorRef={colorAnchorRef}
-              onRequestClose={() => setColorLibraryOpen(false)}
-              role="dialog"
-              aria-label="Color library"
-              className={styles.colorLibraryPopover}
-              style={{ whiteSpace: "normal" }}
-            >
-              <ColorLibrary
-                activeColorId={activeColorId}
-                className={styles.toolbarColorLibrary}
-                colors={palette}
-                onColorSelect={(colorId) => {
-                  dispatch(createSetActiveColorCommand(colorId));
-                  setColorLibraryOpen(false);
+      <div className={styles.selectionToolbarMainViewport}>
+        <Toolbar className={styles.floatingToolbar}>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={colorAnchorRef}>
+              <ToolbarButton
+                type="button"
+                swatch
+                active={colorLibraryOpen}
+                aria-pressed={colorLibraryOpen}
+                aria-label="Open color library"
+                title="Open color library"
+                className={styles.libraryPopoverSwatchTrigger}
+                onClick={() => setColorLibraryOpen((current) => !current)}
+              >
+                <ToolbarSwatch
+                  color={activeColorHex ?? "var(--neutral-400)"}
+                  className={styles.libraryPopoverSwatch}
+                />
+              </ToolbarButton>
+
+              {colorLibraryOpen ? (
+                <TextToolbarPortalPopover
+                  align="center"
+                  anchorRef={colorAnchorRef}
+                  onRequestClose={() => setColorLibraryOpen(false)}
+                  role="dialog"
+                  aria-label="Color library"
+                  className={styles.colorLibraryPopover}
+                  style={{ whiteSpace: "normal" }}
+                >
+                  <ColorLibrary
+                    activeColorId={activeColorId}
+                    className={styles.toolbarColorLibrary}
+                    colors={palette}
+                    featuredColorIds={featuredColorIds}
+                    showFeaturedSymbols={showSymbols}
+                    symbolAssignments={symbolAssignments}
+                    onColorSelect={(colorId) => {
+                      dispatch(createSetActiveColorCommand(colorId));
+                      setColorLibraryOpen(false);
+                    }}
+                  />
+                </TextToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarMeta>
+              <SingleSelectDropdown
+                ariaLabel="Text font"
+                items={TEXT_FONT_OPTIONS}
+                value={placement.fontFamily}
+                placeholder="Font"
+                triggerLabel={
+                  <span style={{ fontFamily: placement.fontFamily, fontWeight: 400 }}>
+                    {placement.fontFamily}
+                  </span>
+                }
+              triggerVariant="ghost"
+              menuPlacement="bottom-start"
+              menuPortalToViewport
+              menuStyle={{ zIndex: 240 }}
+              minWidth="auto"
+              menuWidth={180}
+                getItemValue={(item) => item.value}
+                getItemLabel={(item) => (
+                  <span style={{ fontFamily: item.value }}>{item.label}</span>
+                )}
+                onValueChange={(value) => {
+                  updatePlacementStyle({ fontFamily: value });
                 }}
+                wrapperStyle={{ width: "fit-content", maxWidth: 180 }}
+                triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 700 }}
               />
-            </TextToolbarPortalPopover>
-          ) : null}
-        </ToolbarAnchor>
-      </ToolbarGroup>
+            </ToolbarMeta>
 
-      <ToolbarDivider />
+            <ToolbarButton
+              type="button"
+              active={bold}
+              aria-pressed={bold}
+              aria-label="Bold"
+              title="Bold"
+              onClick={() => updatePlacementStyle({ bold: !bold })}
+            >
+              <ToolbarIcon icon="/icons/lucide/bold.svg" />
+            </ToolbarButton>
 
-      <ToolbarGroup>
-        <ToolbarMeta>
-          <SingleSelectDropdown
-            ariaLabel="Text font"
-            items={TEXT_FONT_OPTIONS}
-            value={placement.fontFamily}
-            placeholder="Font"
-            triggerLabel={
-              <span style={{ fontFamily: placement.fontFamily, fontWeight: 400 }}>
-                {placement.fontFamily}
-              </span>
-            }
-            triggerVariant="ghost"
-            menuPlacement="bottom-start"
-            minWidth="auto"
-            menuWidth={180}
-            getItemValue={(item) => item.value}
-            getItemLabel={(item) => (
-              <span style={{ fontFamily: item.value }}>{item.label}</span>
-            )}
-            onValueChange={(value) => {
-              updatePlacementStyle({ fontFamily: value });
-            }}
-            wrapperStyle={{ width: "fit-content", maxWidth: 180 }}
-            triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 700 }}
-          />
-        </ToolbarMeta>
+            <ToolbarButton
+              type="button"
+              active={italic}
+              aria-pressed={italic}
+              aria-label="Italic"
+              title="Italic"
+              onClick={() => updatePlacementStyle({ italic: !italic })}
+            >
+              <ToolbarIcon icon="/icons/lucide/italic.svg" />
+            </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={bold}
-          aria-pressed={bold}
-          aria-label="Bold"
-          title="Bold"
-          onClick={() => updatePlacementStyle({ bold: !bold })}
-        >
-          <ToolbarIcon icon="/icons/lucide/bold.svg" />
-        </ToolbarButton>
+            <ToolbarButton
+              type="button"
+              active={underline}
+              aria-pressed={underline}
+              aria-label="Underline"
+              title="Underline"
+              onClick={() => updatePlacementStyle({ underline: !underline })}
+            >
+              <ToolbarIcon icon="/icons/lucide/underline.svg" />
+            </ToolbarButton>
+          </ToolbarGroup>
+        </Toolbar>
+      </div>
 
-        <ToolbarButton
-          type="button"
-          active={italic}
-          aria-pressed={italic}
-          aria-label="Italic"
-          title="Italic"
-          onClick={() => updatePlacementStyle({ italic: !italic })}
-        >
-          <ToolbarIcon icon="/icons/lucide/italic.svg" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
-          active={underline}
-          aria-pressed={underline}
-          aria-label="Underline"
-          title="Underline"
-          onClick={() => updatePlacementStyle({ underline: !underline })}
-        >
-          <ToolbarIcon icon="/icons/lucide/underline.svg" />
-        </ToolbarButton>
-      </ToolbarGroup>
-
-      <ToolbarDivider />
-
-      <ToolbarGroup actions style={{ marginLeft: 6, gap: 8 }}>
-        {/* <ToolbarButton
-          type="button"
-          onClick={() => dispatch(createCancelTextPlacementCommand())}
-        >
-          <ToolbarLabel>Cancel</ToolbarLabel>
-        </ToolbarButton> */}
-        <Button 
-          type="button" 
-          variant="secondary" 
-          onClick={() => dispatch(createCancelTextPlacementCommand())}
-        >
-          Cancel
-        </Button>
-        {/* <Button
-          type="button"
-          primary
-          disabled={!canConvert}
-          onClick={handleConvert}
-        >
-          <ToolbarLabel>Convert</ToolbarLabel>
-        </Button> */}
-
-        <Button 
-          type="button" 
-          variant="primary" 
-          onClick={handleConvert}>
-        Convert
-      </Button>
-      </ToolbarGroup>
-    </Toolbar>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+          <ToolbarButton
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            disabled={!canConvert}
+            onClick={handleConvert}
+          >
+            <ToolbarIcon icon="/icons/lucide/check.svg" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
+    </div>
   );
 }

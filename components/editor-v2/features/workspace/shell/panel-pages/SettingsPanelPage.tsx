@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
   ButtonIcon,
+  SegmentedControl,
 } from "@/components/design-system";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import type {
@@ -200,32 +201,12 @@ function SegmentedChoiceSetting<T extends string>({
       <span className={styles.settingsControlLabel} style={typographyStyles.p2}>
         {label}
       </span>
-      <div
-        className={styles.sidebarSegmentedControl}
-        role="radiogroup"
-        aria-label={ariaLabel}
-      >
-        {options.map((option) => {
-          const active = option.value === value;
-
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={styles.sidebarSegmentedItem}
-              data-active={active ? "true" : "false"}
-              aria-pressed={active}
-              onClick={() => {
-                if (!active) {
-                  onChange(option.value);
-                }
-              }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedControl
+        ariaLabel={ariaLabel}
+        options={options}
+        value={value}
+        onChange={onChange}
+      />
     </div>
   );
 }

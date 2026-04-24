@@ -1,9 +1,9 @@
 "use client";
 
 export interface LoadedTraceAsset {
-  assetUrl: string;
+  previewUrl: string;
   height: number;
-  image: HTMLImageElement | null;
+  image: CanvasImageSource | null;
   ready: boolean;
   width: number;
 }

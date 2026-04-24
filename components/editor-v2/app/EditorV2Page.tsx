@@ -31,15 +31,16 @@ const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
 export function EditorV2Page() {
   const { isLoaded, isSignedIn } = useAuth();
   const clerk = useClerk();
-  const [draftWidth, setDraftWidth] = useState("8");
-  const [draftHeight, setDraftHeight] = useState("8");
+  const [draftWidth, setDraftWidth] = useState("120");
+  const [draftHeight, setDraftHeight] = useState("120");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
-    "stitches",
+    "inches",
   );
-  const [draftWidthInches, setDraftWidthInches] = useState("1");
-  const [draftHeightInches, setDraftHeightInches] = useState("1");
-  const [draftMeshCount, setDraftMeshCount] = useState("8");
+  const [draftWidthInches, setDraftWidthInches] = useState("8");
+  const [draftHeightInches, setDraftHeightInches] = useState("8");
+  const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
+  const [savedDocumentsLoading, setSavedDocumentsLoading] = useState(false);
   const [designConfig, setDesignConfig] =
     useState<EditorV2DesignConfig>(INITIAL_DESIGN_CONFIG);
   const [currentStorageId, setCurrentStorageId] = useState("");
@@ -62,6 +63,7 @@ export function EditorV2Page() {
     }
 
     if (!isSignedIn) {
+      setSavedDocumentsLoading(false);
       setSavedDocuments([]);
       setSavedDocumentsErrorMessage(null);
       setSetupErrorMessage(null);
@@ -70,15 +72,18 @@ export function EditorV2Page() {
       return;
     }
 
+    setSavedDocumentsLoading(true);
     void listSavedEditorV2Documents()
       .then((documents) => {
         if (!cancelled) {
+          setSavedDocumentsLoading(false);
           setSavedDocuments(documents);
           setSavedDocumentsErrorMessage(null);
         }
       })
       .catch((error) => {
         if (!cancelled) {
+          setSavedDocumentsLoading(false);
           setSavedDocuments([]);
           setSavedDocumentsErrorMessage(
             getErrorMessage(error, "Try signing in again or refreshing the page."),
@@ -104,6 +109,28 @@ export function EditorV2Page() {
     });
   }, [designConfig]);
 
+  const loadDesignIntoWorkspace = async (storageId: string) => {
+    const instanceKey = `loaded_${storageId}_${Date.now()}`;
+    setCanvasLoadingKey(instanceKey);
+
+    try {
+      const document = await loadSavedEditorV2Document(storageId);
+      setCurrentStorageId(storageId);
+      setSelectedStorageId(storageId);
+      setSetupErrorMessage(null);
+      setDesignConfig({
+        kind: "loaded",
+        document,
+        storageId,
+        instanceKey,
+      });
+      setSetupModalOpen(false);
+    } catch (error) {
+      setCanvasLoadingKey(null);
+      throw error;
+    }
+  };
+
   return (
     <EditorV2Providers
       key={designConfig.instanceKey}
@@ -119,6 +146,7 @@ export function EditorV2Page() {
         }}
         currentStorageId={currentStorageId}
         savedDocuments={savedDocuments}
+        savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
         onSaveDocument={async (document, storageId) => {
@@ -148,19 +176,7 @@ export function EditorV2Page() {
           return savedRecord;
         }}
         onLoadDocument={async (record) => {
-          const instanceKey = `loaded_${record.storageId}_${Date.now()}`;
-          setCanvasLoadingKey(instanceKey);
-          const document = await loadSavedEditorV2Document(record.storageId);
-          setCurrentStorageId(record.storageId);
-          setSelectedStorageId(record.storageId);
-          setSetupErrorMessage(null);
-          setDesignConfig({
-            kind: "loaded",
-            document,
-            storageId: record.storageId,
-            instanceKey,
-          });
-          setSetupModalOpen(false);
+          await loadDesignIntoWorkspace(record.storageId);
         }}
         onStartOver={() => setSetupModalOpen(true)}
         setupModalOpen={setupModalOpen}
@@ -191,29 +207,15 @@ export function EditorV2Page() {
             onDraftWidthChange={setDraftWidth}
             onDraftWidthInchesChange={setDraftWidthInches}
             onLoadSavedDesign={(storageId) => {
-              const instanceKey = `loaded_${storageId}_${Date.now()}`;
-              setCanvasLoadingKey(instanceKey);
-              void loadSavedEditorV2Document(storageId)
-                .then((document) => {
-                  setCurrentStorageId(storageId);
-                  setSelectedStorageId(storageId);
-                  setSetupErrorMessage(null);
-                  setDesignConfig({
-                    kind: "loaded",
-                    document,
-                    storageId,
-                    instanceKey,
-                  });
-                  setSetupModalOpen(false);
-                })
+              void loadDesignIntoWorkspace(storageId)
                 .catch((error) => {
-                  setCanvasLoadingKey(null);
                   setSetupErrorMessage(
                     getErrorMessage(error, "Try again in a moment."),
                   );
                 });
             }}
             savedDocuments={savedDocuments}
+            savedDocumentsLoading={savedDocumentsLoading}
             savedDocumentsErrorMessage={savedDocumentsErrorMessage}
             selectedStorageId={selectedStorageId}
             setSelectedStorageId={setSelectedStorageId}

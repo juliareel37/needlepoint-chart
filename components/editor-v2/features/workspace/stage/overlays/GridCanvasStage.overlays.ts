@@ -119,6 +119,7 @@ export function drawSymbolsOverlay(
     drawX: number;
     drawY: number;
     gridWidth: number;
+    onlyColorId?: string | null;
     symbolAssignments: Record<string, string>;
     zoom: number;
   },
@@ -130,6 +131,7 @@ export function drawSymbolsOverlay(
     drawX,
     drawY,
     gridWidth,
+    onlyColorId = null,
     symbolAssignments,
     zoom,
   } = options;
@@ -148,6 +150,10 @@ export function drawSymbolsOverlay(
     const colorId = cells[index];
 
     if (!colorId) {
+      continue;
+    }
+
+    if (onlyColorId && colorId !== onlyColorId) {
       continue;
     }
 

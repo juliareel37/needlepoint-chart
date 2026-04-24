@@ -1,5 +1,7 @@
 import type { EditorCommandKind, EditorCommandSource } from "../commands/types";
 import type { DocumentPatch } from "./patches";
+import type { IconColorSlot } from "../icons/iconColorSlots";
+import type { PrimitiveIconKind } from "../icons/primitiveIcon";
 
 export type GridCellValue = string | null;
 
@@ -58,7 +60,9 @@ export interface CustomPalette {
 }
 
 export interface TraceDocument {
-  assetUrl: string;
+  previewUrl: string;
+  thumbnailUrl: string;
+  originalUrl: string;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;
@@ -109,6 +113,7 @@ export interface EditorSessionState {
   persistence: PersistenceSessionState;
   traceInteraction: TraceInteractionState;
   textInteraction: TextInteractionState;
+  iconInteraction: IconInteractionState;
   inFlightCommand: InFlightCommandState | null;
 }
 
@@ -127,6 +132,8 @@ export type ActiveTool =
 export interface ActiveToolState {
   tool: ActiveTool;
   brushSize: number;
+  paintBrushSize: number;
+  eraseBrushSize: number;
   colorId: string | null;
 }
 
@@ -137,8 +144,8 @@ export interface ViewportState {
 }
 
 export interface SelectionState {
-  mode: "none" | "rect" | "lasso" | "mirror";
-  shape: "freehand" | "rect";
+  mode: "none" | "rect" | "circle" | "lasso" | "mirror";
+  shape: "freehand" | "rect" | "circle";
   rect: GridRect | null;
   lassoPoints: SelectionPoint[];
   mirrorAxis: "horizontal" | "vertical" | null;
@@ -250,6 +257,10 @@ export interface TextInteractionState {
   placement: TextPlacementSession | null;
 }
 
+export interface IconInteractionState {
+  placement: IconPlacementSession | null;
+}
+
 export interface TextPlacementSession {
   text: string;
   intrinsicWidth: number;
@@ -262,6 +273,27 @@ export interface TextPlacementSession {
   offsetX: number;
   offsetY: number;
   scale: number;
+}
+
+export interface IconPlacementSession {
+  iconId: string;
+  name: string;
+  src: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  colorSlots: IconColorSlot[];
+  primitiveKind: PrimitiveIconKind | null;
+  lockAspectRatio: boolean;
+  primitiveStrokeReferenceSize: number | null;
+  supportsStrokeWidth: boolean;
+  strokeWidthScale: number;
+  primitivePatternScale: number;
+  primitiveSpacingScale: number;
+  selectedColorSlotId: string | null;
+  offsetX: number;
+  offsetY: number;
+  scaleX: number;
+  scaleY: number;
 }
 
 export interface InFlightCommandState {
@@ -279,7 +311,13 @@ export interface EditorUiState {
   preferences: UiPreferenceState;
 }
 
-export type EditorSidebarSection = "document" | "color" | "trace" | "text" | "settings";
+export type EditorSidebarSection =
+  | "document"
+  | "color"
+  | "trace"
+  | "text"
+  | "icons"
+  | "settings";
 
 export interface ShellUiState {
   sidebarCollapsed: boolean;
@@ -370,6 +408,8 @@ export function createInitialEditorStoreState(): EditorStoreState {
       activeTool: {
         tool: "pan",
         brushSize: 1,
+        paintBrushSize: 1,
+        eraseBrushSize: 1,
         colorId: null,
       },
       eyedropperReturnTool: null,
@@ -380,7 +420,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
       },
       selection: {
         mode: "none",
-        shape: "freehand",
+        shape: "rect",
         rect: null,
         lassoPoints: [],
         mirrorAxis: null,
@@ -421,6 +461,9 @@ export function createInitialEditorStoreState(): EditorStoreState {
         draftFontStyle: "normal",
         draftFontWeight: 400,
         previewPosition: null,
+        placement: null,
+      },
+      iconInteraction: {
         placement: null,
       },
       inFlightCommand: null,

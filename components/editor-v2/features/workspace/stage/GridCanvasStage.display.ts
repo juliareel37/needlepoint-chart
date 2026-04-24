@@ -6,6 +6,7 @@ import type {
   TraceDocument,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
+import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import type {
@@ -15,8 +16,8 @@ import type {
 import {
   drawGridOverlay,
   drawSymbolsOverlay,
-  drawThreadOverlay,
 } from "./overlays/GridCanvasStage.overlays";
+import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 export function configureDisplayCanvas(
   canvas: HTMLCanvasElement,
@@ -62,12 +63,12 @@ export function renderDisplayCanvas(options: {
   frameOrigin: { x: number; y: number };
   gridOverlayStep: number;
   gridWidth: number;
+  highlightedColorId?: string | null;
   metrics: GridWorldMetrics;
   paintOpacity: number;
   showGridlines: boolean;
   showSymbols: boolean;
   stageSize: { width: number; height: number };
-  stitchCanvasCache: Map<string, HTMLCanvasElement>;
   symbolAssignments: Record<string, string>;
   threadView: boolean;
   viewport: ViewportState;
@@ -84,26 +85,36 @@ export function renderDisplayCanvas(options: {
     frameOrigin,
     gridOverlayStep,
     gridWidth,
+    highlightedColorId = null,
     metrics,
     paintOpacity,
     showGridlines,
     showSymbols,
     stageSize,
-    stitchCanvasCache,
     symbolAssignments,
     threadView,
     viewport,
   } = options;
   const width = Math.max(stageSize.width, 1);
   const height = Math.max(stageSize.height, 1);
+  const devicePixelRatio = window.devicePixelRatio || 1;
 
   context.imageSmoothingEnabled = false;
   context.clearRect(0, 0, width, height);
 
-  const drawX = frameOrigin.x + viewport.offsetX;
-  const drawY = frameOrigin.y + viewport.offsetY;
-  const drawWidth = metrics.surfaceWidth * viewport.zoom;
-  const drawHeight = metrics.surfaceHeight * viewport.zoom;
+  const drawRect = snapRectToDevicePixels(
+    {
+      x: frameOrigin.x + viewport.offsetX,
+      y: frameOrigin.y + viewport.offsetY,
+      width: metrics.surfaceWidth * viewport.zoom,
+      height: metrics.surfaceHeight * viewport.zoom,
+    },
+    devicePixelRatio,
+  );
+  const drawX = drawRect.x;
+  const drawY = drawRect.y;
+  const drawWidth = drawRect.width;
+  const drawHeight = drawRect.height;
 
   context.fillStyle = backgroundColor;
   context.fillRect(drawX, drawY, drawWidth, drawHeight);
@@ -114,7 +125,7 @@ export function renderDisplayCanvas(options: {
 
   if (
     displayTrace &&
-    displayTraceAsset?.assetUrl === displayTrace.assetUrl &&
+    displayTraceAsset?.previewUrl === displayTrace.previewUrl &&
     displayTraceAsset.ready &&
     displayTraceAsset.image &&
     displayTraceAsset.width > 0 &&
@@ -131,15 +142,24 @@ export function renderDisplayCanvas(options: {
       offsetY: displayTrace.offsetY,
       scale: displayTrace.scale,
     });
+    const traceRect = snapRectToDevicePixels(
+      {
+        x: drawX + bounds.left * viewport.zoom,
+        y: drawY + bounds.top * viewport.zoom,
+        width: bounds.width * viewport.zoom,
+        height: bounds.height * viewport.zoom,
+      },
+      devicePixelRatio,
+    );
 
     context.save();
     context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
     context.drawImage(
       displayTraceAsset.image,
-      drawX + bounds.left * viewport.zoom,
-      drawY + bounds.top * viewport.zoom,
-      bounds.width * viewport.zoom,
-      bounds.height * viewport.zoom,
+      traceRect.x,
+      traceRect.y,
+      traceRect.width,
+      traceRect.height,
     );
     context.restore();
   }
@@ -147,29 +167,7 @@ export function renderDisplayCanvas(options: {
   if (!deferPaintUntilTraceReady) {
     context.save();
     context.globalAlpha = Math.min(Math.max(paintOpacity, 0), 1);
-    if (threadView) {
-      drawThreadOverlay(context, {
-        cells,
-        colorsById,
-        drawX,
-        drawY,
-        gridWidth,
-        renderedCellSize: metrics.cellSize * viewport.zoom,
-        stitchCanvasCache,
-      });
-    } else {
-      context.drawImage(
-        sourceCanvas,
-        0,
-        0,
-        sourceCanvas.width,
-        sourceCanvas.height,
-        drawX,
-        drawY,
-        drawWidth,
-        drawHeight,
-      );
-    }
+    context.drawImage(sourceCanvas, drawX, drawY, drawWidth, drawHeight);
     context.restore();
   }
 
@@ -203,5 +201,171 @@ export function renderDisplayCanvas(options: {
     context.restore();
   }
 
+  if (highlightedColorId) {
+    context.save();
+    context.fillStyle = "rgba(6, 10, 16, 0.84)";
+    context.fillRect(drawX, drawY, drawWidth, drawHeight);
+    drawHighlightedCells(context, {
+      cells,
+      colorsById,
+      drawX,
+      drawY,
+      gridWidth,
+      highlightedColorId,
+      renderedCellSize: metrics.cellSize * viewport.zoom,
+      threadView,
+    });
+
+    if (showSymbols && !deferPaintUntilTraceReady) {
+      drawSymbolsOverlay(context, {
+        cells,
+        cellSize: metrics.cellSize,
+        colorsById,
+        drawX,
+        drawY,
+        gridWidth,
+        symbolAssignments,
+        zoom: viewport.zoom,
+        onlyColorId: highlightedColorId,
+      });
+    }
+    context.restore();
+  }
+
   context.restore();
+}
+
+function drawHighlightedCells(
+  context: CanvasRenderingContext2D,
+  options: {
+    cells: GridCellValue[];
+    colorsById: Record<string, PaletteColor>;
+    drawX: number;
+    drawY: number;
+    gridWidth: number;
+    highlightedColorId: string;
+    renderedCellSize: number;
+    threadView: boolean;
+  },
+) {
+  const {
+    cells,
+    colorsById,
+    drawX,
+    drawY,
+    gridWidth,
+    highlightedColorId,
+    renderedCellSize,
+    threadView,
+  } = options;
+  const color = colorsById[highlightedColorId];
+
+  if (!color || renderedCellSize <= 0) {
+    return;
+  }
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const highlightLiftAlpha = getHighlightLiftAlpha(color.hex);
+  const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
+  const stitchCanvas = threadView
+    ? getThreadStitchCanvas(
+        color.hex,
+        Math.max(1, Math.round(renderedCellSize)),
+        stitchCanvasCache,
+        1,
+      )
+    : null;
+
+  for (let index = 0; index < cells.length; index += 1) {
+    if (cells[index] !== highlightedColorId) {
+      continue;
+    }
+
+    const x = index % gridWidth;
+    const y = Math.floor(index / gridWidth);
+    const cellRect = snapRectToDevicePixels(
+      {
+        x: drawX + x * renderedCellSize,
+        y: drawY + y * renderedCellSize,
+        width: renderedCellSize,
+        height: renderedCellSize,
+      },
+      devicePixelRatio,
+    );
+
+    if (cellRect.width <= 0 || cellRect.height <= 0) {
+      continue;
+    }
+
+    context.fillStyle = color.hex;
+    context.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
+
+    if (threadView && stitchCanvas) {
+      context.drawImage(
+        stitchCanvas,
+        cellRect.x,
+        cellRect.y,
+        cellRect.width,
+        cellRect.height,
+      );
+    }
+
+    if (highlightLiftAlpha > 0) {
+      context.fillStyle = `rgba(255, 255, 255, ${highlightLiftAlpha})`;
+      context.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
+    }
+  }
+}
+
+function getHighlightLiftAlpha(hex: string): number {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return 0.22;
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  if (luminance <= 0.14) {
+    return 0.68;
+  }
+
+  if (luminance <= 0.24) {
+    return 0.56;
+  }
+
+  if (luminance <= 0.36) {
+    return 0.42;
+  }
+
+  if (luminance <= 0.5) {
+    return 0.28;
+  }
+
+  if (luminance <= 0.68) {
+    return 0.14;
+  }
+
+  return 0.04;
+}
+
+function snapRectToDevicePixels(
+  rect: { x: number; y: number; width: number; height: number },
+  devicePixelRatio: number,
+) {
+  const left = snapToDevicePixel(rect.x, devicePixelRatio);
+  const top = snapToDevicePixel(rect.y, devicePixelRatio);
+  const right = snapToDevicePixel(rect.x + rect.width, devicePixelRatio);
+  const bottom = snapToDevicePixel(rect.y + rect.height, devicePixelRatio);
+
+  return {
+    x: left,
+    y: top,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  };
+}
+
+function snapToDevicePixel(value: number, devicePixelRatio: number): number {
+  return Math.round(value * devicePixelRatio) / devicePixelRatio;
 }

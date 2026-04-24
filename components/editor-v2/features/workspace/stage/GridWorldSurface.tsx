@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
   EditorStore,
   EditorStoreState,
   PaletteColor,
+  ViewportState,
 } from "@/lib/editor-v2/editor/store";
 import {
+  clampWorldPointToSurface,
   clampViewportOffsets,
   createGridWorldMetrics,
   clientToWorldPoint,
@@ -17,18 +19,13 @@ import { GridCanvasStage } from "./GridCanvasStage";
 import { GridRulerOverlay } from "./overlays/GridRulerOverlay";
 import { SelectionOverlay } from "./overlays/SelectionOverlay";
 import { TextPlacementLayer } from "./TextPlacementLayer";
+import { IconPlacementLayer } from "./IconPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
-
-interface LoadedTraceAsset {
-  assetUrl: string;
-  height: number;
-  image: HTMLImageElement | null;
-  ready: boolean;
-  width: number;
-}
+import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
+import { clearTraceSampler } from "../trace/traceSampler";
 
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
@@ -36,6 +33,7 @@ interface GridWorldSurfaceProps {
   brushSize: number;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedColorId: string | null;
   onSurfaceReady?: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -51,6 +49,7 @@ export function GridWorldSurface({
   brushSize,
   colorsById,
   dispatch,
+  highlightedColorId,
   onSurfaceReady,
   previewMode,
   showGridlines,
@@ -62,9 +61,11 @@ export function GridWorldSurface({
   const grid = state.document.grid;
   const trace = state.document.trace;
   const textPlacement = state.session.textInteraction.placement;
+  const iconPlacement = state.session.iconInteraction.placement;
   const viewport = state.session.viewport;
   const selection = state.session.selection;
   const mirrorInteraction = state.session.mirrorInteraction;
+  const [coarsePointer, setCoarsePointer] = useState(false);
   const metrics = createGridWorldMetrics(grid.width, grid.height, 28, 0);
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
@@ -72,7 +73,11 @@ export function GridWorldSurface({
   const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
   const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
   const showTraceOverlay = Boolean(trace && traceVisible && tracePositioningEnabled);
-  const showDisplayTrace = Boolean(trace && traceVisible && !tracePositioningEnabled);
+  const showDisplayTrace = Boolean(
+    trace &&
+      traceVisible &&
+      !tracePositioningEnabled,
+  );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
       ? trace.opacity
@@ -88,6 +93,18 @@ export function GridWorldSurface({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageBounds, setStageBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
+  const [worldBounds, setWorldBounds] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -95,8 +112,79 @@ export function GridWorldSurface({
     y: (stageSize.height - metrics.surfaceHeight) / 2,
   };
   const textPlacementActive = Boolean(textPlacement);
+  const iconPlacementActive = Boolean(iconPlacement);
+  const paintDisabled =
+    tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
+
+  const syncSurfaceMeasurements = useCallback(() => {
+    const stageElement = stageRef.current;
+    const worldElement = worldRef.current;
+
+    if (stageElement) {
+      const rect = stageElement.getBoundingClientRect();
+
+      setStageSize((current) =>
+        current.width === rect.width && current.height === rect.height
+          ? current
+          : {
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+      setStageBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+
+    if (worldElement) {
+      const rect = worldElement.getBoundingClientRect();
+
+      setWorldBounds((current) =>
+        current.left === rect.left &&
+        current.top === rect.top &&
+        current.width === rect.width &&
+        current.height === rect.height
+          ? current
+          : {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -145,6 +233,18 @@ export function GridWorldSurface({
     },
     [viewport],
   );
+  const getClampedWorldPointFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const worldPoint = getWorldPointFromClient(clientX, clientY);
+
+      if (!worldPoint) {
+        return null;
+      }
+
+      return clampWorldPointToSurface(worldPoint, metrics);
+    },
+    [getWorldPointFromClient, metrics],
+  );
   const getClampedSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -184,7 +284,7 @@ export function GridWorldSurface({
     },
     [getSelectionPointFromClient],
   );
-  const { handlePointerDown, handlePointerEnter } = useGridInteractions({
+  const { cancelPaintStroke, handlePointerDown, handlePointerEnter } = useGridInteractions({
     activeColorId,
     activeTool,
     brushSize,
@@ -192,6 +292,7 @@ export function GridWorldSurface({
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,
     metrics,
+    paintDisabled,
     state,
     trace,
   });
@@ -199,16 +300,22 @@ export function GridWorldSurface({
     cursor,
     handleStageAuxClick,
     handleStageMouseDownCapture,
+    handleStagePointerDownCapture,
+    isZoomInteracting,
   } = useStagePanInteractions({
     activeTool,
     dispatch,
-    dragPanningDisabled: tracePositioningEnabled || textPlacementActive,
+    dragPanningDisabled:
+      paintDisabled,
     metrics,
     stageRef,
     stageSize,
     viewport,
-    viewportZoom: viewport.zoom,
     zoomAnchor,
+  });
+
+  useLayoutEffect(() => {
+    syncSurfaceMeasurements();
   });
 
   useEffect(() => {
@@ -218,27 +325,21 @@ export function GridWorldSurface({
       return;
     }
 
-    const update = () => {
-      const rect = stageElement.getBoundingClientRect();
-
-      setStageSize({
-        width: rect.width,
-        height: rect.height,
-      });
-    };
-
-    update();
+    syncSurfaceMeasurements();
 
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", update);
-      return () => window.removeEventListener("resize", update);
+      window.addEventListener("resize", syncSurfaceMeasurements);
+      return () => window.removeEventListener("resize", syncSurfaceMeasurements);
     }
 
-    const observer = new ResizeObserver(update);
+    const observer = new ResizeObserver(syncSurfaceMeasurements);
     observer.observe(stageElement);
+    if (worldRef.current) {
+      observer.observe(worldRef.current);
+    }
 
     return () => observer.disconnect();
-  }, []);
+  }, [syncSurfaceMeasurements]);
 
   useEffect(() => {
     if (stageSize.width <= 0 || stageSize.height <= 0) {
@@ -263,13 +364,24 @@ export function GridWorldSurface({
   ]);
 
   useEffect(() => {
-    if (!trace?.assetUrl) {
+    if (trace?.previewUrl && tracePositioningEnabled) {
+      clearTraceSampler(trace.previewUrl);
+    }
+  }, [trace?.previewUrl, tracePositioningEnabled]);
+
+  useEffect(() => {
+    if (coarsePointer && tracePositioningEnabled) {
+      setLoadedTraceAsset(null);
+      return;
+    }
+
+    if (!trace?.previewUrl) {
       setLoadedTraceAsset(null);
       return;
     }
 
     let cancelled = false;
-    const assetUrl = trace.assetUrl;
+    const previewUrl = trace.previewUrl;
     const image = new Image();
     image.decoding = "async";
 
@@ -278,8 +390,19 @@ export function GridWorldSurface({
         return;
       }
 
+      if (ready && (image.naturalWidth <= 0 || image.naturalHeight <= 0)) {
+        setLoadedTraceAsset({
+          previewUrl,
+          height: 0,
+          image: null,
+          ready: false,
+          width: 0,
+        });
+        return;
+      }
+
       setLoadedTraceAsset({
-        assetUrl,
+        previewUrl,
         height: ready ? image.naturalHeight : 0,
         image: ready ? image : null,
         ready,
@@ -289,7 +412,7 @@ export function GridWorldSurface({
 
     image.onload = () => commitLoadedState(true);
     image.onerror = () => commitLoadedState(false);
-    image.src = assetUrl;
+    image.src = previewUrl;
 
     if (image.complete) {
       commitLoadedState(image.naturalWidth > 0 && image.naturalHeight > 0);
@@ -298,18 +421,18 @@ export function GridWorldSurface({
     return () => {
       cancelled = true;
     };
-  }, [trace?.assetUrl]);
+  }, [coarsePointer, trace?.previewUrl, tracePositioningEnabled]);
 
   const traceAssetReady =
-    !trace?.assetUrl ||
-    (loadedTraceAsset?.assetUrl === trace.assetUrl &&
+    !trace?.previewUrl ||
+    (loadedTraceAsset?.previewUrl === trace.previewUrl &&
       loadedTraceAsset.ready &&
       !!loadedTraceAsset.image &&
       loadedTraceAsset.width > 0 &&
       loadedTraceAsset.height > 0);
   const deferPaintUntilTraceReady =
     Boolean(onSurfaceReady) &&
-    Boolean(trace?.assetUrl) &&
+    Boolean(trace?.previewUrl) &&
     !traceAssetReady;
   const handleDisplayRendered = useCallback(() => {
     if (!traceAssetReady) {
@@ -325,6 +448,7 @@ export function GridWorldSurface({
     <div
       ref={stageRef}
       onMouseDownCapture={handleStageMouseDownCapture}
+      onPointerDownCapture={handleStagePointerDownCapture}
       onAuxClick={handleStageAuxClick}
       style={{
         position: "relative",
@@ -332,6 +456,7 @@ export function GridWorldSurface({
         height: "100%",
         overflow: "hidden",
         cursor,
+        touchAction: "none",
       }}
     >
       <div
@@ -365,6 +490,14 @@ export function GridWorldSurface({
           />
         ) : null}
 
+        <SelectionOverlay
+          activeTool={activeTool}
+          metrics={metrics}
+          mirrorInteraction={mirrorInteraction}
+          selection={selection}
+          viewport={viewport}
+        />
+
         <div
           ref={worldRef}
           style={{
@@ -380,14 +513,21 @@ export function GridWorldSurface({
         >
           {showTraceOverlay && trace ? (
             <TraceImageLayer
-              assetHeight={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.height : null}
-              assetWidth={loadedTraceAsset?.assetUrl === trace.assetUrl ? loadedTraceAsset.width : null}
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
               imageOpacity={traceImageOpacity}
               metrics={metrics}
               positioningEnabled={tracePositioningEnabled}
+              portalHost={stageRef.current}
+              stageBounds={stageBounds}
               trace={trace}
+              traceAsset={
+                loadedTraceAsset?.previewUrl === trace.previewUrl
+                  ? loadedTraceAsset
+                  : null
+              }
+              viewport={viewport as ViewportState}
+              worldBounds={worldBounds}
               zIndex={3}
               zoom={viewport.zoom}
             />
@@ -406,9 +546,10 @@ export function GridWorldSurface({
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}
+              highlightedColorId={highlightedColorId}
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
-                trace && loadedTraceAsset?.assetUrl === trace.assetUrl
+                trace && loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
                   : null
               }
@@ -420,6 +561,7 @@ export function GridWorldSurface({
               gridWidth={grid.width}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
+              cancelPaintStroke={cancelPaintStroke}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}
               showGridlines={effectiveShowGridlines}
@@ -428,15 +570,9 @@ export function GridWorldSurface({
               symbolAssignments={state.document.palette.symbolAssignments}
               threadView={threadView}
               viewport={viewport}
+              isZoomInteractionActive={isZoomInteracting}
             />
           </div>
-
-          <SelectionOverlay
-            activeTool={activeTool}
-            metrics={metrics}
-            mirrorInteraction={mirrorInteraction}
-            selection={selection}
-          />
 
           {textPlacement ? (
             <TextPlacementLayer
@@ -444,7 +580,27 @@ export function GridWorldSurface({
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
               placement={textPlacement}
+              portalHost={stageRef.current}
               previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
+              zoom={viewport.zoom}
+            />
+          ) : null}
+
+          {iconPlacement ? (
+            <IconPlacementLayer
+              dispatch={dispatch}
+              getWorldPointFromClient={getWorldPointFromClient}
+              metrics={metrics}
+              paletteById={colorsById}
+              placement={iconPlacement}
+              portalHost={stageRef.current}
+              previewColor={textPreviewColor}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
               zoom={viewport.zoom}
             />
           ) : null}

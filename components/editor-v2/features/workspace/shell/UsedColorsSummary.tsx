@@ -23,6 +23,10 @@ import {
   findClosestColorIdFromCandidates,
   hexToRgb,
 } from "@/lib/editor-v2/editor/color-utils";
+import {
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
 function getSwatchIconColor(hex: string) {
@@ -58,9 +62,11 @@ function UsedColorsPortalPopover({
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
     top: number;
-    left: number;
+    left: number | "auto";
+    right: number | "auto";
     direction: "up" | "down";
     maxHeight: number;
+    transform: string;
   } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
@@ -82,6 +88,12 @@ function UsedColorsPortalPopover({
     const spaceAbove = Math.max(rect.top - viewportPadding, 0);
     const spaceBelow = Math.max(window.innerHeight - rect.bottom - viewportPadding, 0);
     const popoverHeight = popoverRef.current?.scrollHeight ?? 0;
+    const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
+    const horizontalPosition = getToolbarPopoverHorizontalPosition({
+      anchorRect: rect,
+      popoverWidth,
+      viewportPadding,
+    });
     const direction =
       preferredDirection === "auto"
         ? popoverHeight > 0
@@ -96,9 +108,14 @@ function UsedColorsPortalPopover({
 
     setPosition({
       top: direction === "up" ? rect.top - gap : rect.bottom + gap,
-      left: rect.left - 12,
+      left: horizontalPosition.left,
+      right: horizontalPosition.right,
       direction,
       maxHeight: Math.max(availableSpace - gap, 140),
+      transform:
+        direction === "up"
+          ? `${horizontalPosition.transform} translateY(-100%)`.trim()
+          : horizontalPosition.transform,
     });
   }, [anchorRef, preferredDirection]);
 
@@ -166,8 +183,10 @@ function UsedColorsPortalPopover({
         position: "fixed",
         top: position.top,
         left: position.left,
+        right: position.right,
         zIndex: 40,
-        transform: position.direction === "up" ? "translateY(-100%)" : "none",
+        transform: position.transform,
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         ["--used-colors-popover-max-height" as string]: `${position.maxHeight}px`,
       }}
     >
@@ -178,16 +197,28 @@ function UsedColorsPortalPopover({
 }
 
 export function UsedColorsSummary({
+  activeColorId,
   usedColors,
   colorsById,
+  highlightedColorId,
   palette,
+  onActiveColorChange,
+  onHighlightColorChange,
+  showSymbols,
+  symbolAssignments,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
 }: {
+  activeColorId: string | null;
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
+  highlightedColorId: string | null;
   palette: PaletteColor[];
+  onActiveColorChange: (colorId: string) => void;
+  onHighlightColorChange: (colorId: string | null) => void;
+  showSymbols: boolean;
+  symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -204,12 +235,27 @@ export function UsedColorsSummary({
     useState<UsedColorsSuccessNotification | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
+  const featuredColorIds = usedColors.map((entry) => entry.colorId);
+  const isSelecting = toolMode !== "idle";
 
   useEffect(() => {
     setSelectedColorIds((current) =>
       current.filter((colorId) => usedColors.some((entry) => entry.colorId === colorId)),
     );
   }, [usedColors]);
+
+  useEffect(() => {
+    if (highlightedColorId && !usedColors.some((entry) => entry.colorId === highlightedColorId)) {
+      onHighlightColorChange(null);
+    }
+  }, [highlightedColorId, onHighlightColorChange, usedColors]);
+
+  useEffect(
+    () => () => {
+      onHighlightColorChange(null);
+    },
+    [onHighlightColorChange],
+  );
 
   useEffect(() => {
     if (!swapSourceColorId) {
@@ -246,11 +292,9 @@ export function UsedColorsSummary({
     [selectedColorIdSet, usedColors],
   );
   const defaultMergeTargetColorId = useMemo(
-    () =>
-      usedColors.find((entry) => !selectedColorIdSet.has(entry.colorId))?.colorId ?? null,
-    [selectedColorIdSet, usedColors],
+    () => selectedUsedColors[0]?.colorId ?? null,
+    [selectedUsedColors],
   );
-  const isSelecting = toolMode !== "idle";
   const canDelete =
     selectedColorIds.length > 0 &&
     selectedColorIds.some((colorId) =>
@@ -296,6 +340,21 @@ export function UsedColorsSummary({
     deleteSelectionCount === 1
       ? `${deleteStitchCount} canvas cell${deleteStitchCount === 1 ? "" : "s"} will be replaced with the closest remaining color in the design palette.`
       : `${deleteStitchCount} canvas cells will be replaced with the most similar remaining color in the design palette.`;
+
+  useEffect(() => {
+    if (actionMode !== "merge") {
+      return;
+    }
+
+    if (
+      mergeTargetColorId &&
+      selectedColorIds.some((colorId) => colorId === mergeTargetColorId)
+    ) {
+      return;
+    }
+
+    setMergeTargetColorId(defaultMergeTargetColorId);
+  }, [actionMode, defaultMergeTargetColorId, mergeTargetColorId, selectedColorIds]);
 
   const exitToolMode = () => {
     setToolMode("idle");
@@ -359,9 +418,14 @@ export function UsedColorsSummary({
 
       <div className={styles.usedColorsBlock}>
       <div className={styles.usedColorsHeaderRow}>
-        <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-          {`Colors in canvas (${usedColors.length})`}
-        </p>
+        <div className={styles.usedColorsTitleRow}>
+          <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
+            Colors used
+          </p>
+          <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
+            {usedColors.length}
+          </span>
+        </div>
         {isSelecting ? (
           <Button
             type="button"
@@ -372,13 +436,14 @@ export function UsedColorsSummary({
             title="Exit used colors tool"
             onClick={exitToolMode}
           >
-            <ButtonIcon icon="/icons/lucide/x.svg" />
+            {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+            Cancel
           </Button>
         ) : usedColors.length > 0 ? (
           <div className={styles.usedColorsToolButtons}>
             <Button
               type="button"
-              variant="secondary"
+              variant="ghostV2"
               size="sm"
               className={styles.usedColorsEditButton}
               onClick={enterToolMode}
@@ -413,11 +478,19 @@ export function UsedColorsSummary({
               }
             >
             {usedColors.map((entry) => (
-              <li key={entry.colorId}>
+              (() => {
+                const isActiveColor = !isSelecting && activeColorId === entry.colorId;
+
+                return (
+              <li
+                key={entry.colorId}
+                className={styles.usedColorsRow}
+                data-active-color={isActiveColor ? "true" : "false"}
+                data-selectable={isSelecting ? "true" : "false"}
+                data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
+              >
                 <div
                   className={styles.usedColorsItem}
-                  data-selectable={isSelecting ? "true" : "false"}
-                  data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                   role={isSelecting ? "button" : undefined}
                   tabIndex={isSelecting ? 0 : undefined}
                   style={typographyStyles.p2}
@@ -480,6 +553,9 @@ export function UsedColorsSummary({
                     >
                       {(() => {
                         const swatchColor = colorsById[entry.colorId]?.hex ?? "#ffffff";
+                        const swatchSymbol = showSymbols
+                          ? symbolAssignments[entry.colorId]
+                          : null;
 
                         return (
                       <span
@@ -489,6 +565,22 @@ export function UsedColorsSummary({
                           backgroundColor: swatchColor,
                         }}
                       >
+                        <span
+                          className={[
+                            styles.sidebarColorPreviewCountBadge,
+                            styles.usedColorSwatchCountBadge,
+                          ].join(" ")}
+                        >
+                          {entry.count}
+                        </span>
+                        {swatchSymbol ? (
+                          <span
+                            className={styles.usedColorSwatchSymbol}
+                            style={{ color: getSwatchIconColor(swatchColor) }}
+                          >
+                            {swatchSymbol}
+                          </span>
+                        ) : null}
                         {!isSelecting ? (
                           <span
                             className={styles.usedColorSwatchSwapIcon}
@@ -515,6 +607,9 @@ export function UsedColorsSummary({
                           activeColorId={entry.colorId}
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
+                          featuredColorIds={featuredColorIds}
+                          showFeaturedSymbols={showSymbols}
+                          symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
                             if (colorId !== entry.colorId) {
                               onSwapColor(entry.colorId, colorId);
@@ -529,25 +624,63 @@ export function UsedColorsSummary({
                   <button
                     type="button"
                     className={styles.usedColorsItemButton}
+                    data-active={isActiveColor ? "true" : "false"}
                     data-selectable={isSelecting ? "true" : "false"}
                     data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                     style={typographyStyles.p2}
                     onClick={(event) => {
                       if (isSelecting) {
                         event.stopPropagation();
+                        toggleColorSelection(entry.colorId);
+                        return;
                       }
-                      toggleColorSelection(entry.colorId);
+
+                      onActiveColorChange(entry.colorId);
                     }}
-                    disabled={!isSelecting}
+                    aria-label={
+                      isSelecting
+                        ? `Select ${colorsById[entry.colorId]?.name ?? entry.colorId}`
+                        : `Set ${colorsById[entry.colorId]?.name ?? entry.colorId} as active color`
+                    }
                     aria-pressed={
-                      isSelecting ? selectedColorIdSet.has(entry.colorId) : undefined
+                      isSelecting
+                        ? selectedColorIdSet.has(entry.colorId)
+                        : isActiveColor
                     }
                   >
                     <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
-                    <span className={styles.usedColorsItemCount}>×{entry.count}</span>
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  className={styles.usedColorsHighlightButton}
+                  aria-label={
+                    highlightedColorId === entry.colorId
+                      ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                      : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                  }
+                  aria-pressed={highlightedColorId === entry.colorId}
+                  title={
+                    highlightedColorId === entry.colorId
+                      ? "Stop highlight"
+                      : "Highlight on canvas"
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onHighlightColorChange(
+                      highlightedColorId === entry.colorId ? null : entry.colorId,
+                    );
+                  }}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <ButtonIcon icon="/icons/lucide/search.svg" />
+                </button>
               </li>
+                );
+              })()
             ))}
             </ul>
             {isSelecting ? (
@@ -625,6 +758,19 @@ export function UsedColorsSummary({
                               className={styles.libraryPopoverSwatch}
                               color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
                             />
+                            {showSymbols && mergeTargetColorId && symbolAssignments[mergeTargetColorId] ? (
+                              <span
+                                aria-hidden="true"
+                                className={styles.libraryPopoverSwatchSymbol}
+                                style={{
+                                  color: getSwatchIconColor(
+                                    colorsById[mergeTargetColorId]?.hex ?? "#ffffff",
+                                  ),
+                                }}
+                              >
+                                {symbolAssignments[mergeTargetColorId]}
+                              </span>
+                            ) : null}
                           </ToolbarButton>
 
                           {mergePickerOpen ? (
@@ -641,6 +787,9 @@ export function UsedColorsSummary({
                                 activeColorId={mergeTargetColorId}
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
+                                featuredColorIds={featuredColorIds}
+                                showFeaturedSymbols={showSymbols}
+                                symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {
                                   setMergeTargetColorId(colorId);
                                   setMergePickerOpen(false);
