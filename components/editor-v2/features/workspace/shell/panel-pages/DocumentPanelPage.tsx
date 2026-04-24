@@ -277,7 +277,7 @@ function SavedDesignSingleSelect({
         minWidth={0}
         onValueChange={setSelectedStorageId}
         placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
-        wrapperStyle={{ width: "100%" }}
+        wrapperStyle={{ width: "50vw" }}
         value={selectedStorageId}
       />
           </div>

@@ -554,6 +554,7 @@ export function EditorV2SetupModal({
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 10,
+                          minWidth: "100%"
                         }}
                       >
                         <span className="loading-spinner" aria-hidden="true" />
@@ -569,6 +570,8 @@ export function EditorV2SetupModal({
                   onValueChange={setSelectedStorageId}
                   placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
                   value={selectedStorageId}
+                  menuWidth="100%"
+                  menuMaxWidth="100%"
                   wrapperStyle={{ width: "100%" }}
                   triggerStyle={{ width: "100%" }}
                 />
