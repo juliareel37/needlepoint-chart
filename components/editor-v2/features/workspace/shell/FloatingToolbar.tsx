@@ -218,7 +218,7 @@ function FloatingToolbarPortalPopover({
           : (position?.transform ?? "none"),
         width: dockedToBottom ? "fit-content" : undefined,
         maxWidth: dockedToBottom
-          ? "min(90%, calc(100vw - 24px))"
+          ? "calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px)"
           : `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
         overflowX: subtoolbar ? "auto" : undefined,
         overflowY: subtoolbar ? "hidden" : undefined,
