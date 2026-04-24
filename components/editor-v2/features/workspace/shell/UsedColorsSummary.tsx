@@ -414,9 +414,14 @@ export function UsedColorsSummary({
 
       <div className={styles.usedColorsBlock}>
       <div className={styles.usedColorsHeaderRow}>
-        <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-          {`Colors used (${usedColors.length})`}
-        </p>
+        <div className={styles.usedColorsTitleRow}>
+          <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
+            Colors used
+          </p>
+          <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
+            {usedColors.length}
+          </span>
+        </div>
         {isSelecting ? (
           <Button
             type="button"
@@ -551,6 +556,14 @@ export function UsedColorsSummary({
                           backgroundColor: swatchColor,
                         }}
                       >
+                        <span
+                          className={[
+                            styles.sidebarColorPreviewCountBadge,
+                            styles.usedColorSwatchCountBadge,
+                          ].join(" ")}
+                        >
+                          {entry.count}
+                        </span>
                         {swatchSymbol ? (
                           <span
                             className={styles.usedColorSwatchSymbol}
@@ -617,7 +630,6 @@ export function UsedColorsSummary({
                     }
                   >
                     <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
-                    <span className={styles.usedColorsItemCount}>×{entry.count}</span>
                   </button>
                 </div>
 

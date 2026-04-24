@@ -139,12 +139,20 @@ export function ColorPanelPage({
             <div className={styles.sidebarSubsection}>
               <div className={styles.sidebarSubsectionHeaderRow}>
                 <div className={styles.sidebarSubsectionHeader}>
-                  <h3 style={typographyStyles.h5}>Design colors </h3>
-                  <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                    {usedColors.length === 0
-                      ? "Review, replace, merge, or delete the colors used in this design."
-                      : `${usedColors.length} colors used in this design.`}
-                  </p>
+                  <div className={styles.sidebarColorPreviewTitleRow}>
+                    <h3 style={typographyStyles.h5}>Design colors</h3>
+                    {usedColors.length > 0 ? (
+                      <span
+                        className={styles.sidebarColorPreviewCountBadge}
+                        style={typographyStyles.p2}
+                      >
+                        {usedColors.length}
+                      </span>
+                    ) : null}
+                  </div>
+                  {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                    Review, replace, merge, or delete the colors used in this design.
+                  </p> */}
                 </div>
                 <Button
                   type="button"
