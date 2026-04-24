@@ -197,10 +197,12 @@ function UsedColorsPortalPopover({
 }
 
 export function UsedColorsSummary({
+  activeColorId,
   usedColors,
   colorsById,
   highlightedColorId,
   palette,
+  onActiveColorChange,
   onHighlightColorChange,
   showSymbols,
   symbolAssignments,
@@ -208,10 +210,12 @@ export function UsedColorsSummary({
   onDeleteColors,
   onMergeColors,
 }: {
+  activeColorId: string | null;
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
   highlightedColorId: string | null;
   palette: PaletteColor[];
+  onActiveColorChange: (colorId: string) => void;
   onHighlightColorChange: (colorId: string | null) => void;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -474,9 +478,14 @@ export function UsedColorsSummary({
               }
             >
             {usedColors.map((entry) => (
+              (() => {
+                const isActiveColor = !isSelecting && activeColorId === entry.colorId;
+
+                return (
               <li
                 key={entry.colorId}
                 className={styles.usedColorsRow}
+                data-active-color={isActiveColor ? "true" : "false"}
                 data-selectable={isSelecting ? "true" : "false"}
                 data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
               >
@@ -615,18 +624,28 @@ export function UsedColorsSummary({
                   <button
                     type="button"
                     className={styles.usedColorsItemButton}
+                    data-active={isActiveColor ? "true" : "false"}
                     data-selectable={isSelecting ? "true" : "false"}
                     data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
                     style={typographyStyles.p2}
                     onClick={(event) => {
                       if (isSelecting) {
                         event.stopPropagation();
+                        toggleColorSelection(entry.colorId);
+                        return;
                       }
-                      toggleColorSelection(entry.colorId);
+
+                      onActiveColorChange(entry.colorId);
                     }}
-                    disabled={!isSelecting}
+                    aria-label={
+                      isSelecting
+                        ? `Select ${colorsById[entry.colorId]?.name ?? entry.colorId}`
+                        : `Set ${colorsById[entry.colorId]?.name ?? entry.colorId} as active color`
+                    }
                     aria-pressed={
-                      isSelecting ? selectedColorIdSet.has(entry.colorId) : undefined
+                      isSelecting
+                        ? selectedColorIdSet.has(entry.colorId)
+                        : isActiveColor
                     }
                   >
                     <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
@@ -660,6 +679,8 @@ export function UsedColorsSummary({
                   <ButtonIcon icon="/icons/lucide/search.svg" />
                 </button>
               </li>
+                );
+              })()
             ))}
             </ul>
             {isSelecting ? (

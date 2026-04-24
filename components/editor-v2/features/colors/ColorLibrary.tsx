@@ -36,6 +36,7 @@ interface ColorLibraryProps {
   featuredColorIds?: string[];
   onColorSelect: (colorId: string) => void;
   showAllSymbols?: boolean;
+  showFeaturedSection?: boolean;
   showFeaturedSymbols?: boolean;
   symbolAssignments?: Record<string, string>;
 }
@@ -47,6 +48,7 @@ export function ColorLibrary({
   featuredColorIds = [],
   onColorSelect,
   showAllSymbols = false,
+  showFeaturedSection = true,
   showFeaturedSymbols = false,
   symbolAssignments = {},
 }: ColorLibraryProps) {
@@ -100,7 +102,7 @@ export function ColorLibrary({
 
   return (
     <div className={[styles.library, className].filter(Boolean).join(" ")}>
-      {featuredColors.length > 0 ? (
+      {showFeaturedSection && featuredColors.length > 0 ? (
         <section className={styles.section} aria-label="Design colors">
           <div className={styles.sectionContent}>
             <h3 className={styles.sectionHeader}>Design Colors</h3>

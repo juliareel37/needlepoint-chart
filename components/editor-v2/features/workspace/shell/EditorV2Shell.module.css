@@ -1312,6 +1312,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 6px;
 }
 
 .usedColorsEditButton {
@@ -1328,6 +1329,7 @@
 .usedColorsListFrame {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 12px;
 }
 
@@ -1390,11 +1392,13 @@
 
 .usedColorsListCard {
   position: relative;
+  width: 100%;
 }
 
 .usedColorsList {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 4px;
   /* margin: 0; */
   list-style: none;
@@ -1412,6 +1416,8 @@
 .usedColorsRow {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -1419,6 +1425,7 @@
   display: flex;
   align-items: center;
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   gap: 0;
   color: var(--text-primary);
@@ -1475,17 +1482,25 @@
 }
 
 .usedColorsItemButton {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
+  align-self: stretch;
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
   gap: 10px;
   color: inherit;
   margin: 0;
-  padding: 2px 4px;
+  padding: 6px 8px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
   text-align: left;
   cursor: default;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .usedColorsItemButton:disabled {
@@ -1494,6 +1509,28 @@
 
 .usedColorsItemButton[data-selectable="true"] {
   cursor: pointer;
+}
+
+.usedColorsItemButton:not([data-selectable="true"]) {
+  cursor: pointer;
+}
+
+.usedColorsItemButton:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+.usedColorsRow[data-active-color="true"] .usedColorsItemButton {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.usedColorsRow[data-active-color="true"] .usedColorSwatchButton .swatch {
+  transform: scale(1.14);
+  border-color: var(--swatch-border-strong);
+  box-shadow:
+    0 0 0 1px var(--swatch-ring-inner),
+    0 0 0 3px var(--swatch-ring-outer) !important;
 }
 
 .usedColorsHighlightButton {
@@ -1586,7 +1623,7 @@
   align-items: center;
   flex: 0 0 auto;
   margin-left: 14px;
-  margin-right: 4px;
+  margin-right: 6px;
 }
 
 .usedColorSwatchButton {
@@ -2177,12 +2214,8 @@
     box-shadow: none;
   }
 
-  .usedColorSwatchButton:hover:not(:disabled) .swatch {
+  .usedColorsRow:hover .usedColorSwatchButton:not(:disabled) .swatch {
     transform: scale(1.14);
-    border-color: var(--swatch-border-strong);
-    box-shadow:
-      0 0 0 1px var(--swatch-ring-inner),
-      0 0 0 3px var(--swatch-ring-outer);
   }
 
   .usedColorSwatchButton:hover:not(:disabled) .usedColorSwatchSwapIcon {

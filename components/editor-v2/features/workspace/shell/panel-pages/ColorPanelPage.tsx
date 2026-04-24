@@ -226,6 +226,7 @@ export function ColorPanelPage({
                   colors={palette}
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
                   symbolAssignments={symbolAssignments}
                 />
@@ -236,10 +237,14 @@ export function ColorPanelPage({
         ) : (
           <div className={styles.sidebarSubsection}>
             <UsedColorsSummary
+              activeColorId={activeColorId}
               usedColors={usedColors}
               colorsById={colorsById}
               highlightedColorId={highlightedColorId}
               palette={palette}
+              onActiveColorChange={(colorId) =>
+                dispatch(createSetActiveColorCommand(colorId))
+              }
               onHighlightColorChange={onHighlightColorChange}
               showSymbols={showSymbols}
               symbolAssignments={symbolAssignments}
