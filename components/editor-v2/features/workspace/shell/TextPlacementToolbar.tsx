@@ -222,136 +222,149 @@ export function TextPlacementToolbar({
   }
 
   return (
-    <Toolbar className={styles.floatingToolbar}>
-      <ToolbarGroup>
-        <ToolbarAnchor ref={colorAnchorRef}>
+    <div className={styles.selectionToolbarCluster}>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
-            swatch
-            active={colorLibraryOpen}
-            aria-pressed={colorLibraryOpen}
-            aria-label="Open color library"
-            title="Open color library"
-            className={styles.libraryPopoverSwatchTrigger}
-            onClick={() => setColorLibraryOpen((current) => !current)}
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            onClick={() => dispatch(createCancelTextPlacementCommand())}
           >
-            <ToolbarSwatch
-              color={activeColorHex ?? "var(--neutral-400)"}
-              className={styles.libraryPopoverSwatch}
-            />
+            <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
+        </Toolbar>
+      </div>
 
-          {colorLibraryOpen ? (
-            <TextToolbarPortalPopover
-              anchorRef={colorAnchorRef}
-              onRequestClose={() => setColorLibraryOpen(false)}
-              role="dialog"
-              aria-label="Color library"
-              className={styles.colorLibraryPopover}
-              style={{ whiteSpace: "normal" }}
-            >
-              <ColorLibrary
-                activeColorId={activeColorId}
-                className={styles.toolbarColorLibrary}
-                colors={palette}
-                featuredColorIds={featuredColorIds}
-                showFeaturedSymbols={showSymbols}
-                symbolAssignments={symbolAssignments}
-                onColorSelect={(colorId) => {
-                  dispatch(createSetActiveColorCommand(colorId));
-                  setColorLibraryOpen(false);
+      <div className={styles.selectionToolbarMainViewport}>
+        <Toolbar className={styles.floatingToolbar}>
+          <ToolbarGroup>
+            <ToolbarAnchor ref={colorAnchorRef}>
+              <ToolbarButton
+                type="button"
+                swatch
+                active={colorLibraryOpen}
+                aria-pressed={colorLibraryOpen}
+                aria-label="Open color library"
+                title="Open color library"
+                className={styles.libraryPopoverSwatchTrigger}
+                onClick={() => setColorLibraryOpen((current) => !current)}
+              >
+                <ToolbarSwatch
+                  color={activeColorHex ?? "var(--neutral-400)"}
+                  className={styles.libraryPopoverSwatch}
+                />
+              </ToolbarButton>
+
+              {colorLibraryOpen ? (
+                <TextToolbarPortalPopover
+                  anchorRef={colorAnchorRef}
+                  onRequestClose={() => setColorLibraryOpen(false)}
+                  role="dialog"
+                  aria-label="Color library"
+                  className={styles.colorLibraryPopover}
+                  style={{ whiteSpace: "normal" }}
+                >
+                  <ColorLibrary
+                    activeColorId={activeColorId}
+                    className={styles.toolbarColorLibrary}
+                    colors={palette}
+                    featuredColorIds={featuredColorIds}
+                    showFeaturedSymbols={showSymbols}
+                    symbolAssignments={symbolAssignments}
+                    onColorSelect={(colorId) => {
+                      dispatch(createSetActiveColorCommand(colorId));
+                      setColorLibraryOpen(false);
+                    }}
+                  />
+                </TextToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+          </ToolbarGroup>
+
+          <ToolbarDivider />
+
+          <ToolbarGroup>
+            <ToolbarMeta>
+              <SingleSelectDropdown
+                ariaLabel="Text font"
+                items={TEXT_FONT_OPTIONS}
+                value={placement.fontFamily}
+                placeholder="Font"
+                triggerLabel={
+                  <span style={{ fontFamily: placement.fontFamily, fontWeight: 400 }}>
+                    {placement.fontFamily}
+                  </span>
+                }
+              triggerVariant="ghost"
+              menuPlacement="bottom-start"
+              menuPortalToViewport
+              menuStyle={{ zIndex: 240 }}
+              minWidth="auto"
+              menuWidth={180}
+                getItemValue={(item) => item.value}
+                getItemLabel={(item) => (
+                  <span style={{ fontFamily: item.value }}>{item.label}</span>
+                )}
+                onValueChange={(value) => {
+                  updatePlacementStyle({ fontFamily: value });
                 }}
+                wrapperStyle={{ width: "fit-content", maxWidth: 180 }}
+                triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 700 }}
               />
-            </TextToolbarPortalPopover>
-          ) : null}
-        </ToolbarAnchor>
-      </ToolbarGroup>
+            </ToolbarMeta>
 
-      <ToolbarDivider />
+            <ToolbarButton
+              type="button"
+              active={bold}
+              aria-pressed={bold}
+              aria-label="Bold"
+              title="Bold"
+              onClick={() => updatePlacementStyle({ bold: !bold })}
+            >
+              <ToolbarIcon icon="/icons/lucide/bold.svg" />
+            </ToolbarButton>
 
-      <ToolbarGroup>
-        <ToolbarMeta>
-          <SingleSelectDropdown
-            ariaLabel="Text font"
-            items={TEXT_FONT_OPTIONS}
-            value={placement.fontFamily}
-            placeholder="Font"
-            triggerLabel={
-              <span style={{ fontFamily: placement.fontFamily, fontWeight: 400 }}>
-                {placement.fontFamily}
-              </span>
-            }
-            triggerVariant="ghost"
-            menuPlacement="bottom-start"
-            minWidth="auto"
-            menuWidth={180}
-            getItemValue={(item) => item.value}
-            getItemLabel={(item) => (
-              <span style={{ fontFamily: item.value }}>{item.label}</span>
-            )}
-            onValueChange={(value) => {
-              updatePlacementStyle({ fontFamily: value });
-            }}
-            wrapperStyle={{ width: "fit-content", maxWidth: 180 }}
-            triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 700 }}
-          />
-        </ToolbarMeta>
+            <ToolbarButton
+              type="button"
+              active={italic}
+              aria-pressed={italic}
+              aria-label="Italic"
+              title="Italic"
+              onClick={() => updatePlacementStyle({ italic: !italic })}
+            >
+              <ToolbarIcon icon="/icons/lucide/italic.svg" />
+            </ToolbarButton>
 
-        <ToolbarButton
-          type="button"
-          active={bold}
-          aria-pressed={bold}
-          aria-label="Bold"
-          title="Bold"
-          onClick={() => updatePlacementStyle({ bold: !bold })}
-        >
-          <ToolbarIcon icon="/icons/lucide/bold.svg" />
-        </ToolbarButton>
+            <ToolbarButton
+              type="button"
+              active={underline}
+              aria-pressed={underline}
+              aria-label="Underline"
+              title="Underline"
+              onClick={() => updatePlacementStyle({ underline: !underline })}
+            >
+              <ToolbarIcon icon="/icons/lucide/underline.svg" />
+            </ToolbarButton>
+          </ToolbarGroup>
+        </Toolbar>
+      </div>
 
-        <ToolbarButton
-          type="button"
-          active={italic}
-          aria-pressed={italic}
-          aria-label="Italic"
-          title="Italic"
-          onClick={() => updatePlacementStyle({ italic: !italic })}
-        >
-          <ToolbarIcon icon="/icons/lucide/italic.svg" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          type="button"
-          active={underline}
-          aria-pressed={underline}
-          aria-label="Underline"
-          title="Underline"
-          onClick={() => updatePlacementStyle({ underline: !underline })}
-        >
-          <ToolbarIcon icon="/icons/lucide/underline.svg" />
-        </ToolbarButton>
-      </ToolbarGroup>
-
-      <ToolbarDivider />
-
-      <ToolbarGroup actions style={{ marginLeft: 6, gap: 8 }}>
-        <ToolbarButton
-          type="button"
-          variant="secondary"
-          labelled
-          onClick={() => dispatch(createCancelTextPlacementCommand())}
-        >
-          Cancel
-        </ToolbarButton>
-        <ToolbarButton
-          type="button"
-          variant="primary"
-          labelled
-          disabled={!canConvert}
-          onClick={handleConvert}
-        >
-          Convert
-        </ToolbarButton>
-      </ToolbarGroup>
-    </Toolbar>
+      <div className={styles.selectionToolbarCloseViewport}>
+        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+          <ToolbarButton
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={styles.selectionToolbarCloseButton}
+            disabled={!canConvert}
+            onClick={handleConvert}
+          >
+            <ToolbarIcon icon="/icons/lucide/check.svg" />
+          </ToolbarButton>
+        </Toolbar>
+      </div>
+    </div>
   );
 }
