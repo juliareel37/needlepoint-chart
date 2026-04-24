@@ -55,7 +55,7 @@ export function createNewDesignState(
       ...state.session,
       activeTool: {
         ...state.session.activeTool,
-        tool: "pan",
+        tool: "paint",
         colorId: DEFAULT_DMC_COLOR_ID,
       },
       eyedropperReturnTool: null,

@@ -832,24 +832,6 @@ export function FloatingToolbar({
       <ToolbarDivider />
         <ToolbarButton
           type="button"
-          active={activeTool === "eyedropper"}
-          aria-pressed={activeTool === "eyedropper"}
-          aria-label="Eyedropper"
-          data-tooltip="Eyedropper"
-          title="Eyedropper"
-          onClick={() => {
-            closeColorLibrary();
-            closeDrawMenu();
-            closeImageMenu();
-            dispatch(createSetToolCommand("eyedropper"));
-          }}
-        >
-          <ToolbarIcon icon="/icons/lucide/dropper.svg" />
-        </ToolbarButton>
-
-
-        <ToolbarButton
-          type="button"
           active={activeTool === "pan"}
           inertWhenActive
           aria-pressed={activeTool === "pan"}
@@ -1007,6 +989,23 @@ export function FloatingToolbar({
             }}
           >
             <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+          </ToolbarButton>
+
+          <ToolbarButton
+            type="button"
+            active={activeTool === "eyedropper"}
+            aria-pressed={activeTool === "eyedropper"}
+            aria-label="Eyedropper"
+            data-tooltip="Eyedropper"
+            title="Eyedropper"
+            onClick={() => {
+              closeColorLibrary();
+              closeDrawMenu();
+              closeImageMenu();
+              dispatch(createSetToolCommand("eyedropper"));
+            }}
+          >
+            <ToolbarIcon icon="/icons/lucide/dropper.svg" />
           </ToolbarButton>
 
           {drawOpen ? (

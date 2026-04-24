@@ -51,7 +51,7 @@ export function createEditorStateFromDocument(
       ...state.session,
       activeTool: {
         ...state.session.activeTool,
-        tool: "pan",
+        tool: "paint",
         colorId: defaultColorId,
       },
       eyedropperReturnTool: null,
