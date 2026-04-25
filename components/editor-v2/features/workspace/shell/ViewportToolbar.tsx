@@ -63,12 +63,12 @@ export function ViewportToolbar({
   const nextZoomIn = getNextZoomInPercent(zoomPercent) / 100;
   const nextZoomOut = getNextZoomOutPercent(zoomPercent) / 100;
   const zoomPopupItems: ZoomPopupItem[] = [
+    { kind: "fit", value: "fit" },
     ...ZOOM_POPUP_PRESET_PERCENTS.map((percent) => ({
       kind: "preset" as const,
       percent,
       value: String(percent),
     })),
-    { kind: "fit", value: "fit" },
   ];
 
   return (
