@@ -12,6 +12,7 @@ import {
   getHandleTop,
   getRotationCss,
   POSITIONING_HANDLES,
+  shouldSnapRotationToZero,
   type PositioningPinchState,
 } from "@/lib/editor-v2/editor/positioning";
 import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -324,6 +325,13 @@ export function IconPlacementBoxOverlay({
       secondTouch.clientY - firstTouch.clientY,
       secondTouch.clientX - firstTouch.clientX,
     );
+    const rawRotation =
+      pinchSession.pinch.startTransform.rotation +
+      ((nextAngle - pinchSession.pinch.startAngle) * 180) / Math.PI;
+    pinchSession.pinch.snapToZero = shouldSnapRotationToZero(
+      rawRotation,
+      pinchSession.pinch.snapToZero,
+    );
     const nextTransform = getIconPlacementTransformFromPinch(
       pinchSession.pinch,
       worldCenter,
@@ -387,6 +395,10 @@ export function IconPlacementBoxOverlay({
         startAngle: Math.atan2(
           secondTouch.clientY - firstTouch.clientY,
           secondTouch.clientX - firstTouch.clientX,
+        ),
+        snapToZero: shouldSnapRotationToZero(
+          latestTransformRef.current.rotation,
+          false,
         ),
         startTransform: {
           offsetX: latestTransformRef.current.offsetX,

@@ -5,6 +5,7 @@ import type {
   PositioningRect,
 } from "../positioning";
 import type { WorldPoint } from "../viewport";
+import { getSnappedRotationDegrees } from "../positioning";
 
 export interface IconPlacementTransform {
   offsetX: number;
@@ -100,9 +101,11 @@ export function getIconPlacementTransformFromPinch(
     offsetY: nextTop - baseRect.top,
     scaleX: nextScaleX,
     scaleY: nextScaleY,
-    rotation:
+    rotation: getSnappedRotationDegrees(
       pinchState.startTransform.rotation +
-      ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
+        ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
+      pinchState.snapToZero,
+    ),
     lockAspectRatio: startTransform.lockAspectRatio,
     freeCornerResize: startTransform.freeCornerResize,
   };

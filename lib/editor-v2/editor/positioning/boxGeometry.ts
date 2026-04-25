@@ -40,7 +40,11 @@ export interface PositioningPinchState {
   startDistance: number;
   startAngle: number;
   startTransform: PositioningTransform;
+  snapToZero: boolean;
 }
+
+export const ROTATION_SNAP_DEGREES = 3;
+export const ROTATION_UNSNAP_DEGREES = 5;
 
 export const POSITIONING_HANDLES: Array<{
   id: PositioningHandleId;
@@ -185,9 +189,10 @@ export function getTransformFromPinch(
     offsetX: nextLeft - baseRect.left,
     offsetY: nextTop - baseRect.top,
     scale: nextScale,
-    rotation: normalizeRotationDegrees(
+    rotation: getSnappedRotationDegrees(
       pinchState.startTransform.rotation +
         ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
+      pinchState.snapToZero,
     ),
   };
 }
@@ -363,4 +368,18 @@ export function normalizeRotationDegrees(value: number): number {
 
   const normalized = ((((value + 180) % 360) + 360) % 360) - 180;
   return Number(normalized.toFixed(4));
+}
+
+export function shouldSnapRotationToZero(rotation: number, currentlySnapped: boolean): boolean {
+  const threshold = currentlySnapped ? ROTATION_UNSNAP_DEGREES : ROTATION_SNAP_DEGREES;
+  return Math.abs(normalizeRotationDegrees(rotation)) <= threshold;
+}
+
+export function getSnappedRotationDegrees(
+  rotation: number,
+  currentlySnapped: boolean,
+): number {
+  return shouldSnapRotationToZero(rotation, currentlySnapped)
+    ? 0
+    : normalizeRotationDegrees(rotation);
 }
