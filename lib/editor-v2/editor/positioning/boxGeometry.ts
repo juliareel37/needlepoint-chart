@@ -10,7 +10,7 @@ export type PositioningHandleId =
   | "w"
   | "nw";
 
-export type PositioningDragMode = PositioningHandleId | "move";
+export type PositioningDragMode = PositioningHandleId | "move" | "rotate";
 
 export interface PositioningRect {
   left: number;
@@ -145,6 +145,26 @@ export function getTransformFromDrag(
   point: WorldPoint,
   baseRect: PositioningRect,
 ): PositioningTransform {
+  if (dragState.mode === "rotate") {
+    const centerX = dragState.startBounds.left + dragState.startBounds.width / 2;
+    const centerY = dragState.startBounds.top + dragState.startBounds.height / 2;
+    const startAngle = Math.atan2(
+      dragState.startPoint.y - centerY,
+      dragState.startPoint.x - centerX,
+    );
+    const nextAngle = Math.atan2(point.y - centerY, point.x - centerX);
+
+    return {
+      offsetX: dragState.startTransform.offsetX,
+      offsetY: dragState.startTransform.offsetY,
+      scale: dragState.startTransform.scale,
+      rotation: normalizeRotationDegrees(
+        dragState.startTransform.rotation +
+          ((nextAngle - startAngle) * 180) / Math.PI,
+      ),
+    };
+  }
+
   if (dragState.mode === "move") {
     return {
       offsetX: dragState.startTransform.offsetX + (point.x - dragState.startPoint.x),

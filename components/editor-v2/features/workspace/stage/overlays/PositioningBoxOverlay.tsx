@@ -12,7 +12,6 @@ import {
   getHandleTop,
   getPositionedBounds,
   getRotationCss,
-  getSnappedRotationDegrees,
   getTransformFromDrag,
   getTransformFromPinch,
   POSITIONING_HANDLES,
@@ -82,6 +81,7 @@ interface PinchSession {
 const DRAG_THRESHOLD = 4;
 const TOUCH_HANDLE_TARGET_SIZE = 36;
 const TOUCH_HANDLE_DRAG_THRESHOLD = 2;
+const ROTATE_HANDLE_OFFSET = 24;
 
 export function PositioningBoxOverlay({
   ariaLabel,
@@ -108,6 +108,7 @@ export function PositioningBoxOverlay({
 }: PositioningBoxOverlayProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const handleRefs = useRef<Record<string, HandleElements>>({});
+  const rotateHandleRef = useRef<HandleElements>({ hit: null, visible: null });
   const dragSequenceRef = useRef(0);
   const dragSessionRef = useRef<DragSession | null>(null);
   const pinchSessionRef = useRef<PinchSession | null>(null);
@@ -161,6 +162,7 @@ export function PositioningBoxOverlay({
       applyPreviewBounds(
         overlayRef.current,
         handleRefs.current,
+        rotateHandleRef.current,
         bounds,
         transform.rotation,
         handleSize,
@@ -306,7 +308,7 @@ export function PositioningBoxOverlay({
     const deltaY = nextClientY - session.startClientY;
     if (!session.dragged && Math.hypot(deltaX, deltaY) >= session.dragThreshold) {
       session.dragged = true;
-      if (session.mode === "move" && overlayRef.current) {
+      if ((session.mode === "move" || session.mode === "rotate") && overlayRef.current) {
         overlayRef.current.style.cursor = "grabbing";
       }
     }
@@ -337,6 +339,7 @@ export function PositioningBoxOverlay({
       applyPreviewBounds(
         overlayRef.current,
         handleRefs.current,
+        rotateHandleRef.current,
         nextBounds,
         nextTransform.rotation,
         handleSize,
@@ -406,6 +409,7 @@ export function PositioningBoxOverlay({
       applyPreviewBounds(
         overlayRef.current,
         handleRefs.current,
+        rotateHandleRef.current,
         nextBounds,
         nextTransform.rotation,
         handleSize,
@@ -555,7 +559,8 @@ export function PositioningBoxOverlay({
     }
 
     if (overlayRef.current) {
-      overlayRef.current.style.cursor = interactive ? "grab" : "default";
+      overlayRef.current.style.cursor =
+        interactive ? (session.mode === "rotate" ? "crosshair" : "grab") : "default";
     }
 
     latestOnInteractionEndRef.current?.();
@@ -630,6 +635,53 @@ export function PositioningBoxOverlay({
         />
       ) : null}
 
+      {showHandles ? (
+        <>
+          <div
+            ref={(node) => {
+              rotateHandleRef.current = { ...rotateHandleRef.current, hit: node };
+            }}
+            role="presentation"
+            aria-hidden="true"
+            onPointerDown={(event) => beginDrag(event, "rotate")}
+            style={{
+              position: "absolute",
+              left: `${bounds.width / 2 - handleHitSize / 2}px`,
+              top: `${-ROTATE_HANDLE_OFFSET * controlScale - handleHitSize / 2}px`,
+              width: `${handleHitSize}px`,
+              height: `${handleHitSize}px`,
+              cursor: "crosshair",
+              WebkitTapHighlightColor: "transparent",
+              background: "transparent",
+            }}
+          />
+          <div
+            ref={(node) => {
+              rotateHandleRef.current = { ...rotateHandleRef.current, visible: node };
+            }}
+            role="presentation"
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: `${bounds.width / 2 - handleSize / 2}px`,
+              top: `${-ROTATE_HANDLE_OFFSET * controlScale - handleSize / 2}px`,
+              width: `${handleSize}px`,
+              height: `${handleSize}px`,
+              borderRadius: "999px",
+              backgroundColor: "#ffffff",
+              backgroundImage: "url('/icons/lucide/rotate-cw.svg')",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: `${Math.max(8, handleSize * 0.6)}px ${Math.max(8, handleSize * 0.6)}px`,
+              border: `${handleBorderWidth}px solid #2563eb`,
+              boxSizing: "border-box",
+              cursor: "crosshair",
+              pointerEvents: "none",
+            }}
+          />
+        </>
+      ) : null}
+
       {showHandles
         ? POSITIONING_HANDLES.map((handle) => (
             <div key={handle.id}>
@@ -693,6 +745,7 @@ export function PositioningBoxOverlay({
 function applyPreviewBounds(
   overlayElement: HTMLDivElement | null,
   handleRefs: Record<string, HandleElements>,
+  rotateHandle: HandleElements,
   bounds: PositioningRect,
   rotation: number,
   handleSize: number,
@@ -725,5 +778,20 @@ function applyPreviewBounds(
       hitElement.style.left = `${visibleLeft - hitInset}px`;
       hitElement.style.top = `${visibleTop - hitInset}px`;
     }
+  }
+
+  const controlScale = handleSize / 14;
+  const rotateVisibleTop = -ROTATE_HANDLE_OFFSET * controlScale - handleSize / 2;
+  const rotateVisibleLeft = bounds.width / 2 - handleSize / 2;
+  const rotateHitInset = (handleHitSize - handleSize) / 2;
+
+  if (rotateHandle.visible) {
+    rotateHandle.visible.style.left = `${rotateVisibleLeft}px`;
+    rotateHandle.visible.style.top = `${rotateVisibleTop}px`;
+  }
+
+  if (rotateHandle.hit) {
+    rotateHandle.hit.style.left = `${rotateVisibleLeft - rotateHitInset}px`;
+    rotateHandle.hit.style.top = `${rotateVisibleTop - rotateHitInset}px`;
   }
 }

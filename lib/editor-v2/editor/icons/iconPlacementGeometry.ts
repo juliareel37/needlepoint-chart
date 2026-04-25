@@ -5,7 +5,10 @@ import type {
   PositioningRect,
 } from "../positioning";
 import type { WorldPoint } from "../viewport";
-import { getSnappedRotationDegrees } from "../positioning";
+import {
+  getSnappedRotationDegrees,
+  normalizeRotationDegrees,
+} from "../positioning";
 
 export interface IconPlacementTransform {
   offsetX: number;
@@ -50,6 +53,29 @@ export function getIconPlacementTransformFromDrag(
   point: WorldPoint,
   baseRect: PositioningRect,
 ): IconPlacementTransform {
+  if (dragState.mode === "rotate") {
+    const centerX = dragState.startBounds.left + dragState.startBounds.width / 2;
+    const centerY = dragState.startBounds.top + dragState.startBounds.height / 2;
+    const startAngle = Math.atan2(
+      dragState.startPoint.y - centerY,
+      dragState.startPoint.x - centerX,
+    );
+    const nextAngle = Math.atan2(point.y - centerY, point.x - centerX);
+
+    return {
+      offsetX: dragState.startTransform.offsetX,
+      offsetY: dragState.startTransform.offsetY,
+      scaleX: dragState.startTransform.scaleX,
+      scaleY: dragState.startTransform.scaleY,
+      rotation: normalizeRotationDegrees(
+        dragState.startTransform.rotation +
+          ((nextAngle - startAngle) * 180) / Math.PI,
+      ),
+      lockAspectRatio: dragState.startTransform.lockAspectRatio,
+      freeCornerResize: dragState.startTransform.freeCornerResize,
+    };
+  }
+
   if (dragState.mode === "move") {
     return {
       offsetX: dragState.startTransform.offsetX + (point.x - dragState.startPoint.x),
