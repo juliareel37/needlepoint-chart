@@ -86,8 +86,51 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  if (!clerkPublishableKey) {
+    return (
+      <html lang="en">
+        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+          <div
+            style={{
+              minHeight: "100vh",
+              display: "grid",
+              placeItems: "center",
+              padding: 24,
+              background: "var(--surface-primary, #ffffff)",
+              color: "var(--text-primary, #111111)",
+            }}
+          >
+            <div
+              style={{
+                width: "min(560px, 100%)",
+                border: "1px solid rgba(0, 0, 0, 0.12)",
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255, 255, 255, 0.92)",
+                boxShadow: "0 12px 32px rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <h1 style={{ margin: 0, fontSize: 24, lineHeight: 1.2 }}>
+                Auth Configuration Missing
+              </h1>
+              <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.6 }}>
+                This deployment is missing the Clerk publishable key. Add
+                <code style={{ marginLeft: 4, marginRight: 4 }}>
+                  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+                </code>
+                to the production environment for this app and redeploy.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    );
+  }
+
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey}>
       <html lang="en" suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
