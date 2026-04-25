@@ -205,12 +205,13 @@ export type BeginTextPlacementCommand = BaseEditorCommand<
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    rotation?: number;
   }
 >;
 
 export type PreviewTextPlacementCommand = BaseEditorCommand<
   "text.previewPlacement",
-  { offsetX: number; offsetY: number; scale: number }
+  { offsetX: number; offsetY: number; scale: number; rotation: number }
 >;
 
 export type UpdateTextPlacementCommand = BaseEditorCommand<
@@ -226,6 +227,7 @@ export type UpdateTextPlacementCommand = BaseEditorCommand<
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    rotation?: number;
   }
 >;
 
@@ -258,6 +260,7 @@ export type BeginIconPlacementCommand = BaseEditorCommand<
     scale?: number;
     scaleX?: number;
     scaleY?: number;
+    rotation?: number;
   }
 >;
 
@@ -269,6 +272,7 @@ export type PreviewIconPlacementCommand = BaseEditorCommand<
     scale?: number;
     scaleX?: number;
     scaleY?: number;
+    rotation: number;
   }
 >;
 
@@ -298,6 +302,7 @@ export type UpdateIconPlacementCommand = BaseEditorCommand<
     >
   > & {
     scale?: number;
+    rotation?: number;
   }
 >;
 
@@ -313,7 +318,7 @@ export type BeginTraceRepositionCommand = BaseEditorCommand<
 
 export type PreviewTraceRepositionCommand = BaseEditorCommand<
   "trace.previewReposition",
-  { offsetX: number; offsetY: number; scale: number }
+  { offsetX: number; offsetY: number; scale: number; rotation: number }
 >;
 
 export type CancelTraceRepositionCommand = BaseEditorCommand<

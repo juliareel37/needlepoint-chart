@@ -14,10 +14,10 @@ import type { ViewportState } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
+  getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
 import {
   getIconPlacementBounds,
-  getIconPlacementTransformCss,
   type IconPlacementTransform,
 } from "@/lib/editor-v2/editor/icons/iconPlacementGeometry";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
@@ -75,6 +75,7 @@ export function IconPlacementLayer({
       offsetY: placement.offsetY,
       scaleX: placement.scaleX,
       scaleY: placement.scaleY,
+      rotation: placement.rotation,
       lockAspectRatio: placement.lockAspectRatio,
       freeCornerResize: isPrimitiveFrameKind(placement.primitiveKind),
     }),
@@ -83,6 +84,7 @@ export function IconPlacementLayer({
       placement.lockAspectRatio,
       placement.offsetX,
       placement.offsetY,
+      placement.rotation,
       placement.scaleX,
       placement.scaleY,
     ],
@@ -184,10 +186,7 @@ export function IconPlacementLayer({
       }
 
       const nextBounds = projectMobileStageBounds(nextTransform, baseRect);
-      mobilePreviewIcon.style.left = `${nextBounds.left}px`;
-      mobilePreviewIcon.style.top = `${nextBounds.top}px`;
-      mobilePreviewIcon.style.width = `${nextBounds.width}px`;
-      mobilePreviewIcon.style.height = `${nextBounds.height}px`;
+      applyPreviewIconBox(mobilePreviewIcon, nextBounds, nextTransform.rotation);
       return;
     }
 
@@ -197,15 +196,12 @@ export function IconPlacementLayer({
 
     if (placement.primitiveKind) {
       const nextBounds = getIconPlacementBounds(baseRect, nextTransform);
-      previewIconRef.current.style.left = `${nextBounds.left}px`;
-      previewIconRef.current.style.top = `${nextBounds.top}px`;
-      previewIconRef.current.style.width = `${nextBounds.width}px`;
-      previewIconRef.current.style.height = `${nextBounds.height}px`;
-      previewIconRef.current.style.transform = "none";
+      applyPreviewIconBox(previewIconRef.current, nextBounds, nextTransform.rotation);
       return;
     }
 
-    previewIconRef.current.style.transform = getIconPlacementTransformCss(nextTransform);
+    const nextBounds = getIconPlacementBounds(baseRect, nextTransform);
+    applyPreviewIconBox(previewIconRef.current, nextBounds, nextTransform.rotation);
   }, [
     baseRect,
     coarsePointer,
@@ -221,6 +217,7 @@ export function IconPlacementLayer({
           offsetY: nextTransform.offsetY,
           scaleX: nextTransform.scaleX,
           scaleY: nextTransform.scaleY,
+          rotation: nextTransform.rotation,
         }),
       );
       setMobilePreviewTransform(nextTransform);
@@ -357,6 +354,8 @@ export function IconPlacementLayer({
               alignItems: "center",
               justifyContent: "center",
               filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
+              transform: getRotationCss(displayTransform.rotation),
+              transformOrigin: "center center",
             }}
           >
             {(placement.primitiveKind ? Boolean(previewSrc) : placement.colorSlots.length > 0) ? (
@@ -427,14 +426,12 @@ export function IconPlacementLayer({
             style={{
               position: "absolute",
               top: `${placement.primitiveKind ? bounds.top : baseRect.top}px`,
-              left: `${placement.primitiveKind ? bounds.left : baseRect.left}px`,
-              width: `${placement.primitiveKind ? bounds.width : baseRect.width}px`,
-              height: `${placement.primitiveKind ? bounds.height : baseRect.height}px`,
-              transform: placement.primitiveKind
-                ? "none"
-                : getIconPlacementTransformCss(transform),
-              transformOrigin: "top left",
-              willChange: "transform",
+              left: `${bounds.left}px`,
+              width: `${bounds.width}px`,
+              height: `${bounds.height}px`,
+              transform: getRotationCss(transform.rotation),
+              transformOrigin: "center center",
+              willChange: "left, top, width, height, transform",
               pointerEvents: "none",
               display: "flex",
               alignItems: "center",
@@ -488,4 +485,16 @@ export function IconPlacementLayer({
       ) : null}
     </>
   );
+}
+
+function applyPreviewIconBox(
+  element: HTMLDivElement,
+  bounds: { left: number; top: number; width: number; height: number },
+  rotation: number,
+): void {
+  element.style.left = `${bounds.left}px`;
+  element.style.top = `${bounds.top}px`;
+  element.style.width = `${bounds.width}px`;
+  element.style.height = `${bounds.height}px`;
+  element.style.transform = getRotationCss(rotation);
 }

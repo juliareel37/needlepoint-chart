@@ -331,6 +331,7 @@ export function createBeginTextPlacementCommand(payload: {
   offsetX?: number;
   offsetY?: number;
   scale?: number;
+  rotation?: number;
 }): EditorCommand {
   return createCommand(
     "text.beginPlacement",
@@ -344,6 +345,7 @@ export function createPreviewTextPlacementCommand(payload: {
   offsetX: number;
   offsetY: number;
   scale: number;
+  rotation: number;
 }): EditorCommand {
   return createCommand(
     "text.previewPlacement",
@@ -364,6 +366,7 @@ export function createUpdateTextPlacementCommand(payload: {
   offsetX?: number;
   offsetY?: number;
   scale?: number;
+  rotation?: number;
 }): EditorCommand {
   return createCommand(
     "text.updatePlacement",
@@ -402,6 +405,7 @@ export function createBeginIconPlacementCommand(payload: {
   scale?: number;
   scaleX?: number;
   scaleY?: number;
+  rotation?: number;
 }): EditorCommand {
   return createCommand(
     "icon.beginPlacement",
@@ -417,6 +421,7 @@ export function createPreviewIconPlacementCommand(payload: {
   scale?: number;
   scaleX?: number;
   scaleY?: number;
+  rotation: number;
 }): EditorCommand {
   return createCommand(
     "icon.previewPlacement",
@@ -446,6 +451,7 @@ export function createUpdateIconPlacementCommand(payload: {
   scale?: number;
   scaleX?: number;
   scaleY?: number;
+  rotation?: number;
 }): EditorCommand {
   return createCommand(
     "icon.updatePlacement",
@@ -497,6 +503,7 @@ export function createPreviewTraceRepositionCommand(payload: {
   offsetX: number;
   offsetY: number;
   scale: number;
+  rotation: number;
 }): EditorCommand {
   return createCommand(
     "trace.previewReposition",

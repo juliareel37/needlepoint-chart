@@ -1,6 +1,11 @@
 import type { GridPoint, TextPlacementSession } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
-import { getContainedRect, getPositionedBounds } from "../positioning";
+import {
+  getContainedRect,
+  getLocalPointWithinRotatedBounds,
+  getPositionedBounds,
+  getRotatedBounds,
+} from "../positioning";
 
 export function convertTextPlacementToCells(
   placement: TextPlacementSession,
@@ -17,7 +22,9 @@ export function convertTextPlacementToCells(
     offsetX: placement.offsetX,
     offsetY: placement.offsetY,
     scale: placement.scale,
+    rotation: placement.rotation,
   });
+  const rotatedBounds = getRotatedBounds(bounds, placement.rotation);
   const canvasWidth = Math.max(1, Math.ceil(bounds.width));
   const canvasHeight = Math.max(1, Math.ceil(bounds.height));
   const canvas = document.createElement("canvas");
@@ -62,15 +69,15 @@ export function convertTextPlacementToCells(
   }
 
   const pitch = metrics.cellSize + metrics.cellGap;
-  const minCellX = Math.max(0, Math.floor(bounds.left / pitch));
-  const minCellY = Math.max(0, Math.floor(bounds.top / pitch));
+  const minCellX = Math.max(0, Math.floor(rotatedBounds.left / pitch));
+  const minCellY = Math.max(0, Math.floor(rotatedBounds.top / pitch));
   const maxCellX = Math.min(
     metrics.width - 1,
-    Math.ceil((bounds.left + bounds.width) / pitch),
+    Math.ceil((rotatedBounds.left + rotatedBounds.width) / pitch),
   );
   const maxCellY = Math.min(
     metrics.height - 1,
-    Math.ceil((bounds.top + bounds.height) / pitch),
+    Math.ceil((rotatedBounds.top + rotatedBounds.height) / pitch),
   );
 
   const cells: GridPoint[] = [];
@@ -80,18 +87,13 @@ export function convertTextPlacementToCells(
     for (let x = minCellX; x <= maxCellX; x += 1) {
       const centerWorldX = x * pitch + metrics.cellSize / 2;
       const centerWorldY = y * pitch + metrics.cellSize / 2;
-
-      if (
-        centerWorldX < bounds.left ||
-        centerWorldY < bounds.top ||
-        centerWorldX > bounds.left + bounds.width ||
-        centerWorldY > bounds.top + bounds.height
-      ) {
-        continue;
-      }
-
-      const sampleX = Math.floor(centerWorldX - bounds.left);
-      const sampleY = Math.floor(centerWorldY - bounds.top);
+      const localPoint = getLocalPointWithinRotatedBounds(
+        { x: centerWorldX, y: centerWorldY },
+        bounds,
+        placement.rotation,
+      );
+      const sampleX = Math.floor(localPoint.x);
+      const sampleY = Math.floor(localPoint.y);
 
       if (sampleX < 0 || sampleY < 0 || sampleX >= canvasWidth || sampleY >= canvasHeight) {
         continue;

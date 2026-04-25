@@ -11,6 +11,7 @@ import {
   getHandleLeft,
   getHandleTop,
   getPositionedBounds,
+  getRotationCss,
   getTransformFromDrag,
   getTransformFromPinch,
   POSITIONING_HANDLES,
@@ -74,7 +75,6 @@ interface HandleElements {
 interface PinchSession {
   pinch: PositioningPinchState;
   pointerIds: [number, number];
-  startClientDistance: number;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -160,6 +160,7 @@ export function PositioningBoxOverlay({
         overlayRef.current,
         handleRefs.current,
         bounds,
+        transform.rotation,
         handleSize,
         handleHitSize,
       );
@@ -335,6 +336,7 @@ export function PositioningBoxOverlay({
         overlayRef.current,
         handleRefs.current,
         nextBounds,
+        nextTransform.rotation,
         handleSize,
         handleHitSize,
       );
@@ -368,13 +370,15 @@ export function PositioningBoxOverlay({
       secondTouch.clientX - firstTouch.clientX,
       secondTouch.clientY - firstTouch.clientY,
     );
+    const nextAngle = Math.atan2(
+      secondTouch.clientY - firstTouch.clientY,
+      secondTouch.clientX - firstTouch.clientX,
+    );
     const nextTransform = getTransformFromPinch(
-      {
-        ...pinchSession.pinch,
-        startDistance: pinchSession.startClientDistance,
-      },
+      pinchSession.pinch,
       worldCenter,
       nextDistance,
+      nextAngle,
       latestBaseRectRef.current,
     );
 
@@ -394,6 +398,7 @@ export function PositioningBoxOverlay({
         overlayRef.current,
         handleRefs.current,
         nextBounds,
+        nextTransform.rotation,
         handleSize,
         handleHitSize,
       );
@@ -420,22 +425,23 @@ export function PositioningBoxOverlay({
     const startBounds = latestBoundsRef.current;
     const width = Math.max(startBounds.width, 0.0001);
     const height = Math.max(startBounds.height, 0.0001);
+    const startDistance = Math.hypot(
+      secondTouch.clientX - firstTouch.clientX,
+      secondTouch.clientY - firstTouch.clientY,
+    );
 
     pinchSessionRef.current = {
       pinch: {
         anchorX: (worldCenter.x - startBounds.left) / width,
         anchorY: (worldCenter.y - startBounds.top) / height,
-        startDistance: Math.hypot(
-          secondTouch.clientX - firstTouch.clientX,
+        startDistance,
+        startAngle: Math.atan2(
           secondTouch.clientY - firstTouch.clientY,
+          secondTouch.clientX - firstTouch.clientX,
         ),
         startTransform: latestTransformRef.current,
       },
       pointerIds: [firstPointerId, secondPointerId],
-      startClientDistance: Math.hypot(
-        secondTouch.clientX - firstTouch.clientX,
-        secondTouch.clientY - firstTouch.clientY,
-      ),
     };
 
     const activeDragSession = dragSessionRef.current;
@@ -589,6 +595,8 @@ export function PositioningBoxOverlay({
         top: `${bounds.top}px`,
         width: `${bounds.width}px`,
         height: `${bounds.height}px`,
+        transform: getRotationCss(transform.rotation),
+        transformOrigin: "center center",
         cursor: interactive ? "grab" : "default",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -673,6 +681,7 @@ function applyPreviewBounds(
   overlayElement: HTMLDivElement | null,
   handleRefs: Record<string, HandleElements>,
   bounds: PositioningRect,
+  rotation: number,
   handleSize: number,
   handleHitSize: number,
 ) {
@@ -684,6 +693,7 @@ function applyPreviewBounds(
   overlayElement.style.top = `${bounds.top}px`;
   overlayElement.style.width = `${bounds.width}px`;
   overlayElement.style.height = `${bounds.height}px`;
+  overlayElement.style.transform = getRotationCss(rotation);
 
   for (const handle of POSITIONING_HANDLES) {
     const handleElements = handleRefs[handle.id];

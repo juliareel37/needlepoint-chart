@@ -11,7 +11,7 @@ import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewpo
 import {
   getContainedRect,
   getPositionedBounds,
-  getPositioningTransformCss,
+  getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
 import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
 import {
@@ -76,8 +76,9 @@ export function TextPlacementLayer({
       offsetX: placement.offsetX,
       offsetY: placement.offsetY,
       scale: placement.scale,
+      rotation: placement.rotation,
     }),
-    [placement.offsetX, placement.offsetY, placement.scale],
+    [placement.offsetX, placement.offsetY, placement.rotation, placement.scale],
   );
   const bounds = useMemo(
     () => getPositionedBounds(baseRect, transform),
@@ -114,14 +115,14 @@ export function TextPlacementLayer({
       return;
     }
 
-    const nextStyle = getPositioningTransformCss(nextTransform);
+    const nextBounds = getPositionedBounds(baseRect, nextTransform);
     if (previewTextRef.current) {
-      previewTextRef.current.style.transform = nextStyle;
+      applyTextPreviewBox(previewTextRef.current, nextBounds, nextTransform.rotation);
     }
     if (textareaPreviewRef.current) {
-      textareaPreviewRef.current.style.transform = nextStyle;
+      applyTextPreviewBox(textareaPreviewRef.current, nextBounds, nextTransform.rotation);
     }
-  }, [coarsePointer, isEditing]);
+  }, [baseRect, coarsePointer, isEditing]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform) => {
       setMobilePreviewTransform(nextTransform);
@@ -130,6 +131,7 @@ export function TextPlacementLayer({
           offsetX: nextTransform.offsetX,
           offsetY: nextTransform.offsetY,
           scale: nextTransform.scale,
+          rotation: nextTransform.rotation,
         }),
       );
     },
@@ -259,10 +261,12 @@ export function TextPlacementLayer({
               color: previewColor,
               textShadow: "0 1px 0 rgba(255,255,255,0.55)",
               textDecoration: placement.underline ? "underline" : "none",
-              padding: `${6 * viewport.zoom}px`,
+              padding: `${6 * displayTransform.scale * viewport.zoom}px`,
               boxSizing: "border-box",
               whiteSpace: "pre-wrap",
               overflow: "hidden",
+              transform: getRotationCss(displayTransform.rotation),
+              transformOrigin: "center center",
             }}
           >
             {placement.text}
@@ -307,12 +311,12 @@ export function TextPlacementLayer({
             style={{
               position: "absolute",
               top: `${baseRect.top}px`,
-              left: `${baseRect.left}px`,
-              width: `${baseRect.width}px`,
-              height: `${baseRect.height}px`,
-              transform: getPositioningTransformCss(transform),
-              transformOrigin: "top left",
-              willChange: "transform",
+              left: `${bounds.left}px`,
+              width: `${bounds.width}px`,
+              height: `${bounds.height}px`,
+              transform: getRotationCss(transform.rotation),
+              transformOrigin: "center center",
+              willChange: "left, top, width, height, transform",
               pointerEvents: isEditing ? "none" : "auto",
               display: "flex",
               alignItems: "center",
@@ -320,13 +324,13 @@ export function TextPlacementLayer({
               fontFamily: `${placement.fontFamily}, sans-serif`,
               fontWeight: placement.fontWeight,
               fontStyle: placement.fontStyle,
-              fontSize: `${fontSize}px`,
+              fontSize: `${fontSize * transform.scale}px`,
               lineHeight: 1.1,
               textAlign: "center",
               color: previewColor,
               textShadow: "0 1px 0 rgba(255,255,255,0.55)",
               textDecoration: placement.underline ? "underline" : "none",
-              padding: 6,
+              padding: `${6 * transform.scale}px`,
               boxSizing: "border-box",
               whiteSpace: "pre-wrap",
               overflow: "hidden",
@@ -379,12 +383,12 @@ export function TextPlacementLayer({
                 style={{
                   position: "absolute",
                   top: `${baseRect.top}px`,
-                  left: `${baseRect.left}px`,
-                  width: `${baseRect.width}px`,
-                  height: `${baseRect.height}px`,
-                  transform: getPositioningTransformCss(transform),
-                  transformOrigin: "top left",
-                  willChange: "transform",
+                  left: `${bounds.left}px`,
+                  width: `${bounds.width}px`,
+                  height: `${bounds.height}px`,
+                  transform: getRotationCss(transform.rotation),
+                  transformOrigin: "center center",
+                  willChange: "left, top, width, height, transform",
                   resize: "none",
                   border: "none",
                   background: "transparent",
@@ -393,14 +397,14 @@ export function TextPlacementLayer({
                   fontFamily: `${placement.fontFamily}, sans-serif`,
                   fontWeight: placement.fontWeight,
                   fontStyle: placement.fontStyle,
-                  fontSize: `${fontSize}px`,
+                  fontSize: `${fontSize * transform.scale}px`,
                   lineHeight: 1.1,
                   textAlign: "center",
                   textDecoration: placement.underline ? "underline" : "none",
-                  paddingTop: verticalPadding,
-                  paddingBottom: verticalPadding,
-                  paddingLeft: 6,
-                  paddingRight: 6,
+                  paddingTop: verticalPadding * transform.scale,
+                  paddingBottom: verticalPadding * transform.scale,
+                  paddingLeft: 6 * transform.scale,
+                  paddingRight: 6 * transform.scale,
                   boxSizing: "border-box",
                   overflow: "hidden",
                   outline: "none",
@@ -431,4 +435,16 @@ export function TextPlacementLayer({
       ) : null}
     </>
   );
+}
+
+function applyTextPreviewBox(
+  element: HTMLElement,
+  bounds: { left: number; top: number; width: number; height: number },
+  rotation: number,
+): void {
+  element.style.left = `${bounds.left}px`;
+  element.style.top = `${bounds.top}px`;
+  element.style.width = `${bounds.width}px`;
+  element.style.height = `${bounds.height}px`;
+  element.style.transform = getRotationCss(rotation);
 }

@@ -54,6 +54,7 @@ export type TraceUpdateChanges = Partial<
     | "offsetX"
     | "offsetY"
     | "scale"
+    | "rotation"
     | "locked"
   >
 >;
