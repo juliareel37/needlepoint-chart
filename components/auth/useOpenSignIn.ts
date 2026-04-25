@@ -40,6 +40,7 @@ export function useOpenSignIn(): () => void {
     try {
       clerk.openSignIn({
         fallbackRedirectUrl: currentUrl,
+        forceRedirectUrl: currentUrl,
       });
     } catch (error) {
       console.warn("Sign-in modal failed to open, falling back to sign-in page", {
