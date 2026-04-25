@@ -1,6 +1,10 @@
 "use client";
 
-import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
+import {
+  getContainedRect,
+  getLocalPointWithinRotatedBounds,
+  getPositionedBounds,
+} from "@/lib/editor-v2/editor/positioning";
 import type { Rgb } from "@/lib/editor-v2/editor/color-utils";
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
 
@@ -59,19 +63,20 @@ export function sampleTraceRgbAtWorldPoint(
     offsetX: trace.offsetX,
     offsetY: trace.offsetY,
     scale: trace.scale,
+    rotation: trace.rotation,
   });
-
+  const localPoint = getLocalPointWithinRotatedBounds(point, bounds, trace.rotation);
   if (
-    point.x < bounds.left ||
-    point.y < bounds.top ||
-    point.x >= bounds.left + bounds.width ||
-    point.y >= bounds.top + bounds.height
+    localPoint.x < 0 ||
+    localPoint.y < 0 ||
+    localPoint.x >= bounds.width ||
+    localPoint.y >= bounds.height
   ) {
     return null;
   }
 
-  const u = (point.x - bounds.left) / bounds.width;
-  const v = (point.y - bounds.top) / bounds.height;
+  const u = localPoint.x / bounds.width;
+  const v = localPoint.y / bounds.height;
   const pixelX = clampInt(Math.round(u * sampler.width), 0, sampler.width - 1);
   const pixelY = clampInt(Math.round(v * sampler.height), 0, sampler.height - 1);
 

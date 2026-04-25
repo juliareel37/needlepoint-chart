@@ -145,6 +145,7 @@ export function renderDisplayCanvas(options: {
       offsetX: displayTrace.offsetX,
       offsetY: displayTrace.offsetY,
       scale: displayTrace.scale,
+      rotation: displayTrace.rotation,
     });
     const traceRect = snapRectToDevicePixels(
       {
@@ -158,10 +159,12 @@ export function renderDisplayCanvas(options: {
 
     context.save();
     context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
+    context.translate(traceRect.x + traceRect.width / 2, traceRect.y + traceRect.height / 2);
+    context.rotate((displayTrace.rotation * Math.PI) / 180);
     context.drawImage(
       displayTraceAsset.image,
-      traceRect.x,
-      traceRect.y,
+      -traceRect.width / 2,
+      -traceRect.height / 2,
       traceRect.width,
       traceRect.height,
     );

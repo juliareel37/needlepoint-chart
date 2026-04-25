@@ -164,6 +164,7 @@ export const previewTraceRepositionCommandHandler: EditorCommandHandler<PreviewT
             offsetX: command.payload.offsetX,
             offsetY: command.payload.offsetY,
             scale: command.payload.scale,
+            rotation: command.payload.rotation,
           },
         },
       ],
@@ -247,6 +248,7 @@ export const commitTraceRepositionCommandHandler: EditorCommandHandler<CommitTra
       offsetX: currentTrace.offsetX,
       offsetY: currentTrace.offsetY,
       scale: currentTrace.scale,
+      rotation: currentTrace.rotation,
       locked: true,
     };
 
@@ -331,6 +333,7 @@ function buildTraceRepositionSnapshot(
     offsetX: trace.offsetX,
     offsetY: trace.offsetY,
     scale: trace.scale,
+    rotation: trace.rotation,
     locked: true,
   };
 }

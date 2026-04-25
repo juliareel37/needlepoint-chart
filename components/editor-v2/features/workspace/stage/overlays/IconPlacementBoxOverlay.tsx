@@ -10,6 +10,7 @@ import type { PositioningDragMode, PositioningRect } from "@/lib/editor-v2/edito
 import {
   getHandleLeft,
   getHandleTop,
+  getRotationCss,
   POSITIONING_HANDLES,
   type PositioningPinchState,
 } from "@/lib/editor-v2/editor/positioning";
@@ -64,7 +65,6 @@ interface HandleElements {
 interface PinchSession {
   pinch: PositioningPinchState;
   pointerIds: [number, number];
-  startClientDistance: number;
   startTransform: IconPlacementTransform;
 }
 
@@ -138,6 +138,7 @@ export function IconPlacementBoxOverlay({
         overlayRef.current,
         handleRefs.current,
         bounds,
+        transform.rotation,
         handleSize,
         handleHitSize,
       );
@@ -287,6 +288,7 @@ export function IconPlacementBoxOverlay({
       overlayRef.current,
       handleRefs.current,
       nextBounds,
+      nextTransform.rotation,
       handleSize,
       handleHitSize,
     );
@@ -318,13 +320,15 @@ export function IconPlacementBoxOverlay({
       secondTouch.clientX - firstTouch.clientX,
       secondTouch.clientY - firstTouch.clientY,
     );
+    const nextAngle = Math.atan2(
+      secondTouch.clientY - firstTouch.clientY,
+      secondTouch.clientX - firstTouch.clientX,
+    );
     const nextTransform = getIconPlacementTransformFromPinch(
-      {
-        ...pinchSession.pinch,
-        startDistance: pinchSession.startClientDistance,
-      },
+      pinchSession.pinch,
       worldCenter,
       nextDistance,
+      nextAngle,
       latestBaseRectRef.current,
       pinchSession.startTransform,
     );
@@ -344,6 +348,7 @@ export function IconPlacementBoxOverlay({
       overlayRef.current,
       handleRefs.current,
       nextBounds,
+      nextTransform.rotation,
       handleSize,
       handleHitSize,
     );
@@ -379,14 +384,18 @@ export function IconPlacementBoxOverlay({
         anchorX: (worldCenter.x - startBounds.left) / width,
         anchorY: (worldCenter.y - startBounds.top) / height,
         startDistance: startClientDistance,
+        startAngle: Math.atan2(
+          secondTouch.clientY - firstTouch.clientY,
+          secondTouch.clientX - firstTouch.clientX,
+        ),
         startTransform: {
           offsetX: latestTransformRef.current.offsetX,
           offsetY: latestTransformRef.current.offsetY,
           scale: 1,
+          rotation: latestTransformRef.current.rotation,
         },
       },
       pointerIds: [firstPointerId, secondPointerId],
-      startClientDistance,
       startTransform: latestTransformRef.current,
     };
 
@@ -530,6 +539,8 @@ export function IconPlacementBoxOverlay({
         top: `${bounds.top}px`,
         width: `${bounds.width}px`,
         height: `${bounds.height}px`,
+        transform: getRotationCss(transform.rotation),
+        transformOrigin: "center center",
         cursor: "grab",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -605,6 +616,7 @@ function applyPreviewBounds(
   overlayElement: HTMLDivElement | null,
   handleRefs: Record<string, HandleElements>,
   bounds: PositioningRect,
+  rotation: number,
   handleSize: number,
   handleHitSize: number,
 ) {
@@ -616,6 +628,7 @@ function applyPreviewBounds(
   overlayElement.style.top = `${bounds.top}px`;
   overlayElement.style.width = `${bounds.width}px`;
   overlayElement.style.height = `${bounds.height}px`;
+  overlayElement.style.transform = getRotationCss(rotation);
 
   for (const handle of POSITIONING_HANDLES) {
     const handleElements = handleRefs[handle.id];

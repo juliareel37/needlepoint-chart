@@ -11,6 +11,7 @@ export interface IconPlacementTransform {
   offsetY: number;
   scaleX: number;
   scaleY: number;
+  rotation: number;
   lockAspectRatio?: boolean;
   freeCornerResize?: boolean;
 }
@@ -54,6 +55,7 @@ export function getIconPlacementTransformFromDrag(
       offsetY: dragState.startTransform.offsetY + (point.y - dragState.startPoint.y),
       scaleX: dragState.startTransform.scaleX,
       scaleY: dragState.startTransform.scaleY,
+      rotation: dragState.startTransform.rotation,
     };
   }
 
@@ -71,6 +73,7 @@ export function getIconPlacementTransformFromDrag(
     offsetY: nextBounds.top - baseRect.top,
     scaleX: clampScale(nextBounds.width / Math.max(baseRect.width, 0.0001)),
     scaleY: clampScale(nextBounds.height / Math.max(baseRect.height, 0.0001)),
+    rotation: dragState.startTransform.rotation,
     lockAspectRatio: dragState.startTransform.lockAspectRatio,
     freeCornerResize: dragState.startTransform.freeCornerResize,
   };
@@ -80,6 +83,7 @@ export function getIconPlacementTransformFromPinch(
   pinchState: PositioningPinchState,
   nextCenter: WorldPoint,
   nextDistance: number,
+  nextAngle: number,
   baseRect: PositioningRect,
   startTransform: IconPlacementTransform,
 ): IconPlacementTransform {
@@ -96,6 +100,9 @@ export function getIconPlacementTransformFromPinch(
     offsetY: nextTop - baseRect.top,
     scaleX: nextScaleX,
     scaleY: nextScaleY,
+    rotation:
+      pinchState.startTransform.rotation +
+      ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
     lockAspectRatio: startTransform.lockAspectRatio,
     freeCornerResize: startTransform.freeCornerResize,
   };

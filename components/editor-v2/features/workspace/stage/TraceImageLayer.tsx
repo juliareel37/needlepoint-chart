@@ -20,7 +20,7 @@ import type {
 import {
   getContainedRect,
   getPositionedBounds,
-  getPositioningTransformCss,
+  getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
@@ -114,8 +114,9 @@ export function TraceImageLayer({
       offsetX: trace.offsetX,
       offsetY: trace.offsetY,
       scale: trace.scale,
+      rotation: trace.rotation,
     }),
-    [trace.offsetX, trace.offsetY, trace.scale],
+    [trace.offsetX, trace.offsetY, trace.rotation, trace.scale],
   );
   const traceBounds = useMemo(
     () =>
@@ -217,11 +218,9 @@ export function TraceImageLayer({
 
   useEffect(() => {
     const desktopCanvas = desktopCanvasRef.current;
-    if (desktopCanvas) {
-      desktopCanvas.style.transform = getPositioningTransformCss(traceTransform);
-    }
-    applyDesktopProxyTransform(desktopProxyRef.current, traceTransform);
-  }, [traceTransform]);
+    applyDesktopTransform(desktopCanvas, traceTransform, traceBaseRect);
+    applyDesktopProxyTransform(desktopProxyRef.current, traceTransform, traceBaseRect);
+  }, [traceBaseRect, traceTransform]);
 
   useEffect(() => {
     setMobilePreviewTransform(null);
@@ -260,6 +259,7 @@ export function TraceImageLayer({
       desktopCanvasRef.current,
       desktopProxyRef.current,
       clampedTrace,
+      traceBaseRect,
       DESKTOP_TRACE_DRAG_PROXY_MODE,
     );
   }, [metrics, traceBaseRect]);
@@ -269,8 +269,8 @@ export function TraceImageLayer({
       const clampedTrace = traceBaseRect
         ? clampTraceTransformToSurface(nextTrace, traceBaseRect, metrics)
         : nextTrace;
-      applyDesktopTransform(desktopCanvasRef.current, clampedTrace);
-      applyDesktopProxyTransform(desktopProxyRef.current, clampedTrace);
+      applyDesktopTransform(desktopCanvasRef.current, clampedTrace, traceBaseRect);
+      applyDesktopProxyTransform(desktopProxyRef.current, clampedTrace, traceBaseRect);
       setDesktopProxyActive(desktopCanvasRef.current, desktopProxyRef.current, false);
       dispatch(createPreviewTraceRepositionCommand(clampedTrace));
     },
@@ -302,7 +302,12 @@ export function TraceImageLayer({
   }, []);
   const projectMobileStageBounds = useCallback(
     (
-      nextTrace: { offsetX: number; offsetY: number; scale: number },
+      nextTrace: {
+        offsetX: number;
+        offsetY: number;
+        scale: number;
+        rotation: number;
+      },
       baseRect: { left: number; top: number; width: number; height: number },
     ) => {
       const clampedTrace = clampTraceTransformToSurface(nextTrace, baseRect, metrics);
@@ -349,12 +354,13 @@ export function TraceImageLayer({
                 top: `${mobileOverlayBounds.top}px`,
                 width: `${mobileOverlayBounds.width}px`,
                 height: `${mobileOverlayBounds.height}px`,
+                transform: getRotationCss(mobileDisplayTransform.rotation),
+                transformOrigin: "center center",
                 display: "block",
                 opacity: imageOpacity,
-                willChange: "left, top, width, height",
+                willChange: "left, top, width, height, transform",
                 contain: "layout style size",
                 isolation: "isolate",
-                overflow: "hidden",
                 pointerEvents: "none",
                 userSelect: "none",
                 WebkitUserSelect: "none",
@@ -428,9 +434,9 @@ export function TraceImageLayer({
               height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
               opacity: imageOpacity,
               pointerEvents: "none",
-              transform: getPositioningTransformCss(traceTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
+              transform: getRotationCss(traceTransform.rotation),
+              transformOrigin: "center center",
+              willChange: "left, top, width, height, transform",
               backfaceVisibility: "hidden",
               userSelect: "none",
               WebkitUserSelect: "none",
@@ -447,9 +453,9 @@ export function TraceImageLayer({
               width: `${traceBaseRect?.width ?? metrics.surfaceWidth}px`,
               height: `${traceBaseRect?.height ?? metrics.surfaceHeight}px`,
               display: "none",
-              transform: getPositioningTransformCss(traceTransform),
-              transformOrigin: "top left",
-              willChange: "transform",
+              transform: getRotationCss(traceTransform.rotation),
+              transformOrigin: "center center",
+              willChange: "left, top, width, height, transform",
               pointerEvents: "none",
               background: "rgba(37, 99, 235, 0.18)",
               border: "1px solid rgba(37, 99, 235, 0.9)",
@@ -484,38 +490,51 @@ export function TraceImageLayer({
 
 function applyDesktopTransform(
   element: HTMLCanvasElement | null,
-  transform: { offsetX: number; offsetY: number; scale: number },
+  transform: { offsetX: number; offsetY: number; scale: number; rotation: number },
+  baseRect: { left: number; top: number; width: number; height: number } | null,
 ): void {
-  if (!element) {
+  if (!element || !baseRect) {
     return;
   }
 
-  element.style.transform = getPositioningTransformCss(transform);
+  const bounds = getPositionedBounds(baseRect, transform);
+  element.style.left = `${bounds.left}px`;
+  element.style.top = `${bounds.top}px`;
+  element.style.width = `${bounds.width}px`;
+  element.style.height = `${bounds.height}px`;
+  element.style.transform = getRotationCss(transform.rotation);
 }
 
 function applyDesktopProxyTransform(
   element: HTMLDivElement | null,
-  transform: { offsetX: number; offsetY: number; scale: number },
+  transform: { offsetX: number; offsetY: number; scale: number; rotation: number },
+  baseRect: { left: number; top: number; width: number; height: number } | null,
 ): void {
-  if (!element) {
+  if (!element || !baseRect) {
     return;
   }
 
-  element.style.transform = getPositioningTransformCss(transform);
+  const bounds = getPositionedBounds(baseRect, transform);
+  element.style.left = `${bounds.left}px`;
+  element.style.top = `${bounds.top}px`;
+  element.style.width = `${bounds.width}px`;
+  element.style.height = `${bounds.height}px`;
+  element.style.transform = getRotationCss(transform.rotation);
 }
 
 function applyDesktopDragTransform(
   canvas: HTMLCanvasElement | null,
   proxy: HTMLDivElement | null,
-  transform: { offsetX: number; offsetY: number; scale: number },
+  transform: { offsetX: number; offsetY: number; scale: number; rotation: number },
+  baseRect: { left: number; top: number; width: number; height: number } | null,
   proxyMode: "off" | "solid-rect",
 ): void {
   if (proxyMode === "solid-rect") {
-    applyDesktopProxyTransform(proxy, transform);
+    applyDesktopProxyTransform(proxy, transform, baseRect);
     return;
   }
 
-  applyDesktopTransform(canvas, transform);
+  applyDesktopTransform(canvas, transform, baseRect);
 }
 
 function setDesktopProxyActive(
@@ -551,10 +570,10 @@ function drawTraceSourceToCanvas(
 }
 
 function clampTraceTransformToSurface(
-  transform: { offsetX: number; offsetY: number; scale: number },
+  transform: { offsetX: number; offsetY: number; scale: number; rotation: number },
   baseRect: { left: number; top: number; width: number; height: number },
   metrics: Pick<GridWorldMetrics, "surfaceWidth" | "surfaceHeight">,
-): { offsetX: number; offsetY: number; scale: number } {
+): { offsetX: number; offsetY: number; scale: number; rotation: number } {
   const width = baseRect.width * transform.scale;
   const height = baseRect.height * transform.scale;
   const minLeft = MIN_VISIBLE_TRACE_PX - width;
@@ -568,6 +587,7 @@ function clampTraceTransformToSurface(
     offsetX: nextLeft - baseRect.left,
     offsetY: nextTop - baseRect.top,
     scale: transform.scale,
+    rotation: transform.rotation,
   };
 }
 

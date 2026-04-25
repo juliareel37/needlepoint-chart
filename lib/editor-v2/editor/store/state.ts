@@ -243,7 +243,7 @@ export type TraceRepositionOrigin =
 
 export type TraceRepositionSnapshot = Pick<
   TraceDocument,
-  "offsetX" | "offsetY" | "scale" | "locked"
+  "offsetX" | "offsetY" | "scale" | "rotation" | "locked"
 >;
 
 export interface TextInteractionState {
@@ -273,6 +273,7 @@ export interface TextPlacementSession {
   offsetX: number;
   offsetY: number;
   scale: number;
+  rotation: number;
 }
 
 export interface IconPlacementSession {
@@ -294,6 +295,7 @@ export interface IconPlacementSession {
   offsetY: number;
   scaleX: number;
   scaleY: number;
+  rotation: number;
 }
 
 export interface InFlightCommandState {
