@@ -158,7 +158,7 @@ export function PositioningBoxOverlay({
 
   useEffect(() => {
     latestBoundsRef.current = interactionBounds ?? bounds;
-    if (!dragSessionRef.current) {
+    if (!dragSessionRef.current && !pinchSessionRef.current) {
       applyPreviewBounds(
         overlayRef.current,
         handleRefs.current,
