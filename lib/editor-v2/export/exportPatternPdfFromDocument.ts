@@ -56,7 +56,7 @@ export function exportPatternPdfFromDocument(
     .filter((entry): entry is { color: Color; count: number } => entry !== null)
     .sort((left, right) => right.count - left.count);
 
-  exportPatternPdf({
+  const { blob, filename } = exportPatternPdf({
     title: document.project.title,
     usedColors,
     grid: legacyGrid,
@@ -66,6 +66,8 @@ export function exportPatternPdfFromDocument(
     height: document.grid.height,
     cellSize: PDF_EXPORT_CELL_SIZE,
   });
+
+  openPdfInNewTab(blob, filename);
 }
 
 function createLegacyColor(
@@ -78,4 +80,30 @@ function createLegacyColor(
     hex: color.hex,
     code: color.code,
   };
+}
+
+function openPdfInNewTab(blob: Blob, filename: string): void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  const openedWindow = window.open(objectUrl, "_blank", "noopener,noreferrer");
+
+  if (openedWindow) {
+    window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+    }, 60_000);
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.rel = "noopener noreferrer";
+  link.click();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 0);
 }
