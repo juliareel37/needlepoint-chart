@@ -40,7 +40,7 @@ export interface PositioningPinchState {
   startDistance: number;
   startAngle: number;
   startTransform: PositioningTransform;
-  snapToZero: boolean;
+  snapRotation: number | null;
 }
 
 export const ROTATION_SNAP_DEGREES = 3;
@@ -212,7 +212,7 @@ export function getTransformFromPinch(
     rotation: getSnappedRotationDegrees(
       pinchState.startTransform.rotation +
         ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
-      pinchState.snapToZero,
+      pinchState.snapRotation,
     ),
   };
 }
@@ -390,16 +390,36 @@ export function normalizeRotationDegrees(value: number): number {
   return Number(normalized.toFixed(4));
 }
 
-export function shouldSnapRotationToZero(rotation: number, currentlySnapped: boolean): boolean {
-  const threshold = currentlySnapped ? ROTATION_UNSNAP_DEGREES : ROTATION_SNAP_DEGREES;
-  return Math.abs(normalizeRotationDegrees(rotation)) <= threshold;
+export function getRotationSnapTarget(
+  rotation: number,
+  currentSnapRotation: number | null,
+): number | null {
+  const normalizedRotation = normalizeRotationDegrees(rotation);
+
+  if (
+    currentSnapRotation !== null &&
+    getRotationDeltaDegrees(normalizedRotation, currentSnapRotation) <=
+      ROTATION_UNSNAP_DEGREES
+  ) {
+    return currentSnapRotation;
+  }
+
+  const nearestQuarterTurn = normalizeRotationDegrees(
+    Math.round(normalizedRotation / 90) * 90,
+  );
+  return getRotationDeltaDegrees(normalizedRotation, nearestQuarterTurn) <=
+    ROTATION_SNAP_DEGREES
+    ? nearestQuarterTurn
+    : null;
 }
 
 export function getSnappedRotationDegrees(
   rotation: number,
-  currentlySnapped: boolean,
+  snapRotation: number | null,
 ): number {
-  return shouldSnapRotationToZero(rotation, currentlySnapped)
-    ? 0
-    : normalizeRotationDegrees(rotation);
+  return snapRotation ?? normalizeRotationDegrees(rotation);
+}
+
+function getRotationDeltaDegrees(a: number, b: number): number {
+  return Math.abs(normalizeRotationDegrees(a - b));
 }

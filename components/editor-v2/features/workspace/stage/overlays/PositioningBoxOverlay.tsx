@@ -14,8 +14,8 @@ import {
   getRotationCss,
   getTransformFromDrag,
   getTransformFromPinch,
+  getRotationSnapTarget,
   POSITIONING_HANDLES,
-  shouldSnapRotationToZero,
   type PositioningDragMode,
   type PositioningDragState,
   type PositioningPinchState,
@@ -382,9 +382,9 @@ export function PositioningBoxOverlay({
     const rawRotation =
       pinchSession.pinch.startTransform.rotation +
       ((nextAngle - pinchSession.pinch.startAngle) * 180) / Math.PI;
-    pinchSession.pinch.snapToZero = shouldSnapRotationToZero(
+    pinchSession.pinch.snapRotation = getRotationSnapTarget(
       rawRotation,
-      pinchSession.pinch.snapToZero,
+      pinchSession.pinch.snapRotation,
     );
     const nextTransform = getTransformFromPinch(
       pinchSession.pinch,
@@ -452,9 +452,9 @@ export function PositioningBoxOverlay({
           secondTouch.clientY - firstTouch.clientY,
           secondTouch.clientX - firstTouch.clientX,
         ),
-        snapToZero: shouldSnapRotationToZero(
+        snapRotation: getRotationSnapTarget(
           latestTransformRef.current.rotation,
-          false,
+          null,
         ),
         startTransform: latestTransformRef.current,
       },

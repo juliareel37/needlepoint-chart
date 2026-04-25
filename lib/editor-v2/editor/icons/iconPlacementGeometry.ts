@@ -130,7 +130,7 @@ export function getIconPlacementTransformFromPinch(
     rotation: getSnappedRotationDegrees(
       pinchState.startTransform.rotation +
         ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
-      pinchState.snapToZero,
+      pinchState.snapRotation,
     ),
     lockAspectRatio: startTransform.lockAspectRatio,
     freeCornerResize: startTransform.freeCornerResize,
