@@ -10,7 +10,7 @@ export type PositioningHandleId =
   | "w"
   | "nw";
 
-export type PositioningDragMode = PositioningHandleId | "move";
+export type PositioningDragMode = PositioningHandleId | "move" | "rotate";
 
 export interface PositioningRect {
   left: number;
@@ -40,7 +40,11 @@ export interface PositioningPinchState {
   startDistance: number;
   startAngle: number;
   startTransform: PositioningTransform;
+  snapRotation: number | null;
 }
+
+export const ROTATION_SNAP_DEGREES = 3;
+export const ROTATION_UNSNAP_DEGREES = 5;
 
 export const POSITIONING_HANDLES: Array<{
   id: PositioningHandleId;
@@ -141,6 +145,26 @@ export function getTransformFromDrag(
   point: WorldPoint,
   baseRect: PositioningRect,
 ): PositioningTransform {
+  if (dragState.mode === "rotate") {
+    const centerX = dragState.startBounds.left + dragState.startBounds.width / 2;
+    const centerY = dragState.startBounds.top + dragState.startBounds.height / 2;
+    const startAngle = Math.atan2(
+      dragState.startPoint.y - centerY,
+      dragState.startPoint.x - centerX,
+    );
+    const nextAngle = Math.atan2(point.y - centerY, point.x - centerX);
+
+    return {
+      offsetX: dragState.startTransform.offsetX,
+      offsetY: dragState.startTransform.offsetY,
+      scale: dragState.startTransform.scale,
+      rotation: normalizeRotationDegrees(
+        dragState.startTransform.rotation +
+          ((nextAngle - startAngle) * 180) / Math.PI,
+      ),
+    };
+  }
+
   if (dragState.mode === "move") {
     return {
       offsetX: dragState.startTransform.offsetX + (point.x - dragState.startPoint.x),
@@ -185,9 +209,10 @@ export function getTransformFromPinch(
     offsetX: nextLeft - baseRect.left,
     offsetY: nextTop - baseRect.top,
     scale: nextScale,
-    rotation: normalizeRotationDegrees(
+    rotation: getSnappedRotationDegrees(
       pinchState.startTransform.rotation +
         ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
+      pinchState.snapRotation,
     ),
   };
 }
@@ -363,4 +388,38 @@ export function normalizeRotationDegrees(value: number): number {
 
   const normalized = ((((value + 180) % 360) + 360) % 360) - 180;
   return Number(normalized.toFixed(4));
+}
+
+export function getRotationSnapTarget(
+  rotation: number,
+  currentSnapRotation: number | null,
+): number | null {
+  const normalizedRotation = normalizeRotationDegrees(rotation);
+
+  if (
+    currentSnapRotation !== null &&
+    getRotationDeltaDegrees(normalizedRotation, currentSnapRotation) <=
+      ROTATION_UNSNAP_DEGREES
+  ) {
+    return currentSnapRotation;
+  }
+
+  const nearestQuarterTurn = normalizeRotationDegrees(
+    Math.round(normalizedRotation / 90) * 90,
+  );
+  return getRotationDeltaDegrees(normalizedRotation, nearestQuarterTurn) <=
+    ROTATION_SNAP_DEGREES
+    ? nearestQuarterTurn
+    : null;
+}
+
+export function getSnappedRotationDegrees(
+  rotation: number,
+  snapRotation: number | null,
+): number {
+  return snapRotation ?? normalizeRotationDegrees(rotation);
+}
+
+function getRotationDeltaDegrees(a: number, b: number): number {
+  return Math.abs(normalizeRotationDegrees(a - b));
 }
