@@ -8,7 +8,6 @@ import type {
 import {
   useCallback,
   useEffect,
-  useEffectEvent,
   useRef,
   useState,
 } from "react";
@@ -51,6 +50,7 @@ export function useStagePanInteractions({
   const [isZoomInteracting, setIsZoomInteracting] = useState(false);
   const isSpacePressedRef = useRef(false);
   const panDragRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const touchPanPointerIdRef = useRef<number | null>(null);
   const touchGestureRef = useRef<{
     centerX: number;
     centerY: number;
@@ -77,16 +77,16 @@ export function useStagePanInteractions({
     zoomAnchorRef.current = zoomAnchor;
   }, [zoomAnchor]);
 
-  const beginZoomInteraction = useEffectEvent(() => {
+  const beginZoomInteraction = useCallback(() => {
     if (zoomInteractionTimeoutRef.current !== null) {
       window.clearTimeout(zoomInteractionTimeoutRef.current);
       zoomInteractionTimeoutRef.current = null;
     }
 
     setIsZoomInteracting(true);
-  });
+  }, []);
 
-  const scheduleZoomInteractionEnd = useEffectEvent(() => {
+  const scheduleZoomInteractionEnd = useCallback(() => {
     if (zoomInteractionTimeoutRef.current !== null) {
       window.clearTimeout(zoomInteractionTimeoutRef.current);
     }
@@ -95,7 +95,7 @@ export function useStagePanInteractions({
       zoomInteractionTimeoutRef.current = null;
       setIsZoomInteracting(false);
     }, ZOOM_INTERACTION_SETTLE_DELAY_MS);
-  });
+  }, []);
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
@@ -138,25 +138,34 @@ export function useStagePanInteractions({
     [beginZoomInteraction, dispatch, metrics, scheduleZoomInteractionEnd, stageSize],
   );
 
-  const stopPanDragging = useEffectEvent(() => {
+  const stopPanDragging = useCallback(() => {
     panDragRef.current = null;
+    touchPanPointerIdRef.current = null;
     touchGestureRef.current = null;
     setIsPanDragging(false);
-  });
-  const startPanDragging = useEffectEvent((clientX: number, clientY: number) => {
+  }, []);
+  const startPanDragging = useCallback((clientX: number, clientY: number) => {
     panDragRef.current = {
       lastX: clientX,
       lastY: clientY,
     };
     setIsPanDragging(true);
-  });
+  }, []);
 
   useEffect(() => {
     if (!dragPanningDisabled) {
       return;
     }
 
-    stopPanDragging();
+    panDragRef.current = null;
+    touchPanPointerIdRef.current = null;
+    touchGestureRef.current = null;
+
+    const timeoutId = window.setTimeout(() => {
+      setIsPanDragging(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [dragPanningDisabled, stopPanDragging]);
 
   useEffect(() => {
@@ -216,8 +225,28 @@ export function useStagePanInteractions({
         y: clientY - rect.top - frameOriginY,
       };
     };
+    const touchStartsInInteractiveElement = (touches: TouchList) => {
+      if (typeof document.elementFromPoint !== "function") {
+        return false;
+      }
+
+      for (let index = 0; index < touches.length; index += 1) {
+        const touch = touches[index];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        if (target?.closest("[data-touch-gesture-scope='element']")) {
+          return true;
+        }
+      }
+
+      return false;
+    };
     const startTouchGesture = (event: TouchEvent) => {
-      if (dragPanningDisabled || event.touches.length !== 2) {
+      if (event.touches.length !== 2) {
+        return;
+      }
+
+      if (touchStartsInInteractiveElement(event.touches)) {
         return;
       }
 
@@ -225,6 +254,19 @@ export function useStagePanInteractions({
 
       if (!geometry) {
         return;
+      }
+
+      if (touchPanPointerIdRef.current !== null) {
+        try {
+          if (stageElement.hasPointerCapture(touchPanPointerIdRef.current)) {
+            stageElement.releasePointerCapture(touchPanPointerIdRef.current);
+          }
+        } catch {
+          // Ignore release errors while transitioning from touch pan to pinch.
+        }
+        panDragRef.current = null;
+        touchPanPointerIdRef.current = null;
+        setIsPanDragging(false);
       }
 
       event.preventDefault();
@@ -291,11 +333,11 @@ export function useStagePanInteractions({
     stageElement.addEventListener("touchstart", startTouchGesture, {
       passive: false,
     });
-    stageElement.addEventListener("touchmove", updateTouchGesture, {
+    window.addEventListener("touchmove", updateTouchGesture, {
       passive: false,
     });
-    stageElement.addEventListener("touchend", endTouchGesture);
-    stageElement.addEventListener("touchcancel", endTouchGesture);
+    window.addEventListener("touchend", endTouchGesture);
+    window.addEventListener("touchcancel", endTouchGesture);
 
     return () => {
       if (zoomInteractionTimeoutRef.current !== null) {
@@ -310,11 +352,12 @@ export function useStagePanInteractions({
       stageElement.removeEventListener("mousedown", startNativeMiddlePanCapture, true);
       stageElement.removeEventListener("auxclick", preventNativeMiddleAuxClick, true);
       stageElement.removeEventListener("touchstart", startTouchGesture);
-      stageElement.removeEventListener("touchmove", updateTouchGesture);
-      stageElement.removeEventListener("touchend", endTouchGesture);
-      stageElement.removeEventListener("touchcancel", endTouchGesture);
+      window.removeEventListener("touchmove", updateTouchGesture);
+      window.removeEventListener("touchend", endTouchGesture);
+      window.removeEventListener("touchcancel", endTouchGesture);
     };
   }, [
+    beginZoomInteraction,
     dispatch,
     dragPanningDisabled,
     handleWheel,
@@ -372,6 +415,14 @@ export function useStagePanInteractions({
       const currentViewport = viewportRef.current;
 
       if (!dragState) {
+        return;
+      }
+
+      if (
+        event.pointerType === "touch" &&
+        touchPanPointerIdRef.current !== null &&
+        event.pointerId !== touchPanPointerIdRef.current
+      ) {
         return;
       }
 
@@ -471,9 +522,33 @@ export function useStagePanInteractions({
       return;
     }
 
+    if (touchGestureRef.current) {
+      return;
+    }
+
+    if (
+      event.pointerType === "touch" &&
+      touchPanPointerIdRef.current !== null &&
+      touchPanPointerIdRef.current !== event.pointerId
+    ) {
+      try {
+        if (event.currentTarget.hasPointerCapture(touchPanPointerIdRef.current)) {
+          event.currentTarget.releasePointerCapture(touchPanPointerIdRef.current);
+        }
+      } catch {
+        // Ignore release errors while upgrading to a gesture interaction.
+      }
+
+      panDragRef.current = null;
+      touchPanPointerIdRef.current = null;
+      setIsPanDragging(false);
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    touchPanPointerIdRef.current = event.pointerId;
 
     panDragRef.current = {
       lastX: event.clientX,

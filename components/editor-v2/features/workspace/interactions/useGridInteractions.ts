@@ -126,7 +126,7 @@ export function useGridInteractions({
       return;
     }
 
-    const returnTool = state.session.eyedropperReturnTool ?? "pan";
+    const returnTool = state.session.eyedropperReturnTool ?? "paint";
     // const returnTool = "draw";
 
     const paintedColorId = getCell(state, point.x, point.y);

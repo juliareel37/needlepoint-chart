@@ -1,9 +1,9 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import {
   getActiveColor,
   getActiveColorId,
@@ -36,6 +36,7 @@ import type {
 import {
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
+  createSetPreviewModeCommand,
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
@@ -57,6 +58,15 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
+
+interface PreviewSessionSnapshot {
+  sidebarCollapsed: boolean;
+  viewport: {
+    zoom: number;
+    offsetX: number;
+    offsetY: number;
+  };
+}
 
 export function EditorV2Shell({
   canvasLoading,
@@ -101,7 +111,7 @@ export function EditorV2Shell({
   setupModalOpen: boolean;
   successNotification: EditorV2SuccessNotification | null;
 }) {
-  const clerk = useClerk();
+  const openSignIn = useOpenSignIn();
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
 
@@ -139,6 +149,8 @@ export function EditorV2Shell({
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
+  const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
+  const previewFitPendingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
@@ -158,7 +170,9 @@ export function EditorV2Shell({
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
-        ? [{ id: "export", label: "Export design" }]
+        ? [
+            { id: "export", label: "Export design" },
+          ]
         : [
             { id: "export", label: "Export design" },
             { id: "sign-in", label: "Sign in" },
@@ -233,6 +247,22 @@ export function EditorV2Shell({
       y: (zoomAnchor.y - viewport.offsetY) / viewport.zoom,
     };
   }, [viewport.offsetX, viewport.offsetY, viewport.zoom, zoomAnchor]);
+  const textViewportWidth = useMemo(() => {
+    if (viewport.zoom <= 0 || canvasWorldSize.width <= 0) {
+      return null;
+    }
+
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleCanvasWidth = Math.max(canvasWorldSize.width - visibleLeftInset, 1);
+
+    return visibleCanvasWidth / viewport.zoom;
+  }, [
+    canvasWorldSize.width,
+    isBottomPanelLayout,
+    sidebarCollapsed,
+    viewport.zoom,
+  ]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -265,6 +295,68 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+  ]);
+
+  const enterPreviewMode = useCallback(() => {
+    if (previewMode) {
+      return;
+    }
+
+    previewSessionSnapshotRef.current = {
+      sidebarCollapsed,
+      viewport: {
+        zoom: viewport.zoom,
+        offsetX: viewport.offsetX,
+        offsetY: viewport.offsetY,
+      },
+    };
+    previewFitPendingRef.current = true;
+
+    dispatch(createSetPreviewModeCommand(true));
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+  }, [
+    dispatch,
+    previewMode,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+    viewport.zoom,
+  ]);
+
+  const exitPreviewMode = useCallback(() => {
+    if (!previewMode) {
+      return;
+    }
+
+    const snapshot = previewSessionSnapshotRef.current;
+    previewFitPendingRef.current = false;
+    dispatch(createSetPreviewModeCommand(false));
+
+    if (!snapshot) {
+      return;
+    }
+
+    if (sidebarCollapsed !== snapshot.sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+    }
+
+    dispatch(createSetViewportZoomCommand(snapshot.viewport.zoom));
+    dispatch(
+      createPanViewportCommand(
+        snapshot.viewport.offsetX - viewport.offsetX,
+        snapshot.viewport.offsetY - viewport.offsetY,
+      ),
+    );
+
+    previewSessionSnapshotRef.current = null;
+  }, [
+    dispatch,
+    previewMode,
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
@@ -407,6 +499,41 @@ export function EditorV2Shell({
     fitZoom,
     isBottomPanelLayout,
     layoutModeResolved,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (
+      !previewMode ||
+      !previewFitPendingRef.current ||
+      !sidebarCollapsed ||
+      fitZoom <= 0 ||
+      canvasWorldSize.width <= 0 ||
+      canvasWorldSize.height <= 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      fitToGrid();
+      previewFitPendingRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    fitToGrid,
+    fitZoom,
+    previewMode,
     sidebarCollapsed,
   ]);
 
@@ -571,6 +698,7 @@ export function EditorV2Shell({
               hasUnsavedChanges={hasUnsavedChanges}
               layout="header"
               onDismiss={null}
+              onSignIn={openSignIn}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
@@ -583,6 +711,7 @@ export function EditorV2Shell({
               hasUnsavedChanges={hasUnsavedChanges}
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
+              onSignIn={openSignIn}
               saveMessage={saveMessage}
             />,
             topBannerTarget,
@@ -673,7 +802,7 @@ export function EditorV2Shell({
                 }
 
                 if (value === "sign-in") {
-                  void clerk.openSignIn();
+                  openSignIn();
                 }
               }}
               wrapperClassName={styles.headerOverflowMenu}
@@ -863,6 +992,7 @@ export function EditorV2Shell({
                 showGridlines={showGridlines}
                 showSymbols={showSymbols}
                 textViewportCenter={textViewportCenter}
+                textViewportWidth={textViewportWidth}
               />
             </div>
 
@@ -931,21 +1061,36 @@ export function EditorV2Shell({
               </div>
             )}
 
-            <div className={styles.stageToolbarBottomRight}>
-              <ViewportToolbar
-                dispatch={dispatch}
-                fitZoom={fitZoom}
-                onFitToGrid={fitToGrid}
-                zoomAnchor={zoomAnchor}
-                viewport={viewport}
-              />
-            </div>
+            {previewMode ? null : (
+              <div className={styles.stageToolbarBottomRight}>
+                <ViewportToolbar
+                  dispatch={dispatch}
+                  fitZoom={fitZoom}
+                  onFitToGrid={fitToGrid}
+                  zoomAnchor={zoomAnchor}
+                  viewport={viewport}
+                />
+              </div>
+            )}
 
             <div
               ref={canvasWorldRef}
               className={styles.canvasWorld}
               data-loading={canvasLoading ? "true" : "false"}
             >
+              {previewMode ? (
+                <div className={styles.previewDoneButtonWrap}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    className={styles.previewDoneButton}
+                    onClick={exitPreviewMode}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : null}
               <GridWorldSurface
                 activeColorId={activeColorId}
                 activeTool={activeTool}
@@ -983,16 +1128,16 @@ function HeaderSaveStatus({
   hasUnsavedChanges,
   layout,
   onDismiss,
+  onSignIn,
   saveMessage,
 }: {
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
   layout: "header" | "banner";
   onDismiss: (() => void) | null;
+  onSignIn: () => void;
   saveMessage: string;
 }) {
-  const clerk = useClerk();
-
   if (!saveMessage && !hasUnsavedChanges) {
     return null;
   }
@@ -1033,7 +1178,7 @@ function HeaderSaveStatus({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => void clerk.openSignIn()}
+          onClick={onSignIn}
         >
           Sign in
         </Button>

@@ -1,6 +1,5 @@
 "use client";
 
-import { SignInButton } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
@@ -12,6 +11,7 @@ import {
   SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import {
   EDITOR_V2_MAX_GRID_SIZE,
   EDITOR_V2_MIN_GRID_SIZE,
@@ -113,6 +113,7 @@ export function EditorV2SetupModal({
   setSelectedStorageId,
   setupErrorMessage,
 }: EditorV2SetupModalProps) {
+  const openSignIn = useOpenSignIn();
   const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
   const [useCustomMeshCount, setUseCustomMeshCount] = useState(
     () => getCellsPerInchPreset(draftMeshCount) === null,
@@ -600,11 +601,9 @@ export function EditorV2SetupModal({
                 </p>
 
                 <div className={styles.actions}>
-                  <SignInButton mode="modal">
-                    <Button type="button" variant="primary">
-                      Sign in
-                    </Button>
-                  </SignInButton>
+                  <Button type="button" variant="primary" onClick={openSignIn}>
+                    Sign in
+                  </Button>
                 </div>
               </>
             )}

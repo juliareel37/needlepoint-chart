@@ -6,6 +6,7 @@ export function getInitialPlacementTransform(options: {
   intrinsicHeight: number;
   metrics: GridWorldMetrics;
   viewportCenter: WorldPoint | null;
+  viewportWidth?: number | null;
   widthRatio: number;
 }): { offsetX: number; offsetY: number; scale: number } {
   const baseRect = getContainedRect(
@@ -14,7 +15,11 @@ export function getInitialPlacementTransform(options: {
     options.metrics.surfaceWidth,
     options.metrics.surfaceHeight,
   );
-  const targetWidth = options.metrics.surfaceWidth * options.widthRatio;
+  const referenceWidth =
+    options.viewportWidth && options.viewportWidth > 0
+      ? Math.min(options.viewportWidth, options.metrics.surfaceWidth)
+      : options.metrics.surfaceWidth;
+  const targetWidth = referenceWidth * options.widthRatio;
   const scale = clampScale(targetWidth / Math.max(baseRect.width, 1));
   const targetCenterX = options.viewportCenter?.x ?? options.metrics.surfaceWidth / 2;
   const targetCenterY = options.viewportCenter?.y ?? options.metrics.surfaceHeight / 2;

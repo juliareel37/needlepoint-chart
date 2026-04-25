@@ -90,6 +90,16 @@ export function getThreadRadii(size: number) {
   return { radiusX: Math.max(1, a), radiusY: Math.max(1, b) };
 }
 
+function getPreviewThreadRadii(size: number) {
+  const s = Math.max(1, Math.round(size));
+  const half = Math.max(1, s / 2 - 0.1);
+
+  return {
+    radiusX: Math.max(1, half * 1.34),
+    radiusY: Math.max(1, half * 0.72),
+  };
+}
+
 export function getThreadStitchCanvas(
   hex: string,
   size: number,
@@ -100,30 +110,100 @@ export function getThreadStitchCanvas(
   const key = `${styleVersion}|${hex}|${rounded}`;
   const cached = cache.get(key);
   if (cached) return cached;
+  const previewStyle = styleVersion >= 2;
+  const oversample = previewStyle ? 2 : 1;
   const canvas = document.createElement("canvas");
-  canvas.width = rounded;
-  canvas.height = rounded;
+  canvas.width = rounded * oversample;
+  canvas.height = rounded * oversample;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
-  ctx.clearRect(0, 0, rounded, rounded);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (oversample > 1) {
+    ctx.scale(oversample, oversample);
+  }
 
   const center = rounded / 2;
-  const { radiusX, radiusY } = getThreadRadii(rounded);
+  const { radiusX, radiusY } = previewStyle
+    ? getPreviewThreadRadii(rounded)
+    : getThreadRadii(rounded);
 
   const light = adjustLightness(hex, 0.18);
   const dark = adjustLightness(hex, -0.18);
-  const highlightColor = `rgba(${light.r}, ${light.g}, ${light.b}, 0.3)`;
-  const shadowColor = `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.25)`;
-  const ridgeColor = `rgba(${light.r}, ${light.g}, ${light.b}, 0.12)`;
-  const glintColor = `rgba(${light.r}, ${light.g}, ${light.b}, 0.12)`;
+  const highlightColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.26 : 0.3})`;
+  const shadowColor = `rgba(${dark.r}, ${dark.g}, ${dark.b}, ${previewStyle ? 0.22 : 0.25})`;
+  const ridgeColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.1 : 0.12})`;
+  const glintColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.09 : 0.12})`;
+
+  if (previewStyle) {
+    const cornerInset = rounded * 0.08;
+    const topLeftCorner = ctx.createRadialGradient(
+      cornerInset,
+      cornerInset,
+      0,
+      cornerInset,
+      cornerInset,
+      rounded * 0.78,
+    );
+    // topLeftCorner.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.38)`);
+    // topLeftCorner.addColorStop(0.5, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.2)`);
+    // topLeftCorner.addColorStop(1, "rgba(0,0,0,0)");
+    // ctx.fillStyle = topLeftCorner;
+    ctx.fillRect(0, 0, rounded, rounded);
+
+    // const bottomRightCorner = ctx.createRadialGradient(
+    //   rounded - cornerInset,
+    //   rounded - cornerInset,
+    //   0,
+    //   rounded - cornerInset,
+    //   rounded - cornerInset,
+    //   rounded * 0.8,
+    // );
+    // bottomRightCorner.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.54)`);
+    // bottomRightCorner.addColorStop(0.45, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.28)`);
+    // bottomRightCorner.addColorStop(1, "rgba(0,0,0,0)");
+    // ctx.fillStyle = bottomRightCorner;
+    ctx.fillRect(0, 0, rounded, rounded);
+  }
 
   ctx.save();
   ctx.translate(center, center);
   ctx.rotate(-Math.PI / 4);
 
+  if (previewStyle) {
+    const shadowGradient = ctx.createLinearGradient(
+      -radiusX * 1.1,
+      -radiusY * 1.1,
+      radiusX * 1.1,
+      radiusY * 1.1,
+    );
+    shadowGradient.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.44)`);
+    shadowGradient.addColorStop(0.65, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.16)`);
+    shadowGradient.addColorStop(1, `rgba(${light.r}, ${light.g}, ${light.b}, 0.08)`);
+    ctx.fillStyle = shadowGradient;
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      0,
+      radiusX * 1.06,
+      radiusY * 1.06,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+
   ctx.fillStyle = hex;
   ctx.beginPath();
-  ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.ellipse(
+    0,
+    0,
+    previewStyle ? radiusX * 0.98 : radiusX,
+    previewStyle ? radiusY * 0.98 : radiusY,
+    0,
+    0,
+    Math.PI * 2,
+  );
   ctx.fill();
 
   const highlight = ctx.createLinearGradient(-radiusX, 0, radiusX, 0);
@@ -145,7 +225,7 @@ export function getThreadStitchCanvas(
   ctx.fill();
 
   ctx.strokeStyle = ridgeColor;
-  ctx.lineWidth = Math.max(0.6, rounded * 0.04);
+  ctx.lineWidth = Math.max(0.6, rounded * (previewStyle ? 0.033 : 0.04));
   const ridgeCount = rounded >= 18 ? 4 : 3;
   const offsets =
     ridgeCount === 4
@@ -160,15 +240,15 @@ export function getThreadStitchCanvas(
   });
 
   ctx.strokeStyle = glintColor;
-  ctx.lineWidth = Math.max(0.5, rounded * 0.03);
+  ctx.lineWidth = Math.max(0.5, rounded * (previewStyle ? 0.024 : 0.03));
   ctx.beginPath();
   ctx.moveTo(-radiusX * 0.2, -radiusY * 0.05);
   ctx.lineTo(radiusX * 0.2, -radiusY * 0.05);
   ctx.stroke();
 
   const rand = mulberry32(hashString(key));
-  ctx.strokeStyle = `rgba(${light.r}, ${light.g}, ${light.b}, 0.1)`;
-  ctx.lineWidth = Math.max(0.4, rounded * 0.02);
+  ctx.strokeStyle = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.08 : 0.1})`;
+  ctx.lineWidth = Math.max(0.4, rounded * (previewStyle ? 0.017 : 0.02));
   const fuzzLines = rounded >= 18 ? 10 : 8;
   for (let i = 0; i < fuzzLines; i++) {
     const y = (rand() * 2 - 1) * radiusY * 0.65;

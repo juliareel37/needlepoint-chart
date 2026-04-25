@@ -21,6 +21,12 @@ describe("setActiveToolCommandHandler", () => {
     expect(store.getState().session.eyedropperReturnTool).toBe("paint");
   });
 
+  it("defaults the initial active tool to paint", () => {
+    const initial = createInitialEditorStoreState();
+
+    expect(initial.session.activeTool.tool).toBe("paint");
+  });
+
   it("clears eyedropperReturnTool when leaving eyedropper", () => {
     const initial = createInitialEditorStoreState();
     initial.session.activeTool.tool = "paint";

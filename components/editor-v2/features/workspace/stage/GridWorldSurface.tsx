@@ -554,6 +554,7 @@ export function GridWorldSurface({
                   : null
               }
               paintOpacity={gridOpacity}
+              previewMode={previewMode}
               displayTrace={showDisplayTrace ? trace : null}
               frameOrigin={frameOrigin}
               getGridPointFromClient={getGridPointFromClient}
@@ -561,6 +562,7 @@ export function GridWorldSurface({
               gridWidth={grid.width}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
+              interactionEnabled={!paintDisabled}
               cancelPaintStroke={cancelPaintStroke}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}

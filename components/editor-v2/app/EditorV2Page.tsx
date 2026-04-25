@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { EditorV2Providers } from "./EditorV2Providers";
@@ -30,7 +31,7 @@ const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
 
 export function EditorV2Page() {
   const { isLoaded, isSignedIn } = useAuth();
-  const clerk = useClerk();
+  const openSignIn = useOpenSignIn();
   const [draftWidth, setDraftWidth] = useState("120");
   const [draftHeight, setDraftHeight] = useState("120");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
@@ -151,7 +152,7 @@ export function EditorV2Page() {
         setSelectedStorageId={setSelectedStorageId}
         onSaveDocument={async (document, storageId) => {
           if (!isLoaded || !isSignedIn) {
-            void clerk.openSignIn();
+            openSignIn();
             return null;
           }
 

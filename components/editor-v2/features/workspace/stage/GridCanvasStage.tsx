@@ -35,6 +35,7 @@ interface GridCanvasStageProps {
   onDisplayRendered?: () => void;
   displayTraceAsset: LoadedTraceAsset | null;
   paintOpacity?: number;
+  previewMode?: boolean;
   displayTrace?: TraceDocument | null;
   frameOrigin: { x: number; y: number };
   getGridPointFromClient: (clientX: number, clientY: number) => GridPoint | null;
@@ -42,6 +43,7 @@ interface GridCanvasStageProps {
   gridWidth: number;
   handlePointerDown: (point: GridPoint, selectionPoint: SelectionPoint) => void;
   handlePointerEnter: (point: GridPoint) => void;
+  interactionEnabled?: boolean;
   gridOverlayStep: number;
   showGridlines: boolean;
   showSymbols: boolean;
@@ -63,6 +65,7 @@ export function GridCanvasStage({
   onDisplayRendered,
   displayTraceAsset,
   paintOpacity = 1,
+  previewMode = false,
   displayTrace = null,
   frameOrigin,
   getGridPointFromClient,
@@ -70,6 +73,7 @@ export function GridCanvasStage({
   gridWidth,
   handlePointerDown,
   handlePointerEnter,
+  interactionEnabled = true,
   gridOverlayStep,
   showGridlines,
   showSymbols,
@@ -81,6 +85,7 @@ export function GridCanvasStage({
   isZoomInteractionActive,
 }: GridCanvasStageProps) {
   const TOUCH_PAINT_ACTIVATION_DISTANCE_PX = 8;
+  const sourceThreadStyleVersion = previewMode && threadView ? 2 : 1;
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sourceCanvasSizingRef = useRef<CanvasSizing | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -151,20 +156,13 @@ export function GridCanvasStage({
 
     const justEnteredZoomInteraction =
       isZoomInteractionActive && !previousZoomInteractionActiveRef.current;
-    const isContinuingZoomInteraction =
-      isZoomInteractionActive && previousZoomInteractionActiveRef.current;
 
     previousZoomInteractionActiveRef.current = isZoomInteractionActive;
-
-    if (isContinuingZoomInteraction && sourceCanvasSizingRef.current) {
-      return;
-    }
 
     const nextConfiguration = configureSourceCanvas(
       canvas,
       context,
       metrics,
-      viewport.zoom,
       stageSize,
       { isZoomInteractionActive },
       sourceCanvasSizingRef.current,
@@ -180,7 +178,6 @@ export function GridCanvasStage({
     metrics.surfaceWidth,
     stageSize.height,
     stageSize.width,
-    viewport.zoom,
   ]);
 
   useEffect(() => {
@@ -222,6 +219,7 @@ export function GridCanvasStage({
         colorsById,
         gridWidth,
         metrics,
+        stitchStyleVersion: sourceThreadStyleVersion,
         threadView,
         stitchCanvasCache: stitchCanvasCacheRef.current,
       });
@@ -243,6 +241,7 @@ export function GridCanvasStage({
       colorsById,
       gridWidth,
       cellSize: metrics.cellSize,
+      stitchStyleVersion: sourceThreadStyleVersion,
       threadView,
       stitchCanvasCache: stitchCanvasCacheRef.current,
     });
@@ -261,6 +260,7 @@ export function GridCanvasStage({
     metrics.cellSize,
     metrics.surfaceHeight,
     metrics.surfaceWidth,
+    sourceThreadStyleVersion,
     stageSize.height,
     stageSize.width,
     threadView,
@@ -302,6 +302,8 @@ export function GridCanvasStage({
       highlightedColorId,
       metrics,
       paintOpacity,
+      previewMode,
+      isZoomInteractionActive,
       showGridlines,
       showSymbols,
       stageSize,
@@ -344,6 +346,8 @@ export function GridCanvasStage({
     displayTrace?.previewUrl,
     displayTraceAsset,
     paintOpacity,
+    previewMode,
+    isZoomInteractionActive,
     threadView,
     viewport.offsetX,
     viewport.offsetY,
@@ -478,6 +482,10 @@ export function GridCanvasStage({
       <div
         aria-label="Grid canvas"
         onPointerDown={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.add(event.pointerId);
 
@@ -535,6 +543,10 @@ export function GridCanvasStage({
           handlePointerDown(point, selectionPoint);
         }}
         onPointerMove={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (
             event.pointerType === "touch" &&
             (touchGestureLockedRef.current || activeTouchPointerIdsRef.current.size > 1)
@@ -581,6 +593,10 @@ export function GridCanvasStage({
           handlePointerEnter(point);
         }}
         onPointerUp={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.delete(event.pointerId);
 
@@ -608,6 +624,10 @@ export function GridCanvasStage({
           }
         }}
         onPointerCancel={(event) => {
+          if (!interactionEnabled) {
+            return;
+          }
+
           if (event.pointerType === "touch") {
             activeTouchPointerIdsRef.current.delete(event.pointerId);
 
@@ -636,6 +656,7 @@ export function GridCanvasStage({
           zIndex: 2,
           background: "transparent",
           cursor: "inherit",
+          pointerEvents: interactionEnabled ? "auto" : "none",
           touchAction: "none",
         }}
       />

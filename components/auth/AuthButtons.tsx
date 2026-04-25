@@ -1,25 +1,27 @@
 "use client";
 
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/design-system";
+import { useOpenSignIn } from "./useOpenSignIn";
 
 export default function AuthButtons() {
+  const openSignIn = useOpenSignIn();
+
   return (
     <>
       <SignedIn>
         <UserButton />
       </SignedIn>
       <SignedOut>
-        <SignInButton mode="modal">
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            className="app-header-sign-in-button"
-          >
-            Sign in
-          </Button>
-        </SignInButton>
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          className="app-header-sign-in-button"
+          onClick={openSignIn}
+        >
+          Sign in
+        </Button>
       </SignedOut>
     </>
   );

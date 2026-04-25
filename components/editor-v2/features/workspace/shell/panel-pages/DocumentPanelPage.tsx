@@ -1,6 +1,5 @@
 "use client";
 
-import { SignInButton } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
@@ -8,6 +7,7 @@ import {
   FieldInput,
   SingleSelectDropdown,
 } from "@/components/design-system";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
@@ -44,6 +44,7 @@ export function DocumentPanelPage({
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
+  const openSignIn = useOpenSignIn();
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(documentTitle);
   const commitOnBlurRef = useRef(true);
@@ -182,11 +183,14 @@ export function DocumentPanelPage({
               <p className={styles.emptyMessage} style={typographyStyles.p2}>
                 Sign in to access your saved designs.
               </p>
-              <SignInButton mode="modal">
-                <Button type="button" variant="primary" className={styles.loadButton}>
-                  Sign in
-                </Button>
-              </SignInButton>
+              <Button
+                type="button"
+                variant="primary"
+                className={styles.loadButton}
+                onClick={openSignIn}
+              >
+                Sign in
+              </Button>
             </>
           )}
 

@@ -58,6 +58,7 @@ interface EditorSidebarProps {
   isBottomPanelLayout: boolean;
   onHighlightColorChange: (colorId: string | null) => void;
   textViewportCenter: WorldPoint | null;
+  textViewportWidth: number | null;
 }
 
 export function EditorSidebar({
@@ -94,6 +95,7 @@ export function EditorSidebar({
   isBottomPanelLayout,
   onHighlightColorChange,
   textViewportCenter,
+  textViewportWidth,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
@@ -228,6 +230,7 @@ export function EditorSidebar({
               palette={palette}
               placement={textPlacement}
               viewportCenter={textViewportCenter}
+              viewportWidth={textViewportWidth}
             />
           ) : null}
 

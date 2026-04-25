@@ -406,7 +406,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
     },
     session: {
       activeTool: {
-        tool: "pan",
+        tool: "paint",
         brushSize: 1,
         paintBrushSize: 1,
         eraseBrushSize: 1,
