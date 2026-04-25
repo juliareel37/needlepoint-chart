@@ -20,24 +20,25 @@ export function getToolbarPopoverHorizontalPosition({
   popoverWidth,
   viewportPadding = TOOLBAR_POPOVER_VIEWPORT_PADDING,
 }: {
-  align?: "start" | "center";
+  align?: "start" | "center" | "end";
   anchorRect: DOMRect;
   popoverWidth: number;
   viewportPadding?: number;
 }): ToolbarPopoverHorizontalPosition {
   const centeredLeft = anchorRect.left + anchorRect.width / 2;
   const startLeft = anchorRect.left - 12;
+  const endLeft = anchorRect.right - popoverWidth + 12;
 
   if (popoverWidth <= 0 || typeof window === "undefined") {
     return {
-      left: align === "center" ? centeredLeft : startLeft,
+      left: align === "center" ? centeredLeft : align === "end" ? anchorRect.right : startLeft,
       right: "auto",
       transform: align === "center" ? "translateX(-50%)" : "none",
     };
   }
 
   const desiredLeft =
-    align === "center" ? centeredLeft - popoverWidth / 2 : startLeft;
+    align === "center" ? centeredLeft - popoverWidth / 2 : align === "end" ? endLeft : startLeft;
   const desiredRight = window.innerWidth - desiredLeft - popoverWidth;
 
   if (desiredLeft < viewportPadding) {
@@ -57,7 +58,7 @@ export function getToolbarPopoverHorizontalPosition({
   }
 
   return {
-    left: align === "center" ? centeredLeft : startLeft,
+    left: align === "center" ? centeredLeft : align === "end" ? endLeft : startLeft,
     right: "auto",
     transform: align === "center" ? "translateX(-50%)" : "none",
   };

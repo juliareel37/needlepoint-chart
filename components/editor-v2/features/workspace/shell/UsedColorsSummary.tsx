@@ -51,11 +51,13 @@ type UsedColorsSuccessNotification = {
 function UsedColorsPortalPopover({
   anchorRef,
   children,
+  horizontalAlign = "start",
   onRequestClose,
   preferredDirection = "auto",
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
   anchorRef: React.RefObject<HTMLDivElement | null>;
+  horizontalAlign?: "start" | "center" | "end";
   onRequestClose?: () => void;
   preferredDirection?: "auto" | "up" | "down";
 }) {
@@ -90,6 +92,7 @@ function UsedColorsPortalPopover({
     const popoverHeight = popoverRef.current?.scrollHeight ?? 0;
     const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
     const horizontalPosition = getToolbarPopoverHorizontalPosition({
+      align: horizontalAlign,
       anchorRect: rect,
       popoverWidth,
       viewportPadding,
@@ -105,19 +108,20 @@ function UsedColorsPortalPopover({
             : "up"
         : preferredDirection;
     const availableSpace = direction === "up" ? spaceAbove : spaceBelow;
+    const top =
+      direction === "up"
+        ? Math.max(viewportPadding, rect.top - gap - popoverHeight)
+        : rect.bottom + gap;
 
     setPosition({
-      top: direction === "up" ? rect.top - gap : rect.bottom + gap,
+      top,
       left: horizontalPosition.left,
       right: horizontalPosition.right,
       direction,
       maxHeight: Math.max(availableSpace - gap, 140),
-      transform:
-        direction === "up"
-          ? `${horizontalPosition.transform} translateY(-100%)`.trim()
-          : horizontalPosition.transform,
+      transform: horizontalPosition.transform,
     });
-  }, [anchorRef, preferredDirection]);
+  }, [anchorRef, horizontalAlign, preferredDirection]);
 
   useEffect(() => {
     if (!mounted) {
@@ -170,7 +174,7 @@ function UsedColorsPortalPopover({
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [anchorRef, mounted, onRequestClose]);
 
-  if (!mounted || !position) {
+  if (!mounted) {
     return null;
   }
 
@@ -181,13 +185,14 @@ function UsedColorsPortalPopover({
       style={{
         ...props.style,
         position: "fixed",
-        top: position.top,
-        left: position.left,
-        right: position.right,
-        zIndex: 40,
-        transform: position.transform,
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        right: position?.right ?? "auto",
+        zIndex: "var(--z-editor-popover)",
+        transform: position?.transform ?? "none",
         maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
-        ["--used-colors-popover-max-height" as string]: `${position.maxHeight}px`,
+        ["--used-colors-popover-max-height" as string]: `${position?.maxHeight ?? 220}px`,
+        visibility: position ? "visible" : "hidden",
       }}
     >
       {children}
@@ -308,14 +313,13 @@ export function UsedColorsSummary({
         ),
       ),
     );
-  const canMerge =
-    actionMode === "merge" &&
-    selectedColorIds.length > 0 &&
-    mergeTargetColorId !== null &&
-    selectedColorIds.some((colorId) => colorId !== mergeTargetColorId);
   const mergeSourceColorIds = mergeTargetColorId
     ? selectedColorIds.filter((colorId) => colorId !== mergeTargetColorId)
     : [];
+  const canMerge =
+    actionMode === "merge" &&
+    mergeTargetColorId !== null &&
+    mergeSourceColorIds.length > 0;
   const deleteSelectionCount = selectedColorIds.length;
   const deleteStitchCount = selectedUsedColors.reduce(
     (total, entry) => total + entry.count,
@@ -346,15 +350,12 @@ export function UsedColorsSummary({
       return;
     }
 
-    if (
-      mergeTargetColorId &&
-      selectedColorIds.some((colorId) => colorId === mergeTargetColorId)
-    ) {
+    if (mergeTargetColorId && colorsById[mergeTargetColorId]) {
       return;
     }
 
     setMergeTargetColorId(defaultMergeTargetColorId);
-  }, [actionMode, defaultMergeTargetColorId, mergeTargetColorId, selectedColorIds]);
+  }, [actionMode, colorsById, defaultMergeTargetColorId, mergeTargetColorId]);
 
   const exitToolMode = () => {
     setToolMode("idle");
@@ -728,12 +729,14 @@ export function UsedColorsSummary({
                 <div className={styles.usedColorsSelectionBarActions}>
                   {actionMode === "merge" ? (
                     <>
-                      <div className={styles.usedColorsMergeActionGroup}>
+                      <div
+                        ref={mergeTargetAnchorRef}
+                        className={styles.usedColorsMergeActionGroup}
+                      >
                         <span className={styles.usedColorsMergeActionLabel} style={typographyStyles.p2}>
                           Target
                         </span>
                         <ToolbarAnchor
-                          ref={mergeTargetAnchorRef}
                           className={styles.usedColorsMergeTriggerWrap}
                         >
                           <ToolbarButton
@@ -776,6 +779,7 @@ export function UsedColorsSummary({
                           {mergePickerOpen ? (
                             <UsedColorsPortalPopover
                               anchorRef={mergeTargetAnchorRef}
+                              horizontalAlign="center"
                               onRequestClose={() => setMergePickerOpen(false)}
                               preferredDirection="up"
                               role="dialog"
