@@ -50,7 +50,7 @@ export function TextPlacementLayer({
   const useCellSampledPreview = SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW;
   const [isEditing, setIsEditing] = useState(true);
   const [coarsePointer, setCoarsePointer] = useState(false);
-  const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
+  const [previewTransform, setPreviewTransform] = useState<
     typeof transform | null
   >(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export function TextPlacementLayer({
     () => getPositionedBounds(baseRect, transform),
     [baseRect, transform],
   );
-  const displayTransform = mobilePreviewTransform ?? transform;
+  const displayTransform = previewTransform ?? transform;
   const displayBounds = useMemo(
     () => getPositionedBounds(baseRect, displayTransform),
     [baseRect, displayTransform],
@@ -115,10 +115,7 @@ export function TextPlacementLayer({
   const previewTextRef = useRef<HTMLDivElement | null>(null);
   const textareaPreviewRef = useRef<HTMLTextAreaElement | null>(null);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
-    if (coarsePointer && !isEditing) {
-      setMobilePreviewTransform(nextTransform);
-      return;
-    }
+    setPreviewTransform(nextTransform);
 
     const nextBounds = getPositionedBounds(baseRect, nextTransform);
     if (previewTextRef.current) {
@@ -130,7 +127,7 @@ export function TextPlacementLayer({
   }, [baseRect, coarsePointer, isEditing]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform) => {
-      setMobilePreviewTransform(nextTransform);
+      setPreviewTransform(nextTransform);
       dispatch(
         createUpdateTextPlacementCommand({
           offsetX: nextTransform.offsetX,
@@ -231,7 +228,7 @@ export function TextPlacementLayer({
   }, []);
 
   useEffect(() => {
-    setMobilePreviewTransform(null);
+    setPreviewTransform(null);
   }, [transform]);
 
   useEffect(() => {
@@ -438,13 +435,13 @@ export function TextPlacementLayer({
                   fontFamily: `${placement.fontFamily}, sans-serif`,
                   fontWeight: placement.fontWeight,
                   fontStyle: placement.fontStyle,
-                  fontSize: `${fontSize * transform.scale}px`,
+                  fontSize: `${fontSize * displayTransform.scale}px`,
                   lineHeight: 1.1,
                   textAlign: "center",
                   color: previewColor,
                   textShadow: "0 1px 0 rgba(255,255,255,0.55)",
                   textDecoration: placement.underline ? "underline" : "none",
-                  padding: `${6 * transform.scale}px`,
+                  padding: `${6 * displayTransform.scale}px`,
                   boxSizing: "border-box",
                   whiteSpace: "pre-wrap",
                   overflow: "hidden",
@@ -493,11 +490,11 @@ export function TextPlacementLayer({
                 }}
                 style={{
                   position: "absolute",
-                  top: `${bounds.top}px`,
-                  left: `${bounds.left}px`,
-                  width: `${bounds.width}px`,
-                  height: `${bounds.height}px`,
-                  transform: getRotationCss(transform.rotation),
+                  top: `${displayBounds.top}px`,
+                  left: `${displayBounds.left}px`,
+                  width: `${displayBounds.width}px`,
+                  height: `${displayBounds.height}px`,
+                  transform: getRotationCss(displayTransform.rotation),
                   transformOrigin: "center center",
                   willChange: "left, top, width, height, transform",
                   resize: "none",
@@ -510,14 +507,14 @@ export function TextPlacementLayer({
                   fontFamily: `${placement.fontFamily}, sans-serif`,
                   fontWeight: placement.fontWeight,
                   fontStyle: placement.fontStyle,
-                  fontSize: `${fontSize * transform.scale}px`,
+                  fontSize: `${fontSize * displayTransform.scale}px`,
                   lineHeight: 1.1,
                   textAlign: "center",
                   textDecoration: placement.underline ? "underline" : "none",
-                  paddingTop: verticalPadding * transform.scale,
-                  paddingBottom: verticalPadding * transform.scale,
-                  paddingLeft: 6 * transform.scale,
-                  paddingRight: 6 * transform.scale,
+                  paddingTop: verticalPadding * displayTransform.scale,
+                  paddingBottom: verticalPadding * displayTransform.scale,
+                  paddingLeft: 6 * displayTransform.scale,
+                  paddingRight: 6 * displayTransform.scale,
                   boxSizing: "border-box",
                   overflow: "hidden",
                   outline: "none",
@@ -535,13 +532,13 @@ export function TextPlacementLayer({
             <PositioningBoxOverlay
               ariaLabel="Text placement controls"
               baseRect={baseRect}
-              bounds={bounds}
+              bounds={displayBounds}
               getWorldPointFromClient={getWorldPointFromClient}
               onClick={() => setIsEditing(true)}
               onTransformCommit={handleTransformCommit}
               onTransformPreview={handleTransformPreview}
               transactionKeyPrefix="text-drag"
-              transform={transform}
+              transform={displayTransform}
               zoom={zoom}
             />
           )}
