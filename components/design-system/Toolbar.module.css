@@ -281,7 +281,7 @@
 @media (hover: hover) and (pointer: fine) {
   .buttonVariantToolbar:hover:not(:disabled):not([data-active="true"]),
   .buttonVariantGhost:hover:not(:disabled):not([data-active="true"]) {
-    background: var(--button-ghost2-hover);
+    background: var(--toolbar-button-hover-bg);
     filter: none;
   }
 

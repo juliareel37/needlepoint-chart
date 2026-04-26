@@ -113,7 +113,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-subtle);
 }
 
 .sidebarPanelTitle {
@@ -151,13 +151,8 @@
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
-.sidebarPanelBackButton:hover {
-  background: var(--button-ghost2-hover);
-  color: var(--text-primary);
-}
-
 .sidebarPanelBackButton:focus-visible {
-  background: var(--button-ghost2-hover);
+  background: var(--button-ghost-hover);
   color: var(--text-primary);
 }
 
@@ -510,16 +505,6 @@
   .sidebarColorPreviewButton:hover .sidebarColorPreviewMoreBadge {
     background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
   }
-
-  .sidebarColorPreviewSection:hover .sidebarHeaderAction {
-    background: var(--button-ghost2-hover);
-    color: var(--text-primary);
-  }
-}
-
-.sidebarColorPreviewSection:focus-visible .sidebarHeaderAction {
-  background: var(--button-ghost2-hover);
-  color: var(--text-primary);
 }
 
 .sidebarColorPreviewCountBadge {
@@ -546,13 +531,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
+  min-width: 32px;
+  padding-inline: 8px;
   align-self: center;
-  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .sidebarSearchField {
@@ -745,7 +726,7 @@
 
 .sidebarDivider {
   height: 1px;
-  background: var(--ui-border-reg);
+  background: var(--ui-border-subtle);
 }
 
 .settingsControlGroup {
@@ -2001,7 +1982,7 @@
 .traceSectionDivider {
   width: 100%;
   height: 1px;
-  background: var(--ui-border-reg);
+  background: var(--ui-border-subtle);
 }
 
 .traceAttachmentSummary {
@@ -2234,6 +2215,11 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .sidebarPanelBackButton:hover {
+    background: var(--button-ghost-hover);
+    color: var(--text-primary);
+  }
+
   .editableTitleTrigger:hover {
     border-color: transparent;
     background: transparent;
