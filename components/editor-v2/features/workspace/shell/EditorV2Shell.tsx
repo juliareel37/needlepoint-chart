@@ -1054,6 +1054,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     dispatch={dispatch}
                     featuredColorIds={featuredColorIds}
+                    grid={document.grid}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={textPlacement}
@@ -1066,6 +1067,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     dispatch={dispatch}
                     featuredColorIds={featuredColorIds}
+                    grid={document.grid}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={iconPlacement}
