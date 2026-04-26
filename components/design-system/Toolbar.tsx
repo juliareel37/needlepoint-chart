@@ -97,7 +97,13 @@ export function ToolbarButton({
   labelled?: boolean;
   primary?: boolean;
   swatch?: boolean;
-  variant?: "toolbar" | "ghost" | "secondary" | "primary" | "destructive";
+  variant?:
+    | "toolbar"
+    | "ghost"
+    | "ghostNeutral"
+    | "secondary"
+    | "primary"
+    | "destructive";
   wide?: boolean;
 }) {
   const isInertActive = active && inertWhenActive;

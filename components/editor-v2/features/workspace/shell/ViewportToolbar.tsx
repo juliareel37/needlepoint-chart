@@ -76,6 +76,7 @@ export function ViewportToolbar({
       <ToolbarGroup  style={{"gap": "2px"}}>
         <ToolbarButton
           type="button"
+          variant="ghostNeutral"
           aria-label="Zoom out"
           title="Zoom out"
           onClick={() =>
@@ -127,6 +128,7 @@ export function ViewportToolbar({
         </ToolbarMeta>
         <ToolbarButton
           type="button"
+          variant="ghostNeutral"
           aria-label="Zoom in"
           title="Zoom in"
           onClick={() =>

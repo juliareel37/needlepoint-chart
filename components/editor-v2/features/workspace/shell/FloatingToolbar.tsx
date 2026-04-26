@@ -990,6 +990,7 @@ export function FloatingToolbar({
           >
             <ToolbarIcon icon="/icons/lucide/eraser.svg" />
           </ToolbarButton>
+        </ToolbarAnchor>
 
           <ToolbarButton
             type="button"
@@ -1083,7 +1084,6 @@ export function FloatingToolbar({
               </ToolbarSubtoolGroup>
             </FloatingToolbarPortalPopover>
           ) : null}
-        </ToolbarAnchor>
 
         <ToolbarDivider />
 
