@@ -220,8 +220,6 @@ export function IconsPanelPage({
                 baseRect,
                 metrics: gridMetrics,
                 viewportCenter,
-                viewportWidth,
-                viewportHeight,
                 sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
               })
             : getInitialPlacementTransform({
@@ -408,20 +406,10 @@ function getInitialFramePlacementTransform(options: {
   baseRect: { left: number; top: number; width: number; height: number };
   metrics: GridWorldMetrics;
   viewportCenter: WorldPoint | null;
-  viewportWidth: number | null;
-  viewportHeight: number | null;
   sizeRatio: number;
 }): { offsetX: number; offsetY: number; scaleX: number; scaleY: number } {
-  const referenceWidth =
-    options.viewportWidth && options.viewportWidth > 0
-      ? options.viewportWidth
-      : options.metrics.surfaceWidth;
-  const referenceHeight =
-    options.viewportHeight && options.viewportHeight > 0
-      ? options.viewportHeight
-      : options.metrics.surfaceHeight;
-  const targetWidth = referenceWidth * options.sizeRatio;
-  const targetHeight = referenceHeight * options.sizeRatio;
+  const targetWidth = options.metrics.surfaceWidth * options.sizeRatio;
+  const targetHeight = options.metrics.surfaceHeight * options.sizeRatio;
   const scaleX = clampInitialFrameScale(
     targetWidth / Math.max(options.baseRect.width, 1),
   );
