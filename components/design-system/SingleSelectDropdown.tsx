@@ -42,6 +42,7 @@ export interface SingleSelectDropdownProps<TItem> {
   menuOverlapTrigger?: boolean;
   menuPlacement?: SingleSelectDropdownMenuPlacement;
   menuPortalToViewport?: boolean;
+  menuShowTrailingCheck?: boolean;
   menuStyle?: CSSProperties;
   menuWidth?: string | number;
   minWidth?: string | number;
@@ -73,6 +74,7 @@ export function SingleSelectDropdown<TItem>({
   menuOverlapTrigger = false,
   menuPlacement = "bottom-start",
   menuPortalToViewport = false,
+  menuShowTrailingCheck = true,
   menuStyle,
   menuWidth = "max-content",
   minWidth = 200,
@@ -259,8 +261,12 @@ export function SingleSelectDropdown<TItem>({
               aria-checked={active}
               active={active}
               disabled={getItemDisabled?.(item)}
-              layout="trailing"
-              trailing={<MenuTrailingCheck active={active} />}
+              layout={menuShowTrailingCheck ? "trailing" : "leading"}
+              trailing={
+                menuShowTrailingCheck
+                  ? <MenuTrailingCheck active={active} />
+                  : undefined
+              }
               onClick={() => {
                 onValueChange(itemValue, item);
                 setOpen(false);

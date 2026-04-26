@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
+  CheckboxField,
+  Modal,
   SingleSelectDropdown,
   Toolbar,
   ToolbarAnchor,
@@ -21,6 +23,7 @@ import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrins
 import { convertTextPlacementToCells } from "@/lib/editor-v2/editor/text/convertTextPlacementToCells";
 import type {
   EditorStore,
+  GridDocument,
   PaletteColor,
   TextPlacementSession,
 } from "@/lib/editor-v2/editor/store";
@@ -35,6 +38,12 @@ import {
   getToolbarPopoverHorizontalPosition,
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
+import {
+  countOverwrittenGridCells,
+  getConversionSubjectLabel,
+  shouldShowOverwriteWarning,
+  suppressOverwriteWarningForOneDay,
+} from "./conversionOverwriteWarning";
 import styles from "./EditorV2Shell.module.css";
 
 function TextToolbarPortalPopover({
@@ -156,6 +165,7 @@ interface TextPlacementToolbarProps {
   activeColorId: string | null;
   dispatch: EditorStore["dispatch"];
   featuredColorIds: string[];
+  grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: TextPlacementSession;
@@ -168,6 +178,7 @@ export function TextPlacementToolbar({
   activeColorId,
   dispatch,
   featuredColorIds,
+  grid,
   gridMetrics,
   palette,
   placement,
@@ -175,11 +186,15 @@ export function TextPlacementToolbar({
   symbolAssignments,
 }: TextPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
+  const [pendingCells, setPendingCells] = useState<Array<{ x: number; y: number }> | null>(null);
+  const [overwriteCount, setOverwriteCount] = useState(0);
+  const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const bold = placement.fontWeight >= 700;
   const italic = placement.fontStyle === "italic";
   const underline = placement.underline;
   const canConvert = Boolean(activeColorId);
+  const conversionSubject = getConversionSubjectLabel("text");
 
   function updatePlacementStyle(next: {
     fontFamily?: string;
@@ -210,6 +225,15 @@ export function TextPlacementToolbar({
     );
   }
 
+  function applyConvertedCells(cells: Array<{ x: number; y: number }>) {
+    if (!activeColorId || cells.length === 0) {
+      return;
+    }
+
+    dispatch(createPaintCellsCommand(activeColorId, cells));
+    dispatch(createCancelTextPlacementCommand());
+  }
+
   function handleConvert() {
     if (!activeColorId) {
       return;
@@ -220,8 +244,15 @@ export function TextPlacementToolbar({
       return;
     }
 
-    dispatch(createPaintCellsCommand(activeColorId, cells));
-    dispatch(createCancelTextPlacementCommand());
+    const nextOverwriteCount = countOverwrittenGridCells(grid, cells);
+    if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+      setPendingCells(cells);
+      setOverwriteCount(nextOverwriteCount);
+      setSkipWarningForOneDay(false);
+      return;
+    }
+
+    applyConvertedCells(cells);
   }
 
   return (
@@ -369,6 +400,47 @@ export function TextPlacementToolbar({
           </ToolbarButton>
         </Toolbar>
       </div>
+      <Modal
+        isOpen={pendingCells !== null}
+        title="Heads up!"
+        description={(
+          <div style={{ display: "grid", gap: 12 }}>
+            <span className={styles.overwriteWarningDescriptionText}>
+              {`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
+                overwriteCount === 1 ? "cell" : "cells"
+              }.`}
+            </span>
+            <CheckboxField
+              className={styles.overwriteWarningCheckbox}
+              checkboxClassName={styles.overwriteWarningCheckboxControl}
+              labelStyle={{ fontSize: 12, lineHeight: 1.25 }}
+              checked={skipWarningForOneDay}
+              onChange={(event) => setSkipWarningForOneDay(event.currentTarget.checked)}
+            >
+              Don&apos;t show again today
+            </CheckboxField>
+          </div>
+        )}
+        tone="warning"
+        dismissLabel="Cancel"
+        confirmLabel="Apply anyway"
+        onDismiss={() => {
+          setPendingCells(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+        onConfirm={() => {
+          if (skipWarningForOneDay) {
+            suppressOverwriteWarningForOneDay();
+          }
+          if (pendingCells) {
+            applyConvertedCells(pendingCells);
+          }
+          setPendingCells(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+      />
     </div>
   );
 }

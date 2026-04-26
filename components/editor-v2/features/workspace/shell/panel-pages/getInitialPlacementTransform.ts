@@ -8,6 +8,9 @@ export function getInitialPlacementTransform(options: {
   viewportCenter: WorldPoint | null;
   viewportWidth?: number | null;
   widthRatio: number;
+  clampReferenceToSurface?: boolean;
+  minScale?: number;
+  maxScale?: number;
 }): { offsetX: number; offsetY: number; scale: number } {
   const baseRect = getContainedRect(
     options.intrinsicWidth,
@@ -15,12 +18,23 @@ export function getInitialPlacementTransform(options: {
     options.metrics.surfaceWidth,
     options.metrics.surfaceHeight,
   );
-  const referenceWidth =
-    options.viewportWidth && options.viewportWidth > 0
-      ? Math.min(options.viewportWidth, options.metrics.surfaceWidth)
-      : options.metrics.surfaceWidth;
+  const referenceWidth = (() => {
+    if (!options.viewportWidth || options.viewportWidth <= 0) {
+      return options.metrics.surfaceWidth;
+    }
+
+    if (options.clampReferenceToSurface ?? true) {
+      return Math.min(options.viewportWidth, options.metrics.surfaceWidth);
+    }
+
+    return options.viewportWidth;
+  })();
   const targetWidth = referenceWidth * options.widthRatio;
-  const scale = clampScale(targetWidth / Math.max(baseRect.width, 1));
+  const scale = clampScale(
+    targetWidth / Math.max(baseRect.width, 1),
+    options.minScale,
+    options.maxScale,
+  );
   const targetCenterX = options.viewportCenter?.x ?? options.metrics.surfaceWidth / 2;
   const targetCenterY = options.viewportCenter?.y ?? options.metrics.surfaceHeight / 2;
   const targetLeft = targetCenterX - (baseRect.width * scale) / 2;
@@ -33,7 +47,11 @@ export function getInitialPlacementTransform(options: {
   };
 }
 
-function clampScale(value: number): number {
+function clampScale(
+  value: number,
+  minScale = 0.1,
+  maxScale = 4,
+): number {
   if (!Number.isFinite(value)) return 1;
-  return Math.min(4, Math.max(0.1, Number(value.toFixed(4))));
+  return Math.min(maxScale, Math.max(minScale, Number(value.toFixed(4))));
 }

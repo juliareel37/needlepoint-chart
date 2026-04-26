@@ -19,7 +19,7 @@ export function exportPatternPdf(opts: {
   width: number;
   height: number;
   cellSize: number;
-}) {
+}): { filename: string; blob: Blob } {
   const { title, threadView = false, usedColors, grid, paletteById, symbolMap, width, height, cellSize } = opts;
   void threadView;
 
@@ -91,7 +91,10 @@ export function exportPatternPdf(opts: {
     symbolsOnly: true,
   });
 
-  pdf.save(`${sanitizeFilename(title || "needlepoint-pattern")}.pdf`);
+  const filename = `${sanitizeFilename(title || "needlepoint-pattern")}.pdf`;
+  const blob = pdf.output("blob");
+
+  return { filename, blob };
 }
 
 function drawLegendTablePages(opts: {

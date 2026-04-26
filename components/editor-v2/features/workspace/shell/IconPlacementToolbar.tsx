@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
+  CheckboxField,
+  Modal,
   Slider,
   Toolbar,
   ToolbarAnchor,
@@ -19,6 +21,7 @@ import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/
 import { getPrimitiveStrokeWidthScaleRange } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type {
   EditorStore,
+  GridDocument,
   IconPlacementSession,
   PaletteColor,
 } from "@/lib/editor-v2/editor/store";
@@ -33,6 +36,12 @@ import {
   getToolbarPopoverHorizontalPosition,
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
+import {
+  countOverwrittenPaintGroupCells,
+  getConversionSubjectLabel,
+  shouldShowOverwriteWarning,
+  suppressOverwriteWarningForOneDay,
+} from "./conversionOverwriteWarning";
 import styles from "./EditorV2Shell.module.css";
 
 function IconToolbarPortalPopover({
@@ -228,6 +237,7 @@ interface IconPlacementToolbarProps {
   activeColorId: string | null;
   dispatch: EditorStore["dispatch"];
   featuredColorIds: string[];
+  grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
   placement: IconPlacementSession;
@@ -240,6 +250,7 @@ export function IconPlacementToolbar({
   activeColorId,
   dispatch,
   featuredColorIds,
+  grid,
   gridMetrics,
   palette,
   placement,
@@ -259,6 +270,11 @@ export function IconPlacementToolbar({
   const patternAnchorRef = useRef<HTMLDivElement | null>(null);
   const spacingAnchorRef = useRef<HTMLDivElement | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [pendingGroups, setPendingGroups] = useState<Awaited<
+    ReturnType<typeof convertIconPlacementToPaintGroups>
+  > | null>(null);
+  const [overwriteCount, setOverwriteCount] = useState(0);
+  const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const paletteById = useMemo(
     () =>
       palette.reduce<Record<string, PaletteColor>>((accumulator, color) => {
@@ -317,6 +333,7 @@ export function IconPlacementToolbar({
   const showDividerAfterStrokeWidth = supportsPatternScale || supportsSpacingScale || hasColorSlots;
   const showDividerAfterPattern = supportsSpacingScale || hasColorSlots;
   const showDividerAfterSpacing = hasColorSlots;
+  const conversionSubject = getConversionSubjectLabel(placement);
 
   function closeColorPickers() {
     setColorLibraryOpen(false);
@@ -342,6 +359,32 @@ export function IconPlacementToolbar({
     );
   }
 
+  function applyConvertedGroups(
+    groups: Awaited<ReturnType<typeof convertIconPlacementToPaintGroups>>,
+  ) {
+    if (groups.length === 0) {
+      return;
+    }
+
+    const conversionTransactionKey = `icon-convert-${placement.iconId}-${Date.now()}`;
+
+    for (const group of groups) {
+      if (group.cells.length === 0) {
+        continue;
+      }
+
+      dispatch(
+        createPaintCellsCommand(
+          group.colorId,
+          group.cells,
+          conversionTransactionKey,
+        ),
+      );
+    }
+
+    dispatch(createCancelIconPlacementCommand());
+  }
+
   async function handleConvert() {
     if (isConverting) {
       return;
@@ -349,7 +392,6 @@ export function IconPlacementToolbar({
 
     setIsConverting(true);
     try {
-      const conversionTransactionKey = `icon-convert-${placement.iconId}-${Date.now()}`;
       const groups = await convertIconPlacementToPaintGroups(
         placement,
         gridMetrics,
@@ -360,20 +402,15 @@ export function IconPlacementToolbar({
         return;
       }
 
-      for (const group of groups) {
-        if (group.cells.length === 0) {
-          continue;
-        }
-
-        dispatch(
-          createPaintCellsCommand(
-            group.colorId,
-            group.cells,
-            conversionTransactionKey,
-          ),
-        );
+      const nextOverwriteCount = countOverwrittenPaintGroupCells(grid, groups);
+      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+        setPendingGroups(groups);
+        setOverwriteCount(nextOverwriteCount);
+        setSkipWarningForOneDay(false);
+        return;
       }
-      dispatch(createCancelIconPlacementCommand());
+
+      applyConvertedGroups(groups);
     } finally {
       setIsConverting(false);
     }
@@ -751,6 +788,47 @@ export function IconPlacementToolbar({
           </ToolbarButton>
         </Toolbar>
       </div>
+      <Modal
+        isOpen={pendingGroups !== null}
+        title="Heads up!"
+        description={(
+          <div style={{ display: "grid", gap: 12}}>
+            <span className={styles.overwriteWarningDescriptionText}>
+              {`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
+                overwriteCount === 1 ? "cell" : "cells"
+              }.`}
+            </span>
+            <CheckboxField
+              className={styles.overwriteWarningCheckbox}
+              checkboxClassName={styles.overwriteWarningCheckboxControl}
+              labelStyle={{ fontSize: 12, lineHeight: 1.25 }}
+              checked={skipWarningForOneDay}
+              onChange={(event) => setSkipWarningForOneDay(event.currentTarget.checked)}
+            >
+              Don&apos;t show again today
+            </CheckboxField>
+          </div>
+        )}
+        tone="warning"
+        dismissLabel="Cancel"
+        confirmLabel="Apply anyway"
+        onDismiss={() => {
+          setPendingGroups(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+        onConfirm={() => {
+          if (skipWarningForOneDay) {
+            suppressOverwriteWarningForOneDay();
+          }
+          if (pendingGroups) {
+            applyConvertedGroups(pendingGroups);
+          }
+          setPendingGroups(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+      />
     </div>
   );
 }

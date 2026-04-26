@@ -74,6 +74,47 @@ export async function renderIconPlacementPreview(
   return canvas.toDataURL();
 }
 
+export async function renderFlatColorIconPreview(
+  src: string,
+  width: number,
+  height: number,
+  color: string,
+): Promise<string> {
+  const rgb = hexToRgb(color);
+  if (!rgb) {
+    return src;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    return src;
+  }
+
+  const image = await loadImage(src);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const alpha = data[index + 3] ?? 0;
+    if (alpha <= 1) {
+      continue;
+    }
+
+    data[index] = rgb.r;
+    data[index + 1] = rgb.g;
+    data[index + 2] = rgb.b;
+  }
+
+  context.putImageData(imageData, 0, 0);
+  return canvas.toDataURL();
+}
+
 function renderRecoloredSvgPreview(
   src: string,
   slots: IconColorSlot[],

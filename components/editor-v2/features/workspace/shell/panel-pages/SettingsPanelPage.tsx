@@ -57,6 +57,10 @@ export function SettingsPanelPage({
                 value: "light",
               },
               {
+                label: "System",
+                value: "system",
+              },
+              {
                 label: (
                   <>
                     <ButtonIcon icon="/icons/lucide/moon.svg" />

@@ -72,7 +72,10 @@ const themeBootstrapScript = `
 (() => {
   try {
     const saved = window.localStorage.getItem("wippa:theme");
-    if (saved === "dark") {
+    const resolved = saved === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : saved;
+    if (resolved === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
     } else {
       document.documentElement.removeAttribute("data-theme");

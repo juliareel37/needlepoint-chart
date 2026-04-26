@@ -63,12 +63,12 @@ export function ViewportToolbar({
   const nextZoomIn = getNextZoomInPercent(zoomPercent) / 100;
   const nextZoomOut = getNextZoomOutPercent(zoomPercent) / 100;
   const zoomPopupItems: ZoomPopupItem[] = [
+    { kind: "fit", value: "fit" },
     ...ZOOM_POPUP_PRESET_PERCENTS.map((percent) => ({
       kind: "preset" as const,
       percent,
       value: String(percent),
     })),
-    { kind: "fit", value: "fit" },
   ];
 
   return (
@@ -76,6 +76,7 @@ export function ViewportToolbar({
       <ToolbarGroup  style={{"gap": "2px"}}>
         <ToolbarButton
           type="button"
+          variant="ghostNeutral"
           aria-label="Zoom out"
           title="Zoom out"
           onClick={() =>
@@ -127,6 +128,7 @@ export function ViewportToolbar({
         </ToolbarMeta>
         <ToolbarButton
           type="button"
+          variant="ghostNeutral"
           aria-label="Zoom in"
           title="Zoom in"
           onClick={() =>

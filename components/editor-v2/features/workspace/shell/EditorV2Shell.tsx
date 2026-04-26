@@ -34,6 +34,7 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createCancelIconPlacementCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
@@ -263,6 +264,13 @@ export function EditorV2Shell({
     sidebarCollapsed,
     viewport.zoom,
   ]);
+  const textViewportHeight = useMemo(() => {
+    if (viewport.zoom <= 0 || canvasWorldSize.height <= 0) {
+      return null;
+    }
+
+    return canvasWorldSize.height / viewport.zoom;
+  }, [canvasWorldSize.height, viewport.zoom]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -598,6 +606,34 @@ export function EditorV2Shell({
   }, [dispatch, iconPlacement, isBottomPanelLayout, sidebarCollapsed]);
 
   useEffect(() => {
+    if (!iconPlacement) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      dispatch(createCancelIconPlacementCommand());
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [dispatch, iconPlacement]);
+
+  useEffect(() => {
     setMounted(true);
   }, []);
 
@@ -756,8 +792,8 @@ export function EditorV2Shell({
               showChevron={false}
               menuPortalToViewport
               menuPlacement="bottom-end"
+              menuShowTrailingCheck={false}
               minWidth="auto"
-              menuWidth={176}
               getItemValue={(item) => item.id}
               getItemLabel={(item) => {
                 if (item.id === "export") {
@@ -993,6 +1029,7 @@ export function EditorV2Shell({
                 showSymbols={showSymbols}
                 textViewportCenter={textViewportCenter}
                 textViewportWidth={textViewportWidth}
+                textViewportHeight={textViewportHeight}
               />
             </div>
 
@@ -1017,6 +1054,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     dispatch={dispatch}
                     featuredColorIds={featuredColorIds}
+                    grid={document.grid}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={textPlacement}
@@ -1029,6 +1067,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     dispatch={dispatch}
                     featuredColorIds={featuredColorIds}
+                    grid={document.grid}
                     gridMetrics={gridMetrics}
                     palette={palette}
                     placement={iconPlacement}

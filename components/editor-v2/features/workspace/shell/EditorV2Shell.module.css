@@ -823,9 +823,10 @@
   align-items: center;
   justify-content: center;
   padding: 4px 8px;
+  /* border: 1px solid var(--ui-border-reg); */
   border-radius: 8px;
-  background: var(--brand-primary);
-  color: var(--neutral-0);
+  background: var(--surface-card);
+  color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
   font-size: 12px;
   line-height: 16px;
@@ -842,7 +843,9 @@
   top: calc(100% - 4px);
   width: 8px;
   height: 8px;
-  background: var(--brand-primary);
+  background: var(--surface-card);
+  border-right: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-reg);
   transform: translateX(-50%) rotate(45deg);
   border-radius: 2px;
 }
@@ -1011,6 +1014,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .headerHistoryButton {
@@ -1068,6 +1072,22 @@
   min-width: 0;
 }
 
+.overwriteWarningCheckbox {
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.overwriteWarningCheckboxControl {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.overwriteWarningDescriptionText {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .selectionToolbarMainViewport,
 .selectionToolbarCloseViewport {
   border-radius: 16px;
@@ -1097,17 +1117,17 @@
 .selectionToolbarCloseBar {
   width: 32px;
   height: 32px;
-  padding: 2px;
+  padding: 0;
   border-radius: 999px;
   align-items: center;
   justify-content: center;
 }
 
 .selectionToolbarCloseButton {
-  min-width: 24px;
-  min-height: 24px;
-  width: 24px;
-  height: 24px;
+  min-width: 32px;
+  min-height: 32px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border-radius: 999px;
 }
@@ -1382,6 +1402,31 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.usedColorsSortTriggerWrap {
+  display: inline-flex;
+}
+
+.usedColorsSortButton {
+  min-width: 32px !important;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--button-secondary-default);
+  color: var(--text-secondary);
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  box-shadow: none;
+}
+
+.usedColorsSortButton[data-open="true"] {
+  background: var(--button-secondary-hover);
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
 }
 
 .usedColorsListFrame {
@@ -2168,9 +2213,10 @@
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
   padding: 4px 8px;
+  border: 1px solid var(--ui-border-reg);
   border-radius: 8px;
-  background: var(--brand-primary);
-  color: var(--neutral-0);
+  background: var(--surface-card);
+  color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
   font-size: 12px;
   line-height: 16px;
@@ -2189,7 +2235,9 @@
   top: calc(100% - 5px);
   width: 8px;
   height: 8px;
-  background: var(--brand-primary);
+  background: var(--surface-card);
+  border-right: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-reg);
   transform: translateX(-50%) rotate(45deg);
   border-radius: 2px;
 }
@@ -2264,6 +2312,12 @@
     box-shadow:
       0 0 0 1px var(--swatch-ring-inner),
       0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .usedColorsSortButton:hover {
+    background: var(--button-secondary-hover);
+    color: var(--text-primary);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
   }
 
   .usedColorsRow[data-selectable="true"][data-selected="false"] .usedColorsItem:hover:not(:disabled) {

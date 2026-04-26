@@ -82,6 +82,11 @@
   color: var(--text-primary);
 }
 
+.buttonVariantGhostNeutral {
+  background: transparent;
+  color: var(--text-primary);
+}
+
 .buttonVariantSecondary {
   background: var(--button-secondary-default);
   color: var(--text-primary);
@@ -149,7 +154,8 @@
 } */
 
 .buttonVariantToolbar[data-active="true"],
-.buttonVariantGhost[data-active="true"] {
+.buttonVariantGhost[data-active="true"],
+.buttonVariantGhostNeutral[data-active="true"] {
   background: var(--toolbar-button-active-bg);
   color: var(--toolbar-button-active-text);
   filter: none;
@@ -282,6 +288,11 @@
   .buttonVariantToolbar:hover:not(:disabled):not([data-active="true"]),
   .buttonVariantGhost:hover:not(:disabled):not([data-active="true"]) {
     background: var(--toolbar-button-hover-bg);
+    filter: none;
+  }
+
+  .buttonVariantGhostNeutral:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--button-ghost2-hover);
     filter: none;
   }
 

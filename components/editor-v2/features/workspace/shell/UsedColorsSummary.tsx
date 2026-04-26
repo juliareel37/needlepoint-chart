@@ -11,6 +11,7 @@ import {
   Checkbox,
   Modal,
   Notification,
+  SingleSelectDropdown,
 } from "@/components/design-system";
 import {
   ToolbarAnchor,
@@ -43,10 +44,244 @@ function getSwatchIconColor(hex: string) {
 
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge";
+type UsedColorsSortMode = "usage" | "color";
 type UsedColorsSuccessNotification = {
   title: string;
   description: string;
 };
+
+type ColorSortFamily =
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "teal"
+  | "blue"
+  | "purple"
+  | "neutral";
+
+type UsedColorSortMetadata = {
+  family: ColorSortFamily;
+  hue: number;
+  saturation: number;
+  lightness: number;
+  lightnessBucket: number;
+};
+
+const COLOR_SORT_FAMILY_ORDER: ColorSortFamily[] = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "teal",
+  "blue",
+  "purple",
+  "neutral",
+];
+
+const COLOR_SORT_FAMILY_RANK = Object.fromEntries(
+  COLOR_SORT_FAMILY_ORDER.map((family, index) => [family, index]),
+) as Record<ColorSortFamily, number>;
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return null;
+  }
+
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  const l = (max + min) / 2;
+  let s = 0;
+
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+
+    switch (max) {
+      case r:
+        h = 60 * (((g - b) / delta) % 6);
+        break;
+      case g:
+        h = 60 * ((b - r) / delta + 2);
+        break;
+      case b:
+        h = 60 * ((r - g) / delta + 4);
+        break;
+    }
+  }
+
+  if (h < 0) {
+    h += 360;
+  }
+
+  return { h, s, l };
+}
+
+function getColorSortFamily(hue: number, saturation: number): ColorSortFamily {
+  if (saturation < 0.12) {
+    return "neutral";
+  }
+
+  if (hue >= 345 || hue < 20) {
+    return "red";
+  }
+  if (hue < 50) {
+    return "orange";
+  }
+  if (hue < 75) {
+    return "yellow";
+  }
+  if (hue < 165) {
+    return "green";
+  }
+  if (hue < 200) {
+    return "teal";
+  }
+  if (hue < 255) {
+    return "blue";
+  }
+  return "purple";
+}
+
+function getLightnessBucket(lightness: number): number {
+  if (lightness < 0.18) {
+    return 0;
+  }
+  if (lightness < 0.32) {
+    return 1;
+  }
+  if (lightness < 0.5) {
+    return 2;
+  }
+  if (lightness < 0.68) {
+    return 3;
+  }
+  if (lightness < 0.84) {
+    return 4;
+  }
+  return 5;
+}
+
+function comparePaletteCodes(a: string, b: string): number {
+  const aNum = Number(a);
+  const bNum = Number(b);
+  const aIsNum = Number.isFinite(aNum);
+  const bIsNum = Number.isFinite(bNum);
+
+  if (aIsNum && bIsNum) {
+    return aNum - bNum;
+  }
+
+  return a.localeCompare(b);
+}
+
+function getUsedColorSortMetadata(color: PaletteColor | undefined): UsedColorSortMetadata {
+  const hsl = color ? hexToHsl(color.hex) : null;
+
+  if (!hsl) {
+    return {
+      family: "neutral",
+      hue: 0,
+      saturation: 0,
+      lightness: 0,
+      lightnessBucket: 0,
+    };
+  }
+
+  return {
+    family: getColorSortFamily(hsl.h, hsl.s),
+    hue: hsl.h,
+    saturation: hsl.s,
+    lightness: hsl.l,
+    lightnessBucket: getLightnessBucket(hsl.l),
+  };
+}
+
+function sortUsedColorsForDisplay(
+  usedColors: UsedColorSummary[],
+  colorsById: Record<string, PaletteColor>,
+  sortMode: UsedColorsSortMode,
+): UsedColorSummary[] {
+  const baseSorted = [...usedColors].sort((left, right) => {
+    if (left.count !== right.count) {
+      return right.count - left.count;
+    }
+
+    const leftColor = colorsById[left.colorId];
+    const rightColor = colorsById[right.colorId];
+
+    return comparePaletteCodes(leftColor?.code ?? left.colorId, rightColor?.code ?? right.colorId);
+  });
+
+  if (sortMode === "usage") {
+    return baseSorted;
+  }
+
+  const metadataByColorId = new Map<string, UsedColorSortMetadata>();
+  const familyTotals = new Map<ColorSortFamily, number>();
+
+  for (const entry of baseSorted) {
+    const metadata = getUsedColorSortMetadata(colorsById[entry.colorId]);
+    metadataByColorId.set(entry.colorId, metadata);
+    familyTotals.set(
+      metadata.family,
+      (familyTotals.get(metadata.family) ?? 0) + entry.count,
+    );
+  }
+
+  return [...baseSorted].sort((left, right) => {
+    const leftColor = colorsById[left.colorId];
+    const rightColor = colorsById[right.colorId];
+    const leftMetadata = metadataByColorId.get(left.colorId) ?? getUsedColorSortMetadata(leftColor);
+    const rightMetadata =
+      metadataByColorId.get(right.colorId) ?? getUsedColorSortMetadata(rightColor);
+    const leftFamilyTotal = familyTotals.get(leftMetadata.family) ?? 0;
+    const rightFamilyTotal = familyTotals.get(rightMetadata.family) ?? 0;
+
+    if (leftFamilyTotal !== rightFamilyTotal) {
+      return rightFamilyTotal - leftFamilyTotal;
+    }
+
+    if (leftMetadata.family !== rightMetadata.family) {
+      return (
+        COLOR_SORT_FAMILY_RANK[leftMetadata.family] -
+        COLOR_SORT_FAMILY_RANK[rightMetadata.family]
+      );
+    }
+
+    if (leftMetadata.lightnessBucket !== rightMetadata.lightnessBucket) {
+      return leftMetadata.lightnessBucket - rightMetadata.lightnessBucket;
+    }
+
+    if (leftMetadata.family === "neutral") {
+      if (leftMetadata.lightness !== rightMetadata.lightness) {
+        return leftMetadata.lightness - rightMetadata.lightness;
+      }
+    } else if (leftMetadata.hue !== rightMetadata.hue) {
+      return leftMetadata.hue - rightMetadata.hue;
+    }
+
+    if (leftMetadata.saturation !== rightMetadata.saturation) {
+      return rightMetadata.saturation - leftMetadata.saturation;
+    }
+
+    if (leftMetadata.lightness !== rightMetadata.lightness) {
+      return leftMetadata.lightness - rightMetadata.lightness;
+    }
+
+    if (left.count !== right.count) {
+      return right.count - left.count;
+    }
+
+    return comparePaletteCodes(leftColor?.code ?? left.colorId, rightColor?.code ?? right.colorId);
+  });
+}
 
 function UsedColorsPortalPopover({
   anchorRef,
@@ -230,6 +465,7 @@ export function UsedColorsSummary({
 }) {
   const [toolMode, setToolMode] = useState<UsedColorsToolMode>("idle");
   const [actionMode, setActionMode] = useState<UsedColorsActionMode>("none");
+  const [sortMode, setSortMode] = useState<UsedColorsSortMode>("usage");
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [mergeTargetColorId, setMergeTargetColorId] = useState<string | null>(null);
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
@@ -242,6 +478,17 @@ export function UsedColorsSummary({
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
+  const sortOptions = useMemo(
+    () => [
+      { value: "usage", label: "Most used first" },
+      { value: "color", label: "Group similar colors" },
+    ] satisfies Array<{ value: UsedColorsSortMode; label: string }>,
+    [],
+  );
+  const displayedUsedColors = useMemo(
+    () => sortUsedColorsForDisplay(usedColors, colorsById, sortMode),
+    [colorsById, sortMode, usedColors],
+  );
 
   useEffect(() => {
     setSelectedColorIds((current) =>
@@ -444,13 +691,31 @@ export function UsedColorsSummary({
           <div className={styles.usedColorsToolButtons}>
             <Button
               type="button"
-              variant="ghostV2"
+              variant="secondary"
               size="sm"
               className={styles.usedColorsEditButton}
               onClick={enterToolMode}
             >
               Select
             </Button>
+            <SingleSelectDropdown
+              ariaLabel="Sort design colors"
+              items={sortOptions}
+              value={sortMode}
+              placeholder="Sort"
+              getItemLabel={(item) => item.label}
+              getItemValue={(item) => item.value}
+              onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
+              showChevron={false}
+              triggerVariant="selection"
+              triggerClassName={styles.usedColorsSortButton}
+              triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
+              wrapperClassName={styles.usedColorsSortTriggerWrap}
+              menuPlacement="bottom-end"
+              menuPortalToViewport
+              menuWidth={200}
+              minWidth={32}
+            />
           </div>
         ) : null}
       </div>
@@ -478,7 +743,7 @@ export function UsedColorsSummary({
                 isSelecting && selectedColorIds.length > 0 ? "true" : "false"
               }
             >
-            {usedColors.map((entry) => (
+            {displayedUsedColors.map((entry) => (
               (() => {
                 const isActiveColor = !isSelecting && activeColorId === entry.colorId;
 

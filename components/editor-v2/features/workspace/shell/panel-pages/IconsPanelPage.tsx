@@ -27,6 +27,8 @@ const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
 const ICON_PREVIEW_SIZE = 72;
 const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
 const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
+const ICON_INITIAL_MIN_SCALE = 0.005;
+const ICON_INITIAL_MAX_SCALE = 64;
 const CATEGORY_ORDER_PRIORITY: Record<string, number> = {
   Shapes: 0,
   Frames: 1,
@@ -43,6 +45,8 @@ interface IconsPanelPageProps {
   placement: IconPlacementSession | null;
   view: IconsPanelView;
   viewportCenter: WorldPoint | null;
+  viewportWidth: number | null;
+  viewportHeight: number | null;
 }
 
 export function IconsPanelPage({
@@ -52,6 +56,8 @@ export function IconsPanelPage({
   placement,
   view,
   viewportCenter,
+  viewportWidth,
+  viewportHeight,
 }: IconsPanelPageProps) {
   const { themeMode } = useThemeMode();
   const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
@@ -221,7 +227,11 @@ export function IconsPanelPage({
                 intrinsicHeight: item.intrinsicHeight,
                 metrics: gridMetrics,
                 viewportCenter,
+                viewportWidth,
                 widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+                clampReferenceToSurface: false,
+                minScale: ICON_INITIAL_MIN_SCALE,
+                maxScale: ICON_INITIAL_MAX_SCALE,
               });
           const initialReferenceSize = item.primitiveKind
             ? Math.min(
@@ -400,8 +410,12 @@ function getInitialFramePlacementTransform(options: {
 }): { offsetX: number; offsetY: number; scaleX: number; scaleY: number } {
   const targetWidth = options.metrics.surfaceWidth * options.sizeRatio;
   const targetHeight = options.metrics.surfaceHeight * options.sizeRatio;
-  const scaleX = clampInitialFrameScale(targetWidth / Math.max(options.baseRect.width, 1));
-  const scaleY = clampInitialFrameScale(targetHeight / Math.max(options.baseRect.height, 1));
+  const scaleX = clampInitialFrameScale(
+    targetWidth / Math.max(options.baseRect.width, 1),
+  );
+  const scaleY = clampInitialFrameScale(
+    targetHeight / Math.max(options.baseRect.height, 1),
+  );
   const targetCenterX = options.viewportCenter?.x ?? options.metrics.surfaceWidth / 2;
   const targetCenterY = options.viewportCenter?.y ?? options.metrics.surfaceHeight / 2;
   const targetLeft = targetCenterX - (options.baseRect.width * scaleX) / 2;
@@ -420,7 +434,7 @@ function clampInitialFrameScale(value: number): number {
     return 1;
   }
 
-  return Math.min(4, Math.max(0.1, Number(value.toFixed(4))));
+  return Math.min(ICON_INITIAL_MAX_SCALE, Math.max(ICON_INITIAL_MIN_SCALE, Number(value.toFixed(4))));
 }
 
 function resolvePrimitivePreviewStrokeColor(): string {

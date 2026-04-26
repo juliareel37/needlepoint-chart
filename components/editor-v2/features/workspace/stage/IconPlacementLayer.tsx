@@ -7,7 +7,10 @@ import {
   isPrimitiveFrameKind,
   resolvePrimitiveColorSlots,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
-import { renderIconPlacementPreview } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
+import {
+  renderFlatColorIconPreview,
+  renderIconPlacementPreview,
+} from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
 import { renderCellSampledPlacementPreview } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { ViewportState } from "@/lib/editor-v2/editor/store";
@@ -20,6 +23,7 @@ import {
   getIconPlacementBounds,
   type IconPlacementTransform,
 } from "@/lib/editor-v2/editor/icons/iconPlacementGeometry";
+import { SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW } from "./placementPreviewMode";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
 import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
 
@@ -50,8 +54,9 @@ export function IconPlacementLayer({
   worldBounds,
   zoom,
 }: IconPlacementLayerProps) {
+  const useCellSampledPreview = SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW;
   const [coarsePointer, setCoarsePointer] = useState(false);
-  const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
+  const [previewTransform, setPreviewTransform] = useState<
     IconPlacementTransform | null
   >(null);
   const baseRect = useMemo(
@@ -93,7 +98,7 @@ export function IconPlacementLayer({
     () => getIconPlacementBounds(baseRect, transform),
     [baseRect, transform],
   );
-  const displayTransform = mobilePreviewTransform ?? transform;
+  const displayTransform = previewTransform ?? transform;
   const displayBounds = useMemo(
     () => getIconPlacementBounds(baseRect, displayTransform),
     [baseRect, displayTransform],
@@ -180,6 +185,7 @@ export function IconPlacementLayer({
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (coarsePointer && portalHost) {
+      setPreviewTransform(nextTransform);
       const mobilePreviewIcon = mobilePreviewIconRef.current;
       if (!mobilePreviewIcon) {
         return;
@@ -188,6 +194,10 @@ export function IconPlacementLayer({
       const nextBounds = projectMobileStageBounds(nextTransform, baseRect);
       applyPreviewIconBox(mobilePreviewIcon, nextBounds, nextTransform.rotation);
       return;
+    }
+
+    if (placement.primitiveKind || useCellSampledPreview) {
+      setPreviewTransform(nextTransform);
     }
 
     if (!previewIconRef.current) {
@@ -208,6 +218,7 @@ export function IconPlacementLayer({
     placement.primitiveKind,
     portalHost,
     projectMobileStageBounds,
+    useCellSampledPreview,
   ]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform, _transactionKey?: string) => {
@@ -220,7 +231,7 @@ export function IconPlacementLayer({
           rotation: nextTransform.rotation,
         }),
       );
-      setMobilePreviewTransform(nextTransform);
+      setPreviewTransform(nextTransform);
     },
     [dispatch],
   );
@@ -229,35 +240,25 @@ export function IconPlacementLayer({
     let cancelled = false;
 
     async function buildPreview() {
-      if (placement.primitiveKind) {
-        if (!primitivePreviewSrc) {
-          return;
+      const basePreviewSrc = await (async () => {
+        if (placement.primitiveKind) {
+          return primitivePreviewSrc;
         }
 
-        try {
-          const nextPreviewSrc = await renderCellSampledPlacementPreview({
-            src: primitivePreviewSrc,
-            bounds: displayBounds,
-            metrics,
-          });
-          if (!cancelled) {
-            setPreviewSrc(nextPreviewSrc);
+        if (placement.colorSlots.length === 0) {
+          if (!useCellSampledPreview) {
+            return null;
           }
-        } catch {
-          if (!cancelled) {
-            setPreviewSrc(primitivePreviewSrc);
-          }
+
+          return renderFlatColorIconPreview(
+            placement.src,
+            placement.intrinsicWidth,
+            placement.intrinsicHeight,
+            previewColor,
+          );
         }
-        return;
-      }
 
-      if (placement.colorSlots.length === 0) {
-        setPreviewSrc(placement.src);
-        return;
-      }
-
-      try {
-        const nextPreviewSrc = await renderIconPlacementPreview(
+        return renderIconPlacementPreview(
           placement.src,
           placement.intrinsicWidth,
           placement.intrinsicHeight,
@@ -268,13 +269,34 @@ export function IconPlacementLayer({
             supportsStrokeWidth: placement.supportsStrokeWidth,
           },
         );
+      })();
 
+      if (!basePreviewSrc) {
+        if (!cancelled) {
+          setPreviewSrc(null);
+        }
+        return;
+      }
+
+      if (!useCellSampledPreview) {
+        if (!cancelled) {
+          setPreviewSrc(basePreviewSrc);
+        }
+        return;
+      }
+
+      try {
+        const nextPreviewSrc = await renderCellSampledPlacementPreview({
+          src: basePreviewSrc,
+          bounds: displayBounds,
+          metrics,
+        });
         if (!cancelled) {
           setPreviewSrc(nextPreviewSrc);
         }
       } catch {
         if (!cancelled) {
-          setPreviewSrc(placement.src);
+          setPreviewSrc(basePreviewSrc);
         }
       }
     }
@@ -304,6 +326,7 @@ export function IconPlacementLayer({
     primitivePreviewSrc,
     previewColor,
     primitiveColors,
+    useCellSampledPreview,
   ]);
 
   useEffect(() => {
@@ -326,7 +349,7 @@ export function IconPlacementLayer({
   }, []);
 
   useEffect(() => {
-    setMobilePreviewTransform(null);
+    setPreviewTransform(null);
   }, [transform]);
 
   const showMobilePositioning = coarsePointer && portalHost;
@@ -358,7 +381,7 @@ export function IconPlacementLayer({
               transformOrigin: "center center",
             }}
           >
-            {(placement.primitiveKind ? Boolean(previewSrc) : placement.colorSlots.length > 0) ? (
+            {previewSrc ? (
               <img
                 src={previewSrc ?? undefined}
                 alt=""
@@ -425,11 +448,11 @@ export function IconPlacementLayer({
             ref={previewIconRef}
             style={{
               position: "absolute",
-              top: `${placement.primitiveKind ? bounds.top : baseRect.top}px`,
-              left: `${bounds.left}px`,
-              width: `${bounds.width}px`,
-              height: `${bounds.height}px`,
-              transform: getRotationCss(transform.rotation),
+              top: `${displayBounds.top}px`,
+              left: `${displayBounds.left}px`,
+              width: `${displayBounds.width}px`,
+              height: `${displayBounds.height}px`,
+              transform: getRotationCss(displayTransform.rotation),
               transformOrigin: "center center",
               willChange: "left, top, width, height, transform",
               pointerEvents: "none",
@@ -439,7 +462,7 @@ export function IconPlacementLayer({
               filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
             }}
           >
-            {(placement.primitiveKind ? Boolean(previewSrc) : placement.colorSlots.length > 0) ? (
+            {previewSrc ? (
               <img
                 ref={previewImageRef}
                 src={previewSrc ?? undefined}

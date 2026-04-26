@@ -269,7 +269,7 @@
   --font-primary: ui-sans-serif, system-ui, sans-serif;
   --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-700);
+  --text-secondary: var(--neutral-800);
 
   --control-secondary-bg: #f1f3f6;
   --canvas-surround-bg: #e2e2e2;
@@ -603,8 +603,9 @@ button:disabled {
   left: 50%;
   bottom: calc(100% + 10px);
   transform: translateX(-50%);
-  background: var(--brand-500);
-  color: #ffffff;
+  border: 1px solid var(--ui-border-reg);
+  background: var(--surface-card);
+  color: var(--text-primary);
   font-size: 11px;
   font-weight: 600;
   padding: 4px 8px;

@@ -7,6 +7,7 @@ const PDF_EXPORT_CELL_SIZE = 28;
 export function exportPatternPdfFromDocument(
   document: EditorDocumentState,
 ): void {
+  const pendingPdfWindow = openPendingPdfWindow();
   const paletteEntries = Object.values(document.palette.colorsById);
   const legacyPaletteByEditorId = new Map<string, Color>();
   const paletteByLegacyId = new Map<number, Color>();
@@ -56,7 +57,7 @@ export function exportPatternPdfFromDocument(
     .filter((entry): entry is { color: Color; count: number } => entry !== null)
     .sort((left, right) => right.count - left.count);
 
-  exportPatternPdf({
+  const { blob, filename } = exportPatternPdf({
     title: document.project.title,
     usedColors,
     grid: legacyGrid,
@@ -66,6 +67,8 @@ export function exportPatternPdfFromDocument(
     height: document.grid.height,
     cellSize: PDF_EXPORT_CELL_SIZE,
   });
+
+  openPdfInNewTab(blob, filename, pendingPdfWindow);
 }
 
 function createLegacyColor(
@@ -78,4 +81,50 @@ function createLegacyColor(
     hex: color.hex,
     code: color.code,
   };
+}
+
+function openPendingPdfWindow(): Window | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const openedWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  if (!openedWindow) {
+    return null;
+  }
+
+  openedWindow.document.title = "Preparing PDF...";
+  openedWindow.document.body.textContent = "Preparing PDF...";
+  return openedWindow;
+}
+
+function openPdfInNewTab(
+  blob: Blob,
+  filename: string,
+  pendingPdfWindow: Window | null,
+): void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+
+  if (pendingPdfWindow && !pendingPdfWindow.closed) {
+    pendingPdfWindow.location.href = objectUrl;
+    window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+    }, 60_000);
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.rel = "noopener noreferrer";
+  link.click();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 0);
 }

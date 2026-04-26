@@ -11,12 +11,14 @@ import {
   type DesignTypeToken,
 } from "@/app/design-system/typography";
 import {
+  ButtonIcon,
   Button,
   Checkbox,
   Field,
   FieldInput,
   Modal,
   Notification,
+  SegmentedControl,
   SingleSelectDropdown,
   Slider,
   Toggle,
@@ -126,11 +128,7 @@ const buttonHoverStyles: Record<
 };
 
 export function EditorV2DesignSystemPage() {
-  const { themeMode, setThemeMode } = useThemeMode();
-
-  const handleThemeChange = (nextChecked: boolean) => {
-    setThemeMode(nextChecked ? "dark" : "light");
-  };
+  const { resolvedThemeMode, themeMode, setThemeMode } = useThemeMode();
 
   return (
     <main className={styles.page}>
@@ -142,13 +140,38 @@ export function EditorV2DesignSystemPage() {
             </Link>
             <div className={styles.themeToggleWrap}>
               <span className={styles.themeToggleMeta} style={typographyStyles.s}>
-                {themeMode === "dark" ? "Dark mode" : "Light mode"}
+                {themeMode === "system"
+                  ? `System (${resolvedThemeMode === "dark" ? "Dark" : "Light"})`
+                  : `${themeMode === "dark" ? "Dark" : "Light"} mode`}
               </span>
-              <Toggle
-                checked={themeMode === "dark"}
-                aria-label={`Switch to ${themeMode === "dark" ? "light" : "dark"} mode`}
-                label={themeMode === "dark" ? "Dark" : "Light"}
-                onChange={handleThemeChange}
+              <SegmentedControl
+                ariaLabel="Application theme"
+                value={themeMode}
+                onChange={setThemeMode}
+                options={[
+                  {
+                    label: (
+                      <>
+                        <ButtonIcon icon="/icons/lucide/sun.svg" />
+                        Light
+                      </>
+                    ),
+                    value: "light",
+                  },
+                  {
+                    label: "System",
+                    value: "system",
+                  },
+                  {
+                    label: (
+                      <>
+                        <ButtonIcon icon="/icons/lucide/moon.svg" />
+                        Dark
+                      </>
+                    ),
+                    value: "dark",
+                  },
+                ]}
               />
             </div>
           </div>
