@@ -310,7 +310,7 @@ export function TextPlacementLayer({
             aria-hidden={isEditing ? "true" : undefined}
             style={{
               position: "absolute",
-              top: `${baseRect.top}px`,
+              top: `${bounds.top}px`,
               left: `${bounds.left}px`,
               width: `${bounds.width}px`,
               height: `${bounds.height}px`,
@@ -382,7 +382,7 @@ export function TextPlacementLayer({
                 }}
                 style={{
                   position: "absolute",
-                  top: `${baseRect.top}px`,
+                  top: `${bounds.top}px`,
                   left: `${bounds.left}px`,
                   width: `${bounds.width}px`,
                   height: `${bounds.height}px`,

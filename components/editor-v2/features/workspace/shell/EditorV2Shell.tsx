@@ -263,6 +263,13 @@ export function EditorV2Shell({
     sidebarCollapsed,
     viewport.zoom,
   ]);
+  const textViewportHeight = useMemo(() => {
+    if (viewport.zoom <= 0 || canvasWorldSize.height <= 0) {
+      return null;
+    }
+
+    return canvasWorldSize.height / viewport.zoom;
+  }, [canvasWorldSize.height, viewport.zoom]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -993,6 +1000,7 @@ export function EditorV2Shell({
                 showSymbols={showSymbols}
                 textViewportCenter={textViewportCenter}
                 textViewportWidth={textViewportWidth}
+                textViewportHeight={textViewportHeight}
               />
             </div>
 
