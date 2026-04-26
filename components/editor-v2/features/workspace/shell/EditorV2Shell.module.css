@@ -257,7 +257,7 @@
   width: fit-content;
   max-width: 100%;
   min-width: 0;
-  padding: 6px 0;
+  padding: 8px 4px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -272,10 +272,10 @@
 }
 
 .editableTitleTrigger:focus-visible {
-  border-color: transparent;
-  background: transparent;
+  border-color: var(--ui-border-subtle);
+  background: var(--surface-card);
   color: var(--text-primary);
-  box-shadow: none;
+  box-shadow: var(--ui-shadow-sm);
 }
 
 .titleHoverIcon {
@@ -283,7 +283,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.65;
   transition: opacity 140ms ease;
 }
 
@@ -297,9 +297,6 @@
   height: 12px;
 }
 
-.editableTitleTrigger:focus-visible .titleHoverIcon {
-  opacity: 0.65;
-}
 .loadDesignButtonRow {
   display: flex;
   flex-direction: column;
@@ -974,6 +971,11 @@
 
 .headerExportButton {
   white-space: nowrap;
+}
+
+.headerSaveButton {
+  white-space: nowrap;
+  margin-left: 14px;
 }
 
 .headerPreviewButton {
@@ -2269,16 +2271,11 @@
   }
 
   .editableTitleTrigger:hover {
-    border-color: transparent;
-    background: transparent;
+    border-color: var(--ui-border-subtle);
+    background: var(--surface-card);
     color: var(--text-primary);
-    box-shadow: none;
+    box-shadow: var(--ui-shadow-sm);
   }
-
-  .editableTitleTrigger:hover .titleHoverIcon {
-    opacity: 0.65;
-  }
-
   .sidebarDetailCard:hover {
     border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
     background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));

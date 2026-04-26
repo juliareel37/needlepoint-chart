@@ -5,8 +5,8 @@ import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
   EditorSidebarSection,
-  EditorStore,
   EditorDocumentState,
+  EditorStore,
   IconPlacementSession,
   PaletteColor,
   TextPlacementSession,
@@ -15,7 +15,6 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
-import type { SaveButtonState } from "../../../app/EditorV2Workspace";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -32,14 +31,12 @@ interface EditorSidebarProps {
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   palette: PaletteColor[];
-  saveButtonState: SaveButtonState;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
   onClose: () => void;
-  onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -70,14 +67,12 @@ export function EditorSidebar({
   documentTitle,
   hasSavedDesignAccess,
   palette,
-  saveButtonState,
   savedDocuments,
   savedDocumentsLoading,
   selectedStorageId,
   setSelectedStorageId,
   onLoadSelected,
   onClose,
-  onSaveDocument,
   onStartOver,
   previewMode,
   showGridlines,
@@ -183,13 +178,10 @@ export function EditorSidebar({
           {activeSection === "document" ? (
             <DocumentPanelPage
               dispatch={dispatch}
-              document={document}
               documentTitle={documentTitle}
               hasSavedDesignAccess={hasSavedDesignAccess}
               onLoadSelected={onLoadSelected}
-              onSaveDocument={onSaveDocument}
               onStartOver={onStartOver}
-              saveButtonState={saveButtonState}
               savedDocuments={savedDocuments}
               savedDocumentsLoading={savedDocumentsLoading}
               selectedStorageId={selectedStorageId}

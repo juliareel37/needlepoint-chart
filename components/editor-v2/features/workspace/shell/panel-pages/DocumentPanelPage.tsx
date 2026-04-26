@@ -9,21 +9,17 @@ import {
 } from "@/components/design-system";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { typographyStyles } from "@/app/design-system/typography";
-import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
+import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
-import type { SaveButtonState } from "../../../../app/EditorV2Workspace";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
 import styles from "../EditorV2Shell.module.css";
 
 interface DocumentPanelPageProps {
   dispatch: EditorStore["dispatch"];
-  document: EditorDocumentState;
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   onLoadSelected: () => void;
-  onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
-  saveButtonState: SaveButtonState;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectedStorageId: string;
@@ -32,13 +28,10 @@ interface DocumentPanelPageProps {
 
 export function DocumentPanelPage({
   dispatch,
-  document,
   documentTitle,
   hasSavedDesignAccess,
   onLoadSelected,
-  onSaveDocument,
   onStartOver,
-  saveButtonState,
   savedDocuments,
   savedDocumentsLoading,
   selectedStorageId,
@@ -134,19 +127,8 @@ export function DocumentPanelPage({
           </div>
           <div className={styles.panelRow}>
             <Button type="button" variant="secondary" onClick={onStartOver}>
+              <ButtonIcon icon="/icons/lucide/plus.svg" className={styles.saveButtonIcon} />
               New design
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              className={styles.pendingActionButton}
-              disabled={saveButtonState === "saving"}
-              onClick={() => onSaveDocument(document)}
-            >
-              <SaveButtonLabel
-                hasSavedDesignAccess={hasSavedDesignAccess}
-                state={saveButtonState}
-              />
             </Button>
           </div>
         </div>
@@ -198,34 +180,6 @@ export function DocumentPanelPage({
       </div>
     </section>
   );
-}
-
-function SaveButtonLabel({
-  hasSavedDesignAccess,
-  state,
-}: {
-  hasSavedDesignAccess: boolean;
-  state: SaveButtonState;
-}) {
-  if (state === "saving") {
-    return (
-      <>
-        <span className={styles.saveButtonSpinner} aria-hidden="true" />
-        Saving
-      </>
-    );
-  }
-
-  if (state === "saved") {
-    return (
-      <>
-        <ButtonIcon icon="/icons/lucide/check.svg" className={styles.saveButtonIcon} />
-        Saved
-      </>
-    );
-  }
-
-  return <>{hasSavedDesignAccess ? "Save" : "Sign in to save"}</>;
 }
 
 function SavedDesignSingleSelect({

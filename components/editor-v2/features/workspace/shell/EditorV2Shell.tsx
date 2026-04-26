@@ -160,6 +160,7 @@ export function EditorV2Shell({
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
@@ -654,6 +655,7 @@ export function EditorV2Shell({
   [saveMessage]);
 
   useEffect(() => {
+    setHeaderFileLeftTarget(window.document.getElementById("app-header-file-left"));
     setHeaderActionsTarget(window.document.getElementById("app-header-actions"));
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
     setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
@@ -727,6 +729,24 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
+      {!setupModalOpen && headerFileLeftTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={styles.headerSaveButton}
+              disabled={saveButtonState === "saving"}
+              onClick={() => onSaveDocument(document)}
+            >
+              <SaveButtonLabel
+                hasSavedDesignAccess={hasSavedDesignAccess}
+                state={saveButtonState}
+              />
+            </Button>,
+            headerFileLeftTarget,
+          )
+        : null}
       {!setupModalOpen && !useTopSaveBanner && headerAutosaveTarget
         ? createPortal(
             <HeaderSaveStatus
@@ -998,7 +1018,6 @@ export function EditorV2Shell({
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
-                saveButtonState={saveButtonState}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
                 selectedStorageId={selectedStorageId}
@@ -1011,7 +1030,6 @@ export function EditorV2Shell({
                   void onLoadDocument(selectedRecord);
                 }}
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
-                onSaveDocument={onSaveDocument}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
                 trace={trace}
@@ -1233,6 +1251,44 @@ function HeaderSaveStatus({
         </button>
       ) : null}
     </div>
+  );
+}
+
+function SaveButtonLabel({
+  hasSavedDesignAccess,
+  state,
+}: {
+  hasSavedDesignAccess: boolean;
+  state: SaveButtonState;
+}) {
+  if (state === "saving") {
+    return (
+      <>
+        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+        Saving
+      </>
+    );
+  }
+
+  if (state === "saved") {
+    return (
+      <>
+        <ButtonIcon icon="/icons/lucide/check.svg" className={styles.saveButtonIcon} />
+        Saved
+      </>
+    );
+  }
+
+  return hasSavedDesignAccess ? (
+    <>
+      <ButtonIcon icon="/icons/lucide/save.svg" className={styles.saveButtonIcon} />
+      Save
+    </>
+  ) : (
+    <>
+      <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} />
+      Sign in to save
+    </>
   );
 }
 
