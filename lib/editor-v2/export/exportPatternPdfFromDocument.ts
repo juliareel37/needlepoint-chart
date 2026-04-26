@@ -88,10 +88,16 @@ function openPendingPdfWindow(): Window | null {
     return null;
   }
 
-  const openedWindow = window.open("", "_blank", "noopener,noreferrer");
+  const openedWindow = window.open("", "_blank");
 
   if (!openedWindow) {
     return null;
+  }
+
+  try {
+    openedWindow.opener = null;
+  } catch {
+    // Some browsers may not allow this assignment.
   }
 
   openedWindow.document.title = "Preparing PDF...";
@@ -110,8 +116,8 @@ function openPdfInNewTab(
 
   const objectUrl = URL.createObjectURL(blob);
 
-  if (pendingPdfWindow && !pendingPdfWindow.closed) {
-    pendingPdfWindow.location.href = objectUrl;
+  if (pendingPdfWindow) {
+    pendingPdfWindow.location.replace(objectUrl);
     window.setTimeout(() => {
       URL.revokeObjectURL(objectUrl);
     }, 60_000);

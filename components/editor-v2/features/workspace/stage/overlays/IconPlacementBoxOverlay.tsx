@@ -8,11 +8,13 @@ import {
 } from "react";
 import type { PositioningDragMode, PositioningRect } from "@/lib/editor-v2/editor/positioning";
 import {
+  getCenterSnappedPosition,
   getHandleLeft,
   getHandleTop,
   getRotationSnapTarget,
   getRotationCss,
   POSITIONING_HANDLES,
+  type PositioningMoveSnapState,
   type PositioningPinchState,
 } from "@/lib/editor-v2/editor/positioning";
 import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -35,6 +37,10 @@ interface IconPlacementBoxOverlayProps {
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: IconPlacementTransform) => void;
+  snapContainerBounds?: PositioningRect;
+  snapGuideContainerBounds?: PositioningRect;
+  snapGuideZoom?: number;
+  snapZoom?: number;
   projectBoundsForPreview?: (
     transform: IconPlacementTransform,
     baseRect: PositioningRect,
@@ -56,6 +62,7 @@ interface DragSession {
   pendingClientX: number;
   pendingClientY: number;
   rafId: number | null;
+  moveSnap: PositioningMoveSnapState;
 }
 
 interface HandleElements {
@@ -82,6 +89,10 @@ export function IconPlacementBoxOverlay({
   getWorldPointFromClient,
   onTransformCommit,
   onTransformPreview,
+  snapContainerBounds,
+  snapGuideContainerBounds,
+  snapGuideZoom = 1,
+  snapZoom,
   projectBoundsForPreview,
   transform,
   transactionKeyPrefix,
@@ -103,6 +114,17 @@ export function IconPlacementBoxOverlay({
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
+  const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
+  const resolvedSnapZoom = snapZoom ?? zoom;
+  const latestSnapZoomRef = useRef(resolvedSnapZoom);
+  const [activeMoveSnap, setActiveMoveSnap] = useState<PositioningMoveSnapState>({
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
+    centerX: null,
+    centerY: null,
+  });
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const handleHitSize = coarsePointer
@@ -110,6 +132,8 @@ export function IconPlacementBoxOverlay({
     : handleSize;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
+  const guideThickness = Math.max(1, 1 / Math.max(snapGuideZoom, 0.0001));
+  const edgeGuideInset = guideThickness;
 
   useEffect(() => {
     latestBaseRectRef.current = baseRect;
@@ -151,6 +175,7 @@ export function IconPlacementBoxOverlay({
 
   useEffect(() => {
     latestTransformRef.current = transform;
+    setActiveMoveSnap(emptyMoveSnap());
   }, [transform]);
 
   useEffect(() => {
@@ -168,6 +193,14 @@ export function IconPlacementBoxOverlay({
   useEffect(() => {
     latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
   }, [projectBoundsForPreview]);
+
+  useEffect(() => {
+    latestSnapContainerBoundsRef.current = snapContainerBounds;
+  }, [snapContainerBounds]);
+
+  useEffect(() => {
+    latestSnapZoomRef.current = resolvedSnapZoom;
+  }, [resolvedSnapZoom]);
 
   useEffect(() => {
     return () => {
@@ -271,11 +304,36 @@ export function IconPlacementBoxOverlay({
       return latestTransformRef.current;
     }
 
-    const nextTransform = getIconPlacementTransformFromDrag(
+    let nextTransform = getIconPlacementTransformFromDrag(
       session.drag,
       worldPoint,
       latestBaseRectRef.current,
     );
+
+    if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getIconPlacementBounds(
+        latestBaseRectRef.current,
+        nextTransform,
+      );
+      const snappedPosition = getCenterSnappedPosition(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        session.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: nextTransform.offsetX + snappedPosition.offsetX,
+        offsetY: nextTransform.offsetY + snappedPosition.offsetY,
+      };
+      session.moveSnap = snappedPosition.snap;
+      setActiveMoveSnap(snappedPosition.snap);
+    } else if (session.mode !== "move") {
+      session.moveSnap = emptyMoveSnap();
+      setActiveMoveSnap(emptyMoveSnap());
+    }
+
     const nextInteractionBounds = getIconPlacementBounds(
       latestBaseRectRef.current,
       nextTransform,
@@ -422,6 +480,7 @@ export function IconPlacementBoxOverlay({
       frameIdRef.current = null;
     }
     dragSessionRef.current = null;
+    setActiveMoveSnap(emptyMoveSnap());
     overlayElement.style.cursor = "grab";
   }
 
@@ -456,6 +515,9 @@ export function IconPlacementBoxOverlay({
     }
 
     dragSequenceRef.current += 1;
+    if (mode !== "move") {
+      setActiveMoveSnap(emptyMoveSnap());
+    }
     const transactionKey = `${transactionKeyPrefix}-${dragSequenceRef.current}`;
     dragSessionRef.current = {
       pointerId: event.pointerId,
@@ -478,6 +540,7 @@ export function IconPlacementBoxOverlay({
       pendingClientX: event.clientX,
       pendingClientY: event.clientY,
       rafId: null,
+      moveSnap: emptyMoveSnap(),
     };
 
     overlayElement.setPointerCapture(event.pointerId);
@@ -509,6 +572,7 @@ export function IconPlacementBoxOverlay({
     }
 
     dragSessionRef.current = null;
+    setActiveMoveSnap(emptyMoveSnap());
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
         overlayRef.current.releasePointerCapture(pointerId);
@@ -527,6 +591,7 @@ export function IconPlacementBoxOverlay({
     const committedTransform = flushPinchPreview();
     pinchSessionRef.current = null;
     touchPointsRef.current.clear();
+    setActiveMoveSnap(emptyMoveSnap());
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
         overlayRef.current.releasePointerCapture(pointerId);
@@ -545,27 +610,76 @@ export function IconPlacementBoxOverlay({
   }
 
   return (
-    <div
-      ref={overlayRef}
-      aria-label={ariaLabel}
-      data-touch-gesture-scope="element"
-      role="presentation"
-      style={{
-        position: "absolute",
-        left: `${bounds.left}px`,
-        top: `${bounds.top}px`,
-        width: `${bounds.width}px`,
-        height: `${bounds.height}px`,
-        transform: getRotationCss(transform.rotation),
-        transformOrigin: "center center",
-        cursor: "grab",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        pointerEvents: "auto",
-        touchAction: "none",
-      }}
-      onPointerDown={(event) => beginDrag(event, "move")}
-    >
+    <>
+      {snapGuideContainerBounds &&
+      (activeMoveSnap.centerY !== null ||
+        activeMoveSnap.top !== null ||
+        activeMoveSnap.bottom !== null) ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${snapGuideContainerBounds.left}px`,
+            top: `${getHorizontalGuideTop(
+              snapGuideContainerBounds,
+              activeMoveSnap,
+              guideThickness,
+              edgeGuideInset,
+            )}px`,
+            width: `${snapGuideContainerBounds.width}px`,
+            height: `${guideThickness}px`,
+            background: "rgba(37, 99, 235, 0.95)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.72)",
+            pointerEvents: "none",
+            zIndex: 11,
+          }}
+        />
+      ) : null}
+      {snapGuideContainerBounds &&
+      (activeMoveSnap.centerX !== null ||
+        activeMoveSnap.left !== null ||
+        activeMoveSnap.right !== null) ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${getVerticalGuideLeft(
+              snapGuideContainerBounds,
+              activeMoveSnap,
+              guideThickness,
+              edgeGuideInset,
+            )}px`,
+            top: `${snapGuideContainerBounds.top}px`,
+            width: `${guideThickness}px`,
+            height: `${snapGuideContainerBounds.height}px`,
+            background: "rgba(37, 99, 235, 0.95)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.72)",
+            pointerEvents: "none",
+            zIndex: 11,
+          }}
+        />
+      ) : null}
+      <div
+        ref={overlayRef}
+        aria-label={ariaLabel}
+        data-touch-gesture-scope="element"
+        role="presentation"
+        style={{
+          position: "absolute",
+          left: `${bounds.left}px`,
+          top: `${bounds.top}px`,
+          width: `${bounds.width}px`,
+          height: `${bounds.height}px`,
+          transform: getRotationCss(transform.rotation),
+          transformOrigin: "center center",
+          cursor: "grab",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          pointerEvents: "auto",
+          touchAction: "none",
+        }}
+        onPointerDown={(event) => beginDrag(event, "move")}
+      >
       <div
         ref={(node) => {
           rotateHandleRef.current = { ...rotateHandleRef.current, hit: node };
@@ -667,8 +781,54 @@ export function IconPlacementBoxOverlay({
           />
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
+}
+
+function emptyMoveSnap(): PositioningMoveSnapState {
+  return {
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
+    centerX: null,
+    centerY: null,
+  };
+}
+
+function getHorizontalGuideTop(
+  bounds: PositioningRect,
+  snap: PositioningMoveSnapState,
+  guideThickness: number,
+  edgeGuideInset: number,
+): number {
+  if (snap.top !== null) {
+    return bounds.top + edgeGuideInset;
+  }
+
+  if (snap.bottom !== null) {
+    return bounds.top + bounds.height - edgeGuideInset - guideThickness;
+  }
+
+  return bounds.top + bounds.height / 2 - guideThickness / 2;
+}
+
+function getVerticalGuideLeft(
+  bounds: PositioningRect,
+  snap: PositioningMoveSnapState,
+  guideThickness: number,
+  edgeGuideInset: number,
+): number {
+  if (snap.left !== null) {
+    return bounds.left + edgeGuideInset;
+  }
+
+  if (snap.right !== null) {
+    return bounds.left + bounds.width - edgeGuideInset - guideThickness;
+  }
+
+  return bounds.left + bounds.width / 2 - guideThickness / 2;
 }
 
 function applyPreviewBounds(

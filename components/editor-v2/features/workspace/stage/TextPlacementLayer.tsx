@@ -48,6 +48,31 @@ export function TextPlacementLayer({
   zoom,
 }: TextPlacementLayerProps) {
   const useCellSampledPreview = SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW;
+  const snapContainerBounds = useMemo(
+    () => ({
+      left: 0,
+      top: 0,
+      width: metrics.surfaceWidth,
+      height: metrics.surfaceHeight,
+    }),
+    [metrics.surfaceHeight, metrics.surfaceWidth],
+  );
+  const mobileSnapGuideContainerBounds = useMemo(
+    () => ({
+      left: worldBounds.left - stageBounds.left,
+      top: worldBounds.top - stageBounds.top,
+      width: worldBounds.width,
+      height: worldBounds.height,
+    }),
+    [
+      stageBounds.left,
+      stageBounds.top,
+      worldBounds.height,
+      worldBounds.left,
+      worldBounds.top,
+      worldBounds.width,
+    ],
+  );
   const [isEditing, setIsEditing] = useState(true);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<
@@ -368,6 +393,10 @@ export function TextPlacementLayer({
             onTransformCommit={handleTransformCommit}
             onTransformPreview={handleTransformPreview}
             projectBoundsForPreview={projectMobileStageBounds}
+            snapContainerBounds={snapContainerBounds}
+            snapGuideContainerBounds={mobileSnapGuideContainerBounds}
+            snapGuideZoom={1}
+            snapZoom={viewport.zoom}
             transactionKeyPrefix="text-drag"
             transform={transform}
             zoom={1}
@@ -537,6 +566,10 @@ export function TextPlacementLayer({
               onClick={() => setIsEditing(true)}
               onTransformCommit={handleTransformCommit}
               onTransformPreview={handleTransformPreview}
+              snapContainerBounds={snapContainerBounds}
+              snapGuideContainerBounds={snapContainerBounds}
+              snapGuideZoom={zoom}
+              snapZoom={viewport.zoom}
               transactionKeyPrefix="text-drag"
               transform={displayTransform}
               zoom={zoom}
