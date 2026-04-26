@@ -756,8 +756,8 @@ export function EditorV2Shell({
               showChevron={false}
               menuPortalToViewport
               menuPlacement="bottom-end"
+              menuShowTrailingCheck={false}
               minWidth="auto"
-              menuWidth={176}
               getItemValue={(item) => item.id}
               getItemLabel={(item) => {
                 if (item.id === "export") {
