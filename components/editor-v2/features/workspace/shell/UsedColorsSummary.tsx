@@ -691,7 +691,7 @@ export function UsedColorsSummary({
           <div className={styles.usedColorsToolButtons}>
             <Button
               type="button"
-              variant="ghostV2"
+              variant="secondary"
               size="sm"
               className={styles.usedColorsEditButton}
               onClick={enterToolMode}
@@ -707,7 +707,7 @@ export function UsedColorsSummary({
               getItemValue={(item) => item.value}
               onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
               showChevron={false}
-              triggerVariant="ghost"
+              triggerVariant="selection"
               triggerClassName={styles.usedColorsSortButton}
               triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
               wrapperClassName={styles.usedColorsSortTriggerWrap}
