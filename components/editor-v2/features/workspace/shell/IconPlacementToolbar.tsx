@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
+  CheckboxField,
   Modal,
   Slider,
   Toolbar,
@@ -38,6 +39,8 @@ import {
 import {
   countOverwrittenPaintGroupCells,
   getConversionSubjectLabel,
+  shouldShowOverwriteWarning,
+  suppressOverwriteWarningForOneDay,
 } from "./conversionOverwriteWarning";
 import styles from "./EditorV2Shell.module.css";
 
@@ -271,6 +274,7 @@ export function IconPlacementToolbar({
     ReturnType<typeof convertIconPlacementToPaintGroups>
   > | null>(null);
   const [overwriteCount, setOverwriteCount] = useState(0);
+  const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const paletteById = useMemo(
     () =>
       palette.reduce<Record<string, PaletteColor>>((accumulator, color) => {
@@ -399,9 +403,10 @@ export function IconPlacementToolbar({
       }
 
       const nextOverwriteCount = countOverwrittenPaintGroupCells(grid, groups);
-      if (nextOverwriteCount > 0) {
+      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
         setPendingGroups(groups);
         setOverwriteCount(nextOverwriteCount);
+        setSkipWarningForOneDay(false);
         return;
       }
 
@@ -786,22 +791,42 @@ export function IconPlacementToolbar({
       <Modal
         isOpen={pendingGroups !== null}
         title="Heads up!"
-        description={`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
-          overwriteCount === 1 ? "cell" : "cells"
-        }. Are you sure?`}
+        description={(
+          <div style={{ display: "grid", gap: 12}}>
+            <span className={styles.overwriteWarningDescriptionText}>
+              {`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
+                overwriteCount === 1 ? "cell" : "cells"
+              }.`}
+            </span>
+            <CheckboxField
+              className={styles.overwriteWarningCheckbox}
+              checkboxClassName={styles.overwriteWarningCheckboxControl}
+              labelStyle={{ fontSize: 12, lineHeight: 1.25 }}
+              checked={skipWarningForOneDay}
+              onChange={(event) => setSkipWarningForOneDay(event.currentTarget.checked)}
+            >
+              Don&apos;t show again today
+            </CheckboxField>
+          </div>
+        )}
         tone="warning"
         dismissLabel="Cancel"
-        confirmLabel="Yes, apply"
+        confirmLabel="Apply anyway"
         onDismiss={() => {
           setPendingGroups(null);
           setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
         }}
         onConfirm={() => {
+          if (skipWarningForOneDay) {
+            suppressOverwriteWarningForOneDay();
+          }
           if (pendingGroups) {
             applyConvertedGroups(pendingGroups);
           }
           setPendingGroups(null);
           setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
         }}
       />
     </div>

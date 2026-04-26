@@ -6,6 +6,9 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { IconPlacementPaintGroup } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 
+const OVERWRITE_WARNING_SUPPRESSION_KEY = "wippa:editor-v2:overwrite-warning-suppressed-until";
+const OVERWRITE_WARNING_SUPPRESSION_MS = 24 * 60 * 60 * 1000;
+
 function getCellKey(cell: GridPoint): string {
   return `${cell.x}:${cell.y}`;
 }
@@ -59,4 +62,35 @@ export function getConversionSubjectLabel(
   }
 
   return "icon";
+}
+
+export function shouldShowOverwriteWarning(now = Date.now()): boolean {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  const rawValue = window.localStorage.getItem(OVERWRITE_WARNING_SUPPRESSION_KEY);
+  const suppressedUntil = rawValue ? Number(rawValue) : NaN;
+
+  if (!Number.isFinite(suppressedUntil)) {
+    return true;
+  }
+
+  if (suppressedUntil <= now) {
+    window.localStorage.removeItem(OVERWRITE_WARNING_SUPPRESSION_KEY);
+    return true;
+  }
+
+  return false;
+}
+
+export function suppressOverwriteWarningForOneDay(now = Date.now()): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    OVERWRITE_WARNING_SUPPRESSION_KEY,
+    String(now + OVERWRITE_WARNING_SUPPRESSION_MS),
+  );
 }

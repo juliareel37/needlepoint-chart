@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
+  CheckboxField,
   Modal,
   SingleSelectDropdown,
   Toolbar,
@@ -40,6 +41,8 @@ import {
 import {
   countOverwrittenGridCells,
   getConversionSubjectLabel,
+  shouldShowOverwriteWarning,
+  suppressOverwriteWarningForOneDay,
 } from "./conversionOverwriteWarning";
 import styles from "./EditorV2Shell.module.css";
 
@@ -185,6 +188,7 @@ export function TextPlacementToolbar({
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
   const [pendingCells, setPendingCells] = useState<Array<{ x: number; y: number }> | null>(null);
   const [overwriteCount, setOverwriteCount] = useState(0);
+  const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const bold = placement.fontWeight >= 700;
   const italic = placement.fontStyle === "italic";
@@ -241,9 +245,10 @@ export function TextPlacementToolbar({
     }
 
     const nextOverwriteCount = countOverwrittenGridCells(grid, cells);
-    if (nextOverwriteCount > 0) {
+    if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
       setPendingCells(cells);
       setOverwriteCount(nextOverwriteCount);
+      setSkipWarningForOneDay(false);
       return;
     }
 
@@ -398,22 +403,42 @@ export function TextPlacementToolbar({
       <Modal
         isOpen={pendingCells !== null}
         title="Heads up!"
-        description={`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
-          overwriteCount === 1 ? "cell" : "cells"
-        }. Are you sure?`}
+        description={(
+          <div style={{ display: "grid", gap: 12 }}>
+            <span className={styles.overwriteWarningDescriptionText}>
+              {`Applying this ${conversionSubject} will overwrite ${overwriteCount} painted ${
+                overwriteCount === 1 ? "cell" : "cells"
+              }.`}
+            </span>
+            <CheckboxField
+              className={styles.overwriteWarningCheckbox}
+              checkboxClassName={styles.overwriteWarningCheckboxControl}
+              labelStyle={{ fontSize: 12, lineHeight: 1.25 }}
+              checked={skipWarningForOneDay}
+              onChange={(event) => setSkipWarningForOneDay(event.currentTarget.checked)}
+            >
+              Don&apos;t show again today
+            </CheckboxField>
+          </div>
+        )}
         tone="warning"
         dismissLabel="Cancel"
-        confirmLabel="Yes, apply"
+        confirmLabel="Apply anyway"
         onDismiss={() => {
           setPendingCells(null);
           setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
         }}
         onConfirm={() => {
+          if (skipWarningForOneDay) {
+            suppressOverwriteWarningForOneDay();
+          }
           if (pendingCells) {
             applyConvertedCells(pendingCells);
           }
           setPendingCells(null);
           setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
         }}
       />
     </div>
