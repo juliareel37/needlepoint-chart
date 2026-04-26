@@ -64,6 +64,22 @@ export function IconPlacementLayer({
     }),
     [metrics.surfaceHeight, metrics.surfaceWidth],
   );
+  const mobileSnapGuideContainerBounds = useMemo(
+    () => ({
+      left: worldBounds.left - stageBounds.left,
+      top: worldBounds.top - stageBounds.top,
+      width: worldBounds.width,
+      height: worldBounds.height,
+    }),
+    [
+      stageBounds.left,
+      stageBounds.top,
+      worldBounds.height,
+      worldBounds.left,
+      worldBounds.top,
+      worldBounds.width,
+    ],
+  );
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<
     IconPlacementTransform | null
@@ -430,6 +446,8 @@ export function IconPlacementLayer({
             onTransformPreview={handleTransformPreview}
             projectBoundsForPreview={projectMobileStageBounds}
             snapContainerBounds={snapContainerBounds}
+            snapGuideContainerBounds={mobileSnapGuideContainerBounds}
+            snapGuideZoom={1}
             snapZoom={viewport.zoom}
             transactionKeyPrefix="icon-drag"
             transform={transform}
@@ -512,6 +530,8 @@ export function IconPlacementLayer({
             onTransformCommit={handleTransformCommit}
             onTransformPreview={handleTransformPreview}
             snapContainerBounds={snapContainerBounds}
+            snapGuideContainerBounds={snapContainerBounds}
+            snapGuideZoom={zoom}
             snapZoom={viewport.zoom}
             transactionKeyPrefix="icon-drag"
             transform={transform}

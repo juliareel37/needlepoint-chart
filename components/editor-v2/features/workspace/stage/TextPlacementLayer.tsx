@@ -57,6 +57,22 @@ export function TextPlacementLayer({
     }),
     [metrics.surfaceHeight, metrics.surfaceWidth],
   );
+  const mobileSnapGuideContainerBounds = useMemo(
+    () => ({
+      left: worldBounds.left - stageBounds.left,
+      top: worldBounds.top - stageBounds.top,
+      width: worldBounds.width,
+      height: worldBounds.height,
+    }),
+    [
+      stageBounds.left,
+      stageBounds.top,
+      worldBounds.height,
+      worldBounds.left,
+      worldBounds.top,
+      worldBounds.width,
+    ],
+  );
   const [isEditing, setIsEditing] = useState(true);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<
@@ -378,6 +394,8 @@ export function TextPlacementLayer({
             onTransformPreview={handleTransformPreview}
             projectBoundsForPreview={projectMobileStageBounds}
             snapContainerBounds={snapContainerBounds}
+            snapGuideContainerBounds={mobileSnapGuideContainerBounds}
+            snapGuideZoom={1}
             snapZoom={viewport.zoom}
             transactionKeyPrefix="text-drag"
             transform={transform}
@@ -549,6 +567,8 @@ export function TextPlacementLayer({
               onTransformCommit={handleTransformCommit}
               onTransformPreview={handleTransformPreview}
               snapContainerBounds={snapContainerBounds}
+              snapGuideContainerBounds={snapContainerBounds}
+              snapGuideZoom={zoom}
               snapZoom={viewport.zoom}
               transactionKeyPrefix="text-drag"
               transform={displayTransform}

@@ -71,6 +71,22 @@ export function TraceImageLayer({
     }),
     [metrics.surfaceHeight, metrics.surfaceWidth],
   );
+  const mobileSnapGuideContainerBounds = useMemo(
+    () => ({
+      left: worldBounds.left - stageBounds.left,
+      top: worldBounds.top - stageBounds.top,
+      width: worldBounds.width,
+      height: worldBounds.height,
+    }),
+    [
+      stageBounds.left,
+      stageBounds.top,
+      worldBounds.height,
+      worldBounds.left,
+      worldBounds.top,
+      worldBounds.width,
+    ],
+  );
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [mobilePreviewSize, setMobilePreviewSize] = useState<{
     width: number;
@@ -406,6 +422,8 @@ export function TraceImageLayer({
               projectBoundsForPreview={projectMobileStageBounds}
               previewBoundsStrategy="live"
               snapContainerBounds={snapContainerBounds}
+              snapGuideContainerBounds={mobileSnapGuideContainerBounds}
+              snapGuideZoom={1}
               snapZoom={viewport.zoom}
               showOutline
               showHandles
@@ -487,6 +505,8 @@ export function TraceImageLayer({
               onTransformPreview={handleDesktopTransformPreview}
               previewBoundsStrategy="live"
               snapContainerBounds={snapContainerBounds}
+              snapGuideContainerBounds={snapContainerBounds}
+              snapGuideZoom={zoom}
               snapZoom={viewport.zoom}
               showOutline
               showHandles

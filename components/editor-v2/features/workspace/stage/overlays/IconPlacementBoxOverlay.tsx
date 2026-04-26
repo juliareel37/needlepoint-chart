@@ -38,6 +38,8 @@ interface IconPlacementBoxOverlayProps {
   ) => void;
   onTransformPreview?: (transform: IconPlacementTransform) => void;
   snapContainerBounds?: PositioningRect;
+  snapGuideContainerBounds?: PositioningRect;
+  snapGuideZoom?: number;
   snapZoom?: number;
   projectBoundsForPreview?: (
     transform: IconPlacementTransform,
@@ -88,6 +90,8 @@ export function IconPlacementBoxOverlay({
   onTransformCommit,
   onTransformPreview,
   snapContainerBounds,
+  snapGuideContainerBounds,
+  snapGuideZoom = 1,
   snapZoom,
   projectBoundsForPreview,
   transform,
@@ -113,6 +117,10 @@ export function IconPlacementBoxOverlay({
   const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
   const resolvedSnapZoom = snapZoom ?? zoom;
   const latestSnapZoomRef = useRef(resolvedSnapZoom);
+  const [activeMoveSnap, setActiveMoveSnap] = useState<PositioningMoveSnapState>({
+    centerX: null,
+    centerY: null,
+  });
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const handleHitSize = coarsePointer
@@ -120,6 +128,7 @@ export function IconPlacementBoxOverlay({
     : handleSize;
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
+  const guideThickness = Math.max(1, 1 / Math.max(snapGuideZoom, 0.0001));
 
   useEffect(() => {
     latestBaseRectRef.current = baseRect;
@@ -161,6 +170,7 @@ export function IconPlacementBoxOverlay({
 
   useEffect(() => {
     latestTransformRef.current = transform;
+    setActiveMoveSnap({ centerX: null, centerY: null });
   }, [transform]);
 
   useEffect(() => {
@@ -313,8 +323,10 @@ export function IconPlacementBoxOverlay({
         offsetY: nextTransform.offsetY + snappedPosition.offsetY,
       };
       session.moveSnap = snappedPosition.snap;
+      setActiveMoveSnap(snappedPosition.snap);
     } else if (session.mode !== "move") {
       session.moveSnap = { centerX: null, centerY: null };
+      setActiveMoveSnap({ centerX: null, centerY: null });
     }
 
     const nextInteractionBounds = getIconPlacementBounds(
@@ -463,6 +475,7 @@ export function IconPlacementBoxOverlay({
       frameIdRef.current = null;
     }
     dragSessionRef.current = null;
+    setActiveMoveSnap({ centerX: null, centerY: null });
     overlayElement.style.cursor = "grab";
   }
 
@@ -497,6 +510,9 @@ export function IconPlacementBoxOverlay({
     }
 
     dragSequenceRef.current += 1;
+    if (mode !== "move") {
+      setActiveMoveSnap({ centerX: null, centerY: null });
+    }
     const transactionKey = `${transactionKeyPrefix}-${dragSequenceRef.current}`;
     dragSessionRef.current = {
       pointerId: event.pointerId,
@@ -551,6 +567,7 @@ export function IconPlacementBoxOverlay({
     }
 
     dragSessionRef.current = null;
+    setActiveMoveSnap({ centerX: null, centerY: null });
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
         overlayRef.current.releasePointerCapture(pointerId);
@@ -569,6 +586,7 @@ export function IconPlacementBoxOverlay({
     const committedTransform = flushPinchPreview();
     pinchSessionRef.current = null;
     touchPointsRef.current.clear();
+    setActiveMoveSnap({ centerX: null, centerY: null });
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
         overlayRef.current.releasePointerCapture(pointerId);
@@ -587,27 +605,60 @@ export function IconPlacementBoxOverlay({
   }
 
   return (
-    <div
-      ref={overlayRef}
-      aria-label={ariaLabel}
-      data-touch-gesture-scope="element"
-      role="presentation"
-      style={{
-        position: "absolute",
-        left: `${bounds.left}px`,
-        top: `${bounds.top}px`,
-        width: `${bounds.width}px`,
-        height: `${bounds.height}px`,
-        transform: getRotationCss(transform.rotation),
-        transformOrigin: "center center",
-        cursor: "grab",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        pointerEvents: "auto",
-        touchAction: "none",
-      }}
-      onPointerDown={(event) => beginDrag(event, "move")}
-    >
+    <>
+      {snapGuideContainerBounds && activeMoveSnap.centerY !== null ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${snapGuideContainerBounds.left}px`,
+            top: `${snapGuideContainerBounds.top + snapGuideContainerBounds.height / 2 - guideThickness / 2}px`,
+            width: `${snapGuideContainerBounds.width}px`,
+            height: `${guideThickness}px`,
+            background: "rgba(37, 99, 235, 0.95)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.72)",
+            pointerEvents: "none",
+            zIndex: 11,
+          }}
+        />
+      ) : null}
+      {snapGuideContainerBounds && activeMoveSnap.centerX !== null ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${snapGuideContainerBounds.left + snapGuideContainerBounds.width / 2 - guideThickness / 2}px`,
+            top: `${snapGuideContainerBounds.top}px`,
+            width: `${guideThickness}px`,
+            height: `${snapGuideContainerBounds.height}px`,
+            background: "rgba(37, 99, 235, 0.95)",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.72)",
+            pointerEvents: "none",
+            zIndex: 11,
+          }}
+        />
+      ) : null}
+      <div
+        ref={overlayRef}
+        aria-label={ariaLabel}
+        data-touch-gesture-scope="element"
+        role="presentation"
+        style={{
+          position: "absolute",
+          left: `${bounds.left}px`,
+          top: `${bounds.top}px`,
+          width: `${bounds.width}px`,
+          height: `${bounds.height}px`,
+          transform: getRotationCss(transform.rotation),
+          transformOrigin: "center center",
+          cursor: "grab",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          pointerEvents: "auto",
+          touchAction: "none",
+        }}
+        onPointerDown={(event) => beginDrag(event, "move")}
+      >
       <div
         ref={(node) => {
           rotateHandleRef.current = { ...rotateHandleRef.current, hit: node };
@@ -709,7 +760,8 @@ export function IconPlacementBoxOverlay({
           />
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
 }
 
