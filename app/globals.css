@@ -806,7 +806,7 @@ button:disabled {
   transition: background 150ms ease, box-shadow 150ms ease;
 }
 .zoom-action-button:focus-visible {
-  background: var(--brand-200) !important;
+  background: var(--button-ghost2-hover) !important;
   box-shadow: 0 1px 3px var(--ui-border-subtle);
 }
 .zoom-action-button:focus-visible {
@@ -930,7 +930,7 @@ button:disabled {
   }
 
   .zoom-action-button:hover:not(:disabled) {
-    background: var(--brand-200) !important;
+    background: var(--button-ghost2-hover) !important;
     box-shadow: 0 1px 3px var(--ui-border-subtle);
   }
 }
