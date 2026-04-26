@@ -13,10 +13,13 @@ import {
   getPositionedBounds,
   getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
+import { renderCellSampledPlacementPreview } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
+import { renderTextPlacementPreview } from "@/lib/editor-v2/editor/text/renderTextPlacementPreview";
 import {
   createUpdateTextPlacementCommand,
 } from "../workspaceCommands";
+import { SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW } from "./placementPreviewMode";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 
 interface TextPlacementLayerProps {
@@ -44,11 +47,13 @@ export function TextPlacementLayer({
   worldBounds,
   zoom,
 }: TextPlacementLayerProps) {
+  const useCellSampledPreview = SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW;
   const [isEditing, setIsEditing] = useState(true);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
     typeof transform | null
   >(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const baseRect = useMemo(
     () =>
@@ -229,6 +234,70 @@ export function TextPlacementLayer({
     setMobilePreviewTransform(null);
   }, [transform]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function buildPreview() {
+      if (!useCellSampledPreview) {
+        setPreviewSrc(null);
+        return;
+      }
+
+      const basePreviewSrc = renderTextPlacementPreview({
+        text: placement.text,
+        width: displayBounds.width,
+        height: displayBounds.height,
+        fontSize: fontSize * displayTransform.scale,
+        fontFamily: placement.fontFamily,
+        fontWeight: placement.fontWeight,
+        fontStyle: placement.fontStyle,
+        underline: placement.underline,
+        color: previewColor,
+      });
+
+      if (!basePreviewSrc) {
+        if (!cancelled) {
+          setPreviewSrc(null);
+        }
+        return;
+      }
+
+      try {
+        const nextPreviewSrc = await renderCellSampledPlacementPreview({
+          src: basePreviewSrc,
+          bounds: displayBounds,
+          metrics,
+        });
+
+        if (!cancelled) {
+          setPreviewSrc(nextPreviewSrc);
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewSrc(basePreviewSrc);
+        }
+      }
+    }
+
+    void buildPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    displayBounds,
+    displayTransform.scale,
+    fontSize,
+    metrics,
+    placement.fontFamily,
+    placement.fontStyle,
+    placement.fontWeight,
+    placement.text,
+    placement.underline,
+    previewColor,
+    useCellSampledPreview,
+  ]);
+
   const showMobilePositioning = coarsePointer && !isEditing && portalHost;
   const mobileOverlay = showMobilePositioning
     ? createPortal(
@@ -249,27 +318,48 @@ export function TextPlacementLayer({
               width: `${mobileOverlayBounds.width}px`,
               height: `${mobileOverlayBounds.height}px`,
               pointerEvents: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: `${placement.fontFamily}, sans-serif`,
-              fontWeight: placement.fontWeight,
-              fontStyle: placement.fontStyle,
-              fontSize: `${fontSize * displayTransform.scale * viewport.zoom}px`,
-              lineHeight: 1.1,
-              textAlign: "center",
-              color: previewColor,
-              textShadow: "0 1px 0 rgba(255,255,255,0.55)",
-              textDecoration: placement.underline ? "underline" : "none",
-              padding: `${6 * displayTransform.scale * viewport.zoom}px`,
-              boxSizing: "border-box",
-              whiteSpace: "pre-wrap",
-              overflow: "hidden",
               transform: getRotationCss(displayTransform.rotation),
               transformOrigin: "center center",
+              overflow: "hidden",
             }}
           >
-            {placement.text}
+            {useCellSampledPreview && previewSrc ? (
+              <img
+                src={previewSrc}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: `${placement.fontFamily}, sans-serif`,
+                  fontWeight: placement.fontWeight,
+                  fontStyle: placement.fontStyle,
+                  fontSize: `${fontSize * displayTransform.scale * viewport.zoom}px`,
+                  lineHeight: 1.1,
+                  textAlign: "center",
+                  color: previewColor,
+                  textShadow: "0 1px 0 rgba(255,255,255,0.55)",
+                  textDecoration: placement.underline ? "underline" : "none",
+                  padding: `${6 * displayTransform.scale * viewport.zoom}px`,
+                  boxSizing: "border-box",
+                  whiteSpace: "pre-wrap",
+                  overflow: "hidden",
+                }}
+              >
+                {placement.text}
+              </div>
+            )}
           </div>
           <PositioningBoxOverlay
             ariaLabel="Text placement controls"
@@ -317,23 +407,8 @@ export function TextPlacementLayer({
               transform: getRotationCss(transform.rotation),
               transformOrigin: "center center",
               willChange: "left, top, width, height, transform",
-              pointerEvents: isEditing ? "none" : "auto",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: `${placement.fontFamily}, sans-serif`,
-              fontWeight: placement.fontWeight,
-              fontStyle: placement.fontStyle,
-              fontSize: `${fontSize * transform.scale}px`,
-              lineHeight: 1.1,
-              textAlign: "center",
-              color: previewColor,
-              textShadow: "0 1px 0 rgba(255,255,255,0.55)",
-              textDecoration: placement.underline ? "underline" : "none",
-              padding: `${6 * transform.scale}px`,
-              boxSizing: "border-box",
-              whiteSpace: "pre-wrap",
               overflow: "hidden",
+              pointerEvents: isEditing ? "none" : "auto",
             }}
             onDoubleClick={(event) => {
               event.preventDefault();
@@ -341,7 +416,43 @@ export function TextPlacementLayer({
               setIsEditing(true);
             }}
           >
-            {isEditing ? null : placement.text}
+            {useCellSampledPreview && previewSrc ? (
+              <img
+                src={previewSrc}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: `${placement.fontFamily}, sans-serif`,
+                  fontWeight: placement.fontWeight,
+                  fontStyle: placement.fontStyle,
+                  fontSize: `${fontSize * transform.scale}px`,
+                  lineHeight: 1.1,
+                  textAlign: "center",
+                  color: previewColor,
+                  textShadow: "0 1px 0 rgba(255,255,255,0.55)",
+                  textDecoration: placement.underline ? "underline" : "none",
+                  padding: `${6 * transform.scale}px`,
+                  boxSizing: "border-box",
+                  whiteSpace: "pre-wrap",
+                  overflow: "hidden",
+                }}
+              >
+                {useCellSampledPreview ? placement.text : isEditing ? null : placement.text}
+              </div>
+            )}
           </div>
 
           {isEditing ? (
@@ -392,8 +503,10 @@ export function TextPlacementLayer({
                   resize: "none",
                   border: "none",
                   background: "transparent",
-                  color: previewColor,
-                  textShadow: "0 1px 0 rgba(255,255,255,0.55)",
+                  color: useCellSampledPreview ? "transparent" : previewColor,
+                  textShadow: useCellSampledPreview
+                    ? "none"
+                    : "0 1px 0 rgba(255,255,255,0.55)",
                   fontFamily: `${placement.fontFamily}, sans-serif`,
                   fontWeight: placement.fontWeight,
                   fontStyle: placement.fontStyle,
@@ -412,6 +525,7 @@ export function TextPlacementLayer({
                   caretColor: "#2563eb",
                   cursor: "text",
                   caretShape: "bar",
+                  WebkitTextFillColor: useCellSampledPreview ? "transparent" : previewColor,
                 }}
               />
             </>
