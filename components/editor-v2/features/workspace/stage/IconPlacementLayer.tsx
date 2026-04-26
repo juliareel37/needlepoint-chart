@@ -56,7 +56,7 @@ export function IconPlacementLayer({
 }: IconPlacementLayerProps) {
   const useCellSampledPreview = SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW;
   const [coarsePointer, setCoarsePointer] = useState(false);
-  const [mobilePreviewTransform, setMobilePreviewTransform] = useState<
+  const [previewTransform, setPreviewTransform] = useState<
     IconPlacementTransform | null
   >(null);
   const baseRect = useMemo(
@@ -98,7 +98,7 @@ export function IconPlacementLayer({
     () => getIconPlacementBounds(baseRect, transform),
     [baseRect, transform],
   );
-  const displayTransform = mobilePreviewTransform ?? transform;
+  const displayTransform = previewTransform ?? transform;
   const displayBounds = useMemo(
     () => getIconPlacementBounds(baseRect, displayTransform),
     [baseRect, displayTransform],
@@ -185,6 +185,7 @@ export function IconPlacementLayer({
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (coarsePointer && portalHost) {
+      setPreviewTransform(nextTransform);
       const mobilePreviewIcon = mobilePreviewIconRef.current;
       if (!mobilePreviewIcon) {
         return;
@@ -193,6 +194,10 @@ export function IconPlacementLayer({
       const nextBounds = projectMobileStageBounds(nextTransform, baseRect);
       applyPreviewIconBox(mobilePreviewIcon, nextBounds, nextTransform.rotation);
       return;
+    }
+
+    if (placement.primitiveKind || useCellSampledPreview) {
+      setPreviewTransform(nextTransform);
     }
 
     if (!previewIconRef.current) {
@@ -213,6 +218,7 @@ export function IconPlacementLayer({
     placement.primitiveKind,
     portalHost,
     projectMobileStageBounds,
+    useCellSampledPreview,
   ]);
   const handleTransformCommit = useCallback(
     (nextTransform: typeof transform, _transactionKey?: string) => {
@@ -225,7 +231,7 @@ export function IconPlacementLayer({
           rotation: nextTransform.rotation,
         }),
       );
-      setMobilePreviewTransform(nextTransform);
+      setPreviewTransform(nextTransform);
     },
     [dispatch],
   );
@@ -343,7 +349,7 @@ export function IconPlacementLayer({
   }, []);
 
   useEffect(() => {
-    setMobilePreviewTransform(null);
+    setPreviewTransform(null);
   }, [transform]);
 
   const showMobilePositioning = coarsePointer && portalHost;
@@ -442,11 +448,11 @@ export function IconPlacementLayer({
             ref={previewIconRef}
             style={{
               position: "absolute",
-              top: `${bounds.top}px`,
-              left: `${bounds.left}px`,
-              width: `${bounds.width}px`,
-              height: `${bounds.height}px`,
-              transform: getRotationCss(transform.rotation),
+              top: `${displayBounds.top}px`,
+              left: `${displayBounds.left}px`,
+              width: `${displayBounds.width}px`,
+              height: `${displayBounds.height}px`,
+              transform: getRotationCss(displayTransform.rotation),
               transformOrigin: "center center",
               willChange: "left, top, width, height, transform",
               pointerEvents: "none",
