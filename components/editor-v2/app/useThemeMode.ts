@@ -2,20 +2,38 @@
 
 import { useEffect, useState } from "react";
 
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "system" | "dark";
+export type ResolvedThemeMode = "light" | "dark";
 
 const THEME_STORAGE_KEY = "wippa:theme";
+const THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
-function applyThemeMode(nextTheme: ThemeMode) {
-  if (typeof document === "undefined") {
-    return;
+function getSystemThemeMode(): ResolvedThemeMode {
+  if (typeof window === "undefined") {
+    return "light";
   }
 
-  if (nextTheme === "dark") {
+  return window.matchMedia(THEME_MEDIA_QUERY).matches ? "dark" : "light";
+}
+
+function resolveThemeMode(nextTheme: ThemeMode): ResolvedThemeMode {
+  return nextTheme === "system" ? getSystemThemeMode() : nextTheme;
+}
+
+function applyThemeMode(nextTheme: ThemeMode): ResolvedThemeMode {
+  if (typeof document === "undefined") {
+    return nextTheme === "dark" ? "dark" : "light";
+  }
+
+  const resolvedTheme = resolveThemeMode(nextTheme);
+
+  if (resolvedTheme === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");
   } else {
     document.documentElement.removeAttribute("data-theme");
   }
+
+  return resolvedTheme;
 }
 
 function getThemeModeFromDocument(): ThemeMode {
@@ -26,25 +44,59 @@ function getThemeModeFromDocument(): ThemeMode {
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
 
+function parseStoredThemeMode(value: string | null): ThemeMode | null {
+  if (value === "light" || value === "dark" || value === "system") {
+    return value;
+  }
+
+  return null;
+}
+
 export function useThemeMode() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const [resolvedThemeMode, setResolvedThemeMode] = useState<ResolvedThemeMode>("light");
 
   useEffect(() => {
     try {
-      const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-      const nextTheme: ThemeMode = savedTheme === "dark" ? "dark" : "light";
-      applyThemeMode(nextTheme);
+      const savedTheme = parseStoredThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
+      const nextTheme = savedTheme ?? getThemeModeFromDocument();
+      const nextResolvedTheme = applyThemeMode(nextTheme);
       setThemeMode(nextTheme);
+      setResolvedThemeMode(nextResolvedTheme);
     } catch {
       const nextTheme = getThemeModeFromDocument();
-      applyThemeMode(nextTheme);
+      const nextResolvedTheme = applyThemeMode(nextTheme);
       setThemeMode(nextTheme);
+      setResolvedThemeMode(nextResolvedTheme);
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(THEME_MEDIA_QUERY);
+
+    const handleChange = () => {
+      setResolvedThemeMode((currentResolvedTheme) => {
+        if (themeMode !== "system") {
+          return currentResolvedTheme;
+        }
+
+        return applyThemeMode("system");
+      });
+    };
+
+    handleChange();
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [themeMode]);
+
   const setAndPersistThemeMode = (nextTheme: ThemeMode) => {
-    applyThemeMode(nextTheme);
+    const nextResolvedTheme = applyThemeMode(nextTheme);
     setThemeMode(nextTheme);
+    setResolvedThemeMode(nextResolvedTheme);
 
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
@@ -52,6 +104,7 @@ export function useThemeMode() {
   };
 
   return {
+    resolvedThemeMode,
     themeMode,
     setThemeMode: setAndPersistThemeMode,
   };
