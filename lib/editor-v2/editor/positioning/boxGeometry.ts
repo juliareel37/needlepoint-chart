@@ -44,6 +44,10 @@ export interface PositioningPinchState {
 }
 
 export interface PositioningMoveSnapState {
+  left: number | null;
+  right: number | null;
+  top: number | null;
+  bottom: number | null;
   centerX: number | null;
   centerY: number | null;
 }
@@ -239,31 +243,77 @@ export function getCenterSnappedPosition(
   const safeZoom = Math.max(zoom, 0.0001);
   const snapTolerance = MOVE_CENTER_SNAP_PX / safeZoom;
   const unsnapTolerance = MOVE_CENTER_UNSNAP_PX / safeZoom;
+  const containerLeft = containerBounds.left;
+  const containerTop = containerBounds.top;
+  const containerRight = containerBounds.left + containerBounds.width;
+  const containerBottom = containerBounds.top + containerBounds.height;
   const containerCenterX = containerBounds.left + containerBounds.width / 2;
   const containerCenterY = containerBounds.top + containerBounds.height / 2;
+  const boundsLeft = bounds.left;
+  const boundsTop = bounds.top;
+  const boundsRight = bounds.left + bounds.width;
+  const boundsBottom = bounds.top + bounds.height;
   const boundsCenterX = bounds.left + bounds.width / 2;
   const boundsCenterY = bounds.top + bounds.height / 2;
-  const snappedCenterX = getAxisSnapTarget(
-    boundsCenterX,
-    containerCenterX,
-    currentSnap.centerX,
+  const snappedX = getAxisSnapTarget(
+    [
+      {
+        key: "left",
+        currentValue: currentSnap.left,
+        value: boundsLeft,
+        target: containerLeft,
+      },
+      {
+        key: "centerX",
+        currentValue: currentSnap.centerX,
+        value: boundsCenterX,
+        target: containerCenterX,
+      },
+      {
+        key: "right",
+        currentValue: currentSnap.right,
+        value: boundsRight,
+        target: containerRight,
+      },
+    ],
     snapTolerance,
     unsnapTolerance,
   );
-  const snappedCenterY = getAxisSnapTarget(
-    boundsCenterY,
-    containerCenterY,
-    currentSnap.centerY,
+  const snappedY = getAxisSnapTarget(
+    [
+      {
+        key: "top",
+        currentValue: currentSnap.top,
+        value: boundsTop,
+        target: containerTop,
+      },
+      {
+        key: "centerY",
+        currentValue: currentSnap.centerY,
+        value: boundsCenterY,
+        target: containerCenterY,
+      },
+      {
+        key: "bottom",
+        currentValue: currentSnap.bottom,
+        value: boundsBottom,
+        target: containerBottom,
+      },
+    ],
     snapTolerance,
     unsnapTolerance,
   );
 
   return {
-    offsetX: snappedCenterX === null ? 0 : snappedCenterX - boundsCenterX,
-    offsetY: snappedCenterY === null ? 0 : snappedCenterY - boundsCenterY,
+    offsetX: snappedX?.offset ?? 0,
+    offsetY: snappedY?.offset ?? 0,
     snap: {
-      centerX: snappedCenterX,
-      centerY: snappedCenterY,
+      left: snappedX?.key === "left" ? containerLeft : null,
+      right: snappedX?.key === "right" ? containerRight : null,
+      centerX: snappedX?.key === "centerX" ? containerCenterX : null,
+      top: snappedY?.key === "top" ? containerTop : null,
+      bottom: snappedY?.key === "bottom" ? containerBottom : null,
+      centerY: snappedY?.key === "centerY" ? containerCenterY : null,
     },
   };
 }
@@ -476,15 +526,44 @@ function getRotationDeltaDegrees(a: number, b: number): number {
 }
 
 function getAxisSnapTarget(
-  value: number,
-  target: number,
-  currentSnap: number | null,
+  candidates: Array<{
+    key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+    currentValue: number | null;
+    value: number;
+    target: number;
+  }>,
   snapTolerance: number,
   unsnapTolerance: number,
-): number | null {
-  if (currentSnap !== null && Math.abs(value - currentSnap) <= unsnapTolerance) {
-    return currentSnap;
+): {
+  key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+  offset: number;
+} | null {
+  const latchedCandidate = candidates.find((candidate) => candidate.currentValue !== null);
+  if (
+    latchedCandidate &&
+    Math.abs(latchedCandidate.value - latchedCandidate.target) <= unsnapTolerance
+  ) {
+    return {
+      key: latchedCandidate.key,
+      offset: latchedCandidate.target - latchedCandidate.value,
+    };
   }
 
-  return Math.abs(value - target) <= snapTolerance ? target : null;
+  const snappedCandidate = candidates
+    .map((candidate) => ({
+      ...candidate,
+      delta: candidate.target - candidate.value,
+      distance: Math.abs(candidate.target - candidate.value),
+    }))
+    .filter((candidate) => candidate.distance <= snapTolerance)
+    .sort((a, b) => a.distance - b.distance)[0];
+
+  if (!snappedCandidate) {
+    return null;
+  }
+
+  return {
+    key: snappedCandidate.key,
+    offset: snappedCandidate.delta,
+  };
 }

@@ -140,6 +140,10 @@ export function PositioningBoxOverlay({
   const resolvedSnapZoom = snapZoom ?? zoom;
   const latestSnapZoomRef = useRef(resolvedSnapZoom);
   const [activeMoveSnap, setActiveMoveSnap] = useState<PositioningMoveSnapState>({
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
     centerX: null,
     centerY: null,
   });
@@ -151,6 +155,7 @@ export function PositioningBoxOverlay({
   const outlineWidth = Math.max(1, 1.5 * controlScale);
   const handleBorderWidth = Math.max(1, 1.25 * controlScale);
   const guideThickness = Math.max(1, 1 / Math.max(snapGuideZoom, 0.0001));
+  const edgeGuideInset = guideThickness;
 
   useEffect(() => {
     latestBaseRectRef.current = baseRect;
@@ -192,7 +197,7 @@ export function PositioningBoxOverlay({
 
   useEffect(() => {
     latestTransformRef.current = transform;
-    setActiveMoveSnap({ centerX: null, centerY: null });
+    setActiveMoveSnap(emptyMoveSnap());
   }, [transform]);
 
   useEffect(() => {
@@ -369,8 +374,8 @@ export function PositioningBoxOverlay({
       session.moveSnap = snappedPosition.snap;
       setActiveMoveSnap(snappedPosition.snap);
     } else if (session.mode !== "move") {
-      session.moveSnap = { centerX: null, centerY: null };
-      setActiveMoveSnap({ centerX: null, centerY: null });
+      session.moveSnap = emptyMoveSnap();
+      setActiveMoveSnap(emptyMoveSnap());
     }
 
     latestTransformRef.current = nextTransform;
@@ -516,7 +521,7 @@ export function PositioningBoxOverlay({
       frameIdRef.current = null;
     }
     dragSessionRef.current = null;
-    setActiveMoveSnap({ centerX: null, centerY: null });
+    setActiveMoveSnap(emptyMoveSnap());
     overlayElement.style.cursor = interactive ? "grab" : "default";
     latestOnInteractionStartRef.current?.();
   }
@@ -556,7 +561,7 @@ export function PositioningBoxOverlay({
 
     dragSequenceRef.current += 1;
     if (mode !== "move") {
-      setActiveMoveSnap({ centerX: null, centerY: null });
+      setActiveMoveSnap(emptyMoveSnap());
     }
     dragSessionRef.current = {
       pointerId: event.pointerId,
@@ -580,7 +585,7 @@ export function PositioningBoxOverlay({
       pendingClientY: event.clientY,
       rafId: null,
       lastPreviewAt: 0,
-      moveSnap: { centerX: null, centerY: null },
+      moveSnap: emptyMoveSnap(),
     };
 
     if (usePointerCapture) {
@@ -619,7 +624,7 @@ export function PositioningBoxOverlay({
 
     latestOnInteractionEndRef.current?.();
     dragSessionRef.current = null;
-    setActiveMoveSnap({ centerX: null, centerY: null });
+    setActiveMoveSnap(emptyMoveSnap());
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
         overlayRef.current.releasePointerCapture(pointerId);
@@ -638,7 +643,7 @@ export function PositioningBoxOverlay({
     const committedTransform = flushPinchPreview();
     pinchSessionRef.current = null;
     touchPointsRef.current.clear();
-    setActiveMoveSnap({ centerX: null, centerY: null });
+    setActiveMoveSnap(emptyMoveSnap());
     latestOnInteractionEndRef.current?.();
     try {
       if (overlayRef.current?.hasPointerCapture(pointerId)) {
@@ -659,13 +664,21 @@ export function PositioningBoxOverlay({
 
   return (
     <>
-      {snapGuideContainerBounds && activeMoveSnap.centerY !== null ? (
+      {snapGuideContainerBounds &&
+      (activeMoveSnap.centerY !== null ||
+        activeMoveSnap.top !== null ||
+        activeMoveSnap.bottom !== null) ? (
         <div
           aria-hidden="true"
           style={{
             position: "absolute",
             left: `${snapGuideContainerBounds.left}px`,
-            top: `${snapGuideContainerBounds.top + snapGuideContainerBounds.height / 2 - guideThickness / 2}px`,
+            top: `${getHorizontalGuideTop(
+              snapGuideContainerBounds,
+              activeMoveSnap,
+              guideThickness,
+              edgeGuideInset,
+            )}px`,
             width: `${snapGuideContainerBounds.width}px`,
             height: `${guideThickness}px`,
             background: "rgba(37, 99, 235, 0.95)",
@@ -675,12 +688,20 @@ export function PositioningBoxOverlay({
           }}
         />
       ) : null}
-      {snapGuideContainerBounds && activeMoveSnap.centerX !== null ? (
+      {snapGuideContainerBounds &&
+      (activeMoveSnap.centerX !== null ||
+        activeMoveSnap.left !== null ||
+        activeMoveSnap.right !== null) ? (
         <div
           aria-hidden="true"
           style={{
             position: "absolute",
-            left: `${snapGuideContainerBounds.left + snapGuideContainerBounds.width / 2 - guideThickness / 2}px`,
+            left: `${getVerticalGuideLeft(
+              snapGuideContainerBounds,
+              activeMoveSnap,
+              guideThickness,
+              edgeGuideInset,
+            )}px`,
             top: `${snapGuideContainerBounds.top}px`,
             width: `${guideThickness}px`,
             height: `${snapGuideContainerBounds.height}px`,
@@ -830,6 +851,51 @@ export function PositioningBoxOverlay({
       </div>
     </>
   );
+}
+
+function emptyMoveSnap(): PositioningMoveSnapState {
+  return {
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
+    centerX: null,
+    centerY: null,
+  };
+}
+
+function getHorizontalGuideTop(
+  bounds: PositioningRect,
+  snap: PositioningMoveSnapState,
+  guideThickness: number,
+  edgeGuideInset: number,
+): number {
+  if (snap.top !== null) {
+    return bounds.top + edgeGuideInset;
+  }
+
+  if (snap.bottom !== null) {
+    return bounds.top + bounds.height - edgeGuideInset - guideThickness;
+  }
+
+  return bounds.top + bounds.height / 2 - guideThickness / 2;
+}
+
+function getVerticalGuideLeft(
+  bounds: PositioningRect,
+  snap: PositioningMoveSnapState,
+  guideThickness: number,
+  edgeGuideInset: number,
+): number {
+  if (snap.left !== null) {
+    return bounds.left + edgeGuideInset;
+  }
+
+  if (snap.right !== null) {
+    return bounds.left + bounds.width - edgeGuideInset - guideThickness;
+  }
+
+  return bounds.left + bounds.width / 2 - guideThickness / 2;
 }
 
 function applyPreviewBounds(

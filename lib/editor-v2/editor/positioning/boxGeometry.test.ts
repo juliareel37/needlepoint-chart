@@ -27,6 +27,10 @@ describe("getCenterSnappedPosition", () => {
       offsetX: 3,
       offsetY: -2,
       snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
         centerX: 50,
         centerY: 40,
       },
@@ -35,22 +39,78 @@ describe("getCenterSnappedPosition", () => {
 
   it("keeps a snapped axis latched until it moves beyond the unsnap threshold", () => {
     const snap: PositioningMoveSnapState = {
+      left: null,
+      right: null,
+      top: null,
+      bottom: null,
       centerX: 50,
       centerY: 40,
     };
     const bounds: PositioningRect = {
       left: 20,
-      top: 4,
+      top: 19,
       width: 40,
-      height: 50,
+      height: 20,
     };
 
     expect(getCenterSnappedPosition(bounds, CONTAINER, snap, 1)).toEqual({
       offsetX: 10,
       offsetY: 11,
       snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
         centerX: 50,
         centerY: 40,
+      },
+    });
+  });
+
+  it("snaps to the left and top canvas edges when the element is within tolerance", () => {
+    const bounds: PositioningRect = {
+      left: 6,
+      top: 4,
+      width: 20,
+      height: 10,
+    };
+
+    expect(
+      getCenterSnappedPosition(bounds, CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      offsetX: -6,
+      offsetY: -4,
+      snap: {
+        left: 0,
+        right: null,
+        top: 0,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("snaps to the right and bottom canvas edges when the element is within tolerance", () => {
+    const bounds: PositioningRect = {
+      left: 73,
+      top: 64,
+      width: 20,
+      height: 10,
+    };
+
+    expect(
+      getCenterSnappedPosition(bounds, CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      offsetX: 7,
+      offsetY: 6,
+      snap: {
+        left: null,
+        right: 100,
+        top: null,
+        bottom: 80,
+        centerX: null,
+        centerY: null,
       },
     });
   });
@@ -69,6 +129,10 @@ describe("getCenterSnappedPosition", () => {
       offsetX: 0,
       offsetY: 0,
       snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
         centerX: null,
         centerY: null,
       },
@@ -78,6 +142,10 @@ describe("getCenterSnappedPosition", () => {
 
 function emptySnap(): PositioningMoveSnapState {
   return {
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
     centerX: null,
     centerY: null,
   };
