@@ -8,11 +8,13 @@ import {
 } from "react";
 import type { PositioningDragMode, PositioningRect } from "@/lib/editor-v2/editor/positioning";
 import {
+  getCenterSnappedPosition,
   getHandleLeft,
   getHandleTop,
   getRotationSnapTarget,
   getRotationCss,
   POSITIONING_HANDLES,
+  type PositioningMoveSnapState,
   type PositioningPinchState,
 } from "@/lib/editor-v2/editor/positioning";
 import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -35,6 +37,8 @@ interface IconPlacementBoxOverlayProps {
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: IconPlacementTransform) => void;
+  snapContainerBounds?: PositioningRect;
+  snapZoom?: number;
   projectBoundsForPreview?: (
     transform: IconPlacementTransform,
     baseRect: PositioningRect,
@@ -56,6 +60,7 @@ interface DragSession {
   pendingClientX: number;
   pendingClientY: number;
   rafId: number | null;
+  moveSnap: PositioningMoveSnapState;
 }
 
 interface HandleElements {
@@ -82,6 +87,8 @@ export function IconPlacementBoxOverlay({
   getWorldPointFromClient,
   onTransformCommit,
   onTransformPreview,
+  snapContainerBounds,
+  snapZoom,
   projectBoundsForPreview,
   transform,
   transactionKeyPrefix,
@@ -103,6 +110,9 @@ export function IconPlacementBoxOverlay({
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
+  const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
+  const resolvedSnapZoom = snapZoom ?? zoom;
+  const latestSnapZoomRef = useRef(resolvedSnapZoom);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const handleHitSize = coarsePointer
@@ -168,6 +178,14 @@ export function IconPlacementBoxOverlay({
   useEffect(() => {
     latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
   }, [projectBoundsForPreview]);
+
+  useEffect(() => {
+    latestSnapContainerBoundsRef.current = snapContainerBounds;
+  }, [snapContainerBounds]);
+
+  useEffect(() => {
+    latestSnapZoomRef.current = resolvedSnapZoom;
+  }, [resolvedSnapZoom]);
 
   useEffect(() => {
     return () => {
@@ -271,11 +289,34 @@ export function IconPlacementBoxOverlay({
       return latestTransformRef.current;
     }
 
-    const nextTransform = getIconPlacementTransformFromDrag(
+    let nextTransform = getIconPlacementTransformFromDrag(
       session.drag,
       worldPoint,
       latestBaseRectRef.current,
     );
+
+    if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getIconPlacementBounds(
+        latestBaseRectRef.current,
+        nextTransform,
+      );
+      const snappedPosition = getCenterSnappedPosition(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        session.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: nextTransform.offsetX + snappedPosition.offsetX,
+        offsetY: nextTransform.offsetY + snappedPosition.offsetY,
+      };
+      session.moveSnap = snappedPosition.snap;
+    } else if (session.mode !== "move") {
+      session.moveSnap = { centerX: null, centerY: null };
+    }
+
     const nextInteractionBounds = getIconPlacementBounds(
       latestBaseRectRef.current,
       nextTransform,
@@ -478,6 +519,7 @@ export function IconPlacementBoxOverlay({
       pendingClientX: event.clientX,
       pendingClientY: event.clientY,
       rafId: null,
+      moveSnap: { centerX: null, centerY: null },
     };
 
     overlayElement.setPointerCapture(event.pointerId);

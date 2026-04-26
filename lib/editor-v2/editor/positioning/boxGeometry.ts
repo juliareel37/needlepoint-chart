@@ -43,8 +43,21 @@ export interface PositioningPinchState {
   snapRotation: number | null;
 }
 
+export interface PositioningMoveSnapState {
+  centerX: number | null;
+  centerY: number | null;
+}
+
+export interface PositioningMoveSnapResult {
+  offsetX: number;
+  offsetY: number;
+  snap: PositioningMoveSnapState;
+}
+
 export const ROTATION_SNAP_DEGREES = 3;
 export const ROTATION_UNSNAP_DEGREES = 5;
+export const MOVE_CENTER_SNAP_PX = 8;
+export const MOVE_CENTER_UNSNAP_PX = 12;
 
 export const POSITIONING_HANDLES: Array<{
   id: PositioningHandleId;
@@ -214,6 +227,44 @@ export function getTransformFromPinch(
         ((nextAngle - pinchState.startAngle) * 180) / Math.PI,
       pinchState.snapRotation,
     ),
+  };
+}
+
+export function getCenterSnappedPosition(
+  bounds: PositioningRect,
+  containerBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  zoom: number,
+): PositioningMoveSnapResult {
+  const safeZoom = Math.max(zoom, 0.0001);
+  const snapTolerance = MOVE_CENTER_SNAP_PX / safeZoom;
+  const unsnapTolerance = MOVE_CENTER_UNSNAP_PX / safeZoom;
+  const containerCenterX = containerBounds.left + containerBounds.width / 2;
+  const containerCenterY = containerBounds.top + containerBounds.height / 2;
+  const boundsCenterX = bounds.left + bounds.width / 2;
+  const boundsCenterY = bounds.top + bounds.height / 2;
+  const snappedCenterX = getAxisSnapTarget(
+    boundsCenterX,
+    containerCenterX,
+    currentSnap.centerX,
+    snapTolerance,
+    unsnapTolerance,
+  );
+  const snappedCenterY = getAxisSnapTarget(
+    boundsCenterY,
+    containerCenterY,
+    currentSnap.centerY,
+    snapTolerance,
+    unsnapTolerance,
+  );
+
+  return {
+    offsetX: snappedCenterX === null ? 0 : snappedCenterX - boundsCenterX,
+    offsetY: snappedCenterY === null ? 0 : snappedCenterY - boundsCenterY,
+    snap: {
+      centerX: snappedCenterX,
+      centerY: snappedCenterY,
+    },
   };
 }
 
@@ -422,4 +473,18 @@ export function getSnappedRotationDegrees(
 
 function getRotationDeltaDegrees(a: number, b: number): number {
   return Math.abs(normalizeRotationDegrees(a - b));
+}
+
+function getAxisSnapTarget(
+  value: number,
+  target: number,
+  currentSnap: number | null,
+  snapTolerance: number,
+  unsnapTolerance: number,
+): number | null {
+  if (currentSnap !== null && Math.abs(value - currentSnap) <= unsnapTolerance) {
+    return currentSnap;
+  }
+
+  return Math.abs(value - target) <= snapTolerance ? target : null;
 }

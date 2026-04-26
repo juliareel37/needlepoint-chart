@@ -14,11 +14,13 @@ import {
   getRotationCss,
   getTransformFromDrag,
   getTransformFromPinch,
+  getCenterSnappedPosition,
   getRotationSnapTarget,
   POSITIONING_HANDLES,
   type PositioningDragMode,
   type PositioningDragState,
   type PositioningPinchState,
+  type PositioningMoveSnapState,
   type PositioningRect,
   type PositioningTransform,
 } from "@/lib/editor-v2/editor/positioning";
@@ -38,6 +40,8 @@ interface PositioningBoxOverlayProps {
     transactionKey: string,
   ) => void;
   onTransformPreview?: (transform: PositioningTransform) => void;
+  snapContainerBounds?: PositioningRect;
+  snapZoom?: number;
   projectBoundsForPreview?: (
     transform: PositioningTransform,
     baseRect: PositioningRect,
@@ -66,6 +70,7 @@ interface DragSession {
   pendingClientY: number;
   rafId: number | null;
   lastPreviewAt: number;
+  moveSnap: PositioningMoveSnapState;
 }
 
 interface HandleElements {
@@ -94,6 +99,8 @@ export function PositioningBoxOverlay({
   onInteractionStart,
   onTransformCommit,
   onTransformPreview,
+  snapContainerBounds,
+  snapZoom,
   projectBoundsForPreview,
   interactive = true,
   handleShape = "mixed",
@@ -125,6 +132,9 @@ export function PositioningBoxOverlay({
   const latestOnTransformPreviewRef = useRef(onTransformPreview);
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
+  const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
+  const resolvedSnapZoom = snapZoom ?? zoom;
+  const latestSnapZoomRef = useRef(resolvedSnapZoom);
   const controlScale = zoom > 0 ? 1 / zoom : 1;
   const handleSize = 14 * controlScale;
   const handleHitSize = coarsePointer
@@ -202,6 +212,14 @@ export function PositioningBoxOverlay({
   useEffect(() => {
     latestProjectBoundsForPreviewRef.current = projectBoundsForPreview;
   }, [projectBoundsForPreview]);
+
+  useEffect(() => {
+    latestSnapContainerBoundsRef.current = snapContainerBounds;
+  }, [snapContainerBounds]);
+
+  useEffect(() => {
+    latestSnapZoomRef.current = resolvedSnapZoom;
+  }, [resolvedSnapZoom]);
 
   useEffect(() => {
     return () => {
@@ -318,11 +336,30 @@ export function PositioningBoxOverlay({
       return latestTransformRef.current;
     }
 
-    const nextTransform = getTransformFromDrag(
+    let nextTransform = getTransformFromDrag(
       session.drag,
       worldPoint,
       latestBaseRectRef.current,
     );
+
+    if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      const snappedPosition = getCenterSnappedPosition(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        session.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: nextTransform.offsetX + snappedPosition.offsetX,
+        offsetY: nextTransform.offsetY + snappedPosition.offsetY,
+      };
+      session.moveSnap = snappedPosition.snap;
+    } else if (session.mode !== "move") {
+      session.moveSnap = { centerX: null, centerY: null };
+    }
 
     latestTransformRef.current = nextTransform;
     const nextInteractionBounds = getPositionedBounds(
@@ -527,6 +564,7 @@ export function PositioningBoxOverlay({
       pendingClientY: event.clientY,
       rafId: null,
       lastPreviewAt: 0,
+      moveSnap: { centerX: null, centerY: null },
     };
 
     if (usePointerCapture) {

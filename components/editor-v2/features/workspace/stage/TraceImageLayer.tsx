@@ -62,6 +62,15 @@ export function TraceImageLayer({
 }: TraceImageLayerProps) {
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
+  const snapContainerBounds = useMemo(
+    () => ({
+      left: 0,
+      top: 0,
+      width: metrics.surfaceWidth,
+      height: metrics.surfaceHeight,
+    }),
+    [metrics.surfaceHeight, metrics.surfaceWidth],
+  );
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [mobilePreviewSize, setMobilePreviewSize] = useState<{
     width: number;
@@ -396,6 +405,8 @@ export function TraceImageLayer({
               onTransformPreview={handleMobileTransformPreview}
               projectBoundsForPreview={projectMobileStageBounds}
               previewBoundsStrategy="live"
+              snapContainerBounds={snapContainerBounds}
+              snapZoom={viewport.zoom}
               showOutline
               showHandles
               transactionKeyPrefix="trace-drag-mobile"
@@ -475,6 +486,8 @@ export function TraceImageLayer({
               onTransformCommit={handleDesktopTransformCommit}
               onTransformPreview={handleDesktopTransformPreview}
               previewBoundsStrategy="live"
+              snapContainerBounds={snapContainerBounds}
+              snapZoom={viewport.zoom}
               showOutline
               showHandles
               transactionKeyPrefix="trace-drag"
