@@ -34,6 +34,7 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createCancelIconPlacementCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
@@ -603,6 +604,34 @@ export function EditorV2Shell({
       dispatch(createSetSidebarCollapsedCommand(true));
     }
   }, [dispatch, iconPlacement, isBottomPanelLayout, sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!iconPlacement) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      dispatch(createCancelIconPlacementCommand());
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [dispatch, iconPlacement]);
 
   useEffect(() => {
     setMounted(true);
