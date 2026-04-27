@@ -74,6 +74,8 @@ const selectionShapeOptions: Array<{
   },
 ];
 
+const ENABLE_MOBILE_SELECTION_DOCK = false;
+
 function FloatingToolbarPortalPopover({
   anchorRef,
   align = "start",
@@ -349,7 +351,8 @@ export function FloatingToolbar({
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
-  const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
+  const mobileSelectionDocked =
+    ENABLE_MOBILE_SELECTION_DOCK && isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
   const toolbarTooltipsEnabled = !touchPrimaryInput;
   const activeSelectionShape =

@@ -59,6 +59,7 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
+const ENABLE_MOBILE_SELECTION_DOCK = false;
 
 interface PreviewSessionSnapshot {
   sidebarCollapsed: boolean;
@@ -184,6 +185,7 @@ export function EditorV2Shell({
   const [headerOverflowTarget, setHeaderOverflowTarget] = useState<HTMLElement | null>(null);
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const mobileSelectionDocked =
+    ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
     (Boolean(selectionBounds) || activeTool === "lasso");
   const mobileBottomPanelVisibleHeightRatio =
