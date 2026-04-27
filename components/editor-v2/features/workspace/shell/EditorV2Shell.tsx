@@ -154,6 +154,7 @@ export function EditorV2Shell({
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
+  const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
@@ -170,6 +171,7 @@ export function EditorV2Shell({
   const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
+  const [stageToolbarTopInset, setStageToolbarTopInset] = useState(0);
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
@@ -188,6 +190,8 @@ export function EditorV2Shell({
         ? 0.6
         : 0.25
       : 1;
+  const mobileVisibleTopInset =
+    isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
@@ -220,7 +224,7 @@ export function EditorV2Shell({
       1,
     );
     const availableHeight = Math.max(
-      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio,
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset,
       1,
     );
 
@@ -233,6 +237,7 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
+    mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
   ]);
   const zoomAnchor = useMemo(() => {
@@ -244,8 +249,11 @@ export function EditorV2Shell({
       sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
     const visibleCenterX =
       visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
-    const visibleCenterY =
-      (canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio) / 2;
+    const visibleCanvasHeight = Math.max(
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset,
+      1,
+    );
+    const visibleCenterY = mobileVisibleTopInset + visibleCanvasHeight / 2;
     const centeredWorldOriginX =
       (canvasWorldSize.width - gridMetrics.surfaceWidth) / 2;
     const centeredWorldOriginY =
@@ -261,19 +269,47 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
     sidebarCollapsed,
   ]);
   const textViewportCenter = useMemo(() => {
-    if (!zoomAnchor || viewport.zoom <= 0) {
+    if (viewport.zoom <= 0 || canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
       return null;
     }
 
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleCenterX =
+      visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
+    const visibleCanvasHeight = Math.max(
+      canvasWorldSize.height - mobileVisibleTopInset,
+      1,
+    );
+    const visibleCenterY = mobileVisibleTopInset + visibleCanvasHeight / 2;
+    const centeredWorldOriginX =
+      (canvasWorldSize.width - gridMetrics.surfaceWidth) / 2;
+    const centeredWorldOriginY =
+      (canvasWorldSize.height - gridMetrics.surfaceHeight) / 2;
+    const anchorX = visibleCenterX - centeredWorldOriginX;
+    const anchorY = visibleCenterY - centeredWorldOriginY;
+
     return {
-      x: (zoomAnchor.x - viewport.offsetX) / viewport.zoom,
-      y: (zoomAnchor.y - viewport.offsetY) / viewport.zoom,
+      x: (anchorX - viewport.offsetX) / viewport.zoom,
+      y: (anchorY - viewport.offsetY) / viewport.zoom,
     };
-  }, [viewport.offsetX, viewport.offsetY, viewport.zoom, zoomAnchor]);
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    gridMetrics.surfaceHeight,
+    gridMetrics.surfaceWidth,
+    isBottomPanelLayout,
+    mobileVisibleTopInset,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+    viewport.zoom,
+  ]);
   const textViewportWidth = useMemo(() => {
     if (viewport.zoom <= 0 || canvasWorldSize.width <= 0) {
       return null;
@@ -295,8 +331,15 @@ export function EditorV2Shell({
       return null;
     }
 
-    return (canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio) / viewport.zoom;
-  }, [canvasWorldSize.height, mobileBottomPanelVisibleHeightRatio, viewport.zoom]);
+    return Math.max(
+      canvasWorldSize.height - mobileVisibleTopInset,
+      1,
+    ) / viewport.zoom;
+  }, [
+    canvasWorldSize.height,
+    mobileVisibleTopInset,
+    viewport.zoom,
+  ]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -309,10 +352,10 @@ export function EditorV2Shell({
     const visibleLeftInset =
       sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
     const availableLeft = visibleLeftInset;
-    const availableTop = 0;
+    const availableTop = mobileVisibleTopInset;
     const availableWidth = canvasWorldSize.width - visibleLeftInset;
     const visibleCanvasHeight =
-      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio;
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset;
     const renderedWidth = gridMetrics.surfaceWidth * fitZoom;
     const renderedHeight = gridMetrics.surfaceHeight * fitZoom;
     const frameOriginX =
@@ -339,6 +382,7 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
     sidebarCollapsed,
     viewport.offsetX,
@@ -541,6 +585,46 @@ export function EditorV2Shell({
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const update = () => {
+      const canvasElement = canvasWorldRef.current;
+      const toolbarElement = stageToolbarTopRef.current;
+
+      if (!canvasElement || !toolbarElement || previewMode || isBottomPanelCanvasFocusActive) {
+        setStageToolbarTopInset(0);
+        return;
+      }
+
+      const canvasRect = canvasElement.getBoundingClientRect();
+      const toolbarRect = toolbarElement.getBoundingClientRect();
+      const nextInset = Math.max(0, toolbarRect.bottom - canvasRect.top + 12);
+      setStageToolbarTopInset((current) =>
+        Math.abs(current - nextInset) < 0.5 ? current : nextInset,
+      );
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+
+    const observer = new ResizeObserver(update);
+    if (canvasWorldRef.current) {
+      observer.observe(canvasWorldRef.current);
+    }
+    if (stageToolbarTopRef.current) {
+      observer.observe(stageToolbarTopRef.current);
+    }
+
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      observer.disconnect();
+    };
+  }, [isBottomPanelCanvasFocusActive, previewMode, sidebarCollapsed, activeSidebarSection]);
 
   useEffect(() => {
     if (
@@ -1201,6 +1285,7 @@ export function EditorV2Shell({
 
             {previewMode || isBottomPanelCanvasFocusActive ? null : (
               <div
+                ref={stageToolbarTopRef}
                 className={styles.stageToolbarTop}
                 style={{
                   ["--stage-toolbar-left-inset" as string]:
