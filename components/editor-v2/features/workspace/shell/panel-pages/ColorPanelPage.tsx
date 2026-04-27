@@ -34,6 +34,7 @@ interface ColorPanelPageProps {
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   palette: PaletteColor[];
   selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
   selectionScopeActive: boolean;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -56,6 +57,7 @@ export function ColorPanelPage({
   onScopeModeChange,
   palette,
   selectionControlActive,
+  selectionPromptVisible,
   selectionScopeActive,
   showSymbols,
   symbolAssignments,
@@ -245,6 +247,7 @@ export function ColorPanelPage({
               onScopeModeChange={onScopeModeChange}
               showSymbols={showSymbols}
               selectionControlActive={selectionControlActive}
+              selectionPromptVisible={selectionPromptVisible}
               selectionScopeActive={selectionScopeActive}
               symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>

@@ -171,6 +171,7 @@ export function EditorV2Shell({
   const previewFitPendingRef = useRef(false);
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
   const reopenColorPanelAfterSelectionRef = useRef(false);
+  const usedColorsSelectionPromptStartedRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -188,6 +189,8 @@ export function EditorV2Shell({
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
   const [headerOverflowTarget, setHeaderOverflowTarget] = useState<HTMLElement | null>(null);
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
+  const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
+    useState(false);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
@@ -858,6 +861,31 @@ export function EditorV2Shell({
     }
   }, [activeTool, dispatch, selectionCommitted, selectionScopeActive]);
 
+  useEffect(() => {
+    if (!usedColorsSelectionPromptVisible) {
+      usedColorsSelectionPromptStartedRef.current = false;
+      return;
+    }
+
+    if (selectionCommitted) {
+      setUsedColorsSelectionPromptVisible(false);
+      return;
+    }
+
+    if (selectionControlActive) {
+      usedColorsSelectionPromptStartedRef.current = true;
+      return;
+    }
+
+    if (usedColorsSelectionPromptStartedRef.current) {
+      setUsedColorsSelectionPromptVisible(false);
+    }
+  }, [
+    selectionCommitted,
+    selectionControlActive,
+    usedColorsSelectionPromptVisible,
+  ]);
+
   const [selectionRequestKey, setSelectionRequestKey] = useState(0);
 
   const handleUsedColorsScopeModeChange = useCallback(
@@ -873,10 +901,12 @@ export function EditorV2Shell({
         }
 
         setSelectionRequestKey((current) => current + 1);
+        setUsedColorsSelectionPromptVisible(true);
         return;
       }
 
       reopenColorPanelAfterSelectionRef.current = false;
+      setUsedColorsSelectionPromptVisible(false);
       dispatch(createClearSelectionCommand());
     },
     [dispatch, isBottomPanelLayout, sidebarCollapsed],
@@ -1298,6 +1328,7 @@ export function EditorV2Shell({
                 onScopeModeChange={handleUsedColorsScopeModeChange}
                 selectionScopeActive={selectionScopeActive}
                 selectionControlActive={selectionControlActive}
+                selectionPromptVisible={usedColorsSelectionPromptVisible}
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}

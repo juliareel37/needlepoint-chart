@@ -453,6 +453,7 @@ export function UsedColorsSummary({
   onScopeModeChange,
   showSymbols,
   selectionControlActive,
+  selectionPromptVisible,
   selectionScopeActive,
   symbolAssignments,
   onSwapColor,
@@ -473,6 +474,7 @@ export function UsedColorsSummary({
   onScopeModeChange: (mode: UsedColorsScopeMode) => void;
   showSymbols: boolean;
   selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
   selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
@@ -739,84 +741,90 @@ export function UsedColorsSummary({
         options={scopeOptions}
         onChange={onScopeModeChange}
       />
-      <div className={styles.usedColorsHeaderRow}>
-        <div className={styles.usedColorsTitleRow}>
-          <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-            Colors used
-          </p>
-          <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
-            {usedColors.length}
-          </span>
-        </div>
-        {isSelecting ? (
-          <Button
-            type="button"
-            variant="ghostV2"
-            size="sm"
-            className={styles.usedColorsEditButton}
-            aria-label="Exit used colors tool"
-            title="Exit used colors tool"
-            onClick={exitToolMode}
-          >
-            {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
-            Cancel
-          </Button>
-        ) : usedColors.length > 0 ? (
-          <div className={styles.usedColorsToolButtons}>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className={styles.usedColorsEditButton}
-              onClick={enterToolMode}
-            >
-              Select
-            </Button>
-            <SingleSelectDropdown
-              ariaLabel="Sort design colors"
-              items={sortOptions}
-              value={sortMode}
-              placeholder="Sort"
-              getItemLabel={(item) => item.label}
-              getItemValue={(item) => item.value}
-              onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
-              showChevron={false}
-              triggerVariant="selection"
-              triggerClassName={styles.usedColorsSortButton}
-              triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
-              wrapperClassName={styles.usedColorsSortTriggerWrap}
-              menuPlacement="bottom-end"
-              menuPortalToViewport
-              menuWidth={200}
-              minWidth={32}
-            />
-          </div>
-        ) : null}
-      </div>
-
-      {usedColors.length === 0 ? (
+      {selectionPromptVisible ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>
-          None yet
+          Drag a selection on the canvas to edit colors.
         </span>
       ) : (
-        <div className={styles.usedColorsListFrame}>
-          {actionMode === "merge" ? (
-            <div 
-            // className={styles.usedColorsMergePanel}
-            >
-              {/* <span className={styles.usedColorsMergeLabel} style={typographyStyles.p2}>
-                Choose a target color, then merge selected colors into it.
-              </span> */}
+        <>
+          <div className={styles.usedColorsHeaderRow}>
+            <div className={styles.usedColorsTitleRow}>
+              <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
+                Colors used
+              </p>
+              <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
+                {usedColors.length}
+              </span>
             </div>
-          ) : null}
-          <div className={styles.usedColorsListCard}>
-            <ul
-              className={styles.usedColorsList}
-              data-selection-mode={isSelecting ? "true" : "false"}
-              data-selection-overlay={
-                isSelecting && selectedColorIds.length > 0 ? "true" : "false"
-              }
-            >
+            {isSelecting ? (
+              <Button
+                type="button"
+                variant="ghostV2"
+                size="sm"
+                className={styles.usedColorsEditButton}
+                aria-label="Exit used colors tool"
+                title="Exit used colors tool"
+                onClick={exitToolMode}
+              >
+                {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
+                Cancel
+              </Button>
+            ) : usedColors.length > 0 ? (
+              <div className={styles.usedColorsToolButtons}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className={styles.usedColorsEditButton}
+                  onClick={enterToolMode}
+                >
+                  Select
+                </Button>
+                <SingleSelectDropdown
+                  ariaLabel="Sort design colors"
+                  items={sortOptions}
+                  value={sortMode}
+                  placeholder="Sort"
+                  getItemLabel={(item) => item.label}
+                  getItemValue={(item) => item.value}
+                  onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
+                  showChevron={false}
+                  triggerVariant="selection"
+                  triggerClassName={styles.usedColorsSortButton}
+                  triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
+                  wrapperClassName={styles.usedColorsSortTriggerWrap}
+                  menuPlacement="bottom-end"
+                  menuPortalToViewport
+                  menuWidth={200}
+                  minWidth={32}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {usedColors.length === 0 ? (
+            <span className={styles.emptyMessage} style={typographyStyles.p2}>
+              None yet
+            </span>
+          ) : (
+            <div className={styles.usedColorsListFrame}>
+              {actionMode === "merge" ? (
+                <div 
+                // className={styles.usedColorsMergePanel}
+                >
+                  {/* <span className={styles.usedColorsMergeLabel} style={typographyStyles.p2}>
+                    Choose a target color, then merge selected colors into it.
+                  </span> */}
+                </div>
+              ) : null}
+              <div className={styles.usedColorsListCard}>
+                <ul
+                  className={styles.usedColorsList}
+                  data-selection-mode={isSelecting ? "true" : "false"}
+                  data-selection-overlay={
+                    isSelecting && selectedColorIds.length > 0 ? "true" : "false"
+                  }
+                >
             {displayedUsedColors.map((entry) => (
               (() => {
                 const isActiveColor = !isSelecting && activeColorId === entry.colorId;
@@ -1226,8 +1234,10 @@ export function UsedColorsSummary({
                 </div>
               </div>
             ) : null}
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Modal

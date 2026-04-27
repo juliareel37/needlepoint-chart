@@ -45,6 +45,7 @@ interface EditorSidebarProps {
   onStartOver: () => void;
   previewMode: boolean;
   selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -87,6 +88,7 @@ export function EditorSidebar({
   onStartOver,
   previewMode,
   selectionControlActive,
+  selectionPromptVisible,
   showGridlines,
   showRuler,
   showSymbols,
@@ -223,6 +225,7 @@ export function EditorSidebar({
               onScopeModeChange={onScopeModeChange}
               palette={palette}
               selectionControlActive={selectionControlActive}
+              selectionPromptVisible={selectionPromptVisible}
               selectionScopeActive={selectionScopeActive}
               showSymbols={showSymbols}
               symbolAssignments={document.palette.symbolAssignments}
