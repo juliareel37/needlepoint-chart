@@ -485,6 +485,8 @@ export function UsedColorsSummary({
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
+  const highlightColorChangeRef = useRef(onHighlightColorChange);
+  const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
   const sortOptions = useMemo(
@@ -511,12 +513,17 @@ export function UsedColorsSummary({
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
 
+  useEffect(() => {
+    highlightColorChangeRef.current = onHighlightColorChange;
+    exitBottomPanelCanvasFocusRef.current = onExitBottomPanelCanvasFocus;
+  }, [onExitBottomPanelCanvasFocus, onHighlightColorChange]);
+
   useEffect(
     () => () => {
-      onHighlightColorChange(null);
-      onExitBottomPanelCanvasFocus();
+      highlightColorChangeRef.current(null);
+      exitBottomPanelCanvasFocusRef.current();
     },
-    [onExitBottomPanelCanvasFocus, onHighlightColorChange],
+    [],
   );
 
   useEffect(() => {
