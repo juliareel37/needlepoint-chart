@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { FieldInput } from "@/components/design-system";
 import { Button } from "@/components/design-system";
 import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
@@ -54,8 +56,19 @@ export function ColorLibrary({
   showFeaturedSymbols = false,
   symbolAssignments = {},
 }: ColorLibraryProps) {
+  const [searchQuery, setSearchQuery] = useState("");
   const featuredColorIdSet = new Set(featuredColorIds);
-  const featuredColors = colors.filter((color) => featuredColorIdSet.has(color.id));
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const matchesSearch = (color: PaletteColor) =>
+    normalizedSearchQuery.length === 0
+      ? true
+      : [color.name, color.code, color.hex, color.brand]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearchQuery);
+  const filteredColors = colors.filter(matchesSearch);
+  const featuredColors = filteredColors.filter((color) => featuredColorIdSet.has(color.id));
+  const hasSearchQuery = normalizedSearchQuery.length > 0;
 
   function renderColorButton(color: PaletteColor, options?: { showSymbol?: boolean }) {
     const selected = color.id === activeColorId;
@@ -104,6 +117,18 @@ export function ColorLibrary({
 
   return (
     <div className={[styles.library, className].filter(Boolean).join(" ")}>
+      <div className={styles.searchField}>
+        <span aria-hidden="true" className={styles.searchIcon} />
+        <FieldInput
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search colors"
+          aria-label="Search colors"
+          className={styles.searchInput}
+        />
+      </div>
+
       {showFeaturedSection && featuredColors.length > 0 ? (
         <section className={styles.section} aria-label="Design colors">
           <div className={styles.sectionContent}>
@@ -122,9 +147,17 @@ export function ColorLibrary({
           {showAllSectionHeader ? (
             <h3 className={styles.sectionHeader}>All Colors</h3>
           ) : null}
-          <div className={styles.sectionGrid}>
-            {colors.map((color) => renderColorButton(color, { showSymbol: showAllSymbols }))}
-          </div>
+          {filteredColors.length > 0 ? (
+            <div className={styles.sectionGrid}>
+              {filteredColors.map((color) =>
+                renderColorButton(color, { showSymbol: showAllSymbols }),
+              )}
+            </div>
+          ) : (
+            <p className={styles.emptyState}>
+              {hasSearchQuery ? `No colors found for "${searchQuery.trim()}".` : "No colors found."}
+            </p>
+          )}
         </div>
       </section>
     </div>
