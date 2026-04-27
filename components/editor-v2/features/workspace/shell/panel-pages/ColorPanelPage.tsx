@@ -152,11 +152,11 @@ export function ColorPanelPage({
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
                     <h3 style={typographyStyles.h5}>Design colors</h3>
-                    {selectionScopeActive ? (
-                      <span className={styles.sidebarSectionScopeBadge} style={typographyStyles.p2}>
-                        Selection
-                      </span>
-                    ) : null}
+                  </div>
+                  <div className={styles.sidebarColorPreviewMetaRow}>
+                    <p className={styles.sidebarColorPreviewScopeLabel} style={typographyStyles.p2}>
+                      {selectionScopeActive ? "Selection" : "Full canvas"}
+                    </p>
                     {usedColors.length > 0 ? (
                       <span
                         className={styles.sidebarColorPreviewCountBadge}

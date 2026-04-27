@@ -503,7 +503,7 @@ export function UsedColorsSummary({
   const scopeOptions = useMemo(
     () =>
       [
-        { value: "full-canvas", label: "Full canvas" },
+        { value: "full-canvas", label: "All" },
         {
           value: "selection",
           label: (
@@ -768,7 +768,7 @@ export function UsedColorsSummary({
           <div className={styles.usedColorsHeaderRow}>
             <div className={styles.usedColorsTitleRow}>
               <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-                Colors used
+                {scopeMode === "selection" ? "Selection colors" : "Canvas colors"}
               </p>
               <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
                 {usedColors.length}
