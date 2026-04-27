@@ -1659,9 +1659,9 @@
 .usedColorsMergeActionGroup {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
   max-width: 100%;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 12px;
   background: var(--surface-card);
   border: 1px solid var(--ui-border-subtle);
@@ -1673,7 +1673,7 @@
 }
 
 .usedColorsMergePopover {
-  padding: 10px;
+  padding: 8px;
   box-shadow: var(--ui-shadow-lg);
 }
 
@@ -2004,8 +2004,9 @@
 }
 
 .usedColorsSelectionBar {
+  --used-colors-selection-dismiss-space: 36px;
   position: fixed;
-  right: 8px;
+  right: calc(8px + var(--used-colors-selection-dismiss-space));
   bottom: 8px;
   left: 8px;
   z-index: 1;
@@ -2018,7 +2019,20 @@
   box-shadow: var(--ui-shadow-md);
   backdrop-filter: blur(8px);
   align-items: stretch;
-  gap: 12px;
+  overflow: visible;
+}
+
+.usedColorsSelectionBarDismiss {
+  position: absolute;
+  top: 50%;
+  right: calc(-1 * var(--used-colors-selection-dismiss-space) - 2px);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  transform: translateY(-50%);
 }
 
 .usedColorsSelectionBarTop {
@@ -2026,6 +2040,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
 }
 
 .usedColorsSelectionSummary {
@@ -2035,27 +2050,23 @@
   min-width: 0;
 }
 
-.usedColorsSelectionBarActions {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  justify-content: stretch;
+.usedColorsMergeControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .usedColorsSelectionCount {
   color: var(--text-secondary);
 }
 
-.usedColorsClearSelectionButton {
-  flex-shrink: 0;
-}
-
 .usedColorsDeleteButton {
   min-width: 108px;
 }
 
-.usedColorsPrimaryAction {
-  width: 100%;
+.usedColorsMergeConfirmButton {
+  flex: 0 0 auto;
 }
 
 .usedColorSwatch {
