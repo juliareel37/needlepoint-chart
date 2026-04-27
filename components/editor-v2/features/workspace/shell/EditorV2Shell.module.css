@@ -1440,6 +1440,67 @@
   margin-bottom: 10px;
 }
 
+.usedColorsScopeControlItem {
+  min-width: 0;
+}
+
+.usedColorsScopeControlItem[data-active="true"] {
+  cursor: pointer;
+}
+
+.usedColorsScopeLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.usedColorsScopeCancelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  opacity: 1;
+  transform: scale(1);
+  line-height: 0;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.usedColorsScopeCancelGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  background: currentColor center / contain no-repeat;
+  -webkit-mask-image: url("/icons/lucide/x.svg");
+  mask-image: url("/icons/lucide/x.svg");
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.usedColorsScopeControlItem[data-active="true"] .usedColorsScopeCancelIcon {
+  color: var(--text-primary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .usedColorsScopeControlItem[data-active="true"]:hover .usedColorsScopeCancelIcon {
+    background: var(--button-ghost2-hover);
+    color: var(--text-primary);
+  }
+}
+
 .usedColorsTitleRow {
   display: flex;
   align-items: center;

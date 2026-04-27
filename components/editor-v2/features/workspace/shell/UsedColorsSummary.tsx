@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
@@ -504,9 +504,21 @@ export function UsedColorsSummary({
     () =>
       [
         { value: "full-canvas", label: "Full canvas" },
-        { value: "selection", label: "Selection" },
-      ] satisfies Array<{ value: UsedColorsScopeMode; label: string }>,
-    [],
+        {
+          value: "selection",
+          label: (
+            <span className={styles.usedColorsScopeLabel}>
+              <span>Selection</span>
+              {selectionControlActive ? (
+                <span className={styles.usedColorsScopeCancelIcon} aria-hidden="true">
+                  <span className={styles.usedColorsScopeCancelGlyph} />
+                </span>
+              ) : null}
+            </span>
+          ),
+        },
+      ] satisfies Array<{ value: UsedColorsScopeMode; label: ReactNode }>,
+    [selectionControlActive],
   );
   const sortOptions = useMemo(
     () => [
@@ -737,9 +749,15 @@ export function UsedColorsSummary({
       <SegmentedControl
         ariaLabel="Colors used scope"
         className={styles.usedColorsScopeControl}
+        itemClassName={styles.usedColorsScopeControlItem}
         value={scopeMode}
         options={scopeOptions}
         onChange={onScopeModeChange}
+        onActiveClick={(value) => {
+          if (value === "selection") {
+            onScopeModeChange("full-canvas");
+          }
+        }}
       />
       {selectionPromptVisible ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>
