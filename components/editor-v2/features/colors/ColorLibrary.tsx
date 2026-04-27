@@ -123,7 +123,7 @@ export function ColorLibrary({
           type="search"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search colors"
+          placeholder="Search"
           aria-label="Search colors"
           className={styles.searchInput}
         />
