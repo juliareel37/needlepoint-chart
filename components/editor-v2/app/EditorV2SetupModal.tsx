@@ -311,9 +311,9 @@ export function EditorV2SetupModal({
                         <Button
                           key={preset.label}
                           type="button"
-                          variant="secondary"
+                          variant="secondary2"
                           size="sm"
-                          className={styles.tertiaryPresetButton}
+                          // className={styles.tertiaryPresetButton}
                           active={active}
                           inertWhenActive={active}
                           aria-pressed={active}
@@ -389,9 +389,9 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset.label}
                             type="button"
-                            variant="secondary"
+                            variant="secondary2"
                             size="sm"
-                            className={styles.tertiaryCompactPresetButton}
+                            // className={styles.tertiaryCompactPresetButton}
                             active={active}
                             inertWhenActive={active}
                             aria-pressed={active}
@@ -428,7 +428,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset}
                             type="button"
-                            variant="secondary"
+                            variant="secondary2"
                             size="md"
                             className={styles.meshPresetButton}
                             active={active}
