@@ -441,8 +441,12 @@ export function UsedColorsSummary({
   usedColors,
   colorsById,
   highlightedColorId,
+  isBottomPanelCanvasFocusActive,
+  isBottomPanelLayout,
   palette,
   onActiveColorChange,
+  onEnterBottomPanelCanvasFocus,
+  onExitBottomPanelCanvasFocus,
   onHighlightColorChange,
   showSymbols,
   symbolAssignments,
@@ -454,8 +458,12 @@ export function UsedColorsSummary({
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
   highlightedColorId: string | null;
+  isBottomPanelCanvasFocusActive: boolean;
+  isBottomPanelLayout: boolean;
   palette: PaletteColor[];
   onActiveColorChange: (colorId: string) => void;
+  onEnterBottomPanelCanvasFocus: () => void;
+  onExitBottomPanelCanvasFocus: () => void;
   onHighlightColorChange: (colorId: string | null) => void;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -476,6 +484,7 @@ export function UsedColorsSummary({
     useState<UsedColorsSuccessNotification | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
+  const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
   const sortOptions = useMemo(
@@ -505,8 +514,9 @@ export function UsedColorsSummary({
   useEffect(
     () => () => {
       onHighlightColorChange(null);
+      onExitBottomPanelCanvasFocus();
     },
-    [onHighlightColorChange],
+    [onExitBottomPanelCanvasFocus, onHighlightColorChange],
   );
 
   useEffect(() => {
@@ -525,6 +535,39 @@ export function UsedColorsSummary({
       setMergeConfirmationOpen(false);
     }
   }, [selectedColorIds]);
+
+  useEffect(() => {
+    if (
+      !isBottomPanelLayout ||
+      !isBottomPanelCanvasFocusActive ||
+      !highlightedColorId
+    ) {
+      return;
+    }
+
+    let firstFrameId = 0;
+    let secondFrameId = 0;
+
+    firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        const rowElement = usedColorRowElementsRef.current.get(highlightedColorId);
+        rowElement?.scrollIntoView({
+          block: "start",
+          inline: "nearest",
+          behavior: "auto",
+        });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [
+    highlightedColorId,
+    isBottomPanelCanvasFocusActive,
+    isBottomPanelLayout,
+  ]);
 
   useEffect(() => {
     if (!successNotification) {
@@ -750,6 +793,14 @@ export function UsedColorsSummary({
                 return (
               <li
                 key={entry.colorId}
+                ref={(element) => {
+                  if (element) {
+                    usedColorRowElementsRef.current.set(entry.colorId, element);
+                    return;
+                  }
+
+                  usedColorRowElementsRef.current.delete(entry.colorId);
+                }}
                 className={styles.usedColorsRow}
                 data-active-color={isActiveColor ? "true" : "false"}
                 data-selectable={isSelecting ? "true" : "false"}
@@ -934,9 +985,23 @@ export function UsedColorsSummary({
                   }
                   onClick={(event) => {
                     event.stopPropagation();
-                    onHighlightColorChange(
-                      highlightedColorId === entry.colorId ? null : entry.colorId,
-                    );
+                    const nextHighlightedColorId =
+                      highlightedColorId === entry.colorId ? null : entry.colorId;
+
+                    onHighlightColorChange(nextHighlightedColorId);
+
+                    if (!isBottomPanelLayout) {
+                      return;
+                    }
+
+                    if (nextHighlightedColorId) {
+                      onEnterBottomPanelCanvasFocus();
+                      return;
+                    }
+
+                    if (isBottomPanelCanvasFocusActive) {
+                      onExitBottomPanelCanvasFocus();
+                    }
                   }}
                   onKeyDown={(event) => {
                     event.stopPropagation();

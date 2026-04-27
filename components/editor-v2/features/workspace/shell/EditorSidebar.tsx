@@ -30,6 +30,7 @@ interface EditorSidebarProps {
   colorsById: Record<string, PaletteColor>;
   documentTitle: string;
   hasSavedDesignAccess: boolean;
+  isBottomPanelCanvasFocusActive: boolean;
   palette: PaletteColor[];
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
@@ -37,6 +38,8 @@ interface EditorSidebarProps {
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
   onClose: () => void;
+  onEnterBottomPanelCanvasFocus: () => void;
+  onExitBottomPanelCanvasFocus: () => void;
   onStartOver: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -66,6 +69,7 @@ export function EditorSidebar({
   colorsById,
   documentTitle,
   hasSavedDesignAccess,
+  isBottomPanelCanvasFocusActive,
   palette,
   savedDocuments,
   savedDocumentsLoading,
@@ -73,6 +77,8 @@ export function EditorSidebar({
   setSelectedStorageId,
   onLoadSelected,
   onClose,
+  onEnterBottomPanelCanvasFocus,
+  onExitBottomPanelCanvasFocus,
   onStartOver,
   previewMode,
   showGridlines,
@@ -158,20 +164,22 @@ export function EditorSidebar({
                         : "Settings"}
             </h2>
           )}
-          <Button
-            type="button"
-            variant="ghostV2"
-            size="sm"
-            className={styles.sidebarCloseButton}
-            aria-label="Hide panel"
-            title="Hide panel"
-            onClick={onClose}
-          >
-            <ButtonIcon
-              icon="/icons/lucide/x.svg"
-              className={styles.sidebarCloseIcon}
-            />
-          </Button>
+          <div className={styles.sidebarHeaderActions}>
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="sm"
+              className={styles.sidebarCloseButton}
+              aria-label="Hide panel"
+              title="Hide panel"
+              onClick={onClose}
+            >
+              <ButtonIcon
+                icon="/icons/lucide/x.svg"
+                className={styles.sidebarCloseIcon}
+              />
+            </Button>
+          </div>
         </div>
 
         <div className={styles.sidebarPanelBody}>
@@ -196,7 +204,10 @@ export function EditorSidebar({
               colorsById={colorsById}
               dispatch={dispatch}
               highlightedColorId={highlightedColorId}
+              isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
+              onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
+              onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
               palette={palette}

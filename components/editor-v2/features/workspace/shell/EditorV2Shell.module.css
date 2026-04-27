@@ -172,6 +172,18 @@
   color: var(--text-primary);
 }
 
+.sidebarHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarHeaderActionButton {
+  min-width: 32px;
+  padding-inline: 8px;
+  color: var(--text-primary);
+}
+
 .sidebarCloseIcon {
   width: 16px;
   height: 16px;
@@ -2559,6 +2571,11 @@
   .sidePanelOverlay {
     width: 100%;
     top: 25%;
+    transition: top 180ms ease;
+  }
+
+  .sidePanelOverlay[data-mobile-canvas-focus="true"] {
+    top: 60%;
   }
 
   .sidePanelOverlay[data-collapsed="true"] .sidebar {

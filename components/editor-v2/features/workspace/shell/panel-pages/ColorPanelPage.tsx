@@ -25,7 +25,10 @@ interface ColorPanelPageProps {
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
+  isBottomPanelCanvasFocusActive: boolean;
   isBottomPanelLayout: boolean;
+  onExitBottomPanelCanvasFocus: () => void;
+  onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
   palette: PaletteColor[];
@@ -41,7 +44,10 @@ export function ColorPanelPage({
   colorsById,
   dispatch,
   highlightedColorId,
+  isBottomPanelCanvasFocusActive,
   isBottomPanelLayout,
+  onExitBottomPanelCanvasFocus,
+  onEnterBottomPanelCanvasFocus,
   onViewChange,
   onHighlightColorChange,
   palette,
@@ -216,10 +222,14 @@ export function ColorPanelPage({
               usedColors={usedColors}
               colorsById={colorsById}
               highlightedColorId={highlightedColorId}
+              isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
+              isBottomPanelLayout={isBottomPanelLayout}
               palette={palette}
               onActiveColorChange={(colorId) =>
                 dispatch(createSetActiveColorCommand(colorId))
               }
+              onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
+              onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onHighlightColorChange={onHighlightColorChange}
               showSymbols={showSymbols}
               symbolAssignments={symbolAssignments}
