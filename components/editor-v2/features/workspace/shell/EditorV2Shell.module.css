@@ -2014,8 +2014,10 @@
   flex-direction: column;
   padding: 10px 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-card) 86%, var(--brand-100));
-  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 70%, var(--brand-200));
+  /* background: color-mix(in srgb, var(--surface-card) 86%, var(--brand-100)); */
+  background: var(--surface-primary);
+  border: 1px solid var(--ui-border-reg);
+  /* border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 70%, var(--brand-200)); */
   box-shadow: var(--ui-shadow-md);
   backdrop-filter: blur(8px);
   align-items: stretch;
@@ -2033,6 +2035,8 @@
   width: 32px;
   height: 32px;
   transform: translateY(-50%);
+  background: var(--surface-primary);
+  box-shadow: var(--ui-shadow-sm);
 }
 
 .usedColorsSelectionBarTop {
