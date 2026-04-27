@@ -26,6 +26,10 @@
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
+.controlWithSuffix {
+  padding-right: 56px;
+}
+
 .control::placeholder {
   color: var(--text-secondary);
   opacity: 0.72;
@@ -39,6 +43,23 @@
 .control:focus-within {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 2px var(--brand-200);
+}
+
+.inputWithSuffix {
+  position: relative;
+  display: block;
+}
+
+.suffix {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .checkboxRow {

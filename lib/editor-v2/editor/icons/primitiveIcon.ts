@@ -20,6 +20,7 @@ interface PrimitiveIconSvgOptions {
   height: number;
   strokeColor: string;
   secondaryStrokeColor?: string | null;
+  fillColor?: string | null;
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
   patternScale?: number;
@@ -120,6 +121,7 @@ export function buildPrimitiveIconDataUrl({
   height,
   strokeColor,
   secondaryStrokeColor,
+  fillColor,
   strokeReferenceSize,
   strokeWidthScale = 1,
   patternScale = 1,
@@ -138,6 +140,7 @@ export function buildPrimitiveIconDataUrl({
   const svgWidth = normalizedWidth.toFixed(3);
   const svgHeight = normalizedHeight.toFixed(3);
   const escapedStroke = escapeXmlAttribute(strokeColor || DEFAULT_STROKE_COLOR);
+  const escapedFill = normalizePrimitiveFillPaint(fillColor);
 
   let shapeMarkup = "";
   switch (kind) {
@@ -147,9 +150,9 @@ export function buildPrimitiveIconDataUrl({
         normalizedHeight / 2
       ).toFixed(3)}" rx="${radius.toFixed(3)}" ry="${radius.toFixed(
         3,
-      )}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      )}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
     case "rectangle": {
@@ -158,9 +161,9 @@ export function buildPrimitiveIconDataUrl({
       )}" width="${Math.max(0, normalizedWidth - strokeWidth).toFixed(3)}" height="${Math.max(
         0,
         normalizedHeight - strokeWidth,
-      ).toFixed(3)}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      ).toFixed(3)}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke"/>`;
+      )}"/>`;
       break;
     }
     case "triangle": {
@@ -171,26 +174,20 @@ export function buildPrimitiveIconDataUrl({
         )}`,
         `${halfStroke.toFixed(3)},${(normalizedHeight - halfStroke).toFixed(3)}`,
       ].join(" ");
-      shapeMarkup = `<polygon points="${points}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      shapeMarkup = `<polygon points="${points}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke"/>`;
+      )}"/>`;
       break;
     }
     case "star": {
-      const centerX = normalizedWidth / 2;
-      const centerY = normalizedHeight / 2;
-      const outerRadius = Math.max(0, Math.min(normalizedWidth, normalizedHeight) / 2 - halfStroke);
-      const innerRadius = outerRadius * 0.45;
-      const starPoints = Array.from({ length: 10 }, (_, index) => {
-        const angle = -Math.PI / 2 + (index * Math.PI) / 5;
-        const radius = index % 2 === 0 ? outerRadius : innerRadius;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-        return `${x.toFixed(3)},${y.toFixed(3)}`;
-      }).join(" ");
-      shapeMarkup = `<polygon points="${starPoints}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      const starPoints = buildNormalizedStarPoints(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+      );
+      shapeMarkup = `<polygon points="${starPoints}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
     case "heart": {
@@ -200,9 +197,9 @@ export function buildPrimitiveIconDataUrl({
         halfStroke,
       );
 
-      shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      shapeMarkup = `<path d="${pathData}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
     case "double-rectangle-frame": {
@@ -225,7 +222,7 @@ export function buildPrimitiveIconDataUrl({
           3,
         )}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
           3,
-        )}" vector-effect="non-scaling-stroke"/>`,
+        )}"/>`,
         `<rect x="${innerOffset.toFixed(3)}" y="${innerOffset.toFixed(3)}" width="${Math.max(
           0,
           normalizedWidth - innerOffset * 2,
@@ -234,7 +231,7 @@ export function buildPrimitiveIconDataUrl({
           normalizedHeight - innerOffset * 2,
         ).toFixed(3)}" fill="none" stroke="${escapedStroke}" stroke-width="${innerStrokeWidth.toFixed(
           3,
-        )}" vector-effect="non-scaling-stroke"/>`,
+        )}"/>`,
       ].join("");
       break;
     }
@@ -247,7 +244,7 @@ export function buildPrimitiveIconDataUrl({
       );
       shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
+      )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
     case "greek-key-frame": {
@@ -258,7 +255,7 @@ export function buildPrimitiveIconDataUrl({
       );
       shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
-      )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`;
+      )}" stroke-linecap="square" stroke-linejoin="miter"/>`;
       break;
     }
     case "greek-key-frame-shadow": {
@@ -283,10 +280,10 @@ export function buildPrimitiveIconDataUrl({
       shapeMarkup = [
         `<path d="${shadowPathData}" fill="none" stroke="${shadowStroke}" stroke-width="${shadowStrokeWidth.toFixed(
           3,
-        )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`,
+        )}" stroke-linecap="square" stroke-linejoin="miter"/>`,
         `<path d="${basePathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
           3,
-        )}" vector-effect="non-scaling-stroke" stroke-linecap="square" stroke-linejoin="miter"/>`,
+        )}" stroke-linecap="square" stroke-linejoin="miter"/>`,
       ].join("");
       break;
     }
@@ -308,29 +305,38 @@ export function resolvePrimitiveColorSlots(
   slots: IconColorSlot[],
   paletteById: Record<string, PaletteColor>,
   fallbackColor: string | null,
-): { primary: string; secondary: string | null } {
-  const resolvedColors = slots.map((slot) => {
-    if (!slot.paletteColorId) {
-      return slot.sourceHex;
-    }
+): { primary: string; secondary: string | null; fill: string | null } {
+  const resolvedById = new Map(
+    slots.map((slot) => [
+      slot.id,
+      slot.paletteColorId ? (paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex) : slot.sourceHex,
+    ]),
+  );
+  const resolvedColors = slots.map((slot) => resolvedById.get(slot.id) ?? slot.sourceHex);
 
-    return paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex;
-  });
-
-  const primary = resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
-  const secondary = resolvedColors[1] ?? null;
+  const primary =
+    resolvedById.get("stroke") ?? resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
+  const secondary = resolvedById.get("shadow") ?? resolvedColors[1] ?? null;
+  const fill = resolvedById.get("fill") ?? null;
 
   return {
     primary,
     secondary,
+    fill,
   };
 }
 
 export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColorSlot[] {
-  if (kind === "greek-key-frame-shadow") {
+  if (
+    kind === "circle" ||
+    kind === "rectangle" ||
+    kind === "triangle" ||
+    kind === "heart" ||
+    kind === "star"
+  ) {
     return [
       {
-        id: "slot-1",
+        id: "stroke",
         sourceHex: "#121923",
         paletteColorId: findClosestPaletteColorId(
           DMC_COLOR_LIBRARY_BY_ID,
@@ -338,7 +344,25 @@ export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColo
         ),
       },
       {
-        id: "slot-2",
+        id: "fill",
+        sourceHex: "transparent",
+        paletteColorId: null,
+      },
+    ];
+  }
+
+  if (kind === "greek-key-frame-shadow") {
+    return [
+      {
+        id: "stroke",
+        sourceHex: "#121923",
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb("#121923") as Rgb,
+        ),
+      },
+      {
+        id: "shadow",
         sourceHex: "#8e99ab",
         paletteColorId: findClosestPaletteColorId(
           DMC_COLOR_LIBRARY_BY_ID,
@@ -355,7 +379,7 @@ function getPrimitiveStrokeWidth(
   kind: PrimitiveIconKind,
   width: number,
   height: number,
-  strokeReferenceSize: number | null | undefined,
+  _strokeReferenceSize: number | null | undefined,
   strokeWidthScale: number,
 ): number {
   const baseStrokeRatio =
@@ -365,15 +389,53 @@ function getPrimitiveStrokeWidth(
     kind === "greek-key-frame-shadow"
       ? FRAME_PRIMITIVE_STROKE_RATIO
       : DEFAULT_PRIMITIVE_STROKE_RATIO;
-  const referenceSize =
-    typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
-      ? Math.max(strokeReferenceSize, 1)
-      : Math.min(width, height);
-  const baseStrokeWidth = Math.max(Math.min(width, height), referenceSize) * baseStrokeRatio;
+  const renderedSize = Math.min(width, height);
+  const baseStrokeWidth = renderedSize * baseStrokeRatio;
   const normalizedScale =
     Number.isFinite(strokeWidthScale) && strokeWidthScale > 0 ? strokeWidthScale : 1;
   const minimumStrokeWidth = isPrimitiveFrameKind(kind) ? FRAME_PRIMITIVE_MIN_STROKE_WIDTH : 1;
   return Math.max(minimumStrokeWidth, baseStrokeWidth * normalizedScale);
+}
+
+function buildNormalizedStarPoints(
+  width: number,
+  height: number,
+  inset: number,
+): string {
+  const pointSet = Array.from({ length: 10 }, (_, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+    const radius = index % 2 === 0 ? 1 : 0.45;
+    return {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    };
+  });
+  const bounds = pointSet.reduce(
+    (accumulator, point) => ({
+      minX: Math.min(accumulator.minX, point.x),
+      maxX: Math.max(accumulator.maxX, point.x),
+      minY: Math.min(accumulator.minY, point.y),
+      maxY: Math.max(accumulator.maxY, point.y),
+    }),
+    {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    },
+  );
+  const innerWidth = Math.max(1, width - inset * 2);
+  const innerHeight = Math.max(1, height - inset * 2);
+  const rangeX = Math.max(bounds.maxX - bounds.minX, 0.0001);
+  const rangeY = Math.max(bounds.maxY - bounds.minY, 0.0001);
+
+  return pointSet
+    .map((point) => {
+      const x = inset + ((point.x - bounds.minX) / rangeX) * innerWidth;
+      const y = inset + ((point.y - bounds.minY) / rangeY) * innerHeight;
+      return `${x.toFixed(3)},${y.toFixed(3)}`;
+    })
+    .join(" ");
 }
 
 function getResponsiveStrokeScaleMultiplier(
@@ -419,6 +481,16 @@ function clampPrimitiveStrokeWidthScale(
 
 function roundStrokeScale(value: number): number {
   return Number(value.toFixed(2));
+}
+
+function normalizePrimitiveFillPaint(fillColor: string | null | undefined): string {
+  const normalized = fillColor?.trim().toLowerCase();
+
+  if (!normalized || normalized === "transparent" || normalized === "none") {
+    return "none";
+  }
+
+  return escapeXmlAttribute(fillColor ?? normalized);
 }
 
 function buildHeartParametricPathData(

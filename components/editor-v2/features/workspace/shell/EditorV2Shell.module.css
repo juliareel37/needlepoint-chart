@@ -113,7 +113,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ui-border-subtle);
+  border-bottom: 1px solid var(--ui-border-reg);
 }
 
 .sidebarPanelTitle {
@@ -167,6 +167,18 @@
 }
 
 .sidebarCloseButton {
+  min-width: 32px;
+  padding-inline: 8px;
+  color: var(--text-primary);
+}
+
+.sidebarHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarHeaderActionButton {
   min-width: 32px;
   padding-inline: 8px;
   color: var(--text-primary);
@@ -257,7 +269,7 @@
   width: fit-content;
   max-width: 100%;
   min-width: 0;
-  padding: 6px 0;
+  padding: 8px 4px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -272,10 +284,10 @@
 }
 
 .editableTitleTrigger:focus-visible {
-  border-color: transparent;
-  background: transparent;
+  border-color: var(--ui-border-subtle);
+  background: var(--surface-card);
   color: var(--text-primary);
-  box-shadow: none;
+  box-shadow: var(--ui-shadow-sm);
 }
 
 .titleHoverIcon {
@@ -283,7 +295,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.65;
   transition: opacity 140ms ease;
 }
 
@@ -297,9 +309,6 @@
   height: 12px;
 }
 
-.editableTitleTrigger:focus-visible .titleHoverIcon {
-  opacity: 0.65;
-}
 .loadDesignButtonRow {
   display: flex;
   flex-direction: column;
@@ -909,7 +918,26 @@
 .iconPlacementSwatchList {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
+  padding-inline: 4px;
+  padding-block: 2px;
+}
+
+.iconPlacementSwatchItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.iconPlacementSwatchCaption {
+  color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .iconPlacementSwatchButton {
@@ -974,6 +1002,11 @@
 
 .headerExportButton {
   white-space: nowrap;
+}
+
+.headerSaveButton {
+  white-space: nowrap;
+  margin-left: 14px;
 }
 
 .headerPreviewButton {
@@ -2027,7 +2060,7 @@
 .traceSectionDivider {
   width: 100%;
   height: 1px;
-  background: var(--ui-border-subtle);
+  background: var(--ui-border-reg);
 }
 
 .traceAttachmentSummary {
@@ -2269,16 +2302,11 @@
   }
 
   .editableTitleTrigger:hover {
-    border-color: transparent;
-    background: transparent;
+    border-color: var(--ui-border-subtle);
+    background: var(--surface-card);
     color: var(--text-primary);
-    box-shadow: none;
+    box-shadow: var(--ui-shadow-sm);
   }
-
-  .editableTitleTrigger:hover .titleHoverIcon {
-    opacity: 0.65;
-  }
-
   .sidebarDetailCard:hover {
     border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
     background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
@@ -2562,6 +2590,11 @@
   .sidePanelOverlay {
     width: 100%;
     top: 25%;
+    transition: top 180ms ease;
+  }
+
+  .sidePanelOverlay[data-mobile-canvas-focus="true"] {
+    top: 60%;
   }
 
   .sidePanelOverlay[data-collapsed="true"] .sidebar {

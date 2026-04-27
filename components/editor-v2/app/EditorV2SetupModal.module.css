@@ -5,6 +5,11 @@
   pointer-events: auto;
 }
 
+.modalCompact {
+  width: min(520px, calc(100vw - 40px));
+  max-height: calc(100dvh - var(--app-header-height, 52px) - 40px);
+}
+
 .card {
   display: flex;
   flex-direction: column;
@@ -20,6 +25,15 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.cardCompact {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .header {
@@ -89,6 +103,10 @@
   justify-content: center;
 }
 
+.contentCompact {
+  display: block;
+}
+
 .section {
   display: flex;
   flex-direction: column;
@@ -99,10 +117,28 @@
   border: 1px solid var(--ui-border-subtle);
 }
 
+.sectionStandalone {
+  gap: 20px;
+  padding: 28px;
+  border-radius: 28px;
+  background: var(--surface-primary);
+  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, white);
+  box-shadow:
+    0 28px 80px rgba(15, 23, 42, 0.24),
+    0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
 .sectionHeader {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.sectionHeaderStandalone {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .fieldGrid {
@@ -150,6 +186,12 @@
   border-radius: 10px;
 }
 
+.tertiaryPresetButton {
+  width: 100%;
+  justify-content: center;
+  border-radius: 10px;
+}
+
 .inlineOptionGrid {
   display: flex;
   flex-wrap: wrap;
@@ -158,10 +200,60 @@
 
 .compactPresetButton {
   justify-content: center;
-  /* border-radius: 999px; */
+  border-radius: 999px;
   padding-inline: 14px;
   min-height: 30px;
   white-space: nowrap;
+}
+
+.meshPresetButton {
+  justify-content: center;
+  border-radius: 10px;
+  padding-inline: 14px;
+  min-height: 30px;
+  white-space: nowrap;
+}
+
+.tertiaryCompactPresetButton {
+  justify-content: center;
+  border-radius: 10px;
+  padding-inline: 14px;
+  min-height: 30px;
+  white-space: nowrap;
+}
+
+.tertiaryPresetButton.tertiaryPresetButton,
+.tertiaryCompactPresetButton.tertiaryCompactPresetButton {
+  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 88%, white);
+  background: color-mix(in srgb, var(--surface-card) 58%, white);
+  color: var(--text-secondary) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.tertiaryPresetButton.tertiaryPresetButton[data-active="true"],
+.tertiaryCompactPresetButton.tertiaryCompactPresetButton[data-active="true"] {
+  border-color: color-mix(in srgb, var(--brand-primary) 28%, var(--ui-border-reg));
+  background: color-mix(in srgb, var(--brand-200) 26%, white);
+  color: var(--text-secondary) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tertiaryPresetButton.tertiaryPresetButton:hover:not(:disabled),
+  .tertiaryCompactPresetButton.tertiaryCompactPresetButton:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--brand-primary) 18%, var(--ui-border-reg));
+    background: color-mix(in srgb, var(--surface-card) 82%, white);
+    color: var(--text-secondary) !important;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
+  }
+
+  .tertiaryPresetButton.tertiaryPresetButton[data-active="true"]:hover:not(:disabled),
+  .tertiaryCompactPresetButton.tertiaryCompactPresetButton[data-active="true"]:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--brand-primary) 34%, var(--ui-border-reg));
+    background: color-mix(in srgb, var(--brand-200) 32%, white);
+    color: var(--text-secondary) !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  }
 }
 
 .customMeshCountInput {
@@ -192,7 +284,16 @@
     max-height: calc(100dvh - var(--app-header-height, 52px) - 24px);
   }
 
+  .modalCompact {
+    width: calc(100vw - 24px);
+  }
+
   .card {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .sectionStandalone {
     padding: 20px;
     border-radius: 24px;
   }

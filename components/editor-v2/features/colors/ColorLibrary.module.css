@@ -10,6 +10,29 @@
   border-radius: 16px;
 }
 
+.searchField {
+  position: relative;
+  color: var(--text-primary);
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  opacity: 0.64;
+  pointer-events: none;
+  background: currentColor center / contain no-repeat;
+  -webkit-mask: url("/icons/lucide/search.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/search.svg") center / contain no-repeat;
+}
+
+.searchInput {
+  padding-left: 38px;
+}
+
 .section {
   display: flex;
   flex-direction: column;
@@ -38,6 +61,13 @@
   grid-template-columns: repeat(auto-fill, minmax(var(--color-library-track-size), 1fr));
   /* gap: var(--color-library-grid-gap); */
   align-items: start;
+}
+
+.emptyState {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .colorButton {

@@ -160,12 +160,15 @@ function IconToolbarPortalPopover({
 interface IconColorSlotSwatchPopoverProps {
   activeColorId: string | null;
   assignedColorHex: string;
+  caption?: string | null;
   colors: PaletteColor[];
   featuredColorIds: string[];
   isOpen: boolean;
   isSelected: boolean;
+  isTransparentSelected?: boolean;
   label: string;
   onColorSelect: (colorId: string) => void;
+  onTransparentSelect?: () => void;
   onOpenChange: (open: boolean) => void;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -174,12 +177,15 @@ interface IconColorSlotSwatchPopoverProps {
 function IconColorSlotSwatchPopover({
   activeColorId,
   assignedColorHex,
+  caption = null,
   colors,
   featuredColorIds,
   isOpen,
   isSelected,
+  isTransparentSelected = false,
   label,
   onColorSelect,
+  onTransparentSelect,
   onOpenChange,
   showSymbols,
   symbolAssignments,
@@ -187,7 +193,11 @@ function IconColorSlotSwatchPopover({
   const anchorRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <ToolbarAnchor ref={anchorRef} role="listitem">
+    <ToolbarAnchor
+      ref={anchorRef}
+      role="listitem"
+      className={caption ? styles.iconPlacementSwatchItem : undefined}
+    >
       <ToolbarButton
         type="button"
         swatch
@@ -203,6 +213,7 @@ function IconColorSlotSwatchPopover({
           className={styles.libraryPopoverSwatch}
         />
       </ToolbarButton>
+      {caption ? <span className={styles.iconPlacementSwatchCaption}>{caption}</span> : null}
 
       {isOpen ? (
         <IconToolbarPortalPopover
@@ -219,8 +230,14 @@ function IconColorSlotSwatchPopover({
             className={styles.toolbarColorLibrary}
             colors={colors}
             featuredColorIds={featuredColorIds}
+            includeTransparentSwatch={Boolean(onTransparentSelect)}
+            onTransparentSelect={() => {
+              onTransparentSelect?.();
+              onOpenChange(false);
+            }}
             showFeaturedSymbols={showSymbols}
             symbolAssignments={symbolAssignments}
+            transparentSelected={isTransparentSelected}
             onColorSelect={(colorId) => {
               onColorSelect(colorId);
               onOpenChange(false);
@@ -354,6 +371,17 @@ export function IconPlacementToolbar({
         selectedColorSlotId: slotId,
         colorSlots: placement.colorSlots.map((slot) =>
           slot.id === slotId ? { ...slot, paletteColorId: colorId } : slot,
+        ),
+      }),
+    );
+  }
+
+  function clearSlotColor(slotId: string) {
+    dispatch(
+      createUpdateIconPlacementCommand({
+        selectedColorSlotId: slotId,
+        colorSlots: placement.colorSlots.map((slot) =>
+          slot.id === slotId ? { ...slot, paletteColorId: null } : slot,
         ),
       }),
     );
@@ -736,18 +764,34 @@ export function IconPlacementToolbar({
                       ? palette.find((color) => color.id === slot.paletteColorId) ?? null
                       : null;
                     const isSelected = slot.id === placement.selectedColorSlotId;
+                    const slotLabel = getIconColorSlotLabel(slot.id);
+                    const transparentSelected =
+                      !slot.paletteColorId &&
+                      (slot.sourceHex === "transparent" || slot.sourceHex === "none");
+                    const allowTransparent = slot.id === "fill";
+                    const primitiveCaption =
+                      placement.primitiveKind && (slot.id === "fill" || slot.id === "stroke")
+                        ? slot.id === "fill"
+                          ? "Fill"
+                          : "Outline"
+                        : null;
 
                     return (
                       <IconColorSlotSwatchPopover
                         key={slot.id}
                         activeColorId={slot.paletteColorId ?? null}
                         assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
+                        caption={primitiveCaption}
                         colors={palette}
                         featuredColorIds={featuredColorIds}
                         isOpen={openColorSlotId === slot.id}
                         isSelected={isSelected}
-                        label={`Edit icon color ${slot.sourceHex}`}
+                        isTransparentSelected={transparentSelected}
+                        label={`Edit ${slotLabel.toLowerCase()}`}
                         onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
+                        onTransparentSelect={
+                          allowTransparent ? () => clearSlotColor(slot.id) : undefined
+                        }
                         showSymbols={showSymbols}
                         symbolAssignments={symbolAssignments}
                         onOpenChange={(open) => {
@@ -831,4 +875,17 @@ export function IconPlacementToolbar({
       />
     </div>
   );
+}
+
+function getIconColorSlotLabel(slotId: string): string {
+  switch (slotId) {
+    case "stroke":
+      return "Stroke color";
+    case "fill":
+      return "Fill color";
+    case "shadow":
+      return "Shadow color";
+    default:
+      return "Icon color";
+  }
 }

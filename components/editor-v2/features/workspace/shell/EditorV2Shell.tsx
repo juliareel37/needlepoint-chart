@@ -69,6 +69,14 @@ interface PreviewSessionSnapshot {
   };
 }
 
+interface BottomPanelCanvasFocusSnapshot {
+  viewport: {
+    zoom: number;
+    offsetX: number;
+    offsetY: number;
+  };
+}
+
 export function EditorV2Shell({
   canvasLoading,
   errorNotification,
@@ -146,20 +154,28 @@ export function EditorV2Shell({
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
+  const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
   const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
+  const bottomPanelCanvasFocusSnapshotRef =
+    useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
+  const bottomPanelCanvasFocusFitPendingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
+  const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
+    useState(false);
   const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
   const [layoutModeResolved, setLayoutModeResolved] = useState(false);
   const [canvasWorldSize, setCanvasWorldSize] = useState({ width: 0, height: 0 });
+  const [stageToolbarTopInset, setStageToolbarTopInset] = useState(0);
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
@@ -168,6 +184,14 @@ export function EditorV2Shell({
   const mobileSelectionDocked =
     isBottomPanelLayout &&
     (Boolean(selectionBounds) || activeTool === "lasso");
+  const mobileBottomPanelVisibleHeightRatio =
+    isBottomPanelLayout && !sidebarCollapsed
+      ? isBottomPanelCanvasFocusActive
+        ? 0.6
+        : 0.25
+      : 1;
+  const mobileVisibleTopInset =
+    isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
@@ -199,7 +223,10 @@ export function EditorV2Shell({
       canvasWorldSize.width - (sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH),
       1,
     );
-    const availableHeight = Math.max(canvasWorldSize.height, 1);
+    const availableHeight = Math.max(
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset,
+      1,
+    );
 
     return Math.min(
       availableWidth / Math.max(gridMetrics.surfaceWidth, 1),
@@ -210,6 +237,8 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
+    mobileVisibleTopInset,
+    mobileBottomPanelVisibleHeightRatio,
   ]);
   const zoomAnchor = useMemo(() => {
     if (canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
@@ -220,7 +249,11 @@ export function EditorV2Shell({
       sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
     const visibleCenterX =
       visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
-    const visibleCenterY = canvasWorldSize.height / 2;
+    const visibleCanvasHeight = Math.max(
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset,
+      1,
+    );
+    const visibleCenterY = mobileVisibleTopInset + visibleCanvasHeight / 2;
     const centeredWorldOriginX =
       (canvasWorldSize.width - gridMetrics.surfaceWidth) / 2;
     const centeredWorldOriginY =
@@ -236,18 +269,47 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    mobileVisibleTopInset,
+    mobileBottomPanelVisibleHeightRatio,
     sidebarCollapsed,
   ]);
   const textViewportCenter = useMemo(() => {
-    if (!zoomAnchor || viewport.zoom <= 0) {
+    if (viewport.zoom <= 0 || canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
       return null;
     }
 
+    const visibleLeftInset =
+      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleCenterX =
+      visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
+    const visibleCanvasHeight = Math.max(
+      canvasWorldSize.height - mobileVisibleTopInset,
+      1,
+    );
+    const visibleCenterY = mobileVisibleTopInset + visibleCanvasHeight / 2;
+    const centeredWorldOriginX =
+      (canvasWorldSize.width - gridMetrics.surfaceWidth) / 2;
+    const centeredWorldOriginY =
+      (canvasWorldSize.height - gridMetrics.surfaceHeight) / 2;
+    const anchorX = visibleCenterX - centeredWorldOriginX;
+    const anchorY = visibleCenterY - centeredWorldOriginY;
+
     return {
-      x: (zoomAnchor.x - viewport.offsetX) / viewport.zoom,
-      y: (zoomAnchor.y - viewport.offsetY) / viewport.zoom,
+      x: (anchorX - viewport.offsetX) / viewport.zoom,
+      y: (anchorY - viewport.offsetY) / viewport.zoom,
     };
-  }, [viewport.offsetX, viewport.offsetY, viewport.zoom, zoomAnchor]);
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    gridMetrics.surfaceHeight,
+    gridMetrics.surfaceWidth,
+    isBottomPanelLayout,
+    mobileVisibleTopInset,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+    viewport.zoom,
+  ]);
   const textViewportWidth = useMemo(() => {
     if (viewport.zoom <= 0 || canvasWorldSize.width <= 0) {
       return null;
@@ -269,8 +331,15 @@ export function EditorV2Shell({
       return null;
     }
 
-    return canvasWorldSize.height / viewport.zoom;
-  }, [canvasWorldSize.height, viewport.zoom]);
+    return Math.max(
+      canvasWorldSize.height - mobileVisibleTopInset,
+      1,
+    ) / viewport.zoom;
+  }, [
+    canvasWorldSize.height,
+    mobileVisibleTopInset,
+    viewport.zoom,
+  ]);
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -282,11 +351,21 @@ export function EditorV2Shell({
 
     const visibleLeftInset =
       sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const availableLeft = visibleLeftInset;
+    const availableTop = mobileVisibleTopInset;
+    const availableWidth = canvasWorldSize.width - visibleLeftInset;
+    const visibleCanvasHeight =
+      canvasWorldSize.height * mobileBottomPanelVisibleHeightRatio - mobileVisibleTopInset;
     const renderedWidth = gridMetrics.surfaceWidth * fitZoom;
     const renderedHeight = gridMetrics.surfaceHeight * fitZoom;
+    const frameOriginX =
+      (canvasWorldSize.width - gridMetrics.surfaceWidth) / 2;
+    const frameOriginY =
+      (canvasWorldSize.height - gridMetrics.surfaceHeight) / 2;
     const targetOffsetX =
-      visibleLeftInset / 2 + (gridMetrics.surfaceWidth - renderedWidth) / 2;
-    const targetOffsetY = (gridMetrics.surfaceHeight - renderedHeight) / 2;
+      availableLeft + (availableWidth - renderedWidth) / 2 - frameOriginX;
+    const targetOffsetY =
+      availableTop + (visibleCanvasHeight - renderedHeight) / 2 - frameOriginY;
 
     dispatch(createSetViewportZoomCommand(fitZoom));
     dispatch(
@@ -303,6 +382,8 @@ export function EditorV2Shell({
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
     isBottomPanelLayout,
+    mobileVisibleTopInset,
+    mobileBottomPanelVisibleHeightRatio,
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
@@ -368,6 +449,68 @@ export function EditorV2Shell({
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
+  ]);
+
+  const exitBottomPanelCanvasFocus = useCallback(
+    (options?: { restoreViewport?: boolean }) => {
+      const restoreViewport = options?.restoreViewport ?? true;
+      const snapshot = bottomPanelCanvasFocusSnapshotRef.current;
+
+      bottomPanelCanvasFocusFitPendingRef.current = false;
+      setIsBottomPanelCanvasFocusActive(false);
+
+      if (!restoreViewport || !snapshot) {
+        bottomPanelCanvasFocusSnapshotRef.current = null;
+        return;
+      }
+
+      dispatch(createSetViewportZoomCommand(snapshot.viewport.zoom));
+      dispatch(
+        createPanViewportCommand(
+          snapshot.viewport.offsetX - viewport.offsetX,
+          snapshot.viewport.offsetY - viewport.offsetY,
+        ),
+      );
+
+      bottomPanelCanvasFocusSnapshotRef.current = null;
+    },
+    [dispatch, viewport.offsetX, viewport.offsetY],
+  );
+
+  const enterBottomPanelCanvasFocus = useCallback(() => {
+    if (isBottomPanelCanvasFocusActive || !isBottomPanelLayout || sidebarCollapsed) {
+      return;
+    }
+
+    bottomPanelCanvasFocusSnapshotRef.current = {
+      viewport: {
+        zoom: viewport.zoom,
+        offsetX: viewport.offsetX,
+        offsetY: viewport.offsetY,
+      },
+    };
+    bottomPanelCanvasFocusFitPendingRef.current = true;
+    setIsBottomPanelCanvasFocusActive(true);
+  }, [
+    isBottomPanelCanvasFocusActive,
+    isBottomPanelLayout,
+    sidebarCollapsed,
+    viewport.offsetX,
+    viewport.offsetY,
+    viewport.zoom,
+  ]);
+
+  const toggleBottomPanelCanvasFocus = useCallback(() => {
+    if (isBottomPanelCanvasFocusActive) {
+      exitBottomPanelCanvasFocus();
+      return;
+    }
+
+    enterBottomPanelCanvasFocus();
+  }, [
+    enterBottomPanelCanvasFocus,
+    exitBottomPanelCanvasFocus,
+    isBottomPanelCanvasFocusActive,
   ]);
 
   useEffect(() => {
@@ -444,6 +587,46 @@ export function EditorV2Shell({
   }, []);
 
   useEffect(() => {
+    const update = () => {
+      const canvasElement = canvasWorldRef.current;
+      const toolbarElement = stageToolbarTopRef.current;
+
+      if (!canvasElement || !toolbarElement || previewMode || isBottomPanelCanvasFocusActive) {
+        setStageToolbarTopInset(0);
+        return;
+      }
+
+      const canvasRect = canvasElement.getBoundingClientRect();
+      const toolbarRect = toolbarElement.getBoundingClientRect();
+      const nextInset = Math.max(0, toolbarRect.bottom - canvasRect.top + 12);
+      setStageToolbarTopInset((current) =>
+        Math.abs(current - nextInset) < 0.5 ? current : nextInset,
+      );
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+
+    const observer = new ResizeObserver(update);
+    if (canvasWorldRef.current) {
+      observer.observe(canvasWorldRef.current);
+    }
+    if (stageToolbarTopRef.current) {
+      observer.observe(stageToolbarTopRef.current);
+    }
+
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      observer.disconnect();
+    };
+  }, [isBottomPanelCanvasFocusActive, previewMode, sidebarCollapsed, activeSidebarSection]);
+
+  useEffect(() => {
     if (
       !layoutModeResolved ||
       hasAppliedInitialFitRef.current ||
@@ -467,6 +650,9 @@ export function EditorV2Shell({
   useEffect(() => {
     if (!isBottomPanelLayout) {
       hasAppliedMobileLayoutRef.current = false;
+      if (isBottomPanelCanvasFocusActive) {
+        exitBottomPanelCanvasFocus({ restoreViewport: false });
+      }
       return;
     }
 
@@ -506,8 +692,10 @@ export function EditorV2Shell({
     fitToGrid,
     fitZoom,
     isBottomPanelLayout,
+    isBottomPanelCanvasFocusActive,
     layoutModeResolved,
     sidebarCollapsed,
+    exitBottomPanelCanvasFocus,
   ]);
 
   useEffect(() => {
@@ -542,6 +730,47 @@ export function EditorV2Shell({
     fitToGrid,
     fitZoom,
     previewMode,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (!isBottomPanelCanvasFocusActive || sidebarCollapsed) {
+      if (isBottomPanelCanvasFocusActive && sidebarCollapsed) {
+        exitBottomPanelCanvasFocus({ restoreViewport: false });
+      }
+      return;
+    }
+
+    if (
+      !bottomPanelCanvasFocusFitPendingRef.current ||
+      fitZoom <= 0 ||
+      canvasWorldSize.width <= 0 ||
+      canvasWorldSize.height <= 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      fitToGrid();
+      bottomPanelCanvasFocusFitPendingRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    exitBottomPanelCanvasFocus,
+    fitToGrid,
+    fitZoom,
+    isBottomPanelCanvasFocusActive,
     sidebarCollapsed,
   ]);
 
@@ -654,6 +883,7 @@ export function EditorV2Shell({
   [saveMessage]);
 
   useEffect(() => {
+    setHeaderFileLeftTarget(window.document.getElementById("app-header-file-left"));
     setHeaderActionsTarget(window.document.getElementById("app-header-actions"));
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
     setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
@@ -727,6 +957,24 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
+      {!setupModalOpen && headerFileLeftTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={styles.headerSaveButton}
+              disabled={saveButtonState === "saving"}
+              onClick={() => onSaveDocument(document)}
+            >
+              <SaveButtonLabel
+                hasSavedDesignAccess={hasSavedDesignAccess}
+                state={saveButtonState}
+              />
+            </Button>,
+            headerFileLeftTarget,
+          )
+        : null}
       {!setupModalOpen && !useTopSaveBanner && headerAutosaveTarget
         ? createPortal(
             <HeaderSaveStatus
@@ -987,6 +1235,7 @@ export function EditorV2Shell({
             <div
               className={styles.sidePanelOverlay}
               data-collapsed={sidebarCollapsed ? "true" : "false"}
+              data-mobile-canvas-focus={isBottomPanelCanvasFocusActive ? "true" : "false"}
             >
               <EditorSidebar
                 activeSection={activeSidebarSection}
@@ -995,10 +1244,10 @@ export function EditorV2Shell({
                 colorsById={colorsById}
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
+                isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 gridMetrics={gridMetrics}
                 showRuler={showRuler}
-                saveButtonState={saveButtonState}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
                 selectedStorageId={selectedStorageId}
@@ -1011,7 +1260,8 @@ export function EditorV2Shell({
                   void onLoadDocument(selectedRecord);
                 }}
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
-                onSaveDocument={onSaveDocument}
+                onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
+                onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
                 trace={trace}
@@ -1033,8 +1283,9 @@ export function EditorV2Shell({
               />
             </div>
 
-            {previewMode ? null : (
+            {previewMode || isBottomPanelCanvasFocusActive ? null : (
               <div
+                ref={stageToolbarTopRef}
                 className={styles.stageToolbarTop}
                 style={{
                   ["--stage-toolbar-left-inset" as string]:
@@ -1233,6 +1484,44 @@ function HeaderSaveStatus({
         </button>
       ) : null}
     </div>
+  );
+}
+
+function SaveButtonLabel({
+  hasSavedDesignAccess,
+  state,
+}: {
+  hasSavedDesignAccess: boolean;
+  state: SaveButtonState;
+}) {
+  if (state === "saving") {
+    return (
+      <>
+        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+        Saving
+      </>
+    );
+  }
+
+  if (state === "saved") {
+    return (
+      <>
+        <ButtonIcon icon="/icons/lucide/check.svg" className={styles.saveButtonIcon} />
+        Saved
+      </>
+    );
+  }
+
+  return hasSavedDesignAccess ? (
+    <>
+      <ButtonIcon icon="/icons/lucide/save.svg" className={styles.saveButtonIcon} />
+      Save
+    </>
+  ) : (
+    <>
+      <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} />
+      Sign in to save
+    </>
   );
 }
 

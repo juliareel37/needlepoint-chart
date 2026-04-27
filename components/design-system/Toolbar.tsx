@@ -246,12 +246,26 @@ export function ToolbarSwatch({
   className,
   ...props
 }: HTMLAttributes<HTMLSpanElement> & { color: string }) {
+  const isTransparent =
+    color.trim().toLowerCase() === "transparent" || color.trim().toLowerCase() === "none";
+  const transparentBackgroundImage =
+    "linear-gradient(45deg, rgba(15, 23, 42, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, 0.1) 75%), linear-gradient(45deg, rgba(15, 23, 42, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, 0.1) 75%)";
+
   return (
     <span
       {...props}
       aria-hidden={props["aria-hidden"] ?? "true"}
       className={[styles.swatch, className].filter(Boolean).join(" ")}
-      style={{ ...props.style, background: color }}
+      style={{
+        ...props.style,
+        backgroundColor: isTransparent ? "#ffffff" : color,
+        backgroundImage: isTransparent
+          ? transparentBackgroundImage
+          : props.style?.backgroundImage,
+        backgroundPosition: isTransparent ? "0 0, 4px 4px" : props.style?.backgroundPosition,
+        backgroundSize: isTransparent ? "8px 8px, 8px 8px" : props.style?.backgroundSize,
+        backgroundRepeat: isTransparent ? "repeat, repeat" : props.style?.backgroundRepeat,
+      }}
     />
   );
 }
