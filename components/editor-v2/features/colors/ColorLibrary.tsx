@@ -31,17 +31,24 @@ function getSwatchSymbolColor(hex: string) {
   return luminance > 0.68 ? "#111827" : "#f8fafc";
 }
 
+function getTransparentSwatchBackground() {
+  return "linear-gradient(45deg, rgba(15, 23, 42, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, 0.1) 75%), linear-gradient(45deg, rgba(15, 23, 42, 0.1) 25%, transparent 25%, transparent 75%, rgba(15, 23, 42, 0.1) 75%)";
+}
+
 interface ColorLibraryProps {
   activeColorId: string | null;
   className?: string;
   colors: PaletteColor[];
   featuredColorIds?: string[];
+  includeTransparentSwatch?: boolean;
   onColorSelect: (colorId: string) => void;
+  onTransparentSelect?: () => void;
   showAllSectionHeader?: boolean;
   showAllSymbols?: boolean;
   showFeaturedSection?: boolean;
   showFeaturedSymbols?: boolean;
   symbolAssignments?: Record<string, string>;
+  transparentSelected?: boolean;
 }
 
 export function ColorLibrary({
@@ -49,12 +56,15 @@ export function ColorLibrary({
   className,
   colors,
   featuredColorIds = [],
+  includeTransparentSwatch = false,
   onColorSelect,
+  onTransparentSelect,
   showAllSectionHeader = true,
   showAllSymbols = false,
   showFeaturedSection = true,
   showFeaturedSymbols = false,
   symbolAssignments = {},
+  transparentSelected = false,
 }: ColorLibraryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const featuredColorIdSet = new Set(featuredColorIds);
@@ -69,6 +79,45 @@ export function ColorLibrary({
   const filteredColors = colors.filter(matchesSearch);
   const featuredColors = filteredColors.filter((color) => featuredColorIdSet.has(color.id));
   const hasSearchQuery = normalizedSearchQuery.length > 0;
+
+  function renderTransparentButton() {
+    return (
+      <Button
+        key="transparent-swatch"
+        type="button"
+        onClick={() => onTransparentSelect?.()}
+        variant="ghostV2"
+        size="sm"
+        active={transparentSelected}
+        inertWhenActive
+        className={styles.colorButton}
+        aria-label="Transparent"
+        aria-pressed={transparentSelected}
+      >
+        <span
+          aria-hidden="true"
+          className={styles.swatch}
+          style={{
+            backgroundColor: "#ffffff",
+            backgroundImage: getTransparentSwatchBackground(),
+            backgroundPosition: "0 0, 4px 4px",
+            backgroundSize: "8px 8px, 8px 8px",
+            backgroundRepeat: "repeat, repeat",
+          }}
+        >
+          {transparentSelected ? (
+            <span
+              aria-hidden="true"
+              className={styles.swatchCheck}
+              style={{ color: "#111111" }}
+            >
+              ✓
+            </span>
+          ) : null}
+        </span>
+      </Button>
+    );
+  }
 
   function renderColorButton(color: PaletteColor, options?: { showSymbol?: boolean }) {
     const selected = color.id === activeColorId;
@@ -128,6 +177,15 @@ export function ColorLibrary({
           className={styles.searchInput}
         />
       </div>
+
+      {includeTransparentSwatch ? (
+        <section className={styles.section} aria-label="Transparent">
+          <div className={styles.sectionContent}>
+            <h3 className={styles.sectionHeader}>Transparent</h3>
+            <div className={styles.sectionGrid}>{renderTransparentButton()}</div>
+          </div>
+        </section>
+      ) : null}
 
       {showFeaturedSection && featuredColors.length > 0 ? (
         <section className={styles.section} aria-label="Design colors">

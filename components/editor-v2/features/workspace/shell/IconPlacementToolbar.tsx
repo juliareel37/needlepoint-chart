@@ -160,7 +160,7 @@ function IconToolbarPortalPopover({
 interface IconColorSlotSwatchPopoverProps {
   activeColorId: string | null;
   assignedColorHex: string;
-  allowTransparent?: boolean;
+  caption?: string | null;
   colors: PaletteColor[];
   featuredColorIds: string[];
   isOpen: boolean;
@@ -177,7 +177,7 @@ interface IconColorSlotSwatchPopoverProps {
 function IconColorSlotSwatchPopover({
   activeColorId,
   assignedColorHex,
-  allowTransparent = false,
+  caption = null,
   colors,
   featuredColorIds,
   isOpen,
@@ -193,7 +193,11 @@ function IconColorSlotSwatchPopover({
   const anchorRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <ToolbarAnchor ref={anchorRef} role="listitem">
+    <ToolbarAnchor
+      ref={anchorRef}
+      role="listitem"
+      className={caption ? styles.iconPlacementSwatchItem : undefined}
+    >
       <ToolbarButton
         type="button"
         swatch
@@ -209,6 +213,7 @@ function IconColorSlotSwatchPopover({
           className={styles.libraryPopoverSwatch}
         />
       </ToolbarButton>
+      {caption ? <span className={styles.iconPlacementSwatchCaption}>{caption}</span> : null}
 
       {isOpen ? (
         <IconToolbarPortalPopover
@@ -220,34 +225,19 @@ function IconColorSlotSwatchPopover({
           className={styles.colorLibraryPopover}
           style={{ whiteSpace: "normal" }}
         >
-          {allowTransparent ? (
-            <>
-              <ToolbarButton
-                type="button"
-                variant="ghost"
-                className={styles.iconPlacementTransparentButton}
-                active={isTransparentSelected}
-                onClick={() => {
-                  onTransparentSelect?.();
-                  onOpenChange(false);
-                }}
-              >
-                <ToolbarSwatch
-                  color="transparent"
-                  className={styles.libraryPopoverSwatch}
-                />
-                <ToolbarLabel>Transparent</ToolbarLabel>
-              </ToolbarButton>
-              <ToolbarDivider />
-            </>
-          ) : null}
           <ColorLibrary
             activeColorId={activeColorId}
             className={styles.toolbarColorLibrary}
             colors={colors}
             featuredColorIds={featuredColorIds}
+            includeTransparentSwatch={Boolean(onTransparentSelect)}
+            onTransparentSelect={() => {
+              onTransparentSelect?.();
+              onOpenChange(false);
+            }}
             showFeaturedSymbols={showSymbols}
             symbolAssignments={symbolAssignments}
+            transparentSelected={isTransparentSelected}
             onColorSelect={(colorId) => {
               onColorSelect(colorId);
               onOpenChange(false);
@@ -779,13 +769,19 @@ export function IconPlacementToolbar({
                       !slot.paletteColorId &&
                       (slot.sourceHex === "transparent" || slot.sourceHex === "none");
                     const allowTransparent = slot.id === "fill";
+                    const primitiveCaption =
+                      placement.primitiveKind && (slot.id === "fill" || slot.id === "stroke")
+                        ? slot.id === "fill"
+                          ? "Fill"
+                          : "Outline"
+                        : null;
 
                     return (
                       <IconColorSlotSwatchPopover
                         key={slot.id}
                         activeColorId={slot.paletteColorId ?? null}
                         assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
-                        allowTransparent={allowTransparent}
+                        caption={primitiveCaption}
                         colors={palette}
                         featuredColorIds={featuredColorIds}
                         isOpen={openColorSlotId === slot.id}

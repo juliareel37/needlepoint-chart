@@ -872,13 +872,6 @@
   height: min(250px, calc(100vh - 180px));
 }
 
-.iconPlacementTransparentButton {
-  width: 100%;
-  justify-content: flex-start;
-  gap: 10px;
-  padding-inline: 8px;
-}
-
 .sidebarColorLibrary.sidebarColorLibrary {
   width: 100%;
   padding: 0px;
@@ -925,7 +918,26 @@
 .iconPlacementSwatchList {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
+  padding-inline: 4px;
+  padding-block: 2px;
+}
+
+.iconPlacementSwatchItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.iconPlacementSwatchCaption {
+  color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .iconPlacementSwatchButton {
