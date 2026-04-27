@@ -47,6 +47,7 @@ export function EditorV2Page() {
   const [currentStorageId, setCurrentStorageId] = useState("");
   const [selectedStorageId, setSelectedStorageId] = useState("");
   const [setupModalOpen, setSetupModalOpen] = useState(true);
+  const [setupModalMode, setSetupModalMode] = useState<"full" | "new-only">("full");
   const [canvasLoadingKey, setCanvasLoadingKey] = useState<string | null>(null);
   const [savedDocumentsErrorMessage, setSavedDocumentsErrorMessage] =
     useState<string | null>(null);
@@ -179,7 +180,10 @@ export function EditorV2Page() {
         onLoadDocument={async (record) => {
           await loadDesignIntoWorkspace(record.storageId);
         }}
-        onStartOver={() => setSetupModalOpen(true)}
+        onStartOver={() => {
+          setSetupModalMode("new-only");
+          setSetupModalOpen(true);
+        }}
         setupModalOpen={setupModalOpen}
         setupModal={
           <EditorV2SetupModal
@@ -191,6 +195,7 @@ export function EditorV2Page() {
             draftWidth={draftWidth}
             draftWidthInches={draftWidthInches}
             hasSavedDesignAccess={Boolean(isLoaded && isSignedIn)}
+            mode={setupModalMode}
             onDismissSavedDocumentsError={() => setSavedDocumentsErrorMessage(null)}
             onDismissSetupError={() => setSetupErrorMessage(null)}
             onClose={() => setSetupModalOpen(false)}
@@ -198,6 +203,7 @@ export function EditorV2Page() {
               setCurrentStorageId("");
               setSelectedStorageId("");
               setSetupErrorMessage(null);
+              setSetupModalMode("full");
               setDesignConfig(config);
               setSetupModalOpen(false);
             }}

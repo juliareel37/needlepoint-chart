@@ -67,6 +67,7 @@ interface EditorV2SetupModalProps {
   draftWidth: string;
   draftWidthInches: string;
   hasSavedDesignAccess: boolean;
+  mode: "full" | "new-only";
   onDismissSavedDocumentsError: () => void;
   onDismissSetupError: () => void;
   onClose: () => void;
@@ -95,6 +96,7 @@ export function EditorV2SetupModal({
   draftWidth,
   draftWidthInches,
   hasSavedDesignAccess,
+  mode,
   onDismissSavedDocumentsError,
   onDismissSetupError,
   onClose,
@@ -144,6 +146,8 @@ export function EditorV2SetupModal({
   const selectedLargeGridPreset = getLargeGridPreset(draftWidth, draftHeight);
   const selectedInchSizePreset = getInchSizePreset(draftWidthInches, draftHeightInches);
   const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
+  const showSavedDesignSection = mode === "full";
+  const compactMode = !showSavedDesignSection;
   const createDisabled =
     draftSizingMode === "inches"
       ? !inchSizing.canCreate
@@ -151,47 +155,79 @@ export function EditorV2SetupModal({
 
   return (
     <div
-      className={styles.modal}
+      className={[styles.modal, compactMode ? styles.modalCompact : null]
+        .filter(Boolean)
+        .join(" ")}
       role="dialog"
       aria-modal="true"
       aria-labelledby="editor-v2-setup-title"
     >
-      <section className={styles.card}>
-        <div className={styles.header}>
-          <div className={styles.titleBlock}>
-            {/* <p className={styles.eyebrow} style={typographyStyles.p2}>
-              editor-v2
-            </p> */}
-            <h1
-              id="editor-v2-setup-title"
-              className={styles.title}
-              style={typographyStyles.h3}
-            >
-              Start a design
-            </h1>
-            <p className={styles.intro} style={typographyStyles.p2}>
-              Create a fresh canvas or jump back into a saved design.
-            </p>
-          </div>
-          {canClose ? (
-            <Button type="button" variant="ghostV2" onClick={onClose}>
-              
-              <ButtonIcon
-              icon="/icons/lucide/x.svg"
-              className={styles.sidebarCloseIcon}
-            />
-            </Button>
-            
-          ) : null}
-        </div>
-
-        <div className={styles.content}>
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
-                New design
-              </h2>
+      <section
+        className={[styles.card, compactMode ? styles.cardCompact : null]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {showSavedDesignSection ? (
+          <div className={styles.header}>
+            <div className={styles.titleBlock}>
+              <h1
+                id="editor-v2-setup-title"
+                className={styles.title}
+                style={typographyStyles.h3}
+              >
+                Start a design
+              </h1>
+              <p className={styles.intro} style={typographyStyles.p2}>
+                Create a fresh canvas or jump back into a saved design.
+              </p>
             </div>
+            {canClose ? (
+              <Button type="button" variant="ghostV2" onClick={onClose}>
+                <ButtonIcon
+                  icon="/icons/lucide/x.svg"
+                  className={styles.sidebarCloseIcon}
+                />
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div
+          className={[styles.content, compactMode ? styles.contentCompact : null]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <section
+            className={[styles.section, compactMode ? styles.sectionStandalone : null]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div
+              className={[styles.sectionHeader, compactMode ? styles.sectionHeaderStandalone : null]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <h1
+                id="editor-v2-setup-title"
+                className={styles.sectionTitle}
+                style={typographyStyles.h4}
+              >
+                New design
+              </h1>
+              {compactMode && canClose ? (
+                <Button type="button" variant="ghostV2" onClick={onClose}>
+                  <ButtonIcon
+                    icon="/icons/lucide/x.svg"
+                    className={styles.sidebarCloseIcon}
+                  />
+                </Button>
+              ) : null}
+            </div>
+            {/* {compactMode ? (
+              <p className={styles.intro} style={typographyStyles.p2}>
+                Create a fresh canvas to start a new design.
+              </p>
+            ) : null} */}
 
             <Field 
             // label="Sizing mode"
@@ -511,103 +547,102 @@ export function EditorV2SetupModal({
             </div>
           </section>
 
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle} style={typographyStyles.h5}>
-                Open saved design
-              </h2>
-              {/* <p className={styles.sectionHint} style={typographyStyles.p2}>
-                Load a saved project from this browser.
-              </p> */}
-            </div>
+          {showSavedDesignSection ? (
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle} style={typographyStyles.h5}>
+                  Open saved design
+                </h2>
+              </div>
 
-            {savedDocumentsErrorMessage ? (
-              <Notification
-                tone="destructive"
-                title="Couldn't load your saved designs"
-                description={savedDocumentsErrorMessage}
-                layout="compact"
-                onDismiss={onDismissSavedDocumentsError}
-              />
-            ) : null}
-
-            {setupErrorMessage ? (
-              <Notification
-                tone="destructive"
-                title="Couldn't open saved design"
-                description={setupErrorMessage}
-                layout="compact"
-                onDismiss={onDismissSetupError}
-              />
-            ) : null}
-
-            {hasSavedDesignAccess ? (
-              <>
-                <p className={styles.helper} style={typographyStyles.p2}>
-                  Choose a design
-                </p>
-                <SingleSelectDropdown
-                  ariaLabel="Saved designs"
-                  emptyLabel={
-                    savedDocumentsLoading ? (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 10,
-                          minWidth: "100%"
-                        }}
-                      >
-                        <span className="loading-spinner" aria-hidden="true" />
-                        Loading saved designs...
-                      </span>
-                    ) : "No saved designs"
-                  }
-                  menuMaxHeight={220}
-                  getItemLabel={formatSavedDesignLabel}
-                  getItemValue={(record) => record.storageId}
-                  items={savedDocuments}
-                  menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
-                  onValueChange={setSelectedStorageId}
-                  placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
-                  value={selectedStorageId}
-                  menuWidth="100%"
-                  menuMaxWidth="100%"
-                  wrapperStyle={{ width: "100%" }}
-                  triggerStyle={{ width: "100%" }}
+              {savedDocumentsErrorMessage ? (
+                <Notification
+                  tone="destructive"
+                  title="Couldn't load your saved designs"
+                  description={savedDocumentsErrorMessage}
+                  layout="compact"
+                  onDismiss={onDismissSavedDocumentsError}
                 />
+              ) : null}
 
-                <div className={styles.actions}>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    disabled={savedDocumentsLoading || !selectedStorageId}
-                    onClick={() => {
-                      if (!selectedStorageId) {
-                        return;
-                      }
+              {setupErrorMessage ? (
+                <Notification
+                  tone="destructive"
+                  title="Couldn't open saved design"
+                  description={setupErrorMessage}
+                  layout="compact"
+                  onDismiss={onDismissSetupError}
+                />
+              ) : null}
 
-                      onLoadSavedDesign(selectedStorageId);
-                    }}
-                  >
-                    Load design
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className={styles.helper} style={typographyStyles.p2}>
-                  Sign in to access your saved designs.
-                </p>
+              {hasSavedDesignAccess ? (
+                <>
+                  <p className={styles.helper} style={typographyStyles.p2}>
+                    Choose a design
+                  </p>
+                  <SingleSelectDropdown
+                    ariaLabel="Saved designs"
+                    emptyLabel={
+                      savedDocumentsLoading ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 10,
+                            minWidth: "100%",
+                          }}
+                        >
+                          <span className="loading-spinner" aria-hidden="true" />
+                          Loading saved designs...
+                        </span>
+                      ) : "No saved designs"
+                    }
+                    menuMaxHeight={220}
+                    getItemLabel={formatSavedDesignLabel}
+                    getItemValue={(record) => record.storageId}
+                    items={savedDocuments}
+                    menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
+                    onValueChange={setSelectedStorageId}
+                    placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
+                    value={selectedStorageId}
+                    menuWidth="100%"
+                    menuMaxWidth="100%"
+                    wrapperStyle={{ width: "100%" }}
+                    triggerStyle={{ width: "100%" }}
+                  />
 
-                <div className={styles.actions}>
-                  <Button type="button" variant="primary" onClick={openSignIn}>
-                    Sign in
-                  </Button>
-                </div>
-              </>
-            )}
-          </section>
+                  <div className={styles.actions}>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      disabled={savedDocumentsLoading || !selectedStorageId}
+                      onClick={() => {
+                        if (!selectedStorageId) {
+                          return;
+                        }
+
+                        onLoadSavedDesign(selectedStorageId);
+                      }}
+                    >
+                      Load design
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className={styles.helper} style={typographyStyles.p2}>
+                    Sign in to access your saved designs.
+                  </p>
+
+                  <div className={styles.actions}>
+                    <Button type="button" variant="primary" onClick={openSignIn}>
+                      Sign in
+                    </Button>
+                  </div>
+                </>
+              )}
+            </section>
+          ) : null}
         </div>
       </section>
     </div>
