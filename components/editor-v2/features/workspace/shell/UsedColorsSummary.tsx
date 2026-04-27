@@ -11,6 +11,7 @@ import {
   Checkbox,
   Modal,
   Notification,
+  SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
 import {
@@ -45,6 +46,7 @@ function getSwatchIconColor(hex: string) {
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge";
 type UsedColorsSortMode = "usage" | "color";
+type UsedColorsScopeMode = "full-canvas" | "selection";
 type UsedColorsSuccessNotification = {
   title: string;
   description: string;
@@ -491,6 +493,15 @@ export function UsedColorsSummary({
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
+  const scopeMode: UsedColorsScopeMode = selectionScopeActive ? "selection" : "full-canvas";
+  const scopeOptions = useMemo(
+    () =>
+      [
+        { value: "full-canvas", label: "Full canvas" },
+        { value: "selection", label: "Selection" },
+      ] satisfies Array<{ value: UsedColorsScopeMode; label: string }>,
+    [],
+  );
   const sortOptions = useMemo(
     () => [
       { value: "usage", label: "Most used first" },
@@ -717,16 +728,20 @@ export function UsedColorsSummary({
         : null}
 
       <div className={styles.usedColorsBlock}>
+      <SegmentedControl
+        ariaLabel="Colors used scope"
+        className={styles.usedColorsScopeControl}
+        value={scopeMode}
+        options={scopeOptions}
+        onChange={() => {
+          // Scope switching is display-only for now; selection activation comes next.
+        }}
+      />
       <div className={styles.usedColorsHeaderRow}>
         <div className={styles.usedColorsTitleRow}>
           <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
             Colors used
           </p>
-          {selectionScopeActive ? (
-            <span className={styles.sidebarSectionScopeBadge} style={typographyStyles.p2}>
-              Selection
-            </span>
-          ) : null}
           <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
             {usedColors.length}
           </span>

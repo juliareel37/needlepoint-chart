@@ -1435,6 +1435,11 @@
   color: var(--text-secondary);
 }
 
+.usedColorsScopeControl {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .usedColorsTitleRow {
   display: flex;
   align-items: center;
