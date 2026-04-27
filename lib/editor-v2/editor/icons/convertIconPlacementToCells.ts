@@ -140,6 +140,7 @@ export async function convertIconPlacementToPaintGroups(
           height: canvasHeight,
           strokeColor: primitiveColors.primary,
           secondaryStrokeColor: primitiveColors.secondary,
+          fillColor: primitiveColors.fill,
           strokeReferenceSize: placement.primitiveStrokeReferenceSize,
           strokeWidthScale: placement.strokeWidthScale,
           patternScale: placement.primitivePatternScale,

@@ -872,6 +872,13 @@
   height: min(250px, calc(100vh - 180px));
 }
 
+.iconPlacementTransparentButton {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-inline: 8px;
+}
+
 .sidebarColorLibrary.sidebarColorLibrary {
   width: 100%;
   padding: 0px;

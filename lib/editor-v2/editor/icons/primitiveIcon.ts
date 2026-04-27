@@ -20,6 +20,7 @@ interface PrimitiveIconSvgOptions {
   height: number;
   strokeColor: string;
   secondaryStrokeColor?: string | null;
+  fillColor?: string | null;
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
   patternScale?: number;
@@ -120,6 +121,7 @@ export function buildPrimitiveIconDataUrl({
   height,
   strokeColor,
   secondaryStrokeColor,
+  fillColor,
   strokeReferenceSize,
   strokeWidthScale = 1,
   patternScale = 1,
@@ -138,6 +140,7 @@ export function buildPrimitiveIconDataUrl({
   const svgWidth = normalizedWidth.toFixed(3);
   const svgHeight = normalizedHeight.toFixed(3);
   const escapedStroke = escapeXmlAttribute(strokeColor || DEFAULT_STROKE_COLOR);
+  const escapedFill = normalizePrimitiveFillPaint(fillColor);
 
   let shapeMarkup = "";
   switch (kind) {
@@ -147,7 +150,7 @@ export function buildPrimitiveIconDataUrl({
         normalizedHeight / 2
       ).toFixed(3)}" rx="${radius.toFixed(3)}" ry="${radius.toFixed(
         3,
-      )}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      )}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
@@ -158,7 +161,7 @@ export function buildPrimitiveIconDataUrl({
       )}" width="${Math.max(0, normalizedWidth - strokeWidth).toFixed(3)}" height="${Math.max(
         0,
         normalizedHeight - strokeWidth,
-      ).toFixed(3)}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      ).toFixed(3)}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}"/>`;
       break;
@@ -171,7 +174,7 @@ export function buildPrimitiveIconDataUrl({
         )}`,
         `${halfStroke.toFixed(3)},${(normalizedHeight - halfStroke).toFixed(3)}`,
       ].join(" ");
-      shapeMarkup = `<polygon points="${points}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      shapeMarkup = `<polygon points="${points}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}"/>`;
       break;
@@ -182,7 +185,7 @@ export function buildPrimitiveIconDataUrl({
         normalizedHeight,
         halfStroke,
       );
-      shapeMarkup = `<polygon points="${starPoints}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      shapeMarkup = `<polygon points="${starPoints}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
@@ -194,7 +197,7 @@ export function buildPrimitiveIconDataUrl({
         halfStroke,
       );
 
-      shapeMarkup = `<path d="${pathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+      shapeMarkup = `<path d="${pathData}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,
       )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
@@ -302,29 +305,38 @@ export function resolvePrimitiveColorSlots(
   slots: IconColorSlot[],
   paletteById: Record<string, PaletteColor>,
   fallbackColor: string | null,
-): { primary: string; secondary: string | null } {
-  const resolvedColors = slots.map((slot) => {
-    if (!slot.paletteColorId) {
-      return slot.sourceHex;
-    }
+): { primary: string; secondary: string | null; fill: string | null } {
+  const resolvedById = new Map(
+    slots.map((slot) => [
+      slot.id,
+      slot.paletteColorId ? (paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex) : slot.sourceHex,
+    ]),
+  );
+  const resolvedColors = slots.map((slot) => resolvedById.get(slot.id) ?? slot.sourceHex);
 
-    return paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex;
-  });
-
-  const primary = resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
-  const secondary = resolvedColors[1] ?? null;
+  const primary =
+    resolvedById.get("stroke") ?? resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
+  const secondary = resolvedById.get("shadow") ?? resolvedColors[1] ?? null;
+  const fill = resolvedById.get("fill") ?? null;
 
   return {
     primary,
     secondary,
+    fill,
   };
 }
 
 export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColorSlot[] {
-  if (kind === "greek-key-frame-shadow") {
+  if (
+    kind === "circle" ||
+    kind === "rectangle" ||
+    kind === "triangle" ||
+    kind === "heart" ||
+    kind === "star"
+  ) {
     return [
       {
-        id: "slot-1",
+        id: "stroke",
         sourceHex: "#121923",
         paletteColorId: findClosestPaletteColorId(
           DMC_COLOR_LIBRARY_BY_ID,
@@ -332,7 +344,25 @@ export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColo
         ),
       },
       {
-        id: "slot-2",
+        id: "fill",
+        sourceHex: "transparent",
+        paletteColorId: null,
+      },
+    ];
+  }
+
+  if (kind === "greek-key-frame-shadow") {
+    return [
+      {
+        id: "stroke",
+        sourceHex: "#121923",
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb("#121923") as Rgb,
+        ),
+      },
+      {
+        id: "shadow",
         sourceHex: "#8e99ab",
         paletteColorId: findClosestPaletteColorId(
           DMC_COLOR_LIBRARY_BY_ID,
@@ -451,6 +481,16 @@ function clampPrimitiveStrokeWidthScale(
 
 function roundStrokeScale(value: number): number {
   return Number(value.toFixed(2));
+}
+
+function normalizePrimitiveFillPaint(fillColor: string | null | undefined): string {
+  const normalized = fillColor?.trim().toLowerCase();
+
+  if (!normalized || normalized === "transparent" || normalized === "none") {
+    return "none";
+  }
+
+  return escapeXmlAttribute(fillColor ?? normalized);
 }
 
 function buildHeartParametricPathData(
