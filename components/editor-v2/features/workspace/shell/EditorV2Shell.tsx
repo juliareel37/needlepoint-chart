@@ -35,6 +35,7 @@ import type {
 } from "../../../app/EditorV2Workspace";
 import {
   createCancelIconPlacementCommand,
+  createClearSelectionCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
@@ -132,6 +133,8 @@ export function EditorV2Shell({
   const colorsById = state.document.palette.colorsById;
   const selectionScopeActive =
     state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+  const selectionControlActive =
+    activeTool === "lasso" || state.session.selection.mode !== "none";
   const usedColors = getUsedColors(state, { scope: "auto" });
   const selectionBounds = getSelectionBounds(state);
   const activeColorId = getActiveColorId(state);
@@ -167,6 +170,7 @@ export function EditorV2Shell({
     useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
+  const reopenColorPanelAfterSelectionRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -839,6 +843,46 @@ export function EditorV2Shell({
   }, [dispatch, iconPlacement, isBottomPanelLayout, sidebarCollapsed]);
 
   useEffect(() => {
+    if (!reopenColorPanelAfterSelectionRef.current) {
+      return;
+    }
+
+    if (selectionCommitted) {
+      dispatch(createSetSidebarCollapsedCommand(false));
+      reopenColorPanelAfterSelectionRef.current = false;
+      return;
+    }
+
+    if (activeTool !== "lasso" && !selectionScopeActive) {
+      reopenColorPanelAfterSelectionRef.current = false;
+    }
+  }, [activeTool, dispatch, selectionCommitted, selectionScopeActive]);
+
+  const [selectionRequestKey, setSelectionRequestKey] = useState(0);
+
+  const handleUsedColorsScopeModeChange = useCallback(
+    (mode: "full-canvas" | "selection") => {
+      if (mode === "selection") {
+        if (isBottomPanelLayout) {
+          if (!sidebarCollapsed) {
+            dispatch(createSetSidebarCollapsedCommand(true));
+          }
+          reopenColorPanelAfterSelectionRef.current = true;
+        } else if (sidebarCollapsed) {
+          dispatch(createSetSidebarCollapsedCommand(false));
+        }
+
+        setSelectionRequestKey((current) => current + 1);
+        return;
+      }
+
+      reopenColorPanelAfterSelectionRef.current = false;
+      dispatch(createClearSelectionCommand());
+    },
+    [dispatch, isBottomPanelLayout, sidebarCollapsed],
+  );
+
+  useEffect(() => {
     if (!iconPlacement) {
       return;
     }
@@ -1251,7 +1295,9 @@ export function EditorV2Shell({
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 gridMetrics={gridMetrics}
+                onScopeModeChange={handleUsedColorsScopeModeChange}
                 selectionScopeActive={selectionScopeActive}
+                selectionControlActive={selectionControlActive}
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
@@ -1349,6 +1395,7 @@ export function EditorV2Shell({
                     trace={trace}
                     mirrorSessionActive={Boolean(mirrorSession)}
                     isBottomPanelLayout={isBottomPanelLayout}
+                    selectionRequestKey={selectionRequestKey}
                     showSymbols={showSymbols}
                     symbolAssignments={document.palette.symbolAssignments}
                   />

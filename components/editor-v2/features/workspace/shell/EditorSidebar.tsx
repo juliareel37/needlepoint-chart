@@ -41,8 +41,10 @@ interface EditorSidebarProps {
   onClose: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
+  onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
   previewMode: boolean;
+  selectionControlActive: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -81,8 +83,10 @@ export function EditorSidebar({
   onClose,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
+  onScopeModeChange,
   onStartOver,
   previewMode,
+  selectionControlActive,
   showGridlines,
   showRuler,
   showSymbols,
@@ -216,7 +220,9 @@ export function EditorSidebar({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
+              onScopeModeChange={onScopeModeChange}
               palette={palette}
+              selectionControlActive={selectionControlActive}
               selectionScopeActive={selectionScopeActive}
               showSymbols={showSymbols}
               symbolAssignments={document.palette.symbolAssignments}

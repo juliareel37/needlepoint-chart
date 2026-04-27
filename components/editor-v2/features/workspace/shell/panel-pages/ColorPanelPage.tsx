@@ -31,7 +31,9 @@ interface ColorPanelPageProps {
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   palette: PaletteColor[];
+  selectionControlActive: boolean;
   selectionScopeActive: boolean;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -51,7 +53,9 @@ export function ColorPanelPage({
   onEnterBottomPanelCanvasFocus,
   onViewChange,
   onHighlightColorChange,
+  onScopeModeChange,
   palette,
+  selectionControlActive,
   selectionScopeActive,
   showSymbols,
   symbolAssignments,
@@ -238,7 +242,9 @@ export function ColorPanelPage({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onHighlightColorChange={onHighlightColorChange}
+              onScopeModeChange={onScopeModeChange}
               showSymbols={showSymbols}
+              selectionControlActive={selectionControlActive}
               selectionScopeActive={selectionScopeActive}
               symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>

@@ -450,7 +450,9 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
   onHighlightColorChange,
+  onScopeModeChange,
   showSymbols,
+  selectionControlActive,
   selectionScopeActive,
   symbolAssignments,
   onSwapColor,
@@ -468,7 +470,9 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onScopeModeChange: (mode: UsedColorsScopeMode) => void;
   showSymbols: boolean;
+  selectionControlActive: boolean;
   selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
@@ -493,7 +497,7 @@ export function UsedColorsSummary({
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
-  const scopeMode: UsedColorsScopeMode = selectionScopeActive ? "selection" : "full-canvas";
+  const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
   const scopeOptions = useMemo(
     () =>
       [
@@ -733,9 +737,7 @@ export function UsedColorsSummary({
         className={styles.usedColorsScopeControl}
         value={scopeMode}
         options={scopeOptions}
-        onChange={() => {
-          // Scope switching is display-only for now; selection activation comes next.
-        }}
+        onChange={onScopeModeChange}
       />
       <div className={styles.usedColorsHeaderRow}>
         <div className={styles.usedColorsTitleRow}>
