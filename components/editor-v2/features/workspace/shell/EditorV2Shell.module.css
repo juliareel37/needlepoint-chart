@@ -546,8 +546,12 @@
   align-items: center;
   justify-content: center;
   min-width: 32px;
+  min-height: 32px;
   padding-inline: 8px;
   align-self: center;
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .sidebarSearchField {
@@ -2301,6 +2305,11 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .sidebarColorPreviewSection:hover .sidebarHeaderAction {
+    background: var(--button-ghost2-hover);
+    color: var(--text-primary);
+  }
+
   .sidebarPanelBackButton:hover {
     background: var(--button-ghost-hover);
     color: var(--text-primary);
