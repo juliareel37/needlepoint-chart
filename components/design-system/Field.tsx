@@ -37,15 +37,35 @@ export function Field({
 
 export function FieldInput({
   className,
+  suffix,
   style,
   ...props
-}: InputHTMLAttributes<HTMLInputElement>) {
-  return (
+}: InputHTMLAttributes<HTMLInputElement> & { suffix?: ReactNode }) {
+  const input = (
     <input
       {...props}
-      className={[styles.control, className].filter(Boolean).join(" ")}
+      className={[
+        styles.control,
+        suffix ? styles.controlWithSuffix : null,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{ ...inputTypographyStyle, ...style }}
     />
+  );
+
+  if (!suffix) {
+    return input;
+  }
+
+  return (
+    <span className={styles.inputWithSuffix}>
+      {input}
+      <span aria-hidden="true" className={styles.suffix}>
+        {suffix}
+      </span>
+    </span>
   );
 }
 

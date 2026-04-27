@@ -267,6 +267,7 @@ export function EditorV2SetupModal({
                       max={EDITOR_V2_MAX_GRID_SIZE}
                       aria-invalid={stitchSizing.widthError ? "true" : undefined}
                       className={stitchSizing.widthError ? styles.invalidInput : undefined}
+                      suffix="cells"
                       value={draftWidth}
                       onChange={(event) => onDraftWidthChange(event.target.value)}
                     />
@@ -291,6 +292,7 @@ export function EditorV2SetupModal({
                       max={EDITOR_V2_MAX_GRID_SIZE}
                       aria-invalid={stitchSizing.heightError ? "true" : undefined}
                       className={stitchSizing.heightError ? styles.invalidInput : undefined}
+                      suffix="cells"
                       value={draftHeight}
                       onChange={(event) => onDraftHeightChange(event.target.value)}
                     />
@@ -311,7 +313,7 @@ export function EditorV2SetupModal({
                           type="button"
                           variant="secondary"
                           size="sm"
-                          className={styles.presetButton}
+                          className={styles.tertiaryPresetButton}
                           active={active}
                           inertWhenActive={active}
                           aria-pressed={active}
@@ -349,22 +351,24 @@ export function EditorV2SetupModal({
                     Canvas size
                   </p> */}
                   <div className={styles.fieldGrid}>
-                    <Field label="Length (inches)">
+                    <Field label="Length">
                       <FieldInput
                         type="number"
                         min="0"
                         step="any"
+                        suffix="inches"
                         value={draftWidthInches}
                         onChange={(event) =>
                           onDraftWidthInchesChange(event.target.value)
                         }
                       />
                     </Field>
-                    <Field label="Height (inches)">
+                    <Field label="Height">
                       <FieldInput
                         type="number"
                         min="0"
                         step="any"
+                        suffix="inches"
                         value={draftHeightInches}
                         onChange={(event) =>
                           onDraftHeightInchesChange(event.target.value)
@@ -387,7 +391,7 @@ export function EditorV2SetupModal({
                             type="button"
                             variant="secondary"
                             size="sm"
-                            className={styles.compactPresetButton}
+                            className={styles.tertiaryCompactPresetButton}
                             active={active}
                             inertWhenActive={active}
                             aria-pressed={active}
@@ -426,7 +430,7 @@ export function EditorV2SetupModal({
                             type="button"
                             variant="secondary"
                             size="md"
-                            className={styles.compactPresetButton}
+                            className={styles.meshPresetButton}
                             active={active}
                             inertWhenActive={active}
                             aria-pressed={active}
@@ -457,7 +461,7 @@ export function EditorV2SetupModal({
                           type="button"
                           variant="ghostV2"
                           size="md"
-                          className={styles.compactPresetButton}
+                          className={styles.meshPresetButton}
                           onClick={() => {
                             setUseCustomMeshCount(true);
                           }}
