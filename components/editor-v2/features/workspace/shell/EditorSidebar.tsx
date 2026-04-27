@@ -121,30 +121,34 @@ export function EditorSidebar({
         <div className={styles.sidebarPanelHeader}>
           {activeSection === "color" && colorPanelView === "design-colors" ? (
             <div className={styles.sidebarPanelBackRow}>
-              <button
+              <Button
                 type="button"
+                variant="ghostV2"
+                size="sm"
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to color overview"
                 title="Back to color overview"
                 onClick={() => setColorPanelView("overview")}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </button>
+              </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
                 Design colors
               </span>
             </div>
           ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
             <div className={styles.sidebarPanelBackRow}>
-              <button
+              <Button
                 type="button"
+                variant="ghostV2"
+                size="sm"
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to icon categories"
                 title="Back to icon categories"
                 onClick={() => setIconsPanelView({ type: "overview" })}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </button>
+              </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
                 {iconsPanelView.category}
               </span>
