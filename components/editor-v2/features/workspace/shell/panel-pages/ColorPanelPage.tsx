@@ -32,6 +32,7 @@ interface ColorPanelPageProps {
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
   palette: PaletteColor[];
+  selectionScopeActive: boolean;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
   usedColors: Array<{ colorId: string; count: number }>;
@@ -51,6 +52,7 @@ export function ColorPanelPage({
   onViewChange,
   onHighlightColorChange,
   palette,
+  selectionScopeActive,
   showSymbols,
   symbolAssignments,
   usedColors,
@@ -144,6 +146,11 @@ export function ColorPanelPage({
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
                     <h3 style={typographyStyles.h5}>Design colors</h3>
+                    {selectionScopeActive ? (
+                      <span className={styles.sidebarSectionScopeBadge} style={typographyStyles.p2}>
+                        Selection
+                      </span>
+                    ) : null}
                     {usedColors.length > 0 ? (
                       <span
                         className={styles.sidebarColorPreviewCountBadge}
@@ -232,6 +239,7 @@ export function ColorPanelPage({
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onHighlightColorChange={onHighlightColorChange}
               showSymbols={showSymbols}
+              selectionScopeActive={selectionScopeActive}
               symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))

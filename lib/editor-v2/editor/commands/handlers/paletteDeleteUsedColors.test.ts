@@ -44,10 +44,38 @@ describe("paletteDeleteUsedColorsCommandHandler", () => {
     expect(store.getState().document.grid.cells).toEqual(["dmc:310"]);
     expect(store.getState().session.persistence.dirty).toBe(false);
   });
+
+  it("deletes only selected-region cells and uses remaining colors from that region", () => {
+    const store = createEditorStore({
+      initialState: createDeleteTestState({
+        selection: {
+          mode: "rect",
+          shape: "rect",
+          rect: { x: 0, y: 0, width: 2, height: 1 },
+          lassoPoints: [],
+          mirrorAxis: null,
+          preview: null,
+        },
+      }),
+    });
+
+    store.dispatch(createDeleteUsedColorsCommand(["dmc:321"]));
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc:310",
+      "dmc:310",
+      "dmc:666",
+      "dmc:321",
+      "dmc:666",
+      "dmc:310",
+    ]);
+  });
 });
 
-function createDeleteTestState(): EditorStoreState {
-  return {
+function createDeleteTestState(
+  overrides?: Partial<EditorStoreState["session"]>,
+): EditorStoreState {
+  const state: EditorStoreState = {
     document: {
       project: {
         id: null,
@@ -212,6 +240,14 @@ function createDeleteTestState(): EditorStoreState {
         darkCanvas: false,
         gridMajorInterval: 10,
       },
+    },
+  };
+
+  return {
+    ...state,
+    session: {
+      ...state.session,
+      ...overrides,
     },
   };
 }

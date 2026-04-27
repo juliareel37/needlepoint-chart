@@ -129,7 +129,9 @@ export function EditorV2Shell({
   const activeTool = state.session.activeTool.tool;
   const brushSize = state.session.activeTool.brushSize;
   const colorsById = state.document.palette.colorsById;
-  const usedColors = getUsedColors(state);
+  const selectionScopeActive =
+    state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+  const usedColors = getUsedColors(state, { scope: "auto" });
   const selectionBounds = getSelectionBounds(state);
   const activeColorId = getActiveColorId(state);
   const activeColor = getActiveColor(state);
@@ -1247,6 +1249,7 @@ export function EditorV2Shell({
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 gridMetrics={gridMetrics}
+                selectionScopeActive={selectionScopeActive}
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}

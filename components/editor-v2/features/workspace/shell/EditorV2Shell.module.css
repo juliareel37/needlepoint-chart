@@ -541,6 +541,21 @@
   letter-spacing: 0.01em;
 }
 
+.sidebarSectionScopeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
 .sidebarHeaderAction {
   display: inline-flex;
   align-items: center;

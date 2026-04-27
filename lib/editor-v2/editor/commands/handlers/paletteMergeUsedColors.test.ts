@@ -35,10 +35,38 @@ describe("paletteMergeUsedColorsCommandHandler", () => {
       "dmc:310",
     ]);
   });
+
+  it("merges only cells inside the active selection", () => {
+    const store = createEditorStore({
+      initialState: createMergeTestState({
+        selection: {
+          mode: "rect",
+          shape: "rect",
+          rect: { x: 1, y: 0, width: 1, height: 2 },
+          lassoPoints: [],
+          mirrorAxis: null,
+          preview: null,
+        },
+      }),
+    });
+
+    store.dispatch(createMergeUsedColorsCommand(["dmc:321", "dmc:666"], "dmc:321"));
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc:310",
+      "dmc:321",
+      "dmc:666",
+      "dmc:321",
+      "dmc:321",
+      "dmc:310",
+    ]);
+  });
 });
 
-function createMergeTestState(): EditorStoreState {
-  return {
+function createMergeTestState(
+  overrides?: Partial<EditorStoreState["session"]>,
+): EditorStoreState {
+  const state: EditorStoreState = {
     document: {
       project: {
         id: null,
@@ -203,6 +231,14 @@ function createMergeTestState(): EditorStoreState {
         darkCanvas: false,
         gridMajorInterval: 10,
       },
+    },
+  };
+
+  return {
+    ...state,
+    session: {
+      ...state.session,
+      ...overrides,
     },
   };
 }

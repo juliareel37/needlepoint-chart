@@ -1,4 +1,5 @@
 import type { ReplaceGridCellsPatch } from "../../store/patches";
+import { isCellInSelection } from "../../selection/lassoGeometry";
 import type { MergeUsedColorsCommand } from "../types";
 import { buildDirtySession } from "./gridMutationUtils";
 import type { EditorCommandHandler } from "./types";
@@ -33,9 +34,26 @@ export const paletteMergeUsedColorsCommandHandler: EditorCommandHandler<MergeUse
     }
 
     const fromColorIdSet = new Set(fromColorIds);
-    const mergedCells = state.document.grid.cells.flatMap((cell, index) =>
-      cell && fromColorIdSet.has(cell) ? [{ index, value: toColorId }] : [],
-    );
+    const gridWidth = state.document.grid.width;
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const mergedCells = state.document.grid.cells.flatMap((cell, index) => {
+      if (!cell || !fromColorIdSet.has(cell)) {
+        return [];
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return [];
+      }
+
+      return [{ index, value: toColorId }];
+    });
     const patches: ReplaceGridCellsPatch[] = mergedCells.length > 0
       ? [{ type: "grid.replaceCells", cells: mergedCells }]
       : [];

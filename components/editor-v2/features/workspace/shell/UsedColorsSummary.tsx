@@ -449,6 +449,7 @@ export function UsedColorsSummary({
   onExitBottomPanelCanvasFocus,
   onHighlightColorChange,
   showSymbols,
+  selectionScopeActive,
   symbolAssignments,
   onSwapColor,
   onDeleteColors,
@@ -466,6 +467,7 @@ export function UsedColorsSummary({
   onExitBottomPanelCanvasFocus: () => void;
   onHighlightColorChange: (colorId: string | null) => void;
   showSymbols: boolean;
+  selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
@@ -720,6 +722,11 @@ export function UsedColorsSummary({
           <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
             Colors used
           </p>
+          {selectionScopeActive ? (
+            <span className={styles.sidebarSectionScopeBadge} style={typographyStyles.p2}>
+              Selection
+            </span>
+          ) : null}
           <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
             {usedColors.length}
           </span>

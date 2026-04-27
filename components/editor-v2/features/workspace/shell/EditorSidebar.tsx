@@ -34,6 +34,7 @@ interface EditorSidebarProps {
   palette: PaletteColor[];
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
@@ -73,6 +74,7 @@ export function EditorSidebar({
   palette,
   savedDocuments,
   savedDocumentsLoading,
+  selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
   onLoadSelected,
@@ -215,6 +217,7 @@ export function EditorSidebar({
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
               palette={palette}
+              selectionScopeActive={selectionScopeActive}
               showSymbols={showSymbols}
               symbolAssignments={document.palette.symbolAssignments}
               usedColors={usedColors}
