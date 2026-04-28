@@ -43,8 +43,9 @@ const appShellStyle: CSSProperties &
   Record<"--app-header-height" | "--app-top-banner-height" | "--app-top-offset", string> = {
   position: "relative",
   width: "100%",
+  height: "100vh",
+  minHeight: "100dvh",
   padding: 0,
-  minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
   "--app-header-height": "52px",
@@ -191,7 +192,7 @@ export default function RootLayout({
                 <div id="app-header-overflow-right" />
               </div>
             </div>
-            <div style={{ flex: "1 1 auto", minHeight: 0 }}>
+            <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
               {children}
             </div>
           </div>

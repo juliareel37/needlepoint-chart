@@ -69,6 +69,7 @@ const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const HEADER_FILE_MENU_ITEMS = [
+  { id: "library", label: "My designs", icon: "/icons/lucide/list.svg" },
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
@@ -1156,6 +1157,11 @@ export function EditorV2Shell({
 
     if (value === "new") {
       onStartOver();
+      return;
+    }
+
+    if (value === "library") {
+      window.location.assign("/library");
       return;
     }
 
