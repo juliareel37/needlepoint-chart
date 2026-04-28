@@ -76,6 +76,19 @@
   gap: 16px;
 }
 
+.cardLink {
+  display: block;
+}
+
+.cardLink:focus-visible {
+  outline: none;
+}
+
+.cardLink:focus-visible .card {
+  border-color: var(--brand-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-200) 55%, transparent);
+}
+
 .card {
   overflow: hidden;
   border: 1px solid #d6deed;
@@ -102,6 +115,16 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
   aspect-ratio: 1 / 1;
   border: 1px solid #d8dfec;
+  background: #ffffff;
+}
+
+.thumbnailImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid #d8dfec;
+  border-radius: 6px;
   background: #ffffff;
 }
 
@@ -167,11 +190,6 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 
-.cardMenuButton:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 2px;
-}
-
 .cardMenuDots {
   position: relative;
   display: block;
@@ -180,6 +198,44 @@
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 -7px 0 currentColor, 0 7px 0 currentColor;
+}
+
+.loadingCard {
+  pointer-events: none;
+}
+
+.loadingThumbnail {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #d8dfec;
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(245, 248, 253, 0.96), rgba(237, 242, 249, 0.96));
+  color: #9aa7c0;
+}
+
+.loadingLineShort,
+.loadingLineMedium,
+.loadingLineLong {
+  height: 10px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(235, 240, 248, 0.9), rgba(223, 230, 242, 0.95), rgba(235, 240, 248, 0.9));
+  background-size: 200% 100%;
+  animation: libraryPulse 1.4s ease infinite;
+}
+
+.loadingLineShort {
+  width: 58%;
+}
+
+.loadingLineMedium {
+  width: 52%;
+}
+
+.loadingLineLong {
+  width: 74%;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -192,6 +248,56 @@
   .cardMenuButton:hover {
     background: #f2f5fb;
     color: #7f90ae;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 320px;
+  padding: 32px 24px;
+  border: 1px dashed #d6deed;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface-card) 90%, white);
+  text-align: center;
+}
+
+.emptyStateTitle {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #1f2a44;
+}
+
+.emptyStateBody {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.loadMoreError {
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--status-destructive-strong);
+}
+
+.scrollSentinel {
+  width: 100%;
+  height: 1px;
+}
+
+@keyframes libraryPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
   }
 }
 

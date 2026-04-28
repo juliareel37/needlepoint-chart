@@ -6,6 +6,7 @@ import {
   normalizeProjectTitle,
   parsePersistedEditorV2Design,
 } from "@/lib/editor-v2/persistence/designs";
+import { loadLibraryDesignPage } from "@/lib/library/designs";
 
 export const runtime = "nodejs";
 
@@ -19,8 +20,12 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  const requestedLimit = Number(url.searchParams.get("limit"));
-  const requestedOffset = Number(url.searchParams.get("offset"));
+  const requestedLimitParam = url.searchParams.get("limit");
+  const requestedOffsetParam = url.searchParams.get("offset");
+  const requestedLimit =
+    requestedLimitParam === null ? Number.NaN : Number(requestedLimitParam);
+  const requestedOffset =
+    requestedOffsetParam === null ? Number.NaN : Number(requestedOffsetParam);
   const limit = Number.isFinite(requestedLimit)
     ? Math.max(1, Math.min(MAX_LIMIT, Math.floor(requestedLimit)))
     : DEFAULT_LIMIT;
@@ -28,30 +33,7 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  const designs = await prisma.editorDesign.findMany({
-    where: { userId },
-    orderBy: { updatedAt: "desc" },
-    skip: offset,
-    take: limit + 1,
-    select: {
-      id: true,
-      title: true,
-      gridWidth: true,
-      gridHeight: true,
-      updatedAt: true,
-    },
-  });
-  const hasMore = designs.length > limit;
-  const visibleDesigns = hasMore ? designs.slice(0, limit) : designs;
-
-  return NextResponse.json({
-    designs: visibleDesigns.map((design) => ({
-      ...design,
-      updatedAt: design.updatedAt.toISOString(),
-    })),
-    hasMore,
-    nextOffset: hasMore ? offset + visibleDesigns.length : null,
-  });
+  return NextResponse.json(await loadLibraryDesignPage({ userId, limit, offset }));
 }
 
 export async function POST(req: Request) {

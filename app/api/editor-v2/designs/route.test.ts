@@ -45,6 +45,8 @@ describe("editor-v2 design collection routes", () => {
 
   it("lists signed-in user designs", async () => {
     authMock.mockResolvedValue({ userId: "user_1" });
+    const state = createNewDesignState(20, 15);
+    state.document.project.title = "Pattern One";
     findManyMock.mockResolvedValue([
       {
         id: "design_1",
@@ -52,6 +54,7 @@ describe("editor-v2 design collection routes", () => {
         gridWidth: 20,
         gridHeight: 15,
         updatedAt: new Date("2026-04-16T12:00:00.000Z"),
+        data: serializeEditorV2Document(state.document),
       },
     ]);
 
@@ -70,6 +73,7 @@ describe("editor-v2 design collection routes", () => {
         gridWidth: true,
         gridHeight: true,
         updatedAt: true,
+        data: true,
       },
     });
     expect(body).toEqual({
@@ -80,6 +84,9 @@ describe("editor-v2 design collection routes", () => {
           gridWidth: 20,
           gridHeight: 15,
           updatedAt: "2026-04-16T12:00:00.000Z",
+          updatedLabel: expect.any(String),
+          colorCount: expect.any(Number),
+          thumbnailUrl: null,
         },
       ],
       hasMore: false,
@@ -90,13 +97,19 @@ describe("editor-v2 design collection routes", () => {
   it("pages signed-in user designs", async () => {
     authMock.mockResolvedValue({ userId: "user_1" });
     findManyMock.mockResolvedValue(
-      Array.from({ length: 7 }, (_, index) => ({
-        id: `design_${index + 1}`,
-        title: `Pattern ${index + 1}`,
-        gridWidth: 20 + index,
-        gridHeight: 15 + index,
-        updatedAt: new Date(`2026-04-1${index}T12:00:00.000Z`),
-      })),
+      Array.from({ length: 7 }, (_, index) => {
+        const state = createNewDesignState(20 + index, 15 + index);
+        state.document.project.title = `Pattern ${index + 1}`;
+
+        return {
+          id: `design_${index + 1}`,
+          title: `Pattern ${index + 1}`,
+          gridWidth: 20 + index,
+          gridHeight: 15 + index,
+          updatedAt: new Date(`2026-04-1${index}T12:00:00.000Z`),
+          data: serializeEditorV2Document(state.document),
+        };
+      }),
     );
 
     const response = await GET(
@@ -116,6 +129,7 @@ describe("editor-v2 design collection routes", () => {
         gridWidth: true,
         gridHeight: true,
         updatedAt: true,
+        data: true,
       },
     });
     expect(body.designs).toHaveLength(6);
