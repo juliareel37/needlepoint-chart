@@ -559,7 +559,9 @@ export function EditorV2Page({
         currentStorageId === routeStorageId &&
         designConfig.kind === "loaded"
       ) {
-        setSetupModalOpen(false);
+        if (!(setupModalOpen && setupModalMode === "new-only")) {
+          setSetupModalOpen(false);
+        }
         setSelectedStorageId(routeStorageId);
         return;
       }
@@ -696,7 +698,9 @@ export function EditorV2Page({
           navigateToEntryRoute("full");
         }}
         onStartOver={() => {
-          navigateToEntryRoute("new-only");
+          setSetupErrorMessage(null);
+          setSetupModalMode("new-only");
+          setSetupModalOpen(true);
         }}
         setupModalOpen={setupModalOpen}
         setupModal={
