@@ -36,6 +36,7 @@ export function createEditorStateFromDocument(
           imageWidth: document.trace.imageWidth ?? null,
           imageHeight: document.trace.imageHeight ?? null,
           blendMode: document.trace.blendMode ?? "image",
+          locked: true,
         }
       : null,
   };

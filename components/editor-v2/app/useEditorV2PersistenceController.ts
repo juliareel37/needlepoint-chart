@@ -19,6 +19,7 @@ import {
 } from "./editorV2AutosavePersistence";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { createApplyProjectServerStateCommand } from "../features/workspace/workspaceCommands";
+import type { DocumentPatch } from "@/lib/editor-v2/editor/store";
 
 const LOCAL_FLUSH_DEBOUNCE_MS = 250;
 const SERVER_FLUSH_DEBOUNCE_MS = 2000;
@@ -328,6 +329,22 @@ export function useEditorV2PersistenceController({
         dirtyChunksRef.current.add(chunk);
       }
 
+      if (shouldFlushImmediatelyForPatches(event.patches)) {
+        if (localFlushTimerRef.current !== null) {
+          window.clearTimeout(localFlushTimerRef.current);
+          localFlushTimerRef.current = null;
+        }
+
+        if (serverFlushTimerRef.current !== null) {
+          window.clearTimeout(serverFlushTimerRef.current);
+          serverFlushTimerRef.current = null;
+        }
+
+        pendingLocalFlushRef.current = false;
+        void flushLocalSnapshot().then(() => performServerSave("autosave", true));
+        return;
+      }
+
       scheduleLocalSnapshot();
 
       if (serverFlushTimerRef.current !== null) {
@@ -418,4 +435,17 @@ export function useEditorV2PersistenceController({
     controllerState,
     handleManualSave,
   };
+}
+
+function shouldFlushImmediatelyForPatches(patches: DocumentPatch[]): boolean {
+  return patches.some((patch) => {
+    if (patch.type === "trace.remove" || patch.type === "trace.upsert") {
+      return true;
+    }
+
+    return (
+      patch.type === "trace.update" &&
+      Object.prototype.hasOwnProperty.call(patch.changes, "locked")
+    );
+  });
 }
