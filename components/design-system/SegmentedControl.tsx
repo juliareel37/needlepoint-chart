@@ -14,6 +14,7 @@ export interface SegmentedControlProps<T extends string> {
   className?: string;
   disabled?: boolean;
   itemClassName?: string;
+  onActiveClick?: (value: T) => void;
   onChange: (next: T) => void;
   options: readonly SegmentedControlOption<T>[];
   stackOnSmallScreens?: boolean;
@@ -25,6 +26,7 @@ export function SegmentedControl<T extends string>({
   className,
   disabled = false,
   itemClassName,
+  onActiveClick,
   onChange,
   options,
   stackOnSmallScreens = false,
@@ -85,9 +87,16 @@ export function SegmentedControl<T extends string>({
             data-active={active ? "true" : "false"}
             disabled={optionDisabled}
             onClick={() => {
-              if (!active && !optionDisabled) {
-                onChange(option.value);
+              if (optionDisabled) {
+                return;
               }
+
+              if (active) {
+                onActiveClick?.(option.value);
+                return;
+              }
+
+              onChange(option.value);
             }}
             onKeyDown={(event) => {
               if (event.key === "ArrowRight" || event.key === "ArrowDown") {

@@ -74,6 +74,8 @@ const selectionShapeOptions: Array<{
   },
 ];
 
+const ENABLE_MOBILE_SELECTION_DOCK = false;
+
 function FloatingToolbarPortalPopover({
   anchorRef,
   align = "start",
@@ -287,6 +289,7 @@ interface FloatingToolbarProps {
   trace: TraceDocument | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
+  selectionRequestKey: number;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
 }
@@ -309,6 +312,7 @@ export function FloatingToolbar({
   trace,
   mirrorSessionActive,
   isBottomPanelLayout,
+  selectionRequestKey,
   showSymbols,
   symbolAssignments,
 }: FloatingToolbarProps) {
@@ -336,6 +340,7 @@ export function FloatingToolbar({
   const selectionShapeAnchorRef = useRef<HTMLDivElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
+  const handledSelectionRequestKeyRef = useRef(selectionRequestKey);
   const drawOpen = drawPopoverTool !== null;
 
   const normalizedBrushSize = Number.isFinite(brushSize)
@@ -349,7 +354,8 @@ export function FloatingToolbar({
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
-  const mobileSelectionDocked = isBottomPanelLayout && (selectionVisible || selectOpen);
+  const mobileSelectionDocked =
+    ENABLE_MOBILE_SELECTION_DOCK && isBottomPanelLayout && (selectionVisible || selectOpen);
   const selectionToolSessionActive = Boolean(selectionBounds) || selectOpen;
   const toolbarTooltipsEnabled = !touchPrimaryInput;
   const activeSelectionShape =
@@ -497,6 +503,15 @@ export function FloatingToolbar({
   }, [selectionVisible]);
 
   useEffect(() => {
+    if (selectionRequestKey === handledSelectionRequestKeyRef.current) {
+      return;
+    }
+
+    handledSelectionRequestKeyRef.current = selectionRequestKey;
+    openSelectionFromExternalTrigger();
+  }, [selectionRequestKey]);
+
+  useEffect(() => {
     if (!trace) {
       selectionTraceOpacityRestoreRef.current = null;
       return;
@@ -581,6 +596,20 @@ export function FloatingToolbar({
         return;
       }
 
+      setSelectOpen(true);
+      return;
+    }
+
+    dispatch(createSetToolCommand("lasso"));
+    setSelectOpen(true);
+  }
+
+  function openSelectionFromExternalTrigger() {
+    closeColorLibrary();
+    closeDrawMenu();
+    closeImageMenu();
+
+    if (activeTool === "lasso") {
       setSelectOpen(true);
       return;
     }

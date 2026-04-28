@@ -34,14 +34,19 @@ interface EditorSidebarProps {
   palette: PaletteColor[];
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
   onClose: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
+  onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
   previewMode: boolean;
+  previewModeDisabled?: boolean;
+  selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -73,14 +78,19 @@ export function EditorSidebar({
   palette,
   savedDocuments,
   savedDocumentsLoading,
+  selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
   onLoadSelected,
   onClose,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
+  onScopeModeChange,
   onStartOver,
   previewMode,
+  previewModeDisabled = false,
+  selectionControlActive,
+  selectionPromptVisible,
   showGridlines,
   showRuler,
   showSymbols,
@@ -121,30 +131,34 @@ export function EditorSidebar({
         <div className={styles.sidebarPanelHeader}>
           {activeSection === "color" && colorPanelView === "design-colors" ? (
             <div className={styles.sidebarPanelBackRow}>
-              <button
+              <Button
                 type="button"
+                variant="ghostV2"
+                size="sm"
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to color overview"
                 title="Back to color overview"
                 onClick={() => setColorPanelView("overview")}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </button>
+              </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
                 Design colors
               </span>
             </div>
           ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
             <div className={styles.sidebarPanelBackRow}>
-              <button
+              <Button
                 type="button"
+                variant="ghostV2"
+                size="sm"
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to icon categories"
                 title="Back to icon categories"
                 onClick={() => setIconsPanelView({ type: "overview" })}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </button>
+              </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
                 {iconsPanelView.category}
               </span>
@@ -210,7 +224,11 @@ export function EditorSidebar({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
+              onScopeModeChange={onScopeModeChange}
               palette={palette}
+              selectionControlActive={selectionControlActive}
+              selectionPromptVisible={selectionPromptVisible}
+              selectionScopeActive={selectionScopeActive}
               showSymbols={showSymbols}
               symbolAssignments={document.palette.symbolAssignments}
               usedColors={usedColors}
@@ -256,6 +274,7 @@ export function EditorSidebar({
             <SettingsPanelPage
               dispatch={dispatch}
               previewMode={previewMode}
+              previewModeDisabled={previewModeDisabled}
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}

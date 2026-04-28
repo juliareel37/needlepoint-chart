@@ -1,6 +1,7 @@
 import type {
   ReplaceGridCellsPatch,
 } from "../../store/patches";
+import { isCellInSelection } from "../../selection/lassoGeometry";
 import type { SwapPaletteColorCommand } from "../types";
 import { buildDirtySession } from "./gridMutationUtils";
 import type { EditorCommandHandler } from "./types";
@@ -23,10 +24,27 @@ export const paletteSwapColorCommandHandler: EditorCommandHandler<SwapPaletteCol
       fromColorId !== toColorId &&
       state.document.grid.cells.some((cell) => cell === fromColorId);
 
+    const gridWidth = state.document.grid.width;
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
     const swappedCells = shouldSwap
-      ? state.document.grid.cells.flatMap((cell, index) =>
-          cell === fromColorId ? [{ index, value: toColorId }] : [],
-        )
+      ? state.document.grid.cells.flatMap((cell, index) => {
+          if (cell !== fromColorId) {
+            return [];
+          }
+
+          if (
+            selectionActive &&
+            !isCellInSelection(state, {
+              x: index % gridWidth,
+              y: Math.floor(index / gridWidth),
+            })
+          ) {
+            return [];
+          }
+
+          return [{ index, value: toColorId }];
+        })
       : [];
     const patches: ReplaceGridCellsPatch[] = swappedCells.length > 0
       ? [{ type: "grid.replaceCells", cells: swappedCells }]

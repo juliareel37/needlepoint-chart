@@ -42,10 +42,36 @@ describe("paletteSwapColorCommandHandler", () => {
       "dmc:321": "@",
     });
   });
+
+  it("swaps only cells inside the active selection", () => {
+    const store = createEditorStore({
+      initialState: createSwapTestState({
+        selection: {
+          mode: "rect",
+          shape: "rect",
+          rect: { x: 0, y: 0, width: 1, height: 1 },
+          lassoPoints: [],
+          mirrorAxis: null,
+          preview: null,
+        },
+      }),
+    });
+
+    store.dispatch(createSwapCommand("dmc:310", "dmc:321"));
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc:321",
+      "dmc:321",
+      "dmc:310",
+      null,
+    ]);
+  });
 });
 
-function createSwapTestState(): EditorStoreState {
-  return {
+function createSwapTestState(
+  overrides?: Partial<EditorStoreState["session"]>,
+): EditorStoreState {
+  const state: EditorStoreState = {
     document: {
       project: {
         id: null,
@@ -202,6 +228,14 @@ function createSwapTestState(): EditorStoreState {
         darkCanvas: false,
         gridMajorInterval: 10,
       },
+    },
+  };
+
+  return {
+    ...state,
+    session: {
+      ...state.session,
+      ...overrides,
     },
   };
 }

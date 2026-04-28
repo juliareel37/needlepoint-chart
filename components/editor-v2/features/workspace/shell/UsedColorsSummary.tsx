@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
@@ -11,6 +11,7 @@ import {
   Checkbox,
   Modal,
   Notification,
+  SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
 import {
@@ -43,8 +44,9 @@ function getSwatchIconColor(hex: string) {
 }
 
 type UsedColorsToolMode = "idle" | "select";
-type UsedColorsActionMode = "none" | "merge";
+type UsedColorsActionMode = "none" | "merge" | "delete";
 type UsedColorsSortMode = "usage" | "color";
+type UsedColorsScopeMode = "full-canvas" | "selection";
 type UsedColorsSuccessNotification = {
   title: string;
   description: string;
@@ -448,7 +450,11 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
   onHighlightColorChange,
+  onScopeModeChange,
   showSymbols,
+  selectionControlActive,
+  selectionPromptVisible,
+  selectionScopeActive,
   symbolAssignments,
   onSwapColor,
   onDeleteColors,
@@ -465,7 +471,11 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onScopeModeChange: (mode: UsedColorsScopeMode) => void;
   showSymbols: boolean;
+  selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
+  selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
@@ -485,8 +495,31 @@ export function UsedColorsSummary({
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
+  const highlightColorChangeRef = useRef(onHighlightColorChange);
+  const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const isSelecting = toolMode !== "idle";
+  const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
+  const scopeOptions = useMemo(
+    () =>
+      [
+        { value: "full-canvas", label: "All" },
+        {
+          value: "selection",
+          label: (
+            <span className={styles.usedColorsScopeLabel}>
+              <span>Selection</span>
+              {selectionControlActive ? (
+                <span className={styles.usedColorsScopeCancelIcon} aria-hidden="true">
+                  <span className={styles.usedColorsScopeCancelGlyph} />
+                </span>
+              ) : null}
+            </span>
+          ),
+        },
+      ] satisfies Array<{ value: UsedColorsScopeMode; label: ReactNode }>,
+    [selectionControlActive],
+  );
   const sortOptions = useMemo(
     () => [
       { value: "usage", label: "Most used first" },
@@ -511,12 +544,17 @@ export function UsedColorsSummary({
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
 
+  useEffect(() => {
+    highlightColorChangeRef.current = onHighlightColorChange;
+    exitBottomPanelCanvasFocusRef.current = onExitBottomPanelCanvasFocus;
+  }, [onExitBottomPanelCanvasFocus, onHighlightColorChange]);
+
   useEffect(
     () => () => {
-      onHighlightColorChange(null);
-      onExitBottomPanelCanvasFocus();
+      highlightColorChangeRef.current(null);
+      exitBottomPanelCanvasFocusRef.current();
     },
-    [onExitBottomPanelCanvasFocus, onHighlightColorChange],
+    [],
   );
 
   useEffect(() => {
@@ -636,29 +674,21 @@ export function UsedColorsSummary({
       : `${deleteStitchCount} canvas cells will be replaced with the most similar remaining color in the design palette.`;
 
   useEffect(() => {
-    if (actionMode !== "merge") {
+    if (actionMode === "merge") {
+      if (mergeTargetColorId && colorsById[mergeTargetColorId]) {
+        return;
+      }
+
+      setMergeTargetColorId(defaultMergeTargetColorId);
       return;
     }
 
-    if (mergeTargetColorId && colorsById[mergeTargetColorId]) {
-      return;
-    }
-
-    setMergeTargetColorId(defaultMergeTargetColorId);
+    setMergePickerOpen(false);
+    setMergeTargetColorId(null);
   }, [actionMode, colorsById, defaultMergeTargetColorId, mergeTargetColorId]);
 
   const exitToolMode = () => {
     setToolMode("idle");
-    setActionMode("none");
-    setSelectedColorIds([]);
-    setMergeTargetColorId(null);
-    setMergePickerOpen(false);
-    setSwapSourceColorId(null);
-    setDeleteConfirmationOpen(false);
-    setMergeConfirmationOpen(false);
-  };
-
-  const clearSelection = () => {
     setActionMode("none");
     setSelectedColorIds([]);
     setMergeTargetColorId(null);
@@ -680,13 +710,38 @@ export function UsedColorsSummary({
     );
   };
 
-  const enterToolMode = () => {
+  const enterToolMode = (nextActionMode: UsedColorsActionMode = "none") => {
     setToolMode("select");
-    setActionMode("none");
+    setActionMode(nextActionMode);
     setSelectedColorIds([]);
-    setMergeTargetColorId(null);
+    setMergeTargetColorId(nextActionMode === "merge" ? defaultMergeTargetColorId : null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
+  };
+
+  const activateActionMode = (nextActionMode: Extract<UsedColorsActionMode, "merge" | "delete">) => {
+    if (!isSelecting) {
+      enterToolMode(nextActionMode);
+      return;
+    }
+
+    if (actionMode === nextActionMode) {
+      exitToolMode();
+      return;
+    }
+
+    setActionMode(nextActionMode);
+    setDeleteConfirmationOpen(false);
+    setMergeConfirmationOpen(false);
+
+    if (nextActionMode === "merge") {
+      setMergeTargetColorId((current) =>
+        current && colorsById[current] ? current : defaultMergeTargetColorId,
+      );
+      return;
+    }
+
+    setMergePickerOpen(false);
   };
 
   return (
@@ -708,84 +763,103 @@ export function UsedColorsSummary({
         : null}
 
       <div className={styles.usedColorsBlock}>
-      <div className={styles.usedColorsHeaderRow}>
-        <div className={styles.usedColorsTitleRow}>
-          <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-            Colors used
-          </p>
-          <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
-            {usedColors.length}
-          </span>
-        </div>
-        {isSelecting ? (
-          <Button
-            type="button"
-            variant="ghostV2"
-            size="sm"
-            className={styles.usedColorsEditButton}
-            aria-label="Exit used colors tool"
-            title="Exit used colors tool"
-            onClick={exitToolMode}
-          >
-            {/* <ButtonIcon icon="/icons/lucide/x.svg" /> */}
-            Cancel
-          </Button>
-        ) : usedColors.length > 0 ? (
-          <div className={styles.usedColorsToolButtons}>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className={styles.usedColorsEditButton}
-              onClick={enterToolMode}
-            >
-              Select
-            </Button>
-            <SingleSelectDropdown
-              ariaLabel="Sort design colors"
-              items={sortOptions}
-              value={sortMode}
-              placeholder="Sort"
-              getItemLabel={(item) => item.label}
-              getItemValue={(item) => item.value}
-              onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
-              showChevron={false}
-              triggerVariant="selection"
-              triggerClassName={styles.usedColorsSortButton}
-              triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
-              wrapperClassName={styles.usedColorsSortTriggerWrap}
-              menuPlacement="bottom-end"
-              menuPortalToViewport
-              menuWidth={200}
-              minWidth={32}
-            />
-          </div>
-        ) : null}
-      </div>
-
-      {usedColors.length === 0 ? (
+      <SegmentedControl
+        ariaLabel="Colors used scope"
+        className={styles.usedColorsScopeControl}
+        itemClassName={styles.usedColorsScopeControlItem}
+        value={scopeMode}
+        options={scopeOptions}
+        onChange={onScopeModeChange}
+        onActiveClick={(value) => {
+          if (value === "selection") {
+            onScopeModeChange("full-canvas");
+          }
+        }}
+      />
+      {selectionPromptVisible ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>
-          None yet
+          Drag a selection on the canvas to edit colors.
         </span>
       ) : (
-        <div className={styles.usedColorsListFrame}>
-          {actionMode === "merge" ? (
-            <div 
-            // className={styles.usedColorsMergePanel}
-            >
-              {/* <span className={styles.usedColorsMergeLabel} style={typographyStyles.p2}>
-                Choose a target color, then merge selected colors into it.
-              </span> */}
+        <>
+          <div className={styles.usedColorsHeaderRow}>
+            <div className={styles.usedColorsTitleRow}>
+              <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
+                {scopeMode === "selection" ? "Selection colors" : "Canvas colors"}
+              </p>
+              <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
+                {usedColors.length}
+              </span>
+            </div>
+            {usedColors.length > 0 ? (
+              <div className={styles.usedColorsHeaderActions}>
+                <SingleSelectDropdown
+                  ariaLabel="Sort design colors"
+                  items={sortOptions}
+                  value={sortMode}
+                  placeholder="Sort"
+                  getItemLabel={(item) => item.label}
+                  getItemValue={(item) => item.value}
+                  onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
+                  showChevron={false}
+                  triggerVariant="selection"
+                  triggerClassName={styles.usedColorsSortButton}
+                  triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
+                  wrapperClassName={styles.usedColorsSortTriggerWrap}
+                  menuPlacement="bottom-end"
+                  menuPortalToViewport
+                  menuWidth={200}
+                  minWidth={32}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {usedColors.length > 0 ? (
+            <div className={styles.usedColorsActionRow}>
+              <Button
+                type="button"
+                variant="secondary2"
+                size="sm"
+                active={actionMode === "merge"}
+                className={styles.usedColorsActionToggle}
+                onClick={() => activateActionMode("merge")}
+              >
+                <ButtonIcon icon="/icons/lucide/merge.svg" />
+                <span className={styles.usedColorsActionLabel}>
+                  <span>Merge</span>
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary2"
+                size="sm"
+                active={actionMode === "delete"}
+                className={styles.usedColorsActionToggle}
+                onClick={() => activateActionMode("delete")}
+              >
+                <ButtonIcon icon="/icons/lucide/trash.svg" />
+                <span className={styles.usedColorsActionLabel}>
+                  <span>Delete</span>
+                </span>
+              </Button>
             </div>
           ) : null}
-          <div className={styles.usedColorsListCard}>
-            <ul
-              className={styles.usedColorsList}
-              data-selection-mode={isSelecting ? "true" : "false"}
-              data-selection-overlay={
-                isSelecting && selectedColorIds.length > 0 ? "true" : "false"
-              }
-            >
+
+          {usedColors.length === 0 ? (
+            <span className={styles.emptyMessage} style={typographyStyles.p2}>
+              None yet
+            </span>
+          ) : (
+            <div className={styles.usedColorsListFrame}>
+              <div className={styles.usedColorsListCard}>
+                <ul
+                  className={styles.usedColorsList}
+                  data-selection-mode={isSelecting ? "true" : "false"}
+                  data-selection-overlay={
+                    isSelecting && selectedColorIds.length > 0 ? "true" : "false"
+                  }
+                >
             {displayedUsedColors.map((entry) => (
               (() => {
                 const isActiveColor = !isSelecting && activeColorId === entry.colorId;
@@ -1016,49 +1090,33 @@ export function UsedColorsSummary({
             </ul>
             {isSelecting ? (
               <div className={styles.usedColorsSelectionBar}>
+                <Button
+                  type="button"
+                  variant="toolbarX"
+                  size="sm"
+                  className={styles.usedColorsSelectionBarDismiss}
+                  aria-label={actionMode === "merge" ? "Exit merge mode" : "Exit delete mode"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    exitToolMode();
+                  }}
+                >
+                  <ButtonIcon icon="/icons/lucide/x.svg" />
+                </Button>
                 <div className={styles.usedColorsSelectionBarTop}>
-                  {actionMode === "merge" ? (
-                    <Button
-                      type="button"
-                      variant="ghostV2"
-                      size="sm"
-                      className={styles.usedColorsClearSelectionButton}
-                      aria-label="Back to selection actions"
-                      title="Back to selection actions"
-                      onClick={() => {
-                        setActionMode("none");
-                        setMergePickerOpen(false);
-                        setMergeConfirmationOpen(false);
-                      }}
+                  <div className={styles.usedColorsSelectionSummary}>
+                    <span
+                      className={styles.usedColorsSelectionCount}
+                      style={typographyStyles.p2}
                     >
-                      <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-                    </Button>
-                  ) : (
-                    <>
-                      <span
-                        className={styles.usedColorsSelectionCount}
-                        style={typographyStyles.p2}
-                      >
-                        {selectedColorIds.length > 0
-                          ? `${selectedColorIds.length} selected`
-                          : "0 selected"}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghostV2"
-                        size="sm"
-                        className={styles.usedColorsClearSelectionButton}
-                        disabled={selectedColorIds.length === 0}
-                        onClick={clearSelection}
-                      >
-                        <ButtonIcon icon="/icons/lucide/x.svg" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className={styles.usedColorsSelectionBarActions}>
+                      {selectedColorIds.length > 0
+                        ? `${selectedColorIds.length} selected`
+                        : "0 selected"}
+                    </span>
+                  </div>
+
                   {actionMode === "merge" ? (
-                    <>
+                    <div className={styles.usedColorsMergeControls}>
                       <div
                         ref={mergeTargetAnchorRef}
                         className={styles.usedColorsMergeActionGroup}
@@ -1137,7 +1195,7 @@ export function UsedColorsSummary({
                         type="button"
                         variant="primary"
                         size="md"
-                        className={styles.usedColorsDeleteButton}
+                        className={styles.usedColorsMergeConfirmButton}
                         disabled={!canMerge}
                         onClick={() => {
                           if (!canMerge || !mergeTargetColorId) {
@@ -1146,57 +1204,34 @@ export function UsedColorsSummary({
                           setMergeConfirmationOpen(true);
                         }}
                       >
-                        {/* <ButtonIcon icon="/icons/lucide/merge.svg" /> */}
                         Merge
                       </Button>
-                    </>
-                  ) : (
-                    <>
-
-
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="md"
-                        className={styles.usedColorsSecondaryAction}
-                        disabled={selectedColorIds.length === 0}
-                        onClick={() => {
-                          if (selectedColorIds.length === 0) {
-                            return;
-                          }
-
-                          setActionMode("merge");
-                          setMergeTargetColorId(defaultMergeTargetColorId);
-                          setMergePickerOpen(false);
-                        }}
-                      >
-                        {/* Merge */}
-                        <ButtonIcon icon="/icons/lucide/merge.svg" />
-                      </Button>
-
-
-                        <Button
-                        type="button"
-                        variant="destructive"
-                        size="md"
-                        className={styles.usedColorsDeleteButton}
-                        disabled={!canDelete}
-                        onClick={() => {
-                          if (!canDelete) {
-                            return;
-                          }
-                          setDeleteConfirmationOpen(true);
-                        }}
-                      >
-                        <ButtonIcon icon="/icons/lucide/trash.svg" />
-                      </Button>
-                    </>
-                  )}
+                    </div>
+                  ) : actionMode === "delete" ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="md"
+                      className={styles.usedColorsDeleteButton}
+                      disabled={!canDelete}
+                      onClick={() => {
+                        if (!canDelete) {
+                          return;
+                        }
+                        setDeleteConfirmationOpen(true);
+                      }}
+                    >
+                      <ButtonIcon icon="/icons/lucide/trash.svg" />
+                      Delete
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ) : null}
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Modal
@@ -1205,7 +1240,7 @@ export function UsedColorsSummary({
         description={mergeDescription}
         tone="warning"
         dismissLabel="Cancel"
-        confirmLabel={mergeColorCount === 1 ? "Merge color" : "Merge colors"}
+        confirmLabel={mergeColorCount === 1 ? "Merge colors" : "Merge colors"}
         confirmVariant="primary"
         onDismiss={() => setMergeConfirmationOpen(false)}
         onConfirm={() => {

@@ -35,6 +35,7 @@ import type {
 } from "../../../app/EditorV2Workspace";
 import {
   createCancelIconPlacementCommand,
+  createClearSelectionCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
@@ -59,6 +60,7 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
+const ENABLE_MOBILE_SELECTION_DOCK = false;
 
 interface PreviewSessionSnapshot {
   sidebarCollapsed: boolean;
@@ -129,7 +131,11 @@ export function EditorV2Shell({
   const activeTool = state.session.activeTool.tool;
   const brushSize = state.session.activeTool.brushSize;
   const colorsById = state.document.palette.colorsById;
-  const usedColors = getUsedColors(state);
+  const selectionScopeActive =
+    state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+  const selectionControlActive =
+    activeTool === "lasso" || state.session.selection.mode !== "none";
+  const usedColors = getUsedColors(state, { scope: "auto" });
   const selectionBounds = getSelectionBounds(state);
   const activeColorId = getActiveColorId(state);
   const activeColor = getActiveColor(state);
@@ -164,6 +170,8 @@ export function EditorV2Shell({
     useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
+  const reopenColorPanelAfterSelectionRef = useRef(false);
+  const usedColorsSelectionPromptStartedRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -181,7 +189,10 @@ export function EditorV2Shell({
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
   const [headerOverflowTarget, setHeaderOverflowTarget] = useState<HTMLElement | null>(null);
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
+  const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
+    useState(false);
   const mobileSelectionDocked =
+    ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
     (Boolean(selectionBounds) || activeTool === "lasso");
   const mobileBottomPanelVisibleHeightRatio =
@@ -190,19 +201,32 @@ export function EditorV2Shell({
         ? 0.6
         : 0.25
       : 1;
+  const previewModeDisabled =
+    Boolean(textPlacement) ||
+    Boolean(iconPlacement) ||
+    traceRepositionActive ||
+    selectionControlActive;
   const mobileVisibleTopInset =
     isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
   const mobileHeaderMenuItems = useMemo(
     () =>
       hasSavedDesignAccess
         ? [
+            {
+              id: previewMode ? "exit-preview" : "preview",
+              label: previewMode ? "Exit preview" : "Preview",
+            },
             { id: "export", label: "Export design" },
           ]
         : [
+            {
+              id: previewMode ? "exit-preview" : "preview",
+              label: previewMode ? "Exit preview" : "Preview",
+            },
             { id: "export", label: "Export design" },
             { id: "sign-in", label: "Sign in" },
           ],
-    [hasSavedDesignAccess],
+    [hasSavedDesignAccess, previewMode],
   );
   const gridMetrics = useMemo(
     () =>
@@ -390,7 +414,7 @@ export function EditorV2Shell({
   ]);
 
   const enterPreviewMode = useCallback(() => {
-    if (previewMode) {
+    if (previewMode || previewModeDisabled) {
       return;
     }
 
@@ -411,6 +435,7 @@ export function EditorV2Shell({
   }, [
     dispatch,
     previewMode,
+    previewModeDisabled,
     sidebarCollapsed,
     viewport.offsetX,
     viewport.offsetY,
@@ -821,6 +846,24 @@ export function EditorV2Shell({
   }, [dispatch, isBottomPanelLayout, sidebarCollapsed, textPlacement]);
 
   useEffect(() => {
+    if (!previewMode) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      exitPreviewMode();
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [exitPreviewMode, previewMode]);
+
+  useEffect(() => {
     if (!iconPlacement) {
       return;
     }
@@ -833,6 +876,73 @@ export function EditorV2Shell({
       dispatch(createSetSidebarCollapsedCommand(true));
     }
   }, [dispatch, iconPlacement, isBottomPanelLayout, sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!reopenColorPanelAfterSelectionRef.current) {
+      return;
+    }
+
+    if (selectionCommitted) {
+      dispatch(createSetSidebarCollapsedCommand(false));
+      reopenColorPanelAfterSelectionRef.current = false;
+      return;
+    }
+
+    if (activeTool !== "lasso" && !selectionScopeActive) {
+      reopenColorPanelAfterSelectionRef.current = false;
+    }
+  }, [activeTool, dispatch, selectionCommitted, selectionScopeActive]);
+
+  useEffect(() => {
+    if (!usedColorsSelectionPromptVisible) {
+      usedColorsSelectionPromptStartedRef.current = false;
+      return;
+    }
+
+    if (selectionCommitted) {
+      setUsedColorsSelectionPromptVisible(false);
+      return;
+    }
+
+    if (selectionControlActive) {
+      usedColorsSelectionPromptStartedRef.current = true;
+      return;
+    }
+
+    if (usedColorsSelectionPromptStartedRef.current) {
+      setUsedColorsSelectionPromptVisible(false);
+    }
+  }, [
+    selectionCommitted,
+    selectionControlActive,
+    usedColorsSelectionPromptVisible,
+  ]);
+
+  const [selectionRequestKey, setSelectionRequestKey] = useState(0);
+
+  const handleUsedColorsScopeModeChange = useCallback(
+    (mode: "full-canvas" | "selection") => {
+      if (mode === "selection") {
+        if (isBottomPanelLayout) {
+          if (!sidebarCollapsed) {
+            dispatch(createSetSidebarCollapsedCommand(true));
+          }
+          reopenColorPanelAfterSelectionRef.current = true;
+        } else if (sidebarCollapsed) {
+          dispatch(createSetSidebarCollapsedCommand(false));
+        }
+
+        setSelectionRequestKey((current) => current + 1);
+        setUsedColorsSelectionPromptVisible(true);
+        return;
+      }
+
+      reopenColorPanelAfterSelectionRef.current = false;
+      setUsedColorsSelectionPromptVisible(false);
+      dispatch(createClearSelectionCommand());
+    },
+    [dispatch, isBottomPanelLayout, sidebarCollapsed],
+  );
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -1004,26 +1114,44 @@ export function EditorV2Shell({
       {!setupModalOpen && headerHistoryTarget && isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerHistoryControls}>
-              <ToolbarButton
-                type="button"
-                disabled={!canUndo}
-                aria-label="Undo"
-                title="Undo"
-                className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
-                onClick={() => dispatch(createUndoCommand())}
-              >
-                <ToolbarIcon icon="/icons/lucide/undo.svg" />
-              </ToolbarButton>
-              <ToolbarButton
-                type="button"
-                disabled={!canRedo}
-                aria-label="Redo"
-                title="Redo"
-                className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
-                onClick={() => dispatch(createRedoCommand())}
-              >
-                <ToolbarIcon icon="/icons/lucide/redo.svg" />
-              </ToolbarButton>
+              {previewMode ? (
+                <Button
+                  type="button"
+                  variant="secondary2"
+                  size="sm"
+                  className={styles.headerMobilePreviewButton}
+                  onClick={exitPreviewMode}
+                >
+                  <ButtonIcon
+                    icon="/icons/lucide/eye-off.svg"
+                    className={styles.saveButtonIcon}
+                  />
+                  Exit preview
+                </Button>
+              ) : (
+                <>
+                  <ToolbarButton
+                    type="button"
+                    disabled={!canUndo}
+                    aria-label="Undo"
+                    title="Undo"
+                    className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                    onClick={() => dispatch(createUndoCommand())}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/undo.svg" />
+                  </ToolbarButton>
+                  <ToolbarButton
+                    type="button"
+                    disabled={!canRedo}
+                    aria-label="Redo"
+                    title="Redo"
+                    className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
+                    onClick={() => dispatch(createRedoCommand())}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/redo.svg" />
+                  </ToolbarButton>
+                </>
+              )}
             </div>,
             headerHistoryTarget,
           )
@@ -1044,6 +1172,22 @@ export function EditorV2Shell({
               minWidth="auto"
               getItemValue={(item) => item.id}
               getItemLabel={(item) => {
+                if (item.id === "preview" || item.id === "exit-preview") {
+                  return (
+                    <span className={styles.headerOverflowItemLabel}>
+                      <ButtonIcon
+                        icon={
+                          item.id === "exit-preview"
+                            ? "/icons/lucide/eye-off.svg"
+                            : "/icons/lucide/eye.svg"
+                        }
+                        className={styles.saveButtonIcon}
+                      />
+                      <span>{item.label}</span>
+                    </span>
+                  );
+                }
+
                 if (item.id === "export") {
                   return (
                     <span className={styles.headerOverflowItemLabel}>
@@ -1077,9 +1221,20 @@ export function EditorV2Shell({
                 return item.label;
               }}
               getItemDisabled={(item) =>
-                item.id === "export" && exportButtonState === "exporting"
+                (item.id === "export" && exportButtonState === "exporting") ||
+                (item.id === "preview" && previewModeDisabled)
               }
               onValueChange={(value) => {
+                if (value === "preview") {
+                  enterPreviewMode();
+                  return;
+                }
+
+                if (value === "exit-preview") {
+                  exitPreviewMode();
+                  return;
+                }
+
                 if (value === "export") {
                   void onExportDocument(document);
                   return;
@@ -1124,6 +1279,20 @@ export function EditorV2Shell({
                   </ToolbarButton>
                 </div>
               ) : null}
+              <Button
+                type="button"
+                variant={previewMode ? "secondary" : "secondary2"}
+                size="md"
+                className={styles.headerPreviewButton}
+                disabled={!previewMode && previewModeDisabled}
+                onClick={previewMode ? exitPreviewMode : enterPreviewMode}
+              >
+                <ButtonIcon
+                  icon={previewMode ? "/icons/lucide/eye-off.svg" : "/icons/lucide/eye.svg"}
+                  className={styles.saveButtonIcon}
+                />
+                {previewMode ? "Exit preview" : "Preview"}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -1247,6 +1416,10 @@ export function EditorV2Shell({
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 gridMetrics={gridMetrics}
+                onScopeModeChange={handleUsedColorsScopeModeChange}
+                selectionScopeActive={selectionScopeActive}
+                selectionControlActive={selectionControlActive}
+                selectionPromptVisible={usedColorsSelectionPromptVisible}
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
@@ -1264,6 +1437,7 @@ export function EditorV2Shell({
                 onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
+                previewModeDisabled={previewModeDisabled}
                 trace={trace}
                 traceRepositionActive={traceRepositionActive}
                 traceRepositionOrigin={traceRepositionOrigin}
@@ -1344,6 +1518,7 @@ export function EditorV2Shell({
                     trace={trace}
                     mirrorSessionActive={Boolean(mirrorSession)}
                     isBottomPanelLayout={isBottomPanelLayout}
+                    selectionRequestKey={selectionRequestKey}
                     showSymbols={showSymbols}
                     symbolAssignments={document.palette.symbolAssignments}
                   />
@@ -1368,19 +1543,6 @@ export function EditorV2Shell({
               className={styles.canvasWorld}
               data-loading={canvasLoading ? "true" : "false"}
             >
-              {previewMode ? (
-                <div className={styles.previewDoneButtonWrap}>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    className={styles.previewDoneButton}
-                    onClick={exitPreviewMode}
-                  >
-                    Done
-                  </Button>
-                </div>
-              ) : null}
               <GridWorldSurface
                 activeColorId={activeColorId}
                 activeTool={activeTool}

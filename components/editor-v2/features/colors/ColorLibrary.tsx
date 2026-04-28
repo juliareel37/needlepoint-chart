@@ -190,7 +190,7 @@ export function ColorLibrary({
       {showFeaturedSection && featuredColors.length > 0 ? (
         <section className={styles.section} aria-label="Design colors">
           <div className={styles.sectionContent}>
-            <h3 className={styles.sectionHeader}>Design Colors</h3>
+            <h3 className={styles.sectionHeader}>Design colors</h3>
             <div className={styles.sectionGrid}>
               {featuredColors.map((color) =>
                 renderColorButton(color, { showSymbol: showFeaturedSymbols }),
@@ -203,7 +203,7 @@ export function ColorLibrary({
       <section className={styles.section} aria-label="All colors">
         <div className={styles.sectionContent}>
           {showAllSectionHeader ? (
-            <h3 className={styles.sectionHeader}>All Colors</h3>
+            <h3 className={styles.sectionHeader}>All colors</h3>
           ) : null}
           {filteredColors.length > 0 ? (
             <div className={styles.sectionGrid}>

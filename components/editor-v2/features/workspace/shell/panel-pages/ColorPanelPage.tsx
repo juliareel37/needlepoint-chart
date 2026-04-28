@@ -31,7 +31,11 @@ interface ColorPanelPageProps {
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   palette: PaletteColor[];
+  selectionControlActive: boolean;
+  selectionPromptVisible: boolean;
+  selectionScopeActive: boolean;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
   usedColors: Array<{ colorId: string; count: number }>;
@@ -50,7 +54,11 @@ export function ColorPanelPage({
   onEnterBottomPanelCanvasFocus,
   onViewChange,
   onHighlightColorChange,
+  onScopeModeChange,
   palette,
+  selectionControlActive,
+  selectionPromptVisible,
+  selectionScopeActive,
   showSymbols,
   symbolAssignments,
   usedColors,
@@ -144,6 +152,11 @@ export function ColorPanelPage({
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
                     <h3 style={typographyStyles.h5}>Design colors</h3>
+                  </div>
+                  <div className={styles.sidebarColorPreviewMetaRow}>
+                    <p className={styles.sidebarColorPreviewScopeLabel} style={typographyStyles.p2}>
+                      {selectionScopeActive ? "Selection" : "Full canvas"}
+                    </p>
                     {usedColors.length > 0 ? (
                       <span
                         className={styles.sidebarColorPreviewCountBadge}
@@ -231,7 +244,11 @@ export function ColorPanelPage({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onHighlightColorChange={onHighlightColorChange}
+              onScopeModeChange={onScopeModeChange}
               showSymbols={showSymbols}
+              selectionControlActive={selectionControlActive}
+              selectionPromptVisible={selectionPromptVisible}
+              selectionScopeActive={selectionScopeActive}
               symbolAssignments={symbolAssignments}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))

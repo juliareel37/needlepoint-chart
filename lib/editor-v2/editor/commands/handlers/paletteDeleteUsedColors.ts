@@ -1,6 +1,7 @@
 import type { ReplaceGridCellsPatch } from "../../store/patches";
 import { findClosestColorIdFromCandidates } from "../../color-utils";
 import type { DeleteUsedColorsCommand } from "../types";
+import { isCellInSelection } from "../../selection/lassoGeometry";
 import { getUsedColors } from "../../selectors";
 import { buildDirtySession } from "./gridMutationUtils";
 import type { EditorCommandHandler } from "./types";
@@ -16,7 +17,7 @@ export const paletteDeleteUsedColorsCommandHandler: EditorCommandHandler<DeleteU
   handle(state, command) {
     const selectedColorIds = Array.from(new Set(command.payload.colorIds));
     const selectedColorIdSet = new Set(selectedColorIds);
-    const usedColors = getUsedColors(state);
+    const usedColors = getUsedColors(state, { scope: "auto" });
     const remainingUsedColorIds = usedColors
       .map((entry) => entry.colorId)
       .filter((colorId) => !selectedColorIdSet.has(colorId));
@@ -50,8 +51,21 @@ export const paletteDeleteUsedColorsCommandHandler: EditorCommandHandler<DeleteU
       }
     }
 
+    const gridWidth = state.document.grid.width;
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
     const replacedCells = state.document.grid.cells.flatMap((cell, index) => {
       if (!cell) {
+        return [];
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
         return [];
       }
 
