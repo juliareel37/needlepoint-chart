@@ -2224,7 +2224,7 @@
 .traceSectionBody {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .traceSectionDivider {
@@ -2454,9 +2454,10 @@
 }
 
 .traceSliderValue {
-  min-width: 52px;
+  min-width: 40px;
   text-align: right;
   color: var(--text-primary);
+  font-size: 12px;
 }
 
 .traceFieldGrid {

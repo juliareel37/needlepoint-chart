@@ -239,6 +239,9 @@ export function EditorSidebar({
           {activeSection === "trace" ? (
             <TracePanelPage
               dispatch={dispatch}
+              grid={document.grid}
+              gridMetrics={gridMetrics}
+              palette={palette}
               repositionActive={traceRepositionActive}
               repositionOrigin={traceRepositionOrigin}
               trace={trace}

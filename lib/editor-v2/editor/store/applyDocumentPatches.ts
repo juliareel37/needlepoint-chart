@@ -44,6 +44,14 @@ function applyDocumentPatch(
       };
     case "palette.replaceColor":
       return applyReplaceColorPatch(document, patch.fromColorId, patch.toColorId);
+    case "palette.setExtractedColorIds":
+      return {
+        ...document,
+        palette: {
+          ...document.palette,
+          extractedPaletteIds: [...patch.colorIds],
+        },
+      };
     case "palette.assignSymbols":
       return {
         ...document,
