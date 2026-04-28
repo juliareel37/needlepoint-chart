@@ -12,14 +12,22 @@ import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
+import { SaveStatusCard } from "../SaveStatusCard";
 import styles from "../EditorV2Shell.module.css";
 
 interface DocumentPanelPageProps {
+  autoSaveEnabled: boolean;
   dispatch: EditorStore["dispatch"];
   documentTitle: string;
   hasSavedDesignAccess: boolean;
+  hasUnsavedChanges: boolean;
+  isAutoSavePanelStatusVisible: boolean;
   onLoadSelected: () => void;
+  onSignIn: () => void;
   onStartOver: () => void;
+  recoveredLocalChanges: boolean;
+  saveMessage: string;
+  saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectedStorageId: string;
@@ -27,11 +35,18 @@ interface DocumentPanelPageProps {
 }
 
 export function DocumentPanelPage({
+  autoSaveEnabled,
   dispatch,
   documentTitle,
   hasSavedDesignAccess,
+  hasUnsavedChanges,
+  isAutoSavePanelStatusVisible,
   onLoadSelected,
+  onSignIn,
   onStartOver,
+  recoveredLocalChanges,
+  saveMessage,
+  saveMode,
   savedDocuments,
   savedDocumentsLoading,
   selectedStorageId,
@@ -67,6 +82,21 @@ export function DocumentPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
+        {isAutoSavePanelStatusVisible ? (
+          <div className={styles.sidebarSubsection}>
+            <SaveStatusCard
+              autoSaveEnabled={autoSaveEnabled}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              layout="panel"
+              onDismiss={null}
+              onSignIn={onSignIn}
+              recoveredLocalChanges={recoveredLocalChanges}
+              saveMessage={saveMessage}
+              saveMode={saveMode}
+            />
+          </div>
+        ) : null}
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarTitleBlock}>
             {isRenaming ? (

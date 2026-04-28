@@ -2083,14 +2083,15 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
-  max-width: min(260px, 32vw);
+  /* min-width: 0; */
+  width: fit-content;
+  /* max-width: min(260px, 32vw); */
   padding: 4px 10px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 10px;
-  background: var(--surface-card);
+  /* background: var(--surface-card); */
   color: var(--text-primary);
-  box-shadow: var(--ui-shadow-md);
+  /* box-shadow: var(--ui-shadow-md); */
 }
 
 .headerSaveStatus[data-layout="banner"] {

@@ -52,6 +52,7 @@ import { ButtonIcon, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
+import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
 import styles from "./EditorV2Shell.module.css";
@@ -60,6 +61,7 @@ const EXPANDED_SIDEBAR_WIDTH = 320;
 const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
+const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
 
@@ -1009,9 +1011,11 @@ export function EditorV2Shell({
 
   const showSaveStatus =
     saveMode === "autosave" && !hasCompletedSave && !saveMessage
-      ? false
+      ? true
       : Boolean(saveMessage || hasUnsavedChanges);
-  const useTopSaveBanner = isBottomPanelLayout && showSaveStatus;
+  const showAutoSavePanelStatus = isBottomPanelLayout && saveMode === "autosave";
+  const useTopSaveBanner =
+    isBottomPanelLayout && saveMode !== "autosave" && showSaveStatus;
   const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
   const showSaveConfirmationOverlay =
     saveNotificationVisible &&
@@ -1099,15 +1103,17 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && !useTopSaveBanner && headerAutosaveTarget
+      {!setupModalOpen && !useTopSaveBanner && !showAutoSavePanelStatus && headerAutosaveTarget
         ? createPortal(
-            <HeaderSaveStatus
+            <SaveStatusCard
+              autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
               layout="header"
               onDismiss={null}
               onSignIn={openSignIn}
               recoveredLocalChanges={recoveredLocalChanges}
+              saveMode={saveMode}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
@@ -1115,13 +1121,15 @@ export function EditorV2Shell({
         : null}
       {!setupModalOpen && showTopSaveBanner && topBannerTarget
         ? createPortal(
-            <HeaderSaveStatus
+            <SaveStatusCard
+              autoSaveEnabled={false}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
               onSignIn={openSignIn}
               recoveredLocalChanges={recoveredLocalChanges}
+              saveMode={saveMode}
               saveMessage={saveMessage}
             />,
             topBannerTarget,
@@ -1424,11 +1432,14 @@ export function EditorV2Shell({
             >
               <EditorSidebar
                 activeSection={activeSidebarSection}
+                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
                 activeColor={activeColor}
                 activeColorId={activeColorId}
                 colorsById={colorsById}
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
+                hasUnsavedChanges={hasUnsavedChanges}
+                isAutoSavePanelStatusVisible={showAutoSavePanelStatus}
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 gridMetrics={gridMetrics}
@@ -1451,6 +1462,7 @@ export function EditorV2Shell({
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                 onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                 onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
+                onSignIn={openSignIn}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
                 previewModeDisabled={previewModeDisabled}
@@ -1464,6 +1476,9 @@ export function EditorV2Shell({
                 document={document}
                 dispatch={dispatch}
                 highlightedColorId={highlightedColorId}
+                recoveredLocalChanges={recoveredLocalChanges}
+                saveMessage={saveMessage}
+                saveMode={saveMode}
                 onHighlightColorChange={setHighlightedColorId}
                 showGridlines={showGridlines}
                 showSymbols={showSymbols}
@@ -1591,86 +1606,6 @@ export function EditorV2Shell({
   );
 }
 
-function HeaderSaveStatus({
-  hasSavedDesignAccess,
-  hasUnsavedChanges,
-  layout,
-  onDismiss,
-  onSignIn,
-  recoveredLocalChanges,
-  saveMessage,
-}: {
-  hasSavedDesignAccess: boolean;
-  hasUnsavedChanges: boolean;
-  layout: "header" | "banner";
-  onDismiss: (() => void) | null;
-  onSignIn: () => void;
-  recoveredLocalChanges: boolean;
-  saveMessage: string;
-}) {
-  if (!saveMessage && !hasUnsavedChanges) {
-    return null;
-  }
-
-  const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
-  const message =
-    recoveredLocalChanges
-      ? "Recovered local changes. Sync pending."
-      : !hasSavedDesignAccess && !saveMessage
-        ? "Sign in to save changes"
-        : saveMessage || "Changes not saved";
-  const icon =
-    recoveredLocalChanges
-      ? "/icons/lucide/backup.svg"
-      : state === "info"
-      ? "/icons/lucide/info.svg"
-      : state === "alert"
-        ? "/icons/lucide/alert.svg"
-        : state === "ready"
-          ? "/icons/lucide/alert.svg"
-        : state === "error"
-          ? "/icons/lucide/alert.svg"
-          : "/icons/lucide/save.svg";
-
-  return (
-    <div
-      className={styles.headerSaveStatus}
-      data-layout={layout}
-      data-state={state}
-      role="status"
-      aria-live="polite"
-      title={message}
-    >
-      <span className={styles.headerSaveStatusIconWrap} aria-hidden="true">
-        <ButtonIcon icon={icon} className={styles.headerSaveStatusIcon} />
-      </span>
-      <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
-        {message}
-      </p>
-      {layout === "banner" && !hasSavedDesignAccess ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onSignIn}
-        >
-          Sign in
-        </Button>
-      ) : null}
-      {layout === "banner" && onDismiss ? (
-        <button
-          type="button"
-          className={styles.headerSaveStatusDismiss}
-          aria-label="Dismiss save status"
-          onClick={onDismiss}
-        >
-          <ButtonIcon icon="/icons/lucide/x.svg" className={styles.headerSaveStatusDismissIcon} />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function SaveButtonLabel({
   hasSavedDesignAccess,
   state,
@@ -1725,7 +1660,10 @@ function getSaveStatusState(
     return "saving";
   }
 
-  if (saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
+  if (
+    saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX)
+  ) {
     return "saved";
   }
 

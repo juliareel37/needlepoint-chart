@@ -22,6 +22,7 @@ import { createApplyProjectServerStateCommand } from "../features/workspace/work
 
 const LOCAL_FLUSH_DEBOUNCE_MS = 250;
 const SERVER_FLUSH_DEBOUNCE_MS = 2000;
+const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
 
 export interface EditorV2PersistenceUiState {
   saveButtonState: "idle" | "saving" | "saved";
@@ -200,7 +201,7 @@ export function useEditorV2PersistenceController({
         );
         setSaveButtonState("saved");
         setSaveMessage(
-          `Saved at ${new Date(result.updatedAt).toLocaleTimeString([], {
+          `${saveMode === "autosave" ? AUTOSAVE_SUCCESS_PREFIX : "Saved at "}${new Date(result.updatedAt).toLocaleTimeString([], {
             hour: "numeric",
             minute: "2-digit",
           })}`,
@@ -219,7 +220,7 @@ export function useEditorV2PersistenceController({
         await deleteLocalSnapshot(previousKey);
       }
     },
-    [dispatch, persistSnapshot, store],
+    [dispatch, persistSnapshot, saveMode, store],
   );
 
   const performServerSave = useCallback(

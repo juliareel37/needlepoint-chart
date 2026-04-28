@@ -25,11 +25,14 @@ import styles from "./EditorV2Shell.module.css";
 
 interface EditorSidebarProps {
   activeSection: EditorSidebarSection;
+  autoSaveEnabled: boolean;
   activeColor: PaletteColor | null;
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
   documentTitle: string;
   hasSavedDesignAccess: boolean;
+  hasUnsavedChanges: boolean;
+  isAutoSavePanelStatusVisible: boolean;
   isBottomPanelCanvasFocusActive: boolean;
   palette: PaletteColor[];
   savedDocuments: SavedEditorV2DocumentRecord[];
@@ -41,6 +44,7 @@ interface EditorSidebarProps {
   onClose: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
+  onSignIn: () => void;
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
   previewMode: boolean;
@@ -57,6 +61,9 @@ interface EditorSidebarProps {
   document: EditorDocumentState;
   gridMetrics: GridWorldMetrics;
   highlightedColorId: string | null;
+  recoveredLocalChanges: boolean;
+  saveMessage: string;
+  saveMode: "manual" | "autosave";
   dispatch: EditorStore["dispatch"];
   textPlacement: TextPlacementSession | null;
   iconPlacement: IconPlacementSession | null;
@@ -69,11 +76,14 @@ interface EditorSidebarProps {
 
 export function EditorSidebar({
   activeSection,
+  autoSaveEnabled,
   activeColor,
   activeColorId,
   colorsById,
   documentTitle,
   hasSavedDesignAccess,
+  hasUnsavedChanges,
+  isAutoSavePanelStatusVisible,
   isBottomPanelCanvasFocusActive,
   palette,
   savedDocuments,
@@ -85,6 +95,7 @@ export function EditorSidebar({
   onClose,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
+  onSignIn,
   onScopeModeChange,
   onStartOver,
   previewMode,
@@ -101,6 +112,9 @@ export function EditorSidebar({
   document,
   gridMetrics,
   highlightedColorId,
+  recoveredLocalChanges,
+  saveMessage,
+  saveMode,
   dispatch,
   textPlacement,
   iconPlacement,
@@ -199,11 +213,18 @@ export function EditorSidebar({
         <div className={styles.sidebarPanelBody}>
           {activeSection === "document" ? (
             <DocumentPanelPage
+              autoSaveEnabled={autoSaveEnabled}
               dispatch={dispatch}
               documentTitle={documentTitle}
               hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isAutoSavePanelStatusVisible={isAutoSavePanelStatusVisible}
               onLoadSelected={onLoadSelected}
+              onSignIn={onSignIn}
               onStartOver={onStartOver}
+              recoveredLocalChanges={recoveredLocalChanges}
+              saveMessage={saveMessage}
+              saveMode={saveMode}
               savedDocuments={savedDocuments}
               savedDocumentsLoading={savedDocumentsLoading}
               selectedStorageId={selectedStorageId}
