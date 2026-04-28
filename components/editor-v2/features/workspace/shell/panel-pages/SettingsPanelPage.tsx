@@ -21,6 +21,7 @@ import styles from "../EditorV2Shell.module.css";
 interface SettingsPanelPageProps {
   dispatch: EditorStore["dispatch"];
   previewMode: boolean;
+  previewModeDisabled?: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
@@ -29,6 +30,7 @@ interface SettingsPanelPageProps {
 export function SettingsPanelPage({
   dispatch,
   previewMode,
+  previewModeDisabled = false,
   showGridlines,
   showRuler,
   showSymbols,
@@ -38,7 +40,7 @@ export function SettingsPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-             <div className={styles.sidebarSubsection}>
+        <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>App Theme</h3>
           </div>
@@ -73,17 +75,24 @@ export function SettingsPanelPage({
             onChange={(nextValue) => setThemeMode(nextValue)}
           />
         </div>
-      </div>
+
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Canvas Aids</h3>
           </div>
-          {/* <SegmentedBooleanSetting
-            label="Preview mode"
-            value={previewMode}
-            ariaLabel="Preview mode"
-            onChange={(nextChecked) => dispatch(createSetPreviewModeCommand(nextChecked))}
-          /> */}
+          <SegmentedChoiceSetting
+            label="Mode"
+            value={previewMode ? "preview" : "edit"}
+            ariaLabel="Canvas mode"
+            disabled={previewModeDisabled}
+            options={[
+              { label: "Edit", value: "edit" },
+              { label: "Preview", value: "preview" },
+            ]}
+            onChange={(nextValue) =>
+              dispatch(createSetPreviewModeCommand(nextValue === "preview"))
+            }
+          />
           <SegmentedBooleanSetting
             label="Grid lines"
             value={showGridlines}
@@ -108,7 +117,7 @@ export function SettingsPanelPage({
             label="Ruler"
             value={showRuler}
             ariaLabel="Ruler visibility"
-                        options={{
+            options={{
               show: (
                 <>
                   <ButtonIcon icon="/icons/lucide/ruler.svg" />
@@ -124,12 +133,6 @@ export function SettingsPanelPage({
             }}
             onChange={(nextChecked) => dispatch(createSetRulerVisibleCommand(nextChecked))}
           />
-        {/* </div>
-
-        <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
-            <h3 style={typographyStyles.h5}>Colors</h3>
-          </div> */}
           <SegmentedBooleanSetting
             label="Color Symbol Key"
             value={showSymbols}
@@ -151,8 +154,7 @@ export function SettingsPanelPage({
             onChange={(nextChecked) => dispatch(createSetSymbolsVisibleCommand(nextChecked))}
           />
         </div>
-
-   
+      </div>
     </section>
   );
 }
@@ -189,12 +191,14 @@ function SegmentedBooleanSetting({
 
 function SegmentedChoiceSetting<T extends string>({
   ariaLabel,
+  disabled = false,
   label,
   onChange,
   options,
   value,
 }: {
   ariaLabel: string;
+  disabled?: boolean;
   label: ReactNode;
   onChange: (next: T) => void;
   options: { label: ReactNode; value: T }[];
@@ -207,6 +211,7 @@ function SegmentedChoiceSetting<T extends string>({
       </span>
       <SegmentedControl
         ariaLabel={ariaLabel}
+        disabled={disabled}
         options={options}
         value={value}
         onChange={onChange}

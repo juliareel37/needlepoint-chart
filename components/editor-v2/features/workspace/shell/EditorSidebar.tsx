@@ -44,6 +44,7 @@ interface EditorSidebarProps {
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
   previewMode: boolean;
+  previewModeDisabled?: boolean;
   selectionControlActive: boolean;
   selectionPromptVisible: boolean;
   showGridlines: boolean;
@@ -87,6 +88,7 @@ export function EditorSidebar({
   onScopeModeChange,
   onStartOver,
   previewMode,
+  previewModeDisabled = false,
   selectionControlActive,
   selectionPromptVisible,
   showGridlines,
@@ -272,6 +274,7 @@ export function EditorSidebar({
             <SettingsPanelPage
               dispatch={dispatch}
               previewMode={previewMode}
+              previewModeDisabled={previewModeDisabled}
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}

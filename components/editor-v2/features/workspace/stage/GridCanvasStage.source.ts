@@ -153,6 +153,7 @@ export function redrawSourceCanvas(options: {
 
   for (let index = 0; index < cells.length; index += 1) {
     drawCell(context, {
+      cells,
       cellSize: metrics.cellSize,
       colorId: cells[index],
       colorsById,
@@ -245,6 +246,7 @@ export function drawChangedSourceCells(options: {
       for (let cellX = minAffectedX; cellX <= maxAffectedX; cellX += 1) {
         const index = cellY * gridWidth + cellX;
         drawCell(context, {
+          cells,
           cellSize,
           colorId: cells[index] ?? null,
           colorsById,
@@ -296,6 +298,7 @@ function clearCellRect(
 function drawCell(
   context: CanvasRenderingContext2D,
   options: {
+    cells: GridCellValue[];
     cellSize: number;
     colorId: GridCellValue;
     colorsById: Record<string, PaletteColor>;
@@ -307,6 +310,7 @@ function drawCell(
   },
 ): void {
   const {
+    cells,
     cellSize,
     colorId,
     colorsById,
@@ -330,11 +334,21 @@ function drawCell(
   const { x0, y0, width, height } = getCellRect(index, gridWidth, cellSize);
 
   if (threadView) {
+    const hasTopNeighbor = hasPaintedNeighbor(cells, index - gridWidth);
+    const hasLeftNeighbor =
+      index % gridWidth > 0 && hasPaintedNeighbor(cells, index - 1);
+    const hasBottomNeighbor = hasPaintedNeighbor(cells, index + gridWidth);
+    const hasRightNeighbor =
+      index % gridWidth < gridWidth - 1 && hasPaintedNeighbor(cells, index + 1);
     const stitchCanvas = getThreadStitchCanvas(
       color.hex,
       Math.max(width, height),
       stitchCanvasCache,
       stitchStyleVersion,
+      {
+        showBottomRightShadow: hasBottomNeighbor && hasRightNeighbor,
+        showTopLeftShadow: hasTopNeighbor && hasLeftNeighbor,
+      },
     );
     context.drawImage(stitchCanvas, x0, y0, width, height);
     return;
@@ -342,6 +356,10 @@ function drawCell(
 
   context.fillStyle = color.hex;
   context.fillRect(x0, y0, width, height);
+}
+
+function hasPaintedNeighbor(cells: GridCellValue[], index: number): boolean {
+  return index >= 0 && index < cells.length && cells[index] !== null;
 }
 
 function getCellRect(index: number, gridWidth: number, cellSize: number) {

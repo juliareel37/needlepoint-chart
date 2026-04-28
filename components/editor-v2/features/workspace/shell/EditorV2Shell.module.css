@@ -1094,6 +1094,10 @@
   padding: 6px;
 }
 
+.headerMobilePreviewButton {
+  white-space: nowrap;
+}
+
 .viewportToolbar {
   position: relative;
 }
@@ -1248,19 +1252,6 @@
 
 .stageToolbarBottomRight > * {
   pointer-events: auto;
-}
-
-.previewDoneButtonWrap {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: calc(var(--z-editor-stage-toolbar) + 1);
-  pointer-events: none;
-}
-
-.previewDoneButton {
-  pointer-events: auto;
-  box-shadow: var(--ui-shadow-md);
 }
 
 .panelRow {

@@ -53,12 +53,35 @@ function hslToRgb(h: number, s: number, l: number) {
   return { r, g, b };
 }
 
-function adjustLightness(hex: string, amount: number) {
+function adjustTone(
+  hex: string,
+  options: {
+    lightnessDelta?: number;
+    saturationMultiplier?: number;
+  },
+) {
   const rgb = hexToRgb(hex);
   if (!rgb) return { r: 0, g: 0, b: 0 };
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-  const nextL = Math.min(1, Math.max(0, hsl.l + amount));
-  return hslToRgb(hsl.h, hsl.s, nextL);
+  const nextL = Math.min(1, Math.max(0, hsl.l + (options.lightnessDelta ?? 0)));
+  const nextS = Math.min(
+    1,
+    Math.max(0, hsl.s * (options.saturationMultiplier ?? 1)),
+  );
+  return hslToRgb(hsl.h, nextS, nextL);
+}
+
+function mixWithBlack(hex: string, amount: number) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return { r: 0, g: 0, b: 0 };
+  const clampedAmount = Math.min(1, Math.max(0, amount));
+  const keep = 1 - clampedAmount;
+
+  return {
+    r: Math.round(rgb.r * keep),
+    g: Math.round(rgb.g * keep),
+    b: Math.round(rgb.b * keep),
+  };
 }
 
 function hashString(input: string) {
@@ -104,10 +127,16 @@ export function getThreadStitchCanvas(
   hex: string,
   size: number,
   cache: Map<string, HTMLCanvasElement>,
-  styleVersion: number
+  styleVersion: number,
+  options?: {
+    showBottomRightShadow?: boolean;
+    showTopLeftShadow?: boolean;
+  },
 ) {
   const rounded = Math.max(1, Math.round(size));
-  const key = `${styleVersion}|${hex}|${rounded}`;
+  const showTopLeftShadow = options?.showTopLeftShadow ?? false;
+  const showBottomRightShadow = options?.showBottomRightShadow ?? false;
+  const key = `${styleVersion}|${hex}|${rounded}|${showTopLeftShadow ? 1 : 0}|${showBottomRightShadow ? 1 : 0}`;
   const cached = cache.get(key);
   if (cached) return cached;
   const previewStyle = styleVersion >= 2;
@@ -127,42 +156,51 @@ export function getThreadStitchCanvas(
     ? getPreviewThreadRadii(rounded)
     : getThreadRadii(rounded);
 
-  const light = adjustLightness(hex, 0.18);
-  const dark = adjustLightness(hex, -0.18);
+  const light = adjustTone(hex, {
+    lightnessDelta: 0.18,
+    saturationMultiplier: 0.94,
+  });
+  const topShadow = mixWithBlack(hex, 0.52);
+  const bottomShadow = mixWithBlack(hex, 0.68);
+  const edgeShadow = mixWithBlack(hex, 0.4);
   const highlightColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.26 : 0.3})`;
-  const shadowColor = `rgba(${dark.r}, ${dark.g}, ${dark.b}, ${previewStyle ? 0.22 : 0.25})`;
+  const shadowColor = `rgba(${edgeShadow.r}, ${edgeShadow.g}, ${edgeShadow.b}, ${previewStyle ? 0.22 : 0.25})`;
   const ridgeColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.1 : 0.12})`;
   const glintColor = `rgba(${light.r}, ${light.g}, ${light.b}, ${previewStyle ? 0.09 : 0.12})`;
 
   if (previewStyle) {
-    const cornerInset = rounded * 0.08;
-    const topLeftCorner = ctx.createRadialGradient(
-      cornerInset,
-      cornerInset,
-      0,
-      cornerInset,
-      cornerInset,
-      rounded * 0.78,
-    );
-    // topLeftCorner.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.38)`);
-    // topLeftCorner.addColorStop(0.5, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.2)`);
-    // topLeftCorner.addColorStop(1, "rgba(0,0,0,0)");
-    // ctx.fillStyle = topLeftCorner;
-    ctx.fillRect(0, 0, rounded, rounded);
+    const cornerReach = rounded * 0.66;
+    const seamOverlap = Math.max(1, rounded * 0.04);
 
-    // const bottomRightCorner = ctx.createRadialGradient(
-    //   rounded - cornerInset,
-    //   rounded - cornerInset,
-    //   0,
-    //   rounded - cornerInset,
-    //   rounded - cornerInset,
-    //   rounded * 0.8,
-    // );
-    // bottomRightCorner.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.54)`);
-    // bottomRightCorner.addColorStop(0.45, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.28)`);
-    // bottomRightCorner.addColorStop(1, "rgba(0,0,0,0)");
-    // ctx.fillStyle = bottomRightCorner;
-    ctx.fillRect(0, 0, rounded, rounded);
+    if (showTopLeftShadow) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, rounded, rounded * 0.5 + seamOverlap);
+      ctx.clip();
+      ctx.fillStyle = `rgb(${topShadow.r}, ${topShadow.g}, ${topShadow.b})`;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(cornerReach, 0);
+      ctx.lineTo(0, cornerReach);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (showBottomRightShadow) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, rounded * 0.5 - seamOverlap, rounded, rounded * 0.5 + seamOverlap);
+      ctx.clip();
+      ctx.fillStyle = `rgb(${bottomShadow.r}, ${bottomShadow.g}, ${bottomShadow.b})`;
+      ctx.beginPath();
+      ctx.moveTo(rounded, rounded);
+      ctx.lineTo(rounded - cornerReach, rounded);
+      ctx.lineTo(rounded, rounded - cornerReach);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   ctx.save();
@@ -176,8 +214,8 @@ export function getThreadStitchCanvas(
       radiusX * 1.1,
       radiusY * 1.1,
     );
-    shadowGradient.addColorStop(0, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.44)`);
-    shadowGradient.addColorStop(0.65, `rgba(${dark.r}, ${dark.g}, ${dark.b}, 0.16)`);
+    shadowGradient.addColorStop(0, `rgba(${edgeShadow.r}, ${edgeShadow.g}, ${edgeShadow.b}, 0.44)`);
+    shadowGradient.addColorStop(0.65, `rgba(${edgeShadow.r}, ${edgeShadow.g}, ${edgeShadow.b}, 0.16)`);
     shadowGradient.addColorStop(1, `rgba(${light.r}, ${light.g}, ${light.b}, 0.08)`);
     ctx.fillStyle = shadowGradient;
     ctx.beginPath();
