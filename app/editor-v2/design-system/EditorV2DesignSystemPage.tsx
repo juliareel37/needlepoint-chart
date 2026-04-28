@@ -135,7 +135,7 @@ export function EditorV2DesignSystemPage() {
       <div className={styles.stack}>
         <header className={styles.hero}>
           <div className={styles.heroTopRow}>
-            <Link href="/editor-v2" className={styles.tempLink}>
+            <Link href="/editor" className={styles.tempLink}>
               Back to editor
             </Link>
             <div className={styles.themeToggleWrap}>

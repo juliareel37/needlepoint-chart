@@ -162,7 +162,7 @@ export default function RootLayout({
                   style={{ height: 24, width: "auto", display: "block" }}
                 />
                 {/* <Link
-                  href="/editor-v2/design-system"
+                  href="/editor/design-system"
                   style={headerUtilityLinkStyle}
                 >
                   V2 DS

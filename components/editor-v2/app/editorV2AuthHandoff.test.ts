@@ -35,9 +35,9 @@ describe("editor v2 auth handoff", () => {
       replaceState: vi.fn(),
     };
     const location = {
-      href: "http://localhost/editor-v2",
+      href: "http://localhost/editor",
       origin: "http://localhost",
-      pathname: "/editor-v2",
+      pathname: "/editor",
       search: "",
     };
 
@@ -76,9 +76,9 @@ describe("editor v2 auth handoff", () => {
   it("round-trips a logged-out draft through the redirect url", () => {
     const document = createNewDesignState(8, 8).document;
 
-    const redirectUrl = createEditorV2AuthHandoffRedirectUrl(document, "/editor-v2");
+    const redirectUrl = createEditorV2AuthHandoffRedirectUrl(document, "/editor");
 
-    expect(redirectUrl).toBe("/editor-v2?authHandoff=token_123");
+    expect(redirectUrl).toBe("/editor?authHandoff=token_123");
 
     globalThis.window.location.href = `http://localhost${redirectUrl}`;
     globalThis.window.location.search = "?authHandoff=token_123";
@@ -94,8 +94,8 @@ describe("editor v2 auth handoff", () => {
   it("falls back to the pending handoff token when the query param is missing", () => {
     const document = createNewDesignState(10, 12).document;
 
-    createEditorV2AuthHandoffRedirectUrl(document, "/editor-v2");
-    globalThis.window.location.href = "http://localhost/editor-v2";
+    createEditorV2AuthHandoffRedirectUrl(document, "/editor");
+    globalThis.window.location.href = "http://localhost/editor";
     globalThis.window.location.search = "";
 
     const restoredDocument = consumeEditorV2AuthHandoffFromUrl();

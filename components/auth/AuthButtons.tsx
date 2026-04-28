@@ -27,7 +27,7 @@ export default function AuthButtons() {
   return (
     <>
       <SignedIn>
-        <UserButton afterSignOutUrl="/editor-v2" />
+        <UserButton afterSignOutUrl="/editor" />
       </SignedIn>
       <SignedOut>
         <Button
@@ -41,9 +41,15 @@ export default function AuthButtons() {
               return;
             }
 
-            const currentUrl = `${window.location.pathname}${window.location.search}`;
+            const currentUrl = `${window.location.pathname}${window.location.search}`.replace(
+              /^\/editor-v2(?=\/|$)/,
+              "/editor",
+            );
 
-            if (window.location.pathname.startsWith("/editor-v2")) {
+            if (
+              window.location.pathname.startsWith("/editor") ||
+              window.location.pathname.startsWith("/editor-v2")
+            ) {
               const editorWindow = window as EditorV2WindowWithDraftGetter;
               const shouldPreserveDraft =
                 editorWindow.__editorV2ShouldPreserveDraftOnSignIn?.() ?? true;

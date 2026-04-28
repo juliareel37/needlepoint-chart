@@ -237,7 +237,7 @@ export function EditorV2Shell({
         document,
         typeof window !== "undefined"
           ? `${window.location.pathname}${window.location.search}`
-          : `/editor-v2/designs/${document.project.id ?? "local_draft"}`,
+          : `/editor/designs/${document.project.id ?? "local_draft"}`,
       ),
     });
   }, [document, openSignIn]);
@@ -1913,7 +1913,7 @@ function duplicateDesignToNewTab(document: EditorDocumentState): void {
   );
 
   const duplicateUrl = new URL(
-    `/editor-v2/designs/${duplicateDocument.project.id ?? duplicateToken}`,
+    `/editor/designs/${duplicateDocument.project.id ?? duplicateToken}`,
     window.location.origin,
   );
   duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);

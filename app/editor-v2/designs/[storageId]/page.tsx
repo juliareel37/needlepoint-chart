@@ -1,4 +1,4 @@
-import { EditorV2Page } from "@/components/editor-v2/app/EditorV2Page";
+import { redirect } from "next/navigation";
 
 export default async function Page({
   params,
@@ -7,5 +7,5 @@ export default async function Page({
 }) {
   const { storageId } = await params;
 
-  return <EditorV2Page routeMode="saved" routeStorageId={storageId} />;
+  redirect(`/editor/designs/${storageId}`);
 }

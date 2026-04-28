@@ -1,5 +1,5 @@
-import { EditorV2Page } from "@/components/editor-v2/app/EditorV2Page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <EditorV2Page routeMode="entry" routeStorageId={null} />;
+  redirect("/editor");
 }

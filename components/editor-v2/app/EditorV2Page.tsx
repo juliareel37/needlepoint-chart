@@ -145,7 +145,7 @@ export function EditorV2Page({
         return;
       }
 
-      router.push("/editor-v2");
+      router.push("/editor");
     },
     [openEntryRoute, routeMode, router],
   );
@@ -248,7 +248,7 @@ export function EditorV2Page({
       navigationMode: "push" | "replace",
     ) => {
       const loadedDocument = applySavedRecordToDocument(document, savedRecord);
-      const nextRoute = `/editor-v2/designs/${savedRecord.storageId}`;
+      const nextRoute = `/editor/designs/${savedRecord.storageId}`;
 
       persistPendingSavedRouteHandoff({
         storageId: savedRecord.storageId,
@@ -510,7 +510,7 @@ export function EditorV2Page({
         void readLocalSnapshot(routeStorageId)
           .then((localSnapshot) => {
             if (!localSnapshot) {
-              router.replace("/editor-v2");
+              router.replace("/editor");
               return;
             }
 
@@ -527,7 +527,7 @@ export function EditorV2Page({
             setSetupModalOpen(false);
           })
           .catch(() => {
-            router.replace("/editor-v2");
+            router.replace("/editor");
           });
         return;
       }
@@ -638,7 +638,7 @@ export function EditorV2Page({
                 document,
                 typeof window !== "undefined"
                   ? `${window.location.pathname}${window.location.search}`
-                  : `/editor-v2/designs/${document.project.id ?? "local_draft"}`,
+                  : `/editor/designs/${document.project.id ?? "local_draft"}`,
               ),
             });
             return null;
@@ -674,12 +674,12 @@ export function EditorV2Page({
             nextSavedDocumentsOffsetRef.current,
             savedDocuments.length + 1,
           );
-          router.replace(`/editor-v2/designs/${savedRecord.storageId}`);
+          router.replace(`/editor/designs/${savedRecord.storageId}`);
           return savedRecord;
         }}
         onLoadDocument={async (record) => {
           setSelectedStorageId(record.storageId);
-          router.push(`/editor-v2/designs/${record.storageId}`);
+          router.push(`/editor/designs/${record.storageId}`);
         }}
         onDeleteCurrentDesign={async (document) => {
           const localSnapshotKey = currentStorageId || document.project.id;
@@ -726,7 +726,7 @@ export function EditorV2Page({
                   redirectUrl:
                     typeof window !== "undefined"
                       ? `${window.location.pathname}${window.location.search}`
-                      : "/editor-v2",
+                      : "/editor",
                 });
                 return;
               }
@@ -736,7 +736,7 @@ export function EditorV2Page({
                   initialState.document,
                   typeof window !== "undefined"
                     ? `${window.location.pathname}${window.location.search}`
-                    : "/editor-v2",
+                    : "/editor",
                 ),
               });
             }}
@@ -774,7 +774,7 @@ export function EditorV2Page({
             onLoadSavedDesign={(storageId) => {
               setSelectedStorageId(storageId);
               setSetupErrorMessage(null);
-              router.push(`/editor-v2/designs/${storageId}`);
+              router.push(`/editor/designs/${storageId}`);
             }}
             savedDocuments={savedDocuments}
             savedDocumentsLoading={savedDocumentsLoading}
