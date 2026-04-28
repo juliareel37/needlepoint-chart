@@ -78,6 +78,7 @@ const HEADER_FILE_MENU_ITEMS = [
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
+  __editorV2ShouldPreserveDraftOnSignIn?: () => boolean;
 };
 
 interface PreviewSessionSnapshot {
@@ -248,13 +249,18 @@ export function EditorV2Shell({
 
     const editorWindow = window as EditorV2WindowWithDraftGetter;
     editorWindow.__editorV2GetCurrentDocument = () => document;
+    editorWindow.__editorV2ShouldPreserveDraftOnSignIn = () => !setupModalOpen;
 
     return () => {
       if (editorWindow.__editorV2GetCurrentDocument) {
         delete editorWindow.__editorV2GetCurrentDocument;
       }
+
+      if (editorWindow.__editorV2ShouldPreserveDraftOnSignIn) {
+        delete editorWindow.__editorV2ShouldPreserveDraftOnSignIn;
+      }
     };
-  }, [document]);
+  }, [document, setupModalOpen]);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
@@ -1812,7 +1818,7 @@ function SaveButtonLabel({
     </>
   ) : (
     <>
-      {/* <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} /> */}
+      <ButtonIcon icon="/icons/lucide/alert.svg" data-state="alert" className={styles.alertButtonIcon} />
       Sign in to save
     </>
   );

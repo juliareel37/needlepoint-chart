@@ -717,6 +717,16 @@ export function EditorV2Page({
             onOpenSavedDocuments={loadSavedDocuments}
             onLoadMoreSavedDocuments={loadMoreSavedDocuments}
             onSignIn={() => {
+              if (isInitialSession && setupModalOpen) {
+                openSignIn({
+                  redirectUrl:
+                    typeof window !== "undefined"
+                      ? `${window.location.pathname}${window.location.search}`
+                      : "/editor-v2",
+                });
+                return;
+              }
+
               openSignIn({
                 redirectUrl: createEditorV2AuthHandoffRedirectUrl(
                   initialState.document,

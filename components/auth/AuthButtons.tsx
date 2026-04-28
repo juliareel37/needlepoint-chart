@@ -9,6 +9,7 @@ import { useOpenSignIn } from "./useOpenSignIn";
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
+  __editorV2ShouldPreserveDraftOnSignIn?: () => boolean;
 };
 
 export default function AuthButtons() {
@@ -44,9 +45,11 @@ export default function AuthButtons() {
 
             if (window.location.pathname.startsWith("/editor-v2")) {
               const editorWindow = window as EditorV2WindowWithDraftGetter;
+              const shouldPreserveDraft =
+                editorWindow.__editorV2ShouldPreserveDraftOnSignIn?.() ?? true;
               const currentDocument = editorWindow.__editorV2GetCurrentDocument?.();
 
-              if (currentDocument) {
+              if (shouldPreserveDraft && currentDocument) {
                 openSignIn({
                   redirectUrl: createEditorV2AuthHandoffRedirectUrl(
                     currentDocument,

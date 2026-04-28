@@ -2117,6 +2117,11 @@
   color: var(--text-secondary);
 }
 
+.alertButtonIcon { 
+  background:var(--status-warning-base);
+  border-radius: 999px;
+}
+
 .headerSaveStatus {
   --header-save-status-badge-bg: color-mix(in srgb, var(--neutral-900) 10%, transparent);
   --header-save-status-icon-color: var(--neutral-700);
