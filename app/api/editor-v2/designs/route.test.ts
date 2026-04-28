@@ -55,10 +55,23 @@ describe("editor-v2 design collection routes", () => {
       },
     ]);
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/editor-v2/designs"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(findManyMock).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+      orderBy: { updatedAt: "desc" },
+      skip: 0,
+      take: 7,
+      select: {
+        id: true,
+        title: true,
+        gridWidth: true,
+        gridHeight: true,
+        updatedAt: true,
+      },
+    });
     expect(body).toEqual({
       designs: [
         {
@@ -69,7 +82,45 @@ describe("editor-v2 design collection routes", () => {
           updatedAt: "2026-04-16T12:00:00.000Z",
         },
       ],
+      hasMore: false,
+      nextOffset: null,
     });
+  });
+
+  it("pages signed-in user designs", async () => {
+    authMock.mockResolvedValue({ userId: "user_1" });
+    findManyMock.mockResolvedValue(
+      Array.from({ length: 7 }, (_, index) => ({
+        id: `design_${index + 1}`,
+        title: `Pattern ${index + 1}`,
+        gridWidth: 20 + index,
+        gridHeight: 15 + index,
+        updatedAt: new Date(`2026-04-1${index}T12:00:00.000Z`),
+      })),
+    );
+
+    const response = await GET(
+      new Request("http://localhost/api/editor-v2/designs?limit=6&offset=6"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(findManyMock).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+      orderBy: { updatedAt: "desc" },
+      skip: 6,
+      take: 7,
+      select: {
+        id: true,
+        title: true,
+        gridWidth: true,
+        gridHeight: true,
+        updatedAt: true,
+      },
+    });
+    expect(body.designs).toHaveLength(6);
+    expect(body.hasMore).toBe(true);
+    expect(body.nextOffset).toBe(12);
   });
 
   it("creates a profile-owned design from a persisted payload", async () => {

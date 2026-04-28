@@ -6,15 +6,16 @@ import { useCallback } from "react";
 
 const MOBILE_SIGN_IN_BREAKPOINT_PX = 768;
 
-export function useOpenSignIn(): () => void {
+export function useOpenSignIn(): (options?: { redirectUrl?: string }) => void {
   const clerk = useClerk();
   const router = useRouter();
 
-  return useCallback(() => {
+  return useCallback((options?: { redirectUrl?: string }) => {
     const currentUrl =
-      typeof window !== "undefined"
+      options?.redirectUrl ??
+      (typeof window !== "undefined"
         ? `${window.location.pathname}${window.location.search}`
-        : "/";
+        : "/");
     const signInUrl = `/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`;
     const usePageNavigation =
       typeof window !== "undefined" &&

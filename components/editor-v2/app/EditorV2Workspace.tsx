@@ -35,6 +35,10 @@ export function EditorV2Workspace({
   saveMode,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectedStorageId,
   setSelectedStorageId,
   onSaveDocument,
@@ -55,6 +59,10 @@ export function EditorV2Workspace({
   saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onSaveDocument: (
@@ -162,6 +170,10 @@ export function EditorV2Workspace({
         saveMode={saveMode}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
+        savedDocumentsHasMore={savedDocumentsHasMore}
+        savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+        onOpenSavedDocuments={onOpenSavedDocuments}
+        onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
         successNotification={successNotification}

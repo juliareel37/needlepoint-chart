@@ -56,6 +56,7 @@ import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
+import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
@@ -74,6 +75,10 @@ const HEADER_FILE_MENU_ITEMS = [
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
+
+type EditorV2WindowWithDraftGetter = Window & {
+  __editorV2GetCurrentDocument?: () => EditorDocumentState;
+};
 
 interface PreviewSessionSnapshot {
   sidebarCollapsed: boolean;
@@ -113,6 +118,10 @@ export function EditorV2Shell({
   saveMode,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectedStorageId,
   setSelectedStorageId,
   setupModal,
@@ -139,6 +148,10 @@ export function EditorV2Shell({
   saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   setupModal: ReactNode;
@@ -217,6 +230,31 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
+  const openSignInForCurrentDesign = useCallback(() => {
+    openSignIn({
+      redirectUrl: createEditorV2AuthHandoffRedirectUrl(
+        document,
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : `/editor-v2/designs/${document.project.id ?? "local_draft"}`,
+      ),
+    });
+  }, [document, openSignIn]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const editorWindow = window as EditorV2WindowWithDraftGetter;
+    editorWindow.__editorV2GetCurrentDocument = () => document;
+
+    return () => {
+      if (editorWindow.__editorV2GetCurrentDocument) {
+        delete editorWindow.__editorV2GetCurrentDocument;
+      }
+    };
+  }, [document]);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
@@ -1138,7 +1176,7 @@ export function EditorV2Shell({
     }
 
     if (value === "sign-in") {
-      openSignIn();
+      openSignInForCurrentDesign();
     }
   }
 
@@ -1209,7 +1247,7 @@ export function EditorV2Shell({
         ? createPortal(
             <Button
               type="button"
-              variant="primary"
+              variant="secondary"
               size="sm"
               className={styles.headerSaveButton}
               disabled={saveButtonState === "saving"}
@@ -1232,7 +1270,7 @@ export function EditorV2Shell({
                 hasUnsavedChanges={hasUnsavedChanges}
                 layout="header"
                 onDismiss={null}
-                onSignIn={openSignIn}
+                onSignIn={openSignInForCurrentDesign}
                 recoveredLocalChanges={recoveredLocalChanges}
                 saveMode={saveMode}
                 saveMessage={saveMessage}
@@ -1270,7 +1308,7 @@ export function EditorV2Shell({
                   hasUnsavedChanges={hasUnsavedChanges}
                   layout="header"
                   onDismiss={null}
-                  onSignIn={openSignIn}
+                  onSignIn={openSignInForCurrentDesign}
                   recoveredLocalChanges={recoveredLocalChanges}
                   saveMode={saveMode}
                   saveMessage={saveMessage}
@@ -1288,7 +1326,7 @@ export function EditorV2Shell({
               hasUnsavedChanges={hasUnsavedChanges}
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
-              onSignIn={openSignIn}
+              onSignIn={openSignInForCurrentDesign}
               recoveredLocalChanges={recoveredLocalChanges}
               saveMode={saveMode}
               saveMessage={saveMessage}
@@ -1582,6 +1620,10 @@ export function EditorV2Shell({
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
+                savedDocumentsHasMore={savedDocumentsHasMore}
+                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+                onOpenSavedDocuments={onOpenSavedDocuments}
+                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
                 onLoadSelected={() => {
@@ -1594,7 +1636,7 @@ export function EditorV2Shell({
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                 onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                 onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
-                onSignIn={openSignIn}
+                onSignIn={openSignInForCurrentDesign}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
                 previewModeDisabled={previewModeDisabled}
@@ -1864,7 +1906,10 @@ function duplicateDesignToNewTab(document: EditorDocumentState): void {
     JSON.stringify(duplicateDocument),
   );
 
-  const duplicateUrl = new URL("/editor-v2", window.location.origin);
+  const duplicateUrl = new URL(
+    `/editor-v2/designs/${duplicateDocument.project.id ?? duplicateToken}`,
+    window.location.origin,
+  );
   duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);
   window.open(duplicateUrl.toString(), "_blank", "noopener,noreferrer");
 }

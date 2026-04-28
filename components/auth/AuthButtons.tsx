@@ -1,16 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/design-system";
+import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
+import { createEditorV2AuthHandoffRedirectUrl } from "@/components/editor-v2/app/editorV2AuthHandoff";
 import { useOpenSignIn } from "./useOpenSignIn";
+
+type EditorV2WindowWithDraftGetter = Window & {
+  __editorV2GetCurrentDocument?: () => EditorDocumentState;
+};
 
 export default function AuthButtons() {
   const openSignIn = useOpenSignIn();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>
       <SignedIn>
-        <UserButton />
+        <UserButton afterSignOutUrl="/editor-v2" />
       </SignedIn>
       <SignedOut>
         <Button
@@ -18,7 +34,31 @@ export default function AuthButtons() {
           variant="secondary"
           size="md"
           className="app-header-sign-in-button"
-          onClick={openSignIn}
+          onClick={() => {
+            if (typeof window === "undefined") {
+              openSignIn();
+              return;
+            }
+
+            const currentUrl = `${window.location.pathname}${window.location.search}`;
+
+            if (window.location.pathname.startsWith("/editor-v2")) {
+              const editorWindow = window as EditorV2WindowWithDraftGetter;
+              const currentDocument = editorWindow.__editorV2GetCurrentDocument?.();
+
+              if (currentDocument) {
+                openSignIn({
+                  redirectUrl: createEditorV2AuthHandoffRedirectUrl(
+                    currentDocument,
+                    currentUrl,
+                  ),
+                });
+                return;
+              }
+            }
+
+            openSignIn({ redirectUrl: currentUrl });
+          }}
         >
           Sign in
         </Button>

@@ -11,11 +11,11 @@ import {
   SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
-import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import {
   EDITOR_V2_MAX_GRID_SIZE,
   EDITOR_V2_MIN_GRID_SIZE,
 } from "@/lib/editor-v2/config";
+import { createLocalProjectId } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "./editorV2ServerPersistence";
 import styles from "./EditorV2SetupModal.module.css";
@@ -38,6 +38,7 @@ const CELLS_PER_INCH_PRESETS = [10, 13, 18] as const;
 
 export interface EditorV2DesignConfigNew {
   kind: "new";
+  draftId: string;
   width: number;
   height: number;
   sizingMode: "stitches" | "inches";
@@ -60,6 +61,7 @@ export type EditorV2DesignConfig =
 
 interface EditorV2SetupModalProps {
   canClose: boolean;
+  creatingDesign: boolean;
   draftHeight: string;
   draftHeightInches: string;
   draftMeshCount: string;
@@ -68,8 +70,12 @@ interface EditorV2SetupModalProps {
   draftWidthInches: string;
   hasSavedDesignAccess: boolean;
   mode: "full" | "new-only";
+  hasMoreSavedDocuments: boolean;
   onDismissSavedDocumentsError: () => void;
   onDismissSetupError: () => void;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
+  onSignIn: () => void;
   onClose: () => void;
   onCreateDesign: (config: EditorV2DesignConfigNew) => void;
   onDraftHeightChange: (value: string) => void;
@@ -81,6 +87,7 @@ interface EditorV2SetupModalProps {
   onLoadSavedDesign: (storageId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsLoadingMore: boolean;
   savedDocumentsErrorMessage: string | null;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -89,6 +96,7 @@ interface EditorV2SetupModalProps {
 
 export function EditorV2SetupModal({
   canClose,
+  creatingDesign,
   draftHeight,
   draftHeightInches,
   draftMeshCount,
@@ -97,8 +105,12 @@ export function EditorV2SetupModal({
   draftWidthInches,
   hasSavedDesignAccess,
   mode,
+  hasMoreSavedDocuments,
   onDismissSavedDocumentsError,
   onDismissSetupError,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
+  onSignIn,
   onClose,
   onCreateDesign,
   onDraftHeightChange,
@@ -110,12 +122,12 @@ export function EditorV2SetupModal({
   onLoadSavedDesign,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsLoadingMore,
   savedDocumentsErrorMessage,
   selectedStorageId,
   setSelectedStorageId,
   setupErrorMessage,
 }: EditorV2SetupModalProps) {
-  const openSignIn = useOpenSignIn();
   const [useTopDropdownPlacement, setUseTopDropdownPlacement] = useState(false);
   const [useCustomMeshCount, setUseCustomMeshCount] = useState(
     () => getCellsPerInchPreset(draftMeshCount) === null,
@@ -148,10 +160,11 @@ export function EditorV2SetupModal({
   const selectedCellsPerInchPreset = getCellsPerInchPreset(draftMeshCount);
   const showSavedDesignSection = mode === "full";
   const compactMode = !showSavedDesignSection;
-  const createDisabled =
+  const createDisabled = creatingDesign || (
     draftSizingMode === "inches"
       ? !inchSizing.canCreate
-      : !stitchSizing.canCreate;
+      : !stitchSizing.canCreate
+  );
 
   return (
     <div
@@ -514,6 +527,7 @@ export function EditorV2SetupModal({
                     onDraftMeshCountChange(normalizeDecimalInput(draftMeshCount));
                     onCreateDesign({
                       kind: "new",
+                      draftId: createLocalProjectId(),
                       width: inchSizing.width!,
                       height: inchSizing.height!,
                       sizingMode: "inches",
@@ -536,6 +550,7 @@ export function EditorV2SetupModal({
                   onDraftHeightChange(String(height));
                   onCreateDesign({
                     kind: "new",
+                    draftId: createLocalProjectId(),
                     width,
                     height,
                     sizingMode: "stitches",
@@ -546,7 +561,7 @@ export function EditorV2SetupModal({
                   });
                 }}
               >
-                Create new design
+                {creatingDesign ? "Creating design..." : "Create new design"}
               </Button>
             </div>
           </section>
@@ -606,7 +621,33 @@ export function EditorV2SetupModal({
                     getItemValue={(record) => record.storageId}
                     items={savedDocuments}
                     menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        void onOpenSavedDocuments();
+                      }
+                    }}
+                    onReachEnd={() => {
+                      if (hasMoreSavedDocuments) {
+                        void onLoadMoreSavedDocuments();
+                      }
+                    }}
                     onValueChange={setSelectedStorageId}
+                    menuFooter={
+                      savedDocumentsLoadingMore ? (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 10,
+                            minWidth: "100%",
+                            padding: "8px 12px",
+                          }}
+                        >
+                          <span className="loading-spinner" aria-hidden="true" />
+                          Loading more designs...
+                        </div>
+                      ) : null
+                    }
                     placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
                     value={selectedStorageId}
                     menuWidth="100%"
@@ -639,7 +680,7 @@ export function EditorV2SetupModal({
                   </p>
 
                   <div className={styles.actions}>
-                    <Button type="button" variant="primary" onClick={openSignIn}>
+                    <Button type="button" variant="primary" onClick={onSignIn}>
                       Sign in
                     </Button>
                   </div>

@@ -15,6 +15,12 @@ export interface SavedEditorV2DocumentRecord {
   updatedAt: string;
 }
 
+export interface ListSavedEditorV2DocumentsResult {
+  documents: SavedEditorV2DocumentRecord[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}
+
 export interface SaveEditorV2DocumentResult {
   storageId: string;
   title: string;
@@ -49,13 +55,43 @@ export class EditorV2PersistenceError extends Error {
   }
 }
 
-export async function listSavedEditorV2Documents(): Promise<SavedEditorV2DocumentRecord[]> {
-  const response = await fetch("/api/editor-v2/designs", {
+export async function listSavedEditorV2Documents({
+  limit,
+  offset,
+}: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ListSavedEditorV2DocumentsResult> {
+  const searchParams = new URLSearchParams();
+
+  if (typeof limit === "number") {
+    searchParams.set("limit", String(limit));
+  }
+
+  if (typeof offset === "number") {
+    searchParams.set("offset", String(offset));
+  }
+
+  const response = await fetch(
+    `/api/editor-v2/designs${searchParams.size ? `?${searchParams.toString()}` : ""}`,
+    {
     method: "GET",
     credentials: "same-origin",
-  });
+    },
+  );
   const body = (await response.json().catch(() => null)) as
-    | { designs?: Array<{ id: string; title: string; gridWidth: number; gridHeight: number; updatedAt: string }>; error?: string }
+    | {
+        designs?: Array<{
+          id: string;
+          title: string;
+          gridWidth: number;
+          gridHeight: number;
+          updatedAt: string;
+        }>;
+        hasMore?: boolean;
+        nextOffset?: number | null;
+        error?: string;
+      }
     | null;
 
   if (!response.ok) {
@@ -65,15 +101,19 @@ export async function listSavedEditorV2Documents(): Promise<SavedEditorV2Documen
     );
   }
 
-  return Array.isArray(body?.designs)
-    ? body.designs.map((design) => ({
+  return {
+    documents: Array.isArray(body?.designs)
+      ? body.designs.map((design) => ({
         storageId: design.id,
         title: design.title,
         gridWidth: design.gridWidth,
         gridHeight: design.gridHeight,
         updatedAt: design.updatedAt,
       }))
-    : [];
+      : [],
+    hasMore: body?.hasMore === true,
+    nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
+  };
 }
 
 export async function loadSavedEditorV2Document(

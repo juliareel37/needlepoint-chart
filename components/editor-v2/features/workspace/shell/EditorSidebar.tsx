@@ -38,6 +38,10 @@ interface EditorSidebarProps {
   renameRequestToken: number;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -90,6 +94,10 @@ export function EditorSidebar({
   renameRequestToken,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
@@ -230,6 +238,10 @@ export function EditorSidebar({
               saveMode={saveMode}
               savedDocuments={savedDocuments}
               savedDocumentsLoading={savedDocumentsLoading}
+              savedDocumentsHasMore={savedDocumentsHasMore}
+              savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+              onOpenSavedDocuments={onOpenSavedDocuments}
+              onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
               selectedStorageId={selectedStorageId}
               setSelectedStorageId={setSelectedStorageId}
             />

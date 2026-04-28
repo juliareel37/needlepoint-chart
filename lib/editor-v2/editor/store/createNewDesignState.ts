@@ -14,6 +14,7 @@ interface NewDesignSizingOptions {
   meshCount?: number | null;
   widthInches?: number | null;
   heightInches?: number | null;
+  projectId?: string | null;
 }
 
 export function createNewDesignState(
@@ -22,7 +23,7 @@ export function createNewDesignState(
   options: NewDesignSizingOptions = {},
 ): EditorStoreState {
   const state = createInitialEditorStoreState();
-  const localProjectId = createLocalProjectId();
+  const localProjectId = options.projectId ?? createLocalProjectId();
   const {
     sizingMode = "stitches",
     meshCount = null,
@@ -69,7 +70,7 @@ export function createNewDesignState(
   };
 }
 
-function createLocalProjectId(): string {
+export function createLocalProjectId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return `local_${crypto.randomUUID()}`;
   }
