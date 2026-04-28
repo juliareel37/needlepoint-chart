@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
+import { IS_DEV_APP_MODE } from "@/lib/editor-v2/config";
 import {
   getActiveColor,
   getActiveColorId,
@@ -1008,6 +1009,9 @@ export function EditorV2Shell({
   const showSaveStatus = Boolean(saveMessage || hasUnsavedChanges);
   const useTopSaveBanner = isBottomPanelLayout && showSaveStatus;
   const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
+  const showSaveConfirmationOverlay =
+    saveNotificationVisible &&
+    (IS_DEV_APP_MODE || saveMode === "manual" || !hasSavedDesignAccess);
 
   useEffect(() => {
     setSaveBannerDismissed(false);
@@ -1325,7 +1329,7 @@ export function EditorV2Shell({
             headerActionsTarget,
           )
         : null}
-      {mounted && saveNotificationVisible
+      {mounted && showSaveConfirmationOverlay
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
               <div className={styles.editorNotificationStack} 
