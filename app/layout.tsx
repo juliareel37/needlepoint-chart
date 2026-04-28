@@ -23,11 +23,11 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/wippa_logo_icon2.png"), type: "image/png" },
+      { url: assetPath("/w.png"), type: "image/png" },
       // { url: assetPath("/favicon.png"), type: "image/png" },
     ],
-    shortcut: assetPath("/wippa_logo_icon2.png"),
-    apple: assetPath("/wippa_logo_icon2.png"),
+    shortcut: assetPath("/w.png"),
+    apple: assetPath("/w.png"),
   },
 };
 

@@ -69,10 +69,10 @@ const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const HEADER_FILE_MENU_ITEMS = [
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
-  { id: "duplicate", label: "Duplicate design", icon: "/icons/lucide/copy.svg" },
-  { id: "rename", label: "Rename design", icon: "/icons/lucide/pencil.svg" },
-  { id: "download", label: "Download pattern", icon: "/icons/lucide/download.svg" },
-  { id: "delete", label: "Delete design", icon: "/icons/lucide/trash.svg" },
+  { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
+  { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
+  { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
 
 interface PreviewSessionSnapshot {
