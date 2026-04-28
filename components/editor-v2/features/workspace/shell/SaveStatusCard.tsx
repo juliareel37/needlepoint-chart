@@ -28,6 +28,10 @@ export function SaveStatusCard({
   saveMode: "manual" | "autosave";
   saveMessage: string;
 }) {
+  if (saveMode === "autosave" && !hasSavedDesignAccess) {
+    return null;
+  }
+
   if (!autoSaveEnabled && !saveMessage && !hasUnsavedChanges) {
     return null;
   }
