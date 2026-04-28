@@ -168,8 +168,8 @@ export default function RootLayout({
                   V2 DS
                 </Link> */}
                 <div id="app-header-history" />
-                <div id="app-header-file-left" />
                 <div id="app-header-autosave" />
+                <div id="app-header-file-left" />
               </div>
               <div
                 id="app-header-title"

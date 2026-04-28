@@ -1812,7 +1812,7 @@ function SaveButtonLabel({
     </>
   ) : (
     <>
-      <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} />
+      {/* <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} /> */}
       Sign in to save
     </>
   );
