@@ -158,6 +158,7 @@ export function EditorV2Shell({
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const hasUnsavedChanges = state.session.persistence.dirty;
+  const hasCompletedSave = state.session.persistence.lastSavedAt !== null;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
@@ -1006,7 +1007,10 @@ export function EditorV2Shell({
     setTopBannerTarget(window.document.getElementById("app-top-banner"));
   }, []);
 
-  const showSaveStatus = Boolean(saveMessage || hasUnsavedChanges);
+  const showSaveStatus =
+    saveMode === "autosave" && !hasCompletedSave && !saveMessage
+      ? false
+      : Boolean(saveMessage || hasUnsavedChanges);
   const useTopSaveBanner = isBottomPanelLayout && showSaveStatus;
   const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
   const showSaveConfirmationOverlay =
