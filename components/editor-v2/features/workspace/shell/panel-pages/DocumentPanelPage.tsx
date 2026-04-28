@@ -23,6 +23,7 @@ interface DocumentPanelPageProps {
   hasUnsavedChanges: boolean;
   isAutoSavePanelStatusVisible: boolean;
   onLoadSelected: () => void;
+  renameRequestToken: number;
   onSignIn: () => void;
   onStartOver: () => void;
   recoveredLocalChanges: boolean;
@@ -42,6 +43,7 @@ export function DocumentPanelPage({
   hasUnsavedChanges,
   isAutoSavePanelStatusVisible,
   onLoadSelected,
+  renameRequestToken,
   onSignIn,
   onStartOver,
   recoveredLocalChanges,
@@ -78,6 +80,14 @@ export function DocumentPanelPage({
     setDraftTitle(documentTitle);
     setIsRenaming(true);
   }
+
+  useEffect(() => {
+    if (renameRequestToken <= 0) {
+      return;
+    }
+
+    startRename();
+  }, [documentTitle, renameRequestToken]);
 
   return (
     <section className={styles.sidebarSection}>

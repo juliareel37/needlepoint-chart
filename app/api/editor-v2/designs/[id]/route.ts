@@ -124,3 +124,38 @@ export async function PUT(req: Request, context: RouteContext) {
     versionToken: updated.updatedAt.toISOString(),
   });
 }
+
+export async function DELETE(_req: Request, context: RouteContext) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const params = await Promise.resolve(context.params);
+  const id = params?.id;
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const existing = await prisma.editorDesign.findFirst({
+    where: { id, userId },
+    select: {
+      id: true,
+      data: true,
+    },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  await prisma.editorDesign.delete({
+    where: { id: existing.id },
+  });
+
+  for (const url of extractEditorV2TraceBlobUrls(existing.data)) {
+    void deleteBlobIfExists(url);
+  }
+
+  return NextResponse.json({ ok: true, id: existing.id });
+}

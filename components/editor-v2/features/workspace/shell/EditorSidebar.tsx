@@ -35,6 +35,7 @@ interface EditorSidebarProps {
   isAutoSavePanelStatusVisible: boolean;
   isBottomPanelCanvasFocusActive: boolean;
   palette: PaletteColor[];
+  renameRequestToken: number;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectionScopeActive: boolean;
@@ -86,6 +87,7 @@ export function EditorSidebar({
   isAutoSavePanelStatusVisible,
   isBottomPanelCanvasFocusActive,
   palette,
+  renameRequestToken,
   savedDocuments,
   savedDocumentsLoading,
   selectionScopeActive,
@@ -220,6 +222,7 @@ export function EditorSidebar({
               hasUnsavedChanges={hasUnsavedChanges}
               isAutoSavePanelStatusVisible={isAutoSavePanelStatusVisible}
               onLoadSelected={onLoadSelected}
+              renameRequestToken={renameRequestToken}
               onSignIn={onSignIn}
               onStartOver={onStartOver}
               recoveredLocalChanges={recoveredLocalChanges}

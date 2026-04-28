@@ -29,6 +29,7 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
+  DeleteButtonState,
   ExportButtonState,
   EditorV2ErrorNotification,
   EditorV2SuccessNotification,
@@ -48,7 +49,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
-import { ButtonIcon, Notification } from "@/components/design-system";
+import { ButtonIcon, Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
@@ -64,6 +65,15 @@ const SAVE_SUCCESS_PREFIX = "Saved at ";
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
+const DUPLICATE_QUERY_PARAM = "duplicate";
+const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
+const HEADER_FILE_MENU_ITEMS = [
+  { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
+  { id: "duplicate", label: "Duplicate design", icon: "/icons/lucide/copy.svg" },
+  { id: "rename", label: "Rename design", icon: "/icons/lucide/pencil.svg" },
+  { id: "download", label: "Download pattern", icon: "/icons/lucide/download.svg" },
+  { id: "delete", label: "Delete design", icon: "/icons/lucide/trash.svg" },
+] as const;
 
 interface PreviewSessionSnapshot {
   sidebarCollapsed: boolean;
@@ -84,10 +94,13 @@ interface BottomPanelCanvasFocusSnapshot {
 
 export function EditorV2Shell({
   canvasLoading,
+  currentStorageId,
+  deleteButtonState,
   errorNotification,
   exportButtonState,
   hasSavedDesignAccess,
   onCanvasReady,
+  onDeleteCurrentDesign,
   onDismissErrorNotification,
   onDismissSuccessNotification,
   onExportDocument,
@@ -107,10 +120,13 @@ export function EditorV2Shell({
   successNotification,
 }: {
   canvasLoading: boolean;
+  currentStorageId: string;
+  deleteButtonState: DeleteButtonState;
   errorNotification: EditorV2ErrorNotification | null;
   exportButtonState: ExportButtonState;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
+  onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onDismissErrorNotification: () => void;
   onDismissSuccessNotification: () => void;
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
@@ -190,7 +206,9 @@ export function EditorV2Shell({
   const [stageToolbarTopInset, setStageToolbarTopInset] = useState(0);
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
@@ -1105,17 +1123,75 @@ export function EditorV2Shell({
         : null}
       {!setupModalOpen && !useTopSaveBanner && !showAutoSavePanelStatus && headerAutosaveTarget
         ? createPortal(
-            <SaveStatusCard
-              autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-              hasSavedDesignAccess={hasSavedDesignAccess}
-              hasUnsavedChanges={hasUnsavedChanges}
-              layout="header"
-              onDismiss={null}
-              onSignIn={openSignIn}
-              recoveredLocalChanges={recoveredLocalChanges}
-              saveMode={saveMode}
-              saveMessage={saveMessage}
-            />,
+            <div className={styles.headerFileMenuGroup}>
+              <SingleSelectDropdown
+                ariaLabel="File actions"
+                items={[...HEADER_FILE_MENU_ITEMS]}
+                value=""
+                placeholder="File"
+                triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
+                triggerVariant="ghost"
+                showChevron={false}
+                menuPortalToViewport
+                menuPlacement="bottom-start"
+                menuShowTrailingCheck={false}
+                minWidth="auto"
+                menuWidth={180}
+                getItemValue={(item) => item.id}
+                getItemLabel={(item) => (
+                  <span className={styles.headerFileMenuItemLabel}>
+                    <ButtonIcon icon={item.icon} className={styles.saveButtonIcon} />
+                    <span>{item.label}</span>
+                  </span>
+                )}
+                getItemDisabled={(item) =>
+                  (item.id === "download" && exportButtonState === "exporting") ||
+                  (item.id === "delete" && deleteButtonState === "deleting")
+                }
+                onValueChange={(value) => {
+                  if (value === "new") {
+                    onStartOver();
+                    return;
+                  }
+
+                  if (value === "duplicate") {
+                    duplicateDesignToNewTab(document);
+                    return;
+                  }
+
+                  if (value === "rename") {
+                    dispatch(createSetActiveSidebarSectionCommand("document"));
+                    dispatch(createSetSidebarCollapsedCommand(false));
+                    setRenameRequestToken((currentValue) => currentValue + 1);
+                    return;
+                  }
+
+                  if (value === "download") {
+                    void onExportDocument(document);
+                    return;
+                  }
+
+                  if (value === "delete") {
+                    setDeleteConfirmationOpen(true);
+                  }
+                }}
+                wrapperClassName={styles.headerFileMenu}
+                triggerClassName={styles.headerFileMenuTrigger}
+                menuClassName={styles.headerFileMenuSurface}
+                triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
+              />
+              <SaveStatusCard
+                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                hasSavedDesignAccess={hasSavedDesignAccess}
+                hasUnsavedChanges={hasUnsavedChanges}
+                layout="header"
+                onDismiss={null}
+                onSignIn={openSignIn}
+                recoveredLocalChanges={recoveredLocalChanges}
+                saveMode={saveMode}
+                saveMessage={saveMessage}
+              />
+            </div>,
             headerAutosaveTarget,
           )
         : null}
@@ -1394,6 +1470,42 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      <Modal
+        isOpen={deleteConfirmationOpen}
+        title={currentStorageId ? "Delete this design?" : "Discard this design?"}
+        description={
+          currentStorageId
+            ? "This will permanently delete the current design from your saved designs."
+            : "This will discard the current design."
+        }
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel={
+          deleteButtonState === "deleting"
+            ? currentStorageId
+              ? "Deleting..."
+              : "Discarding..."
+            : currentStorageId
+              ? "Delete design"
+              : "Discard design"
+        }
+        confirmVariant="destructive"
+        onDismiss={() => {
+          if (deleteButtonState === "deleting") {
+            return;
+          }
+
+          setDeleteConfirmationOpen(false);
+        }}
+        onConfirm={() => {
+          void Promise.resolve(onDeleteCurrentDesign(document))
+            .finally(() => {
+              setDeleteConfirmationOpen(false);
+            });
+        }}
+        confirmDisabled={deleteButtonState === "deleting"}
+        dismissDisabled={deleteButtonState === "deleting"}
+      />
 
       <div
         className={styles.shellContent}
@@ -1442,6 +1554,7 @@ export function EditorV2Shell({
                 isAutoSavePanelStatusVisible={showAutoSavePanelStatus}
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
+                renameRequestToken={renameRequestToken}
                 gridMetrics={gridMetrics}
                 onScopeModeChange={handleUsedColorsScopeModeChange}
                 selectionScopeActive={selectionScopeActive}
@@ -1680,4 +1793,59 @@ function getSaveStatusState(
   }
 
   return "info";
+}
+
+function duplicateDesignToNewTab(document: EditorDocumentState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const duplicateToken =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const localProjectId =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? `local_${crypto.randomUUID()}`
+      : `local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const normalizedTitle = document.project.title.trim() || "Untitled Design";
+  const duplicateDocument: EditorDocumentState = {
+    ...document,
+    project: {
+      ...document.project,
+      id: localProjectId,
+      title: `${normalizedTitle} (Copy)`,
+      createdAt: null,
+      updatedAt: null,
+    },
+    grid: {
+      ...document.grid,
+      cells: [...document.grid.cells],
+    },
+    palette: {
+      ...document.palette,
+      colorsById: { ...document.palette.colorsById },
+      customPalettesById: { ...document.palette.customPalettesById },
+      extractedPaletteIds: [...document.palette.extractedPaletteIds],
+      symbolAssignments: { ...document.palette.symbolAssignments },
+    },
+    trace: document.trace ? { ...document.trace } : null,
+    text: {
+      ...document.text,
+      entities: document.text.entities.map((entity) => ({ ...entity })),
+    },
+    metadata: {
+      ...document.metadata,
+      persistedVersionId: null,
+    },
+  };
+
+  window.localStorage.setItem(
+    `${DUPLICATE_STORAGE_PREFIX}${duplicateToken}`,
+    JSON.stringify(duplicateDocument),
+  );
+
+  const duplicateUrl = new URL("/editor-v2", window.location.origin);
+  duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);
+  window.open(duplicateUrl.toString(), "_blank", "noopener,noreferrer");
 }

@@ -1023,7 +1023,7 @@
 .headerActionGroup {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
 @media (max-width: 1000px) {
@@ -1048,6 +1048,46 @@
 }
 
 .headerPreviewButton {
+  white-space: nowrap;
+}
+
+.headerFileMenuGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerFileMenu {
+  position: relative;
+}
+
+.headerFileMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 28px;
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+}
+
+.headerFileMenuTriggerLabel {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.headerFileMenuSurface {
+  transform-origin: top left;
+}
+
+.headerFileMenuItemLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   white-space: nowrap;
 }
 

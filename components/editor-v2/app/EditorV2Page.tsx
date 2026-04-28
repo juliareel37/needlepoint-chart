@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
+import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { EDITOR_V2_SAVE_MODE } from "@/lib/editor-v2/config";
 import { EditorV2Providers } from "./EditorV2Providers";
 import {
@@ -13,12 +14,14 @@ import {
 } from "./EditorV2SetupModal";
 import { EditorV2Workspace } from "./EditorV2Workspace";
 import {
+  deleteSavedEditorV2Document,
   listSavedEditorV2Documents,
   loadSavedEditorV2Document,
   saveEditorV2Document,
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
 import {
+  deleteLocalSnapshot,
   readLocalSnapshot,
   shouldRecoverLocalSnapshot,
   type EditorV2LocalSnapshotRecord,
@@ -34,6 +37,8 @@ const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
   heightInches: null,
   instanceKey: "design_8x8_initial",
 };
+const DUPLICATE_QUERY_PARAM = "duplicate";
+const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 
 export function EditorV2Page() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -111,6 +116,52 @@ export function EditorV2Page() {
     };
   }, [isLoaded, isSignedIn]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const duplicateToken = url.searchParams.get(DUPLICATE_QUERY_PARAM);
+
+    if (!duplicateToken) {
+      return;
+    }
+
+    const storageKey = `${DUPLICATE_STORAGE_PREFIX}${duplicateToken}`;
+    const rawPayload = window.localStorage.getItem(storageKey);
+
+    window.localStorage.removeItem(storageKey);
+    url.searchParams.delete(DUPLICATE_QUERY_PARAM);
+    window.history.replaceState({}, "", url.toString());
+
+    if (!rawPayload) {
+      return;
+    }
+
+    const duplicatedDocument = parseDuplicatedDocument(rawPayload);
+
+    if (!duplicatedDocument) {
+      return;
+    }
+
+    setCurrentStorageId("");
+    setCurrentServerVersion(null);
+    setInitialRecoveredLocalChanges(false);
+    setInitialDegradedLocalRecovery(false);
+    setInitialLocalSnapshot(null);
+    setSelectedStorageId("");
+    setSetupErrorMessage(null);
+    setSetupModalMode("full");
+    setDesignConfig({
+      kind: "loaded",
+      document: duplicatedDocument,
+      storageId: "",
+      instanceKey: `duplicate_${duplicatedDocument.project.id ?? Date.now()}`,
+    });
+    setSetupModalOpen(false);
+  }, []);
+
   const initialState = useMemo(() => {
     if (designConfig.kind === "loaded") {
       return createEditorStateFromDocument(designConfig.document);
@@ -156,6 +207,20 @@ export function EditorV2Page() {
       setCanvasLoadingKey(null);
       throw error;
     }
+  };
+
+  const returnToOpeningSpot = () => {
+    setCurrentStorageId("");
+    setCurrentServerVersion(null);
+    setInitialRecoveredLocalChanges(false);
+    setInitialDegradedLocalRecovery(false);
+    setInitialLocalSnapshot(null);
+    setSelectedStorageId("");
+    setSetupErrorMessage(null);
+    setSetupModalMode("full");
+    setDesignConfig(INITIAL_DESIGN_CONFIG);
+    setSetupModalOpen(true);
+    setCanvasLoadingKey(null);
   };
 
   return (
@@ -217,6 +282,22 @@ export function EditorV2Page() {
         }}
         onLoadDocument={async (record) => {
           await loadDesignIntoWorkspace(record.storageId);
+        }}
+        onDeleteCurrentDesign={async (document) => {
+          const localSnapshotKey = currentStorageId || document.project.id;
+
+          if (currentStorageId) {
+            await deleteSavedEditorV2Document(currentStorageId);
+            setSavedDocuments((existing) =>
+              existing.filter((record) => record.storageId !== currentStorageId),
+            );
+          }
+
+          if (localSnapshotKey) {
+            await deleteLocalSnapshot(localSnapshotKey);
+          }
+
+          returnToOpeningSpot();
         }}
         onStartOver={() => {
           setSetupModalMode("new-only");
@@ -282,4 +363,31 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function parseDuplicatedDocument(rawPayload: string): EditorDocumentState | null {
+  try {
+    const candidate = JSON.parse(rawPayload) as EditorDocumentState;
+
+    if (!candidate || typeof candidate !== "object") {
+      return null;
+    }
+
+    if (
+      !candidate.project ||
+      !candidate.grid ||
+      !candidate.palette ||
+      !candidate.text ||
+      typeof candidate.project.title !== "string" ||
+      typeof candidate.grid.width !== "number" ||
+      typeof candidate.grid.height !== "number" ||
+      !Array.isArray(candidate.grid.cells)
+    ) {
+      return null;
+    }
+
+    return candidate;
+  } catch {
+    return null;
+  }
 }

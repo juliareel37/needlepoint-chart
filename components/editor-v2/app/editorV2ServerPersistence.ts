@@ -33,6 +33,10 @@ export interface LoadEditorV2DocumentResult {
   updatedAt: string;
 }
 
+export interface DeleteEditorV2DocumentResult {
+  storageId: string;
+}
+
 export class EditorV2PersistenceError extends Error {
   status: number;
   versionToken: string | null;
@@ -169,5 +173,31 @@ export async function saveEditorV2Document(
     createdAt: body.createdAt,
     updatedAt: body.updatedAt,
     versionToken: body.versionToken,
+  };
+}
+
+export async function deleteSavedEditorV2Document(
+  storageId: string,
+): Promise<DeleteEditorV2DocumentResult> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        error?: string;
+      }
+    | null;
+
+  if (!response.ok || !body?.id) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't delete this design.",
+      response.status,
+    );
+  }
+
+  return {
+    storageId: body.id,
   };
 }

@@ -13,6 +13,7 @@ import type { EditorV2LocalSnapshotRecord } from "./editorV2AutosavePersistence"
 
 export type SaveButtonState = "idle" | "saving" | "saved";
 export type ExportButtonState = "idle" | "exporting";
+export type DeleteButtonState = "idle" | "deleting";
 export interface EditorV2ErrorNotification {
   title: string;
   description?: string;
@@ -38,6 +39,7 @@ export function EditorV2Workspace({
   setSelectedStorageId,
   onSaveDocument,
   onLoadDocument,
+  onDeleteCurrentDesign,
   onStartOver,
   setupModal,
   setupModalOpen,
@@ -61,12 +63,15 @@ export function EditorV2Workspace({
     baseVersion?: string | null,
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
+  onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   setupModal: ReactNode;
   setupModalOpen: boolean;
 }) {
   const [exportButtonState, setExportButtonState] =
     useState<ExportButtonState>("idle");
+  const [deleteButtonState, setDeleteButtonState] =
+    useState<DeleteButtonState>("idle");
   const [errorNotification, setErrorNotification] =
     useState<EditorV2ErrorNotification | null>(null);
   const [successNotification, setSuccessNotification] =
@@ -125,7 +130,29 @@ export function EditorV2Workspace({
             });
           }
         }}
+        onDeleteCurrentDesign={async (document) => {
+          setDeleteButtonState("deleting");
+
+          try {
+            await onDeleteCurrentDesign(document);
+            setSuccessNotification({
+              title: "Design deleted",
+              description: "The design was removed and the editor has been reset.",
+            });
+            setErrorNotification(null);
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't delete design",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+          } finally {
+            setDeleteButtonState("idle");
+          }
+        }}
         onStartOver={onStartOver}
+        currentStorageId={currentStorageId}
+        deleteButtonState={deleteButtonState}
         errorNotification={errorNotification}
         onDismissErrorNotification={() => setErrorNotification(null)}
         exportButtonState={exportButtonState}
