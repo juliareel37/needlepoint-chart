@@ -1708,13 +1708,17 @@ function SaveButtonLabel({
 function getSaveStatusState(
   saveMessage: string,
   hasSavedDesignAccess: boolean,
-): "ready" | "saved" | "error" | "info" | "alert" {
+): "ready" | "saving" | "saved" | "error" | "info" | "alert" {
   if (!hasSavedDesignAccess && !saveMessage) {
     return "info";
   }
 
   if (!saveMessage) {
     return "ready";
+  }
+
+  if (saveMessage.startsWith("Saving")) {
+    return "saving";
   }
 
   if (saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
