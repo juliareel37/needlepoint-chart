@@ -242,14 +242,14 @@ export function EditorV2Shell({
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
             },
-            { id: "export", label: "Export design" },
+            ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
             {
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
             },
-            { id: "export", label: "Export design" },
+            ...HEADER_FILE_MENU_ITEMS,
             { id: "sign-in", label: "Sign in" },
           ],
     [hasSavedDesignAccess, previewMode],
@@ -1099,6 +1099,108 @@ export function EditorV2Shell({
     return () => window.clearTimeout(timeoutId);
   }, [onDismissSuccessNotification, successNotification]);
 
+  function handleHeaderMenuAction(value: string): void {
+    if (value === "preview") {
+      enterPreviewMode();
+      return;
+    }
+
+    if (value === "exit-preview") {
+      exitPreviewMode();
+      return;
+    }
+
+    if (value === "new") {
+      onStartOver();
+      return;
+    }
+
+    if (value === "duplicate") {
+      duplicateDesignToNewTab(document);
+      return;
+    }
+
+    if (value === "rename") {
+      dispatch(createSetActiveSidebarSectionCommand("document"));
+      dispatch(createSetSidebarCollapsedCommand(false));
+      setRenameRequestToken((currentValue) => currentValue + 1);
+      return;
+    }
+
+    if (value === "download") {
+      void onExportDocument(document);
+      return;
+    }
+
+    if (value === "delete") {
+      setDeleteConfirmationOpen(true);
+      return;
+    }
+
+    if (value === "sign-in") {
+      openSignIn();
+    }
+  }
+
+  function renderHeaderMenuItemLabel(item: { id: string; label: string; icon?: string }) {
+    if (item.id === "preview" || item.id === "exit-preview") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon
+            icon={
+              item.id === "exit-preview"
+                ? "/icons/lucide/eye-off.svg"
+                : "/icons/lucide/eye.svg"
+            }
+            className={styles.saveButtonIcon}
+          />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    if (item.id === "sign-in") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon
+            icon="/icons/lucide/log-in.svg"
+            className={styles.saveButtonIcon}
+          />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    if (item.id === "download") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          {exportButtonState === "exporting" ? (
+            <span className={styles.saveButtonSpinner} aria-hidden="true" />
+          ) : (
+            <ButtonIcon
+              icon="/icons/lucide/download.svg"
+              className={styles.saveButtonIcon}
+            />
+          )}
+          <span>
+            {exportButtonState === "exporting" ? "Exporting..." : item.label}
+          </span>
+        </span>
+      );
+    }
+
+    if (item.icon) {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon icon={item.icon} className={styles.saveButtonIcon} />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    return item.label;
+  }
+
   return (
     <main className={styles.shell}>
       {!setupModalOpen &&
@@ -1123,63 +1225,7 @@ export function EditorV2Shell({
         : null}
       {!setupModalOpen && !useTopSaveBanner && !showAutoSavePanelStatus && headerAutosaveTarget
         ? createPortal(
-            <div className={styles.headerFileMenuGroup}>
-              <SingleSelectDropdown
-                ariaLabel="File actions"
-                items={[...HEADER_FILE_MENU_ITEMS]}
-                value=""
-                placeholder="File"
-                triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
-                triggerVariant="ghost"
-                showChevron={false}
-                menuPortalToViewport
-                menuPlacement="bottom-start"
-                menuShowTrailingCheck={false}
-                minWidth="auto"
-                menuWidth={180}
-                getItemValue={(item) => item.id}
-                getItemLabel={(item) => (
-                  <span className={styles.headerFileMenuItemLabel}>
-                    <ButtonIcon icon={item.icon} className={styles.saveButtonIcon} />
-                    <span>{item.label}</span>
-                  </span>
-                )}
-                getItemDisabled={(item) =>
-                  (item.id === "download" && exportButtonState === "exporting") ||
-                  (item.id === "delete" && deleteButtonState === "deleting")
-                }
-                onValueChange={(value) => {
-                  if (value === "new") {
-                    onStartOver();
-                    return;
-                  }
-
-                  if (value === "duplicate") {
-                    duplicateDesignToNewTab(document);
-                    return;
-                  }
-
-                  if (value === "rename") {
-                    dispatch(createSetActiveSidebarSectionCommand("document"));
-                    dispatch(createSetSidebarCollapsedCommand(false));
-                    setRenameRequestToken((currentValue) => currentValue + 1);
-                    return;
-                  }
-
-                  if (value === "download") {
-                    void onExportDocument(document);
-                    return;
-                  }
-
-                  if (value === "delete") {
-                    setDeleteConfirmationOpen(true);
-                  }
-                }}
-                wrapperClassName={styles.headerFileMenu}
-                triggerClassName={styles.headerFileMenuTrigger}
-                menuClassName={styles.headerFileMenuSurface}
-                triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
-              />
+            isBottomPanelLayout ? (
               <SaveStatusCard
                 autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
                 hasSavedDesignAccess={hasSavedDesignAccess}
@@ -1191,7 +1237,46 @@ export function EditorV2Shell({
                 saveMode={saveMode}
                 saveMessage={saveMessage}
               />
-            </div>,
+            ) : (
+              <div className={styles.headerFileMenuGroup}>
+                <SingleSelectDropdown
+                  ariaLabel="File actions"
+                  items={[...HEADER_FILE_MENU_ITEMS]}
+                  value=""
+                  placeholder="File"
+                  triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
+                  triggerVariant="ghost"
+                  showChevron={false}
+                  menuPortalToViewport
+                  menuPlacement="bottom-start"
+                  menuShowTrailingCheck={false}
+                  minWidth="auto"
+                  menuWidth={180}
+                  getItemValue={(item) => item.id}
+                  getItemLabel={renderHeaderMenuItemLabel}
+                  getItemDisabled={(item) =>
+                    (item.id === "download" && exportButtonState === "exporting") ||
+                    (item.id === "delete" && deleteButtonState === "deleting")
+                  }
+                  onValueChange={handleHeaderMenuAction}
+                  wrapperClassName={styles.headerFileMenu}
+                  triggerClassName={styles.headerFileMenuTrigger}
+                  menuClassName={styles.headerFileMenuSurface}
+                  triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
+                />
+                <SaveStatusCard
+                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                  hasSavedDesignAccess={hasSavedDesignAccess}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  layout="header"
+                  onDismiss={null}
+                  onSignIn={openSignIn}
+                  recoveredLocalChanges={recoveredLocalChanges}
+                  saveMode={saveMode}
+                  saveMessage={saveMessage}
+                />
+              </div>
+            ),
             headerAutosaveTarget,
           )
         : null}
@@ -1271,79 +1356,13 @@ export function EditorV2Shell({
               menuShowTrailingCheck={false}
               minWidth="auto"
               getItemValue={(item) => item.id}
-              getItemLabel={(item) => {
-                if (item.id === "preview" || item.id === "exit-preview") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      <ButtonIcon
-                        icon={
-                          item.id === "exit-preview"
-                            ? "/icons/lucide/eye-off.svg"
-                            : "/icons/lucide/eye.svg"
-                        }
-                        className={styles.saveButtonIcon}
-                      />
-                      <span>{item.label}</span>
-                    </span>
-                  );
-                }
-
-                if (item.id === "export") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      {exportButtonState === "exporting" ? (
-                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                      ) : (
-                        <ButtonIcon
-                          icon="/icons/lucide/download.svg"
-                          className={styles.saveButtonIcon}
-                        />
-                      )}
-                      <span>
-                        {exportButtonState === "exporting" ? "Exporting..." : item.label}
-                      </span>
-                    </span>
-                  );
-                }
-
-                if (item.id === "sign-in") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      <ButtonIcon
-                        icon="/icons/lucide/log-in.svg"
-                        className={styles.saveButtonIcon}
-                      />
-                      <span>{item.label}</span>
-                    </span>
-                  );
-                }
-
-                return item.label;
-              }}
+              getItemLabel={renderHeaderMenuItemLabel}
               getItemDisabled={(item) =>
-                (item.id === "export" && exportButtonState === "exporting") ||
+                (item.id === "download" && exportButtonState === "exporting") ||
+                (item.id === "delete" && deleteButtonState === "deleting") ||
                 (item.id === "preview" && previewModeDisabled)
               }
-              onValueChange={(value) => {
-                if (value === "preview") {
-                  enterPreviewMode();
-                  return;
-                }
-
-                if (value === "exit-preview") {
-                  exitPreviewMode();
-                  return;
-                }
-
-                if (value === "export") {
-                  void onExportDocument(document);
-                  return;
-                }
-
-                if (value === "sign-in") {
-                  openSignIn();
-                }
-              }}
+              onValueChange={handleHeaderMenuAction}
               wrapperClassName={styles.headerOverflowMenu}
               triggerClassName={styles.headerOverflowTrigger}
               menuClassName={styles.headerOverflowSurface}
