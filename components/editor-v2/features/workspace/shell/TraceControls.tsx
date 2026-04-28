@@ -644,18 +644,28 @@ export function TraceControls({
                 </Button>
               </div>
             ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={!trace || positioningEnabled}
-                onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
-              >
-                <ButtonIcon icon="/icons/lucide/vector_square.svg" />
-
-                Reposition
-
-              </Button>
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Position
+                  </span>
+                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={!trace || positioningEnabled}
+                      onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
+                    >
+                      <ButtonIcon icon="/icons/lucide/vector_square.svg" />
+                      Reposition
+                    </Button>
+                  </div>
+                </div>
+              </Field>
             )}
           {/* </TraceSection> */}
 
