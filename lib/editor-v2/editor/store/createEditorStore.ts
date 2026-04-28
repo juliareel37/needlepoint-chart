@@ -77,7 +77,10 @@ export function createEditorStore(
           };
 
           state = nextState;
-          notifyListeners(listeners, nextState, prevState, execution.event);
+          notifyListeners(listeners, nextState, prevState, {
+            ...execution.event,
+            patches: execution.patches,
+          });
 
           return {
             commandId: command.id,
@@ -134,7 +137,10 @@ export function createEditorStore(
         };
 
         state = nextState;
-        notifyListeners(listeners, nextState, prevState, execution.event);
+        notifyListeners(listeners, nextState, prevState, {
+          ...execution.event,
+          patches: execution.patches,
+        });
 
         return {
           commandId: command.id,

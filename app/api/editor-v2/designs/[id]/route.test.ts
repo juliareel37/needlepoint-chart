@@ -75,7 +75,11 @@ describe("editor-v2 individual design routes", () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
     authMock.mockResolvedValue({ userId: "user_1" });
-    findFirstMock.mockResolvedValue({ id: "design_123", data: { trace: null } });
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      data: { trace: null },
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+    });
     updateMock.mockResolvedValue({
       id: "design_123",
       title: "Untitled Design",
@@ -113,6 +117,38 @@ describe("editor-v2 individual design routes", () => {
       gridHeight: 6,
       createdAt: "2026-04-16T12:00:00.000Z",
       updatedAt: "2026-04-16T12:10:00.000Z",
+      versionToken: "2026-04-16T12:10:00.000Z",
+    });
+  });
+
+  it("rejects stale baseVersion updates", async () => {
+    const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
+
+    authMock.mockResolvedValue({ userId: "user_1" });
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      data: { trace: null },
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+    });
+
+    const response = await PUT(
+      new Request("http://localhost", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data,
+          baseVersion: "2026-04-16T12:00:00.000Z",
+        }),
+      }),
+      { params: { id: "design_123" } },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(body).toEqual({
+      error: "This design changed on the server before your save completed.",
+      versionToken: "2026-04-16T12:10:00.000Z",
     });
   });
 
@@ -148,6 +184,7 @@ describe("editor-v2 individual design routes", () => {
           originalUrl: "https://blob.example.com/old-original.png",
         },
       },
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -168,6 +205,16 @@ describe("editor-v2 individual design routes", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      id: "design_123",
+      title: "Untitled Design",
+      gridWidth: 2,
+      gridHeight: 2,
+      createdAt: "2026-04-16T12:00:00.000Z",
+      updatedAt: "2026-04-16T12:10:00.000Z",
+      versionToken: "2026-04-16T12:10:00.000Z",
+    });
     expect(deleteBlobIfExistsMock).toHaveBeenCalledTimes(3);
     expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-preview.webp");
     expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-thumbnail.webp");

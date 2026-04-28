@@ -91,8 +91,10 @@ export function EditorV2Shell({
   onSaveDocument,
   onLoadDocument,
   onStartOver,
+  recoveredLocalChanges,
   saveButtonState,
   saveMessage,
+  saveMode,
   savedDocuments,
   savedDocumentsLoading,
   selectedStorageId,
@@ -112,8 +114,10 @@ export function EditorV2Shell({
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
+  recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
+  saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectedStorageId: string;
@@ -1067,7 +1071,9 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
-      {!setupModalOpen && headerFileLeftTarget
+      {!setupModalOpen &&
+      headerFileLeftTarget &&
+      (saveMode === "manual" || !hasSavedDesignAccess)
         ? createPortal(
             <Button
               type="button"
@@ -1093,6 +1099,7 @@ export function EditorV2Shell({
               layout="header"
               onDismiss={null}
               onSignIn={openSignIn}
+              recoveredLocalChanges={recoveredLocalChanges}
               saveMessage={saveMessage}
             />,
             headerAutosaveTarget,
@@ -1106,6 +1113,7 @@ export function EditorV2Shell({
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
               onSignIn={openSignIn}
+              recoveredLocalChanges={recoveredLocalChanges}
               saveMessage={saveMessage}
             />,
             topBannerTarget,
@@ -1581,6 +1589,7 @@ function HeaderSaveStatus({
   layout,
   onDismiss,
   onSignIn,
+  recoveredLocalChanges,
   saveMessage,
 }: {
   hasSavedDesignAccess: boolean;
@@ -1588,6 +1597,7 @@ function HeaderSaveStatus({
   layout: "header" | "banner";
   onDismiss: (() => void) | null;
   onSignIn: () => void;
+  recoveredLocalChanges: boolean;
   saveMessage: string;
 }) {
   if (!saveMessage && !hasUnsavedChanges) {
@@ -1596,11 +1606,15 @@ function HeaderSaveStatus({
 
   const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
   const message =
-    !hasSavedDesignAccess && !saveMessage
-      ? "Sign in to save changes"
-      : saveMessage || "Changes not saved";
+    recoveredLocalChanges
+      ? "Recovered local changes. Sync pending."
+      : !hasSavedDesignAccess && !saveMessage
+        ? "Sign in to save changes"
+        : saveMessage || "Changes not saved";
   const icon =
-    state === "info"
+    recoveredLocalChanges
+      ? "/icons/lucide/backup.svg"
+      : state === "info"
       ? "/icons/lucide/info.svg"
       : state === "alert"
         ? "/icons/lucide/alert.svg"
@@ -1705,6 +1719,14 @@ function getSaveStatusState(
 
   if (saveMessage.startsWith("Couldn't")) {
     return "error";
+  }
+
+  if (saveMessage.startsWith("Sync conflict")) {
+    return "alert";
+  }
+
+  if (saveMessage.startsWith("Local recovery")) {
+    return "info";
   }
 
   return "info";

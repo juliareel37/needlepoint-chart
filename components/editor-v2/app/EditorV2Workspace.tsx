@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
-import { useEditorStoreDispatch } from "./editorStoreContext";
 import type {
   SaveEditorV2DocumentResult,
   SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
 import { EditorV2Shell } from "../features/workspace/shell/EditorV2Shell";
-import { createApplyProjectServerStateCommand } from "../features/workspace/workspaceCommands";
+import { useEditorV2PersistenceController } from "./useEditorV2PersistenceController";
+import type { EditorV2LocalSnapshotRecord } from "./editorV2AutosavePersistence";
 
 export type SaveButtonState = "idle" | "saving" | "saved";
 export type ExportButtonState = "idle" | "exporting";
@@ -27,6 +27,11 @@ export function EditorV2Workspace({
   hasSavedDesignAccess,
   onCanvasReady,
   currentStorageId,
+  currentServerVersion,
+  initialRecoveredLocalChanges,
+  initialDegradedLocalRecovery,
+  initialLocalSnapshot,
+  saveMode,
   savedDocuments,
   savedDocumentsLoading,
   selectedStorageId,
@@ -41,6 +46,11 @@ export function EditorV2Workspace({
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   currentStorageId: string;
+  currentServerVersion: string | null;
+  initialRecoveredLocalChanges: boolean;
+  initialDegradedLocalRecovery: boolean;
+  initialLocalSnapshot: EditorV2LocalSnapshotRecord | null;
+  saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   selectedStorageId: string;
@@ -48,30 +58,30 @@ export function EditorV2Workspace({
   onSaveDocument: (
     document: EditorDocumentState,
     storageId?: string,
+    baseVersion?: string | null,
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
   setupModal: ReactNode;
   setupModalOpen: boolean;
 }) {
-  const dispatch = useEditorStoreDispatch();
-  const [saveMessage, setSaveMessage] = useState<string>("");
-  const [saveButtonState, setSaveButtonState] = useState<SaveButtonState>("idle");
   const [exportButtonState, setExportButtonState] =
     useState<ExportButtonState>("idle");
   const [errorNotification, setErrorNotification] =
     useState<EditorV2ErrorNotification | null>(null);
   const [successNotification, setSuccessNotification] =
     useState<EditorV2SuccessNotification | null>(null);
-  const saveButtonResetTimeoutRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (saveButtonResetTimeoutRef.current !== null) {
-        window.clearTimeout(saveButtonResetTimeoutRef.current);
-      }
-    };
-  }, []);
+  const { controllerState, handleManualSave } = useEditorV2PersistenceController({
+    currentStorageId,
+    currentServerVersion,
+    hasSavedDesignAccess,
+    initialRecoveredLocalChanges,
+    initialDegradedLocalRecovery,
+    initialLocalSnapshot,
+    saveMode,
+    onSaveDocument,
+  });
 
   return (
     <div>
@@ -99,63 +109,14 @@ export function EditorV2Workspace({
             setExportButtonState("idle");
           }
         }}
-        onSaveDocument={async (nextDocument) => {
-          if (saveButtonResetTimeoutRef.current !== null) {
-            window.clearTimeout(saveButtonResetTimeoutRef.current);
-            saveButtonResetTimeoutRef.current = null;
-          }
-
-          setSaveButtonState("saving");
-
-          try {
-            const savedRecord = await onSaveDocument(
-              nextDocument,
-              currentStorageId || undefined,
-            );
-
-            if (!savedRecord) {
-              setSaveMessage("Sign in to save to your profile.");
-              setSaveButtonState("idle");
-              setErrorNotification(null);
-              return;
-            }
-
-            dispatch(
-              createApplyProjectServerStateCommand({
-                id: savedRecord.storageId,
-                title: savedRecord.title,
-                createdAt: savedRecord.createdAt,
-                updatedAt: savedRecord.updatedAt,
-              }),
-            );
-            setSelectedStorageId(savedRecord.storageId);
-            setSaveMessage(
-              `Saved at ${new Date().toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}`,
-            );
-            setSaveButtonState("saved");
-            setErrorNotification(null);
-            saveButtonResetTimeoutRef.current = window.setTimeout(() => {
-              setSaveButtonState("idle");
-              saveButtonResetTimeoutRef.current = null;
-            }, 2000);
-          } catch (error) {
-            setSaveMessage("");
-            setSaveButtonState("idle");
-            setErrorNotification({
-              title: "Couldn't save design",
-              description: getErrorMessage(error, "Try again in a moment."),
-            });
-          }
+        onSaveDocument={async (_nextDocument) => {
+          await handleManualSave();
+          setErrorNotification(null);
         }}
         onLoadDocument={async (record) => {
           try {
             await onLoadDocument(record);
             setSelectedStorageId(record.storageId);
-            setSaveMessage("");
-            setSaveButtonState("idle");
             setErrorNotification(null);
           } catch (error) {
             setErrorNotification({
@@ -168,8 +129,10 @@ export function EditorV2Workspace({
         errorNotification={errorNotification}
         onDismissErrorNotification={() => setErrorNotification(null)}
         exportButtonState={exportButtonState}
-        saveButtonState={saveButtonState}
-        saveMessage={saveMessage}
+        recoveredLocalChanges={controllerState.recoveredLocalChanges}
+        saveButtonState={controllerState.saveButtonState}
+        saveMessage={controllerState.saveMessage}
+        saveMode={saveMode}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}

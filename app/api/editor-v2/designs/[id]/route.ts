@@ -47,6 +47,7 @@ export async function GET(_req: Request, context: RouteContext) {
     id: design.id,
     createdAt: design.createdAt.toISOString(),
     updatedAt: design.updatedAt.toISOString(),
+    versionToken: design.updatedAt.toISOString(),
     data: parsedData,
   });
 }
@@ -64,7 +65,7 @@ export async function PUT(req: Request, context: RouteContext) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { data?: unknown }
+    | { data?: unknown; baseVersion?: unknown }
     | null;
   const data = parsePersistedEditorV2Design(body?.data);
   if (!data) {
@@ -73,10 +74,24 @@ export async function PUT(req: Request, context: RouteContext) {
 
   const existing = await prisma.editorDesign.findFirst({
     where: { id, userId },
-    select: { id: true, data: true },
+    select: { id: true, data: true, updatedAt: true },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const baseVersion =
+    typeof body?.baseVersion === "string" ? body.baseVersion : null;
+  const currentVersionToken = existing.updatedAt.toISOString();
+
+  if (baseVersion && baseVersion !== currentVersionToken) {
+    return NextResponse.json(
+      {
+        error: "This design changed on the server before your save completed.",
+        versionToken: currentVersionToken,
+      },
+      { status: 409 },
+    );
   }
 
   const updated = await prisma.editorDesign.update({
@@ -106,5 +121,6 @@ export async function PUT(req: Request, context: RouteContext) {
     gridHeight: updated.gridHeight,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
+    versionToken: updated.updatedAt.toISOString(),
   });
 }

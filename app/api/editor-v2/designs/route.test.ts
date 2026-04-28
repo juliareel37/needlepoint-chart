@@ -114,6 +114,7 @@ describe("editor-v2 design collection routes", () => {
       gridHeight: 3,
       createdAt: "2026-04-16T12:00:00.000Z",
       updatedAt: "2026-04-16T12:00:00.000Z",
+      versionToken: "2026-04-16T12:00:00.000Z",
     });
   });
 });

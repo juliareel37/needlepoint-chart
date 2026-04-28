@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
+import { EDITOR_V2_SAVE_MODE } from "@/lib/editor-v2/config";
 import { EditorV2Providers } from "./EditorV2Providers";
 import {
   EditorV2SetupModal,
@@ -17,6 +18,11 @@ import {
   saveEditorV2Document,
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
+import {
+  readLocalSnapshot,
+  shouldRecoverLocalSnapshot,
+  type EditorV2LocalSnapshotRecord,
+} from "./editorV2AutosavePersistence";
 
 const INITIAL_DESIGN_CONFIG: EditorV2DesignConfig = {
   kind: "new",
@@ -45,6 +51,11 @@ export function EditorV2Page() {
   const [designConfig, setDesignConfig] =
     useState<EditorV2DesignConfig>(INITIAL_DESIGN_CONFIG);
   const [currentStorageId, setCurrentStorageId] = useState("");
+  const [currentServerVersion, setCurrentServerVersion] = useState<string | null>(null);
+  const [initialRecoveredLocalChanges, setInitialRecoveredLocalChanges] = useState(false);
+  const [initialDegradedLocalRecovery, setInitialDegradedLocalRecovery] = useState(false);
+  const [initialLocalSnapshot, setInitialLocalSnapshot] =
+    useState<EditorV2LocalSnapshotRecord | null>(null);
   const [selectedStorageId, setSelectedStorageId] = useState("");
   const [setupModalOpen, setSetupModalOpen] = useState(true);
   const [setupModalMode, setSetupModalMode] = useState<"full" | "new-only">("full");
@@ -70,6 +81,8 @@ export function EditorV2Page() {
       setSavedDocumentsErrorMessage(null);
       setSetupErrorMessage(null);
       setCurrentStorageId("");
+      setCurrentServerVersion(null);
+      setInitialLocalSnapshot(null);
       setSelectedStorageId("");
       return;
     }
@@ -112,13 +125,25 @@ export function EditorV2Page() {
   }, [designConfig]);
 
   const loadDesignIntoWorkspace = async (storageId: string) => {
-    const instanceKey = `loaded_${storageId}_${Date.now()}`;
+      const instanceKey = `loaded_${storageId}_${Date.now()}`;
     setCanvasLoadingKey(instanceKey);
 
     try {
-      const document = await loadSavedEditorV2Document(storageId);
-      setCurrentStorageId(storageId);
+      const loaded = await loadSavedEditorV2Document(storageId);
+      const localSnapshot = await readLocalSnapshot(storageId);
+      const shouldRecover = shouldRecoverLocalSnapshot({
+        localSnapshot,
+        currentServerVersion: loaded.versionToken,
+      });
+      const document = shouldRecover && localSnapshot
+        ? localSnapshot.document
+        : loaded.document;
+      setCurrentStorageId(loaded.storageId);
+      setCurrentServerVersion(loaded.versionToken);
       setSelectedStorageId(storageId);
+      setInitialRecoveredLocalChanges(shouldRecover);
+      setInitialDegradedLocalRecovery(localSnapshot?.degradedLocalRecovery ?? false);
+      setInitialLocalSnapshot(shouldRecover ? localSnapshot : null);
       setSetupErrorMessage(null);
       setDesignConfig({
         kind: "loaded",
@@ -147,19 +172,32 @@ export function EditorV2Page() {
           );
         }}
         currentStorageId={currentStorageId}
+        currentServerVersion={currentServerVersion}
+        initialRecoveredLocalChanges={initialRecoveredLocalChanges}
+        initialDegradedLocalRecovery={initialDegradedLocalRecovery}
+        initialLocalSnapshot={initialLocalSnapshot}
+        saveMode={EDITOR_V2_SAVE_MODE}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        onSaveDocument={async (document, storageId) => {
+        onSaveDocument={async (document, storageId, baseVersion) => {
           if (!isLoaded || !isSignedIn) {
             openSignIn();
             return null;
           }
 
-          const savedRecord = await saveEditorV2Document(document, storageId);
+          const savedRecord = await saveEditorV2Document(
+            document,
+            storageId,
+            baseVersion,
+          );
           setCurrentStorageId(savedRecord.storageId);
+          setCurrentServerVersion(savedRecord.versionToken);
           setSelectedStorageId(savedRecord.storageId);
+          setInitialRecoveredLocalChanges(false);
+          setInitialDegradedLocalRecovery(false);
+          setInitialLocalSnapshot(null);
           setSetupErrorMessage(null);
           setSavedDocuments((existing) => {
             const nextRecord: SavedEditorV2DocumentRecord = {
@@ -201,6 +239,10 @@ export function EditorV2Page() {
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={(config) => {
               setCurrentStorageId("");
+              setCurrentServerVersion(null);
+              setInitialRecoveredLocalChanges(false);
+              setInitialDegradedLocalRecovery(false);
+              setInitialLocalSnapshot(null);
               setSelectedStorageId("");
               setSetupErrorMessage(null);
               setSetupModalMode("full");

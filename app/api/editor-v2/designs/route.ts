@@ -69,5 +69,6 @@ export async function POST(req: Request) {
     gridHeight: created.gridHeight,
     createdAt: created.createdAt.toISOString(),
     updatedAt: created.updatedAt.toISOString(),
+    versionToken: created.updatedAt.toISOString(),
   });
 }
