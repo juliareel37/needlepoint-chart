@@ -1904,7 +1904,7 @@ export function EditorV2Shell({
                     interactionLocked
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
-                    showGridlines={showGridlines}
+                    showGridlines={false}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
                     state={state}
