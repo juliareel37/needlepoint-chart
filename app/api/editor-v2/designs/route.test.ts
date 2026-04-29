@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
-const { authMock, findManyMock, createMock } = vi.hoisted(() => ({
+const { authMock, countMock, findManyMock, createMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
+  countMock: vi.fn(),
   findManyMock: vi.fn(),
   createMock: vi.fn(),
 }));
@@ -15,6 +16,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 vi.mock("@/lib/db", () => ({
   prisma: {
     editorDesign: {
+      count: countMock,
       findMany: findManyMock,
       create: createMock,
     },
@@ -45,6 +47,7 @@ describe("editor-v2 design collection routes", () => {
 
   it("lists signed-in user designs", async () => {
     authMock.mockResolvedValue({ userId: "user_1" });
+    countMock.mockResolvedValue(1);
     const state = createNewDesignState(20, 15);
     state.document.project.title = "Pattern One";
     const [firstColorId, secondColorId] = Object.keys(state.document.palette.colorsById);
@@ -67,6 +70,9 @@ describe("editor-v2 design collection routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(countMock).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
     expect(findManyMock).toHaveBeenCalledWith({
       where: { userId: "user_1" },
       orderBy: { updatedAt: "desc" },
@@ -99,6 +105,7 @@ describe("editor-v2 design collection routes", () => {
           },
         },
       ],
+      totalCount: 1,
       hasMore: false,
       nextOffset: null,
     });
@@ -106,6 +113,7 @@ describe("editor-v2 design collection routes", () => {
 
   it("pages signed-in user designs", async () => {
     authMock.mockResolvedValue({ userId: "user_1" });
+    countMock.mockResolvedValue(13);
     findManyMock.mockResolvedValue(
       Array.from({ length: 7 }, (_, index) => {
         const state = createNewDesignState(20 + index, 15 + index);
@@ -143,6 +151,7 @@ describe("editor-v2 design collection routes", () => {
       },
     });
     expect(body.designs).toHaveLength(6);
+    expect(body.totalCount).toBe(13);
     expect(body.hasMore).toBe(true);
     expect(body.nextOffset).toBe(12);
   });

@@ -15,6 +15,7 @@ export default async function LibraryPage() {
   return (
     <LibraryPageClient
       initialDesigns={initialPage.designs}
+      initialTotalCount={initialPage.totalCount}
       initialHasMore={initialPage.hasMore}
       initialNextOffset={initialPage.nextOffset}
     />

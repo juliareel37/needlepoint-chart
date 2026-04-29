@@ -54,6 +54,7 @@ type LibrarySuccessNotification = {
 type PendingDeletion = {
   designIds: string[];
   previousDesigns: LibraryDesignRecord[];
+  previousTotalCount: number;
 };
 
 async function fetchLibraryPage(offset: number) {
@@ -69,6 +70,7 @@ async function fetchLibraryPage(offset: number) {
   const body = (await response.json().catch(() => null)) as
     | {
         designs?: LibraryDesignRecord[];
+        totalCount?: number;
         hasMore?: boolean;
         nextOffset?: number | null;
         error?: string;
@@ -81,6 +83,7 @@ async function fetchLibraryPage(offset: number) {
 
   return {
     designs: Array.isArray(body?.designs) ? body.designs : [],
+    totalCount: typeof body?.totalCount === "number" ? body.totalCount : 0,
     hasMore: body?.hasMore === true,
     nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
   };
@@ -88,15 +91,18 @@ async function fetchLibraryPage(offset: number) {
 
 export function LibraryPageClient({
   initialDesigns,
+  initialTotalCount,
   initialHasMore,
   initialNextOffset,
 }: {
   initialDesigns: LibraryDesignRecord[];
+  initialTotalCount: number;
   initialHasMore: boolean;
   initialNextOffset: number | null;
 }) {
   const router = useRouter();
   const [designs, setDesigns] = useState(initialDesigns);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextOffset, setNextOffset] = useState(initialNextOffset);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -171,6 +177,7 @@ export function LibraryPageClient({
                 (candidate) => !existing.some((record) => record.id === candidate.id),
               ),
             ]);
+            setTotalCount(result.totalCount);
             setHasMore(result.hasMore);
             setNextOffset(result.nextOffset);
           })
@@ -268,6 +275,7 @@ export function LibraryPageClient({
           },
           ...existing,
         ]);
+        setTotalCount((current) => current + 1);
         return;
       }
 
@@ -358,6 +366,7 @@ export function LibraryPageClient({
       return true;
     } catch (error) {
       restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+      setTotalCount(currentPendingDeletion.previousTotalCount);
       setPendingDeletion(null);
       setSuccessNotification(null);
       setCardActionError(
@@ -388,6 +397,7 @@ export function LibraryPageClient({
         })
         .catch((error) => {
           restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+          setTotalCount(currentPendingDeletion.previousTotalCount);
           setPendingDeletion(null);
           setSuccessNotification(null);
           setCardActionError(
@@ -409,6 +419,7 @@ export function LibraryPageClient({
 
     clearPendingDeletionTimeout();
     restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+    setTotalCount(currentPendingDeletion.previousTotalCount);
     setPendingDeletion(null);
     setSuccessNotification(null);
   }
@@ -443,12 +454,14 @@ export function LibraryPageClient({
           {
             designIds: [designId],
             previousDesigns,
+            previousTotalCount: totalCount,
           },
           {
             title: "Design deleted",
             description: `"${designTitle}" was removed from your saved designs.`,
           },
         );
+        setTotalCount((current) => Math.max(0, current - 1));
         setDeleteConfirmation(null);
         return;
       }
@@ -464,6 +477,7 @@ export function LibraryPageClient({
         {
           designIds: [...deleteConfirmation.designIds],
           previousDesigns,
+          previousTotalCount: totalCount,
         },
         {
           title:
@@ -473,6 +487,9 @@ export function LibraryPageClient({
               ? "The selected design was removed from your saved designs."
               : "The selected designs were removed from your saved designs.",
         },
+      );
+      setTotalCount((current) =>
+        Math.max(0, current - deleteConfirmation.designIds.length),
       );
       setDeleteConfirmation(null);
     } catch (error) {
@@ -591,7 +608,7 @@ export function LibraryPageClient({
         <div className={styles.viewRow}>
           <div className={styles.viewSummary}>
             <span className={styles.viewSummaryLabel}>All Designs</span>
-            <span className={styles.viewSummaryCount}>({designs.length})</span>
+            <span className={styles.viewSummaryCount}>({totalCount})</span>
           </div>
 
           <SegmentedControl<LibraryViewMode>

@@ -19,6 +19,7 @@ export interface LibraryDesignRecord {
 
 export interface LibraryDesignPage {
   designs: LibraryDesignRecord[];
+  totalCount: number;
   hasMore: boolean;
   nextOffset: number | null;
 }
@@ -35,20 +36,25 @@ export async function loadLibraryDesignPage({
   const normalizedLimit = Math.max(1, Math.min(MAX_LIBRARY_PAGE_SIZE, Math.floor(limit)));
   const normalizedOffset = Math.max(0, Math.floor(offset));
 
-  const designs = await prisma.editorDesign.findMany({
-    where: { userId },
-    orderBy: { updatedAt: "desc" },
-    skip: normalizedOffset,
-    take: normalizedLimit + 1,
-    select: {
-      id: true,
-      title: true,
-      gridWidth: true,
-      gridHeight: true,
-      updatedAt: true,
-      data: true,
-    },
-  });
+  const [totalCount, designs] = await Promise.all([
+    prisma.editorDesign.count({
+      where: { userId },
+    }),
+    prisma.editorDesign.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      skip: normalizedOffset,
+      take: normalizedLimit + 1,
+      select: {
+        id: true,
+        title: true,
+        gridWidth: true,
+        gridHeight: true,
+        updatedAt: true,
+        data: true,
+      },
+    }),
+  ]);
 
   const hasMore = designs.length > normalizedLimit;
   const visibleDesigns = hasMore ? designs.slice(0, normalizedLimit) : designs;
@@ -78,6 +84,7 @@ export async function loadLibraryDesignPage({
           : null,
       };
     }),
+    totalCount,
     hasMore,
     nextOffset: hasMore ? normalizedOffset + visibleDesigns.length : null,
   };
