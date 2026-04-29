@@ -58,6 +58,8 @@ export function EditorV2Workspace({
   onRestoreVersion,
   onDeleteCurrentDesign,
   onStartOver,
+  persistentSuccessNotification,
+  onDismissPersistentSuccessNotification,
   setupModal,
   setupModalOpen,
 }: {
@@ -109,6 +111,8 @@ export function EditorV2Workspace({
   ) => Promise<RestoreEditorV2VersionResult>;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
+  persistentSuccessNotification: EditorV2SuccessNotification | null;
+  onDismissPersistentSuccessNotification: () => void;
   setupModal: ReactNode;
   setupModalOpen: boolean;
 }) {
@@ -120,6 +124,7 @@ export function EditorV2Workspace({
     useState<EditorV2ErrorNotification | null>(null);
   const [successNotification, setSuccessNotification] =
     useState<EditorV2SuccessNotification | null>(null);
+  const displayedSuccessNotification = successNotification ?? persistentSuccessNotification;
 
   const { controllerState, handleManualSave, handleManualVersionSnapshot } =
     useEditorV2PersistenceController({
@@ -201,10 +206,6 @@ export function EditorV2Workspace({
         onRestoreVersion={async (storageId, versionId) => {
           try {
             const restored = await onRestoreVersion(storageId, versionId);
-            setSuccessNotification({
-              title: "Version restored",
-              description: "The selected version is now the current design.",
-            });
             setErrorNotification(null);
             return restored;
           } catch (error) {
@@ -257,8 +258,15 @@ export function EditorV2Workspace({
         onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        successNotification={successNotification}
-        onDismissSuccessNotification={() => setSuccessNotification(null)}
+        successNotification={displayedSuccessNotification}
+        onDismissSuccessNotification={() => {
+          if (successNotification) {
+            setSuccessNotification(null);
+            return;
+          }
+
+          onDismissPersistentSuccessNotification();
+        }}
         setupModal={setupModal}
         setupModalOpen={setupModalOpen}
       />

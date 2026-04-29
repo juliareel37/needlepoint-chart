@@ -14,7 +14,10 @@ import {
   type EditorV2DesignConfig,
   type EditorV2DesignConfigNew,
 } from "./EditorV2SetupModal";
-import { EditorV2Workspace } from "./EditorV2Workspace";
+import {
+  EditorV2Workspace,
+  type EditorV2SuccessNotification,
+} from "./EditorV2Workspace";
 import {
   deleteSavedEditorV2Document,
   listEditorV2DesignVersions,
@@ -109,6 +112,8 @@ export function EditorV2Page({
   const [isVersionHistoryMode, setIsVersionHistoryMode] = useState(false);
   const [versionPreviewSession, setVersionPreviewSession] =
     useState<VersionPreviewSession | null>(null);
+  const [restoreSuccessNotification, setRestoreSuccessNotification] =
+    useState<EditorV2SuccessNotification | null>(null);
   const previousRouteRef = useRef<
     { mode: "entry" | "saved"; storageId: string | null } | undefined
   >(undefined);
@@ -871,6 +876,10 @@ export function EditorV2Page({
             versionToken: restored.versionToken,
             instanceKey: `restored_${restored.storageId}_${Date.now()}`,
           });
+          setRestoreSuccessNotification({
+            title: "Version restored",
+            // description: "The selected version is now the current design.",
+          });
           router.replace(`/editor/designs/${restored.storageId}`);
           return restored;
         }}
@@ -899,6 +908,8 @@ export function EditorV2Page({
           setSetupModalMode("new-only");
           setSetupModalOpen(true);
         }}
+        persistentSuccessNotification={restoreSuccessNotification}
+        onDismissPersistentSuccessNotification={() => setRestoreSuccessNotification(null)}
         setupModalOpen={setupModalOpen}
         setupModal={
           <EditorV2SetupModal
