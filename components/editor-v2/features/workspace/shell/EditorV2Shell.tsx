@@ -244,6 +244,7 @@ export function EditorV2Shell({
   const bottomPanelCanvasFocusSnapshotRef =
     useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
+  const versionHistoryFitPendingRef = useRef(false);
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
   const reopenColorPanelAfterSelectionRef = useRef(false);
   const usedColorsSelectionPromptStartedRef = useRef(false);
@@ -722,14 +723,20 @@ export function EditorV2Shell({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, []);
+  }, [isVersionHistoryMode]);
 
   useEffect(() => {
     const update = () => {
       const canvasElement = canvasWorldRef.current;
       const toolbarElement = stageToolbarTopRef.current;
 
-      if (!canvasElement || !toolbarElement || previewMode || isBottomPanelCanvasFocusActive) {
+      if (
+        isVersionHistoryMode ||
+        !canvasElement ||
+        !toolbarElement ||
+        previewMode ||
+        isBottomPanelCanvasFocusActive
+      ) {
         setStageToolbarTopInset(0);
         return;
       }
@@ -762,7 +769,50 @@ export function EditorV2Shell({
       window.removeEventListener("resize", update);
       observer.disconnect();
     };
-  }, [isBottomPanelCanvasFocusActive, previewMode, sidebarCollapsed, activeSidebarSection]);
+  }, [
+    activeSidebarSection,
+    isBottomPanelCanvasFocusActive,
+    isVersionHistoryMode,
+    previewMode,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (!isVersionHistoryMode) {
+      versionHistoryFitPendingRef.current = false;
+      return;
+    }
+
+    if (
+      !versionHistoryFitPendingRef.current ||
+      fitZoom <= 0 ||
+      canvasWorldSize.width <= 0 ||
+      canvasWorldSize.height <= 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      fitToGrid();
+      versionHistoryFitPendingRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasWorldSize.height,
+    canvasWorldSize.width,
+    fitToGrid,
+    fitZoom,
+    isVersionHistoryMode,
+  ]);
 
   useEffect(() => {
     if (
@@ -1180,6 +1230,10 @@ export function EditorV2Shell({
     return () => {
       appShellRoot.removeAttribute("data-editor-version-history-mode");
     };
+  }, [isVersionHistoryMode]);
+
+  useEffect(() => {
+    versionHistoryFitPendingRef.current = isVersionHistoryMode;
   }, [isVersionHistoryMode]);
 
   useEffect(() => {
