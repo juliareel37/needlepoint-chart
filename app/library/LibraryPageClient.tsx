@@ -373,12 +373,12 @@ export function LibraryPageClient({
                       className={styles.cardLink}
                     >
                       <div className={styles.thumbnail}>
-                        <div className={styles.thumbnailFrame}>
+                        {/* <div className={styles.thumbnailFrame}> */}
                           <StitchThumbnailCanvas
                             snapshot={design.stitchSnapshot}
                             className={styles.thumbnailCanvas}
                           />
-                        </div>
+                        {/* </div> */}
                       </div>
                     </Link>
 

@@ -263,8 +263,8 @@
 }
 
 .thumbnail {
-  padding: 12px 12px 0;
-  background: #ffffff;
+  padding: 20px;
+  background: var(--neutral-100);
 }
 
 .thumbnailFrame {
@@ -278,9 +278,11 @@
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 1px solid #d8dfec;
-  border-radius: 6px;
+  /* border: 1px solid #d8dfec; */
+  border-radius: 4px;
   background: #ffffff;
+  box-shadow: var(--ui-shadow-md);
+
 }
 
 .cardBody {
