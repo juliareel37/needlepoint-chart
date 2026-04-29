@@ -946,7 +946,7 @@
   transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-.versionHistoryTimelineItem:hover {
+.versionHistoryTimelineItem:hover:not([data-selected="true"]) {
   background: rgba(226, 81, 255, 0.05);
 }
 
@@ -1760,9 +1760,9 @@
 
 @media (hover: hover) and (pointer: fine) {
 
-  .versionHistoryTimelineItem:hover {
-  background: rgba(220, 81, 255, 0.05);
-}
+  .versionHistoryTimelineItem:hover:not([data-selected="true"]) {
+    background: rgba(220, 81, 255, 0.05);
+  }
 
 
   .usedColorsActionDismiss:hover {

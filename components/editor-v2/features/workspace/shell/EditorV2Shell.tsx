@@ -73,11 +73,13 @@ const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
+const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
 const HEADER_FILE_MENU_ITEMS = [
   { id: "library", label: "My designs", icon: "/icons/lucide/list.svg" },
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "version-history", label: "Version history", icon: "/icons/lucide/history.svg" },
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
@@ -270,11 +272,13 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
-  const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>([]);
+  const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>(() =>
+    currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : [],
+  );
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
   const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
   const [selectedVersionHistoryId, setSelectedVersionHistoryId] = useState<"current" | string>(
-    "current",
+    () => versionPreviewMeta?.versionId ?? "current",
   );
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
@@ -1237,6 +1241,11 @@ export function EditorV2Shell({
   }, [isVersionHistoryMode]);
 
   useEffect(() => {
+    setVersionHistory(currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : []);
+    setVersionHistoryError(null);
+  }, [currentStorageId]);
+
+  useEffect(() => {
     if (!errorNotification) {
       return;
     }
@@ -1267,10 +1276,18 @@ export function EditorV2Shell({
       return;
     }
 
+    const cachedVersions = versionHistoryCache.get(currentStorageId);
+    if (cachedVersions) {
+      setVersionHistory(cachedVersions);
+      setVersionHistoryError(null);
+      return;
+    }
+
     setVersionHistoryLoading(true);
 
     try {
       const versions = await onListVersions(currentStorageId);
+      versionHistoryCache.set(currentStorageId, versions);
       setVersionHistory(versions);
       setVersionHistoryError(null);
     } catch (error) {
@@ -1343,6 +1360,7 @@ export function EditorV2Shell({
 
     try {
       await onRestoreVersion(currentStorageId, selectedVersionHistoryId);
+      versionHistoryCache.delete(currentStorageId);
       setVersionHistoryError(null);
     } catch (error) {
       setVersionHistoryError(
@@ -1387,6 +1405,11 @@ export function EditorV2Shell({
       dispatch(createSetActiveSidebarSectionCommand("document"));
       dispatch(createSetSidebarCollapsedCommand(false));
       setRenameRequestToken((currentValue) => currentValue + 1);
+      return;
+    }
+
+    if (value === "version-history") {
+      onEnterVersionHistoryMode();
       return;
     }
 
@@ -1530,6 +1553,7 @@ export function EditorV2Shell({
                   getItemValue={(item) => item.id}
                   getItemLabel={renderHeaderMenuItemLabel}
                   getItemDisabled={(item) =>
+                    (item.id === "version-history" && !currentStorageId) ||
                     (item.id === "download" && exportButtonState === "exporting") ||
                     (item.id === "delete" && deleteButtonState === "deleting")
                   }

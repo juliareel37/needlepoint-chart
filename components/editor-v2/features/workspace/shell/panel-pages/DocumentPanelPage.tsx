@@ -241,13 +241,15 @@ export function DocumentPanelPage({
               Save this design to start tracking version history.
             </p>
           ) : (
-            <div className={styles.versionHistoryEntryCard}>
-              <p className={styles.versionHistoryEntryText} style={typographyStyles.p2}>
+            <div 
+            // className={styles.versionHistoryEntryCard}
+            >
+              {/* <p className={styles.versionHistoryEntryText} style={typographyStyles.p2}>
                 Open a dedicated version history view to preview older states and restore one when you're ready.
-              </p>
+              </p> */}
               <Button type="button" variant="secondary" onClick={onEnterVersionHistoryMode}>
                 <ButtonIcon icon="/icons/lucide/history.svg" className={styles.saveButtonIcon} />
-                Version history
+                View version history
               </Button>
             </div>
           )}
