@@ -824,7 +824,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
-  background: var(--canvas-stage-bg);
+  /* background: var(--canvas-stage-bg); */
   overflow: visible;
 }
 
@@ -861,9 +861,9 @@
   height: 100%;
   min-height: 0;
   padding: 24px;
-  background:
+  /* background:
     radial-gradient(circle at top left, rgba(222, 214, 255, 0.5), transparent 30%),
-    linear-gradient(180deg, #f8f6ff 0%, #f6f3ee 100%);
+    linear-gradient(180deg, #f8f6ff 0%, #f6f3ee 100%); */
 }
 
 .versionHistoryCanvasPane {
@@ -873,16 +873,16 @@
   min-height: 0;
   border-radius: 28px;
   overflow: hidden;
-  border: 1px solid rgba(125, 96, 197, 0.16);
+  /* border: 1px solid rgba(125, 96, 197, 0.16);
   background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 24px 60px rgba(56, 39, 102, 0.12);
+  box-shadow: 0 24px 60px rgba(56, 39, 102, 0.12); */
 }
-
+/* 
 .versionHistoryCanvasWorld {
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(245, 241, 255, 0.9)),
     var(--canvas-stage-bg);
-}
+} */
 
 .versionHistoryPanel {
   min-height: 0;
@@ -944,9 +944,6 @@
   transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-.versionHistoryTimelineItem:hover {
-  background: rgba(122, 81, 255, 0.05);
-}
 
 .versionHistoryTimelineItem[data-selected="true"] {
   background: rgba(168, 130, 255, 0.14);
@@ -990,14 +987,14 @@
 }
 
 .versionHistoryTimelineTitle {
-  font-size: 24px;
+  font-size: 14px;
   line-height: 1.2;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .versionHistoryTimelineMeta {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--text-secondary);
 }
@@ -1753,6 +1750,12 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+
+  .versionHistoryTimelineItem:hover {
+  background: rgba(122, 81, 255, 0.05);
+}
+
+
   .usedColorsActionDismiss:hover {
     background: var(--button-ghost2-hover);
     box-shadow: var(--ui-shadow-lg);
@@ -3120,10 +3123,10 @@
   .versionHistoryPanel {
     min-height: 0;
   }
-
+/* 
   .versionHistoryTimelineTitle {
     font-size: 20px;
-  }
+  } */
 }
 
 @media (max-width: 640px) {
@@ -3144,7 +3147,7 @@
     padding: 0 20px 20px;
   }
 
-  .versionHistoryTimelineTitle {
+  /* .versionHistoryTimelineTitle {
     font-size: 17px;
-  }
+  } */
 }
