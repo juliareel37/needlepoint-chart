@@ -8,6 +8,7 @@ import { typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
   ButtonIcon,
+  CheckboxField,
   Field,
   Modal,
   Notification,
@@ -16,11 +17,19 @@ import {
 } from "@/components/design-system";
 import type {
   EditorStore,
+  GridDocument,
+  PaletteColor,
   TraceBlendMode,
   TraceDocument,
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
+import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import {
+  convertTraceImageToPattern,
+  loadTraceImage,
+} from "@/lib/editor-v2/editor/trace/convertTraceImageToPattern";
+import {
+  createApplyTraceConversionCommand,
   createAttachTraceCommand,
   createBeginTraceRepositionCommand,
   createCancelTraceRepositionCommand,
@@ -28,11 +37,18 @@ import {
   createRemoveTraceCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
+import {
+  shouldShowOverwriteWarning,
+  suppressOverwriteWarningForOneDay,
+} from "./conversionOverwriteWarning";
 import styles from "./EditorV2Shell.module.css";
 
 const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
 
 interface TraceControlsProps {
+  grid: GridDocument;
+  gridMetrics: GridWorldMetrics;
+  palette: PaletteColor[];
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
   repositionActive?: boolean;
@@ -40,6 +56,9 @@ interface TraceControlsProps {
 }
 
 export function TraceControls({
+  grid,
+  gridMetrics,
+  palette,
   trace,
   dispatch,
   repositionActive = false,
@@ -55,6 +74,16 @@ export function TraceControls({
     userOverrode: boolean;
   } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
+  const [convertMaxColors, setConvertMaxColors] = useState(20);
+  const [convertSmoothing, setConvertSmoothing] = useState(0.25);
+  const [convertingImage, setConvertingImage] = useState(false);
+  const [convertErrorMessage, setConvertErrorMessage] = useState<string | null>(null);
+  const [pendingConversion, setPendingConversion] = useState<{
+    replacements: Array<{ index: number; value: string | null }>;
+    extractedColorIds: string[];
+  } | null>(null);
+  const [overwriteCount, setOverwriteCount] = useState(0);
+  const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const [removeConfirmationOpen, setRemoveConfirmationOpen] = useState(false);
   const [traceUploadErrorMessage, setTraceUploadErrorMessage] = useState<string | null>(
     null,
@@ -69,6 +98,9 @@ export function TraceControls({
   const traceFileNameParts = traceFileName
     ? splitFileNameForDisplay(traceFileName)
     : null;
+  const canConvert = Boolean(trace && !repositionActive);
+  const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
+  const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
@@ -107,6 +139,88 @@ export function TraceControls({
     }
   };
 
+  const applyConversion = (
+    conversion: NonNullable<typeof pendingConversion>,
+  ) => {
+    if (!dispatch) {
+      return;
+    }
+
+    dispatch(
+      createApplyTraceConversionCommand({
+        replacements: conversion.replacements,
+        extractedColorIds: conversion.extractedColorIds,
+        activeColorId: conversion.extractedColorIds[0] ?? null,
+      }),
+    );
+  };
+
+  const handleConvertToPattern = async () => {
+    if (!dispatch || !trace || convertingImage) {
+      return;
+    }
+
+    setConvertingImage(true);
+    setConvertErrorMessage(null);
+
+    try {
+      const traceImage = await loadTraceImage(trace.previewUrl);
+      const result = convertTraceImageToPattern({
+        traceImage,
+        trace,
+        metrics: gridMetrics,
+        palette,
+        maxColors: convertMaxColors,
+        smoothing: convertSmoothing,
+        sampleCanvas: sampleCanvasRef.current,
+      });
+
+      if (!result) {
+        throw new Error("The image couldn't be converted with the current settings.");
+      }
+
+      sampleCanvasRef.current = result.sampleCanvas;
+
+      const replacements: Array<{ index: number; value: string | null }> = [];
+      let nextOverwriteCount = 0;
+
+      for (const index of result.coveredCellIndexes) {
+        const nextValue = result.cells[index] ?? null;
+        const previousValue = grid.cells[index] ?? null;
+
+        if (previousValue !== null && previousValue !== nextValue) {
+          nextOverwriteCount += 1;
+        }
+
+        if (nextValue !== previousValue) {
+          replacements.push({ index, value: nextValue });
+        }
+      }
+
+      const conversion = {
+        replacements,
+        extractedColorIds: result.usedColorIds,
+      };
+
+      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+        setOverwriteCount(nextOverwriteCount);
+        setPendingConversion(conversion);
+        return;
+      }
+
+      applyConversion(conversion);
+    } catch (error) {
+      setConvertErrorMessage(
+        getErrorMessage(
+          error,
+          "Try a different smoothing value or re-upload the image.",
+        ),
+      );
+    } finally {
+      setConvertingImage(false);
+    }
+  };
+
   useEffect(() => {
     if (!opacityTooltipVisible) {
       return;
@@ -131,6 +245,24 @@ export function TraceControls({
 
     return () => window.clearTimeout(timeoutId);
   }, [traceUploadErrorMessage]);
+
+  useEffect(() => {
+    if (!convertErrorMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setConvertErrorMessage(null);
+    }, TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [convertErrorMessage]);
+
+  useEffect(() => {
+    setPendingConversion(null);
+    setOverwriteCount(0);
+    setSkipWarningForOneDay(false);
+  }, [trace?.previewUrl]);
 
   useEffect(() => {
     if (!dispatch) {
@@ -239,7 +371,7 @@ export function TraceControls({
 
   return (
     <>
-      {traceUploadErrorMessage
+      {traceUploadErrorMessage || convertErrorMessage
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
               <div
@@ -249,9 +381,12 @@ export function TraceControls({
               >
                 <Notification
                   tone="destructive"
-                  title="Couldn't upload image"
-                  description={traceUploadErrorMessage}
-                  onDismiss={() => setTraceUploadErrorMessage(null)}
+                  title={traceUploadErrorMessage ? "Couldn't upload image" : "Couldn't convert image"}
+                  description={traceUploadErrorMessage ?? convertErrorMessage ?? ""}
+                  onDismiss={() => {
+                    setTraceUploadErrorMessage(null);
+                    setConvertErrorMessage(null);
+                  }}
                 />
               </div>
             </div>,
@@ -436,11 +571,59 @@ export function TraceControls({
         }}
       />
 
+      <Modal
+        isOpen={pendingConversion !== null}
+        title="Overwrite current pattern?"
+        description={(
+          <div style={{ display: "grid", gap: 12 }}>
+            <span className={styles.overwriteWarningDescriptionText}>
+              {`Converting this image will overwrite ${overwriteCount} painted ${
+                overwriteCount === 1 ? "cell" : "cells"
+              }.`}
+            </span>
+            <CheckboxField
+              checked={skipWarningForOneDay}
+              onChange={(event) => setSkipWarningForOneDay(event.currentTarget.checked)}
+            >
+              Don&apos;t show again today
+            </CheckboxField>
+          </div>
+        )}
+        tone="warning"
+        dismissLabel="Cancel"
+        confirmLabel="Convert"
+        onDismiss={() => {
+          setPendingConversion(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+        onConfirm={() => {
+          if (skipWarningForOneDay) {
+            suppressOverwriteWarningForOneDay();
+          }
+          if (pendingConversion) {
+            applyConversion(pendingConversion);
+          }
+          setPendingConversion(null);
+          setOverwriteCount(0);
+          setSkipWarningForOneDay(false);
+        }}
+      />
+
       {trace ? (
         <>
+          {/* <div className={styles.traceSectionDivider} aria-hidden="true" /> */}
+
+
+        
+
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
-          <TraceSection title="Positioning">
+          <TraceSection title="Settings">
+
+          {/* <TraceSection  */}
+          {/* // title="Positioning" */}
+          {/* > */}
             {positioningEnabled && !preservePositioningSectionLayout ? (
               <div className={styles.panelRow}>
                 <Button
@@ -461,23 +644,33 @@ export function TraceControls({
                 </Button>
               </div>
             ) : (
-              <Button
-                type="button"
-                variant="primary"
-                disabled={!trace || positioningEnabled}
-                onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
-              >
-                <ButtonIcon icon="/icons/lucide/vector_square.svg" />
-
-                Reposition
-
-              </Button>
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Position
+                  </span>
+                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={!trace || positioningEnabled}
+                      onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
+                    >
+                      <ButtonIcon icon="/icons/lucide/vector_square.svg" />
+                      Reposition
+                    </Button>
+                  </div>
+                </div>
+              </Field>
             )}
-          </TraceSection>
+          {/* </TraceSection> */}
 
-          <div className={styles.traceSectionDivider} aria-hidden="true" />
 
-          <TraceSection title="Visibility">
+
             <Field>
               <div className={styles.traceInlineFieldRow}>
                 <span
@@ -589,6 +782,90 @@ export function TraceControls({
                 </div>
               </Field>
             </div>
+          </TraceSection>
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+          <TraceSection
+            title="Convert to Pattern"
+            // hint="Sample the image onto the stitch grid using your thread palette."
+          >
+            <Field>
+              <div className={styles.traceInlineFieldRow}>
+                <span
+                  className={styles.traceInlineFieldLabel}
+                  style={typographyStyles.p2}
+                >
+                  Max colors
+                </span>
+                <div className={styles.traceSliderControl}>
+                  <div className={styles.traceSliderRow}>
+                    <Slider
+                      className={styles.traceSliderFullWidth}
+                      min="2"
+                      max="32"
+                      step="1"
+                      value={convertMaxColors}
+                      disabled={!canConvert || convertingImage}
+                      aria-label="Maximum thread colors"
+                      onChange={(event) =>
+                        setConvertMaxColors(
+                          Math.max(2, Math.min(32, Number(event.target.value) || 2)),
+                        )
+                      }
+                    />
+                    <span className={styles.traceSliderValue}>{convertMaxColors}</span>
+                  </div>
+                </div>
+              </div>
+            </Field>
+
+            <Field>
+              <div className={styles.traceInlineFieldRow}>
+                <span
+                  className={styles.traceInlineFieldLabel}
+                  style={typographyStyles.p2}
+                >
+                  Smoothing
+                </span>
+                <div className={styles.traceSliderControl}>
+                  <div className={styles.traceSliderRow}>
+                    <Slider
+                      className={styles.traceSliderFullWidth}
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={convertSmoothing}
+                      disabled={!canConvert || convertingImage}
+                      aria-label="Image smoothing"
+                      onChange={(event) =>
+                        setConvertSmoothing(
+                          Math.max(0, Math.min(1, Number(event.target.value) || 0)),
+                        )
+                      }
+                    />
+                    <span className={styles.traceSliderValue}>
+                      {conversionSmoothingPercent}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Field>
+
+            <Button
+              type="button"
+              variant="primary"
+              disabled={!canConvert || convertingImage}
+              onClick={handleConvertToPattern}
+            >
+              {convertingImage ? (
+                <>
+                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                  Converting...
+                </>
+              ) : (
+                "Convert image"
+              )}
+            </Button>
           </TraceSection>
         </>
       ) : (

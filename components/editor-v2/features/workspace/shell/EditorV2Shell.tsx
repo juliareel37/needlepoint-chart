@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
+import { IS_DEV_APP_MODE } from "@/lib/editor-v2/config";
 import {
   getActiveColor,
   getActiveColorId,
@@ -28,6 +29,7 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
+  DeleteButtonState,
   ExportButtonState,
   EditorV2ErrorNotification,
   EditorV2SuccessNotification,
@@ -47,20 +49,37 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
-import { ButtonIcon, Notification } from "@/components/design-system";
+import { ButtonIcon, Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
+import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
+import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
 const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
+const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
+const DUPLICATE_QUERY_PARAM = "duplicate";
+const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
+const HEADER_FILE_MENU_ITEMS = [
+  { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
+  { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
+  { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
+  { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
+] as const;
+
+type EditorV2WindowWithDraftGetter = Window & {
+  __editorV2GetCurrentDocument?: () => EditorDocumentState;
+  __editorV2ShouldPreserveDraftOnSignIn?: () => boolean;
+};
 
 interface PreviewSessionSnapshot {
   sidebarCollapsed: boolean;
@@ -81,20 +100,29 @@ interface BottomPanelCanvasFocusSnapshot {
 
 export function EditorV2Shell({
   canvasLoading,
+  currentStorageId,
+  deleteButtonState,
   errorNotification,
   exportButtonState,
   hasSavedDesignAccess,
   onCanvasReady,
+  onDeleteCurrentDesign,
   onDismissErrorNotification,
   onDismissSuccessNotification,
   onExportDocument,
   onSaveDocument,
   onLoadDocument,
   onStartOver,
+  recoveredLocalChanges,
   saveButtonState,
   saveMessage,
+  saveMode,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectedStorageId,
   setSelectedStorageId,
   setupModal,
@@ -102,20 +130,29 @@ export function EditorV2Shell({
   successNotification,
 }: {
   canvasLoading: boolean;
+  currentStorageId: string;
+  deleteButtonState: DeleteButtonState;
   errorNotification: EditorV2ErrorNotification | null;
   exportButtonState: ExportButtonState;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
+  onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onDismissErrorNotification: () => void;
   onDismissSuccessNotification: () => void;
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onStartOver: () => void;
+  recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
+  saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   setupModal: ReactNode;
@@ -153,6 +190,7 @@ export function EditorV2Shell({
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
   const hasUnsavedChanges = state.session.persistence.dirty;
+  const hasCompletedSave = state.session.persistence.lastSavedAt !== null;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
   const mirrorSession = state.session.mirrorInteraction.session;
@@ -182,7 +220,9 @@ export function EditorV2Shell({
   const [stageToolbarTopInset, setStageToolbarTopInset] = useState(0);
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
@@ -191,6 +231,36 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
+  const openSignInForCurrentDesign = useCallback(() => {
+    openSignIn({
+      redirectUrl: createEditorV2AuthHandoffRedirectUrl(
+        document,
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : `/editor/designs/${document.project.id ?? "local_draft"}`,
+      ),
+    });
+  }, [document, openSignIn]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const editorWindow = window as EditorV2WindowWithDraftGetter;
+    editorWindow.__editorV2GetCurrentDocument = () => document;
+    editorWindow.__editorV2ShouldPreserveDraftOnSignIn = () => !setupModalOpen;
+
+    return () => {
+      if (editorWindow.__editorV2GetCurrentDocument) {
+        delete editorWindow.__editorV2GetCurrentDocument;
+      }
+
+      if (editorWindow.__editorV2ShouldPreserveDraftOnSignIn) {
+        delete editorWindow.__editorV2ShouldPreserveDraftOnSignIn;
+      }
+    };
+  }, [document, setupModalOpen]);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK &&
     isBottomPanelLayout &&
@@ -216,14 +286,14 @@ export function EditorV2Shell({
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
             },
-            { id: "export", label: "Export design" },
+            ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
             {
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
             },
-            { id: "export", label: "Export design" },
+            ...HEADER_FILE_MENU_ITEMS,
             { id: "sign-in", label: "Sign in" },
           ],
     [hasSavedDesignAccess, previewMode],
@@ -1001,9 +1071,17 @@ export function EditorV2Shell({
     setTopBannerTarget(window.document.getElementById("app-top-banner"));
   }, []);
 
-  const showSaveStatus = Boolean(saveMessage || hasUnsavedChanges);
-  const useTopSaveBanner = isBottomPanelLayout && showSaveStatus;
+  const showSaveStatus =
+    saveMode === "autosave" && !hasCompletedSave && !saveMessage
+      ? true
+      : Boolean(saveMessage || hasUnsavedChanges);
+  const showAutoSavePanelStatus = isBottomPanelLayout && saveMode === "autosave";
+  const useTopSaveBanner =
+    isBottomPanelLayout && saveMode !== "autosave" && showSaveStatus;
   const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
+  const showSaveConfirmationOverlay =
+    saveNotificationVisible &&
+    (IS_DEV_APP_MODE || saveMode === "manual" || !hasSavedDesignAccess);
 
   useEffect(() => {
     setSaveBannerDismissed(false);
@@ -1065,13 +1143,117 @@ export function EditorV2Shell({
     return () => window.clearTimeout(timeoutId);
   }, [onDismissSuccessNotification, successNotification]);
 
+  function handleHeaderMenuAction(value: string): void {
+    if (value === "preview") {
+      enterPreviewMode();
+      return;
+    }
+
+    if (value === "exit-preview") {
+      exitPreviewMode();
+      return;
+    }
+
+    if (value === "new") {
+      onStartOver();
+      return;
+    }
+
+    if (value === "duplicate") {
+      duplicateDesignToNewTab(document);
+      return;
+    }
+
+    if (value === "rename") {
+      dispatch(createSetActiveSidebarSectionCommand("document"));
+      dispatch(createSetSidebarCollapsedCommand(false));
+      setRenameRequestToken((currentValue) => currentValue + 1);
+      return;
+    }
+
+    if (value === "download") {
+      void onExportDocument(document);
+      return;
+    }
+
+    if (value === "delete") {
+      setDeleteConfirmationOpen(true);
+      return;
+    }
+
+    if (value === "sign-in") {
+      openSignInForCurrentDesign();
+    }
+  }
+
+  function renderHeaderMenuItemLabel(item: { id: string; label: string; icon?: string }) {
+    if (item.id === "preview" || item.id === "exit-preview") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon
+            icon={
+              item.id === "exit-preview"
+                ? "/icons/lucide/eye-off.svg"
+                : "/icons/lucide/eye.svg"
+            }
+            className={styles.saveButtonIcon}
+          />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    if (item.id === "sign-in") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon
+            icon="/icons/lucide/log-in.svg"
+            className={styles.saveButtonIcon}
+          />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    if (item.id === "download") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          {exportButtonState === "exporting" ? (
+            <span className={styles.saveButtonSpinner} aria-hidden="true" />
+          ) : (
+            <ButtonIcon
+              icon="/icons/lucide/download.svg"
+              className={styles.saveButtonIcon}
+            />
+          )}
+          <span>
+            {exportButtonState === "exporting" ? "Exporting..." : item.label}
+          </span>
+        </span>
+      );
+    }
+
+    if (item.icon) {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          <ButtonIcon icon={item.icon} className={styles.saveButtonIcon} />
+          <span>{item.label}</span>
+        </span>
+      );
+    }
+
+    return item.label;
+  }
+
   return (
     <main className={styles.shell}>
-      {!setupModalOpen && headerFileLeftTarget
+      {!setupModalOpen &&
+      headerFileLeftTarget &&
+      (saveMode === "manual" || !hasSavedDesignAccess)
         ? createPortal(
             <Button
               type="button"
-              variant="primary"
+              variant="secondary"
               size="sm"
               className={styles.headerSaveButton}
               disabled={saveButtonState === "saving"}
@@ -1085,27 +1267,74 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && !useTopSaveBanner && headerAutosaveTarget
+      {!setupModalOpen && !useTopSaveBanner && !showAutoSavePanelStatus && headerAutosaveTarget
         ? createPortal(
-            <HeaderSaveStatus
-              hasSavedDesignAccess={hasSavedDesignAccess}
-              hasUnsavedChanges={hasUnsavedChanges}
-              layout="header"
-              onDismiss={null}
-              onSignIn={openSignIn}
-              saveMessage={saveMessage}
-            />,
+            isBottomPanelLayout ? (
+              <SaveStatusCard
+                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                hasSavedDesignAccess={hasSavedDesignAccess}
+                hasUnsavedChanges={hasUnsavedChanges}
+                layout="header"
+                onDismiss={null}
+                onSignIn={openSignInForCurrentDesign}
+                recoveredLocalChanges={recoveredLocalChanges}
+                saveMode={saveMode}
+                saveMessage={saveMessage}
+              />
+            ) : (
+              <div className={styles.headerFileMenuGroup}>
+                <SingleSelectDropdown
+                  ariaLabel="File actions"
+                  items={[...HEADER_FILE_MENU_ITEMS]}
+                  value=""
+                  placeholder="File"
+                  triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
+                  triggerVariant="ghost"
+                  showChevron={false}
+                  menuPortalToViewport
+                  menuPlacement="bottom-start"
+                  menuShowTrailingCheck={false}
+                  minWidth="auto"
+                  menuWidth={180}
+                  getItemValue={(item) => item.id}
+                  getItemLabel={renderHeaderMenuItemLabel}
+                  getItemDisabled={(item) =>
+                    (item.id === "download" && exportButtonState === "exporting") ||
+                    (item.id === "delete" && deleteButtonState === "deleting")
+                  }
+                  onValueChange={handleHeaderMenuAction}
+                  wrapperClassName={styles.headerFileMenu}
+                  triggerClassName={styles.headerFileMenuTrigger}
+                  menuClassName={styles.headerFileMenuSurface}
+                  triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
+                />
+                <SaveStatusCard
+                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                  hasSavedDesignAccess={hasSavedDesignAccess}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  layout="header"
+                  onDismiss={null}
+                  onSignIn={openSignInForCurrentDesign}
+                  recoveredLocalChanges={recoveredLocalChanges}
+                  saveMode={saveMode}
+                  saveMessage={saveMessage}
+                />
+              </div>
+            ),
             headerAutosaveTarget,
           )
         : null}
       {!setupModalOpen && showTopSaveBanner && topBannerTarget
         ? createPortal(
-            <HeaderSaveStatus
+            <SaveStatusCard
+              autoSaveEnabled={false}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
               layout="banner"
               onDismiss={() => setSaveBannerDismissed(true)}
-              onSignIn={openSignIn}
+              onSignIn={openSignInForCurrentDesign}
+              recoveredLocalChanges={recoveredLocalChanges}
+              saveMode={saveMode}
               saveMessage={saveMessage}
             />,
             topBannerTarget,
@@ -1171,79 +1400,13 @@ export function EditorV2Shell({
               menuShowTrailingCheck={false}
               minWidth="auto"
               getItemValue={(item) => item.id}
-              getItemLabel={(item) => {
-                if (item.id === "preview" || item.id === "exit-preview") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      <ButtonIcon
-                        icon={
-                          item.id === "exit-preview"
-                            ? "/icons/lucide/eye-off.svg"
-                            : "/icons/lucide/eye.svg"
-                        }
-                        className={styles.saveButtonIcon}
-                      />
-                      <span>{item.label}</span>
-                    </span>
-                  );
-                }
-
-                if (item.id === "export") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      {exportButtonState === "exporting" ? (
-                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                      ) : (
-                        <ButtonIcon
-                          icon="/icons/lucide/download.svg"
-                          className={styles.saveButtonIcon}
-                        />
-                      )}
-                      <span>
-                        {exportButtonState === "exporting" ? "Exporting..." : item.label}
-                      </span>
-                    </span>
-                  );
-                }
-
-                if (item.id === "sign-in") {
-                  return (
-                    <span className={styles.headerOverflowItemLabel}>
-                      <ButtonIcon
-                        icon="/icons/lucide/log-in.svg"
-                        className={styles.saveButtonIcon}
-                      />
-                      <span>{item.label}</span>
-                    </span>
-                  );
-                }
-
-                return item.label;
-              }}
+              getItemLabel={renderHeaderMenuItemLabel}
               getItemDisabled={(item) =>
-                (item.id === "export" && exportButtonState === "exporting") ||
+                (item.id === "download" && exportButtonState === "exporting") ||
+                (item.id === "delete" && deleteButtonState === "deleting") ||
                 (item.id === "preview" && previewModeDisabled)
               }
-              onValueChange={(value) => {
-                if (value === "preview") {
-                  enterPreviewMode();
-                  return;
-                }
-
-                if (value === "exit-preview") {
-                  exitPreviewMode();
-                  return;
-                }
-
-                if (value === "export") {
-                  void onExportDocument(document);
-                  return;
-                }
-
-                if (value === "sign-in") {
-                  openSignIn();
-                }
-              }}
+              onValueChange={handleHeaderMenuAction}
               wrapperClassName={styles.headerOverflowMenu}
               triggerClassName={styles.headerOverflowTrigger}
               menuClassName={styles.headerOverflowSurface}
@@ -1317,7 +1480,7 @@ export function EditorV2Shell({
             headerActionsTarget,
           )
         : null}
-      {mounted && saveNotificationVisible
+      {mounted && showSaveConfirmationOverlay
         ? createPortal(
             <div className={styles.editorNotificationOverlayTop}>
               <div className={styles.editorNotificationStack} 
@@ -1370,6 +1533,42 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      <Modal
+        isOpen={deleteConfirmationOpen}
+        title={currentStorageId ? "Delete this design?" : "Discard this design?"}
+        description={
+          currentStorageId
+            ? "This will permanently delete the current design from your saved designs."
+            : "This will discard the current design."
+        }
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel={
+          deleteButtonState === "deleting"
+            ? currentStorageId
+              ? "Deleting..."
+              : "Discarding..."
+            : currentStorageId
+              ? "Delete design"
+              : "Discard design"
+        }
+        confirmVariant="destructive"
+        onDismiss={() => {
+          if (deleteButtonState === "deleting") {
+            return;
+          }
+
+          setDeleteConfirmationOpen(false);
+        }}
+        onConfirm={() => {
+          void Promise.resolve(onDeleteCurrentDesign(document))
+            .finally(() => {
+              setDeleteConfirmationOpen(false);
+            });
+        }}
+        confirmDisabled={deleteButtonState === "deleting"}
+        dismissDisabled={deleteButtonState === "deleting"}
+      />
 
       <div
         className={styles.shellContent}
@@ -1408,13 +1607,17 @@ export function EditorV2Shell({
             >
               <EditorSidebar
                 activeSection={activeSidebarSection}
+                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
                 activeColor={activeColor}
                 activeColorId={activeColorId}
                 colorsById={colorsById}
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
+                hasUnsavedChanges={hasUnsavedChanges}
+                isAutoSavePanelStatusVisible={showAutoSavePanelStatus}
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
+                renameRequestToken={renameRequestToken}
                 gridMetrics={gridMetrics}
                 onScopeModeChange={handleUsedColorsScopeModeChange}
                 selectionScopeActive={selectionScopeActive}
@@ -1423,6 +1626,10 @@ export function EditorV2Shell({
                 showRuler={showRuler}
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
+                savedDocumentsHasMore={savedDocumentsHasMore}
+                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+                onOpenSavedDocuments={onOpenSavedDocuments}
+                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
                 onLoadSelected={() => {
@@ -1435,6 +1642,7 @@ export function EditorV2Shell({
                 onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                 onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                 onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
+                onSignIn={openSignInForCurrentDesign}
                 onStartOver={onStartOver}
                 previewMode={previewMode}
                 previewModeDisabled={previewModeDisabled}
@@ -1448,6 +1656,9 @@ export function EditorV2Shell({
                 document={document}
                 dispatch={dispatch}
                 highlightedColorId={highlightedColorId}
+                recoveredLocalChanges={recoveredLocalChanges}
+                saveMessage={saveMessage}
+                saveMode={saveMode}
                 onHighlightColorChange={setHighlightedColorId}
                 showGridlines={showGridlines}
                 showSymbols={showSymbols}
@@ -1575,80 +1786,6 @@ export function EditorV2Shell({
   );
 }
 
-function HeaderSaveStatus({
-  hasSavedDesignAccess,
-  hasUnsavedChanges,
-  layout,
-  onDismiss,
-  onSignIn,
-  saveMessage,
-}: {
-  hasSavedDesignAccess: boolean;
-  hasUnsavedChanges: boolean;
-  layout: "header" | "banner";
-  onDismiss: (() => void) | null;
-  onSignIn: () => void;
-  saveMessage: string;
-}) {
-  if (!saveMessage && !hasUnsavedChanges) {
-    return null;
-  }
-
-  const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
-  const message =
-    !hasSavedDesignAccess && !saveMessage
-      ? "Sign in to save changes"
-      : saveMessage || "Changes not saved";
-  const icon =
-    state === "info"
-      ? "/icons/lucide/info.svg"
-      : state === "alert"
-        ? "/icons/lucide/alert.svg"
-        : state === "ready"
-          ? "/icons/lucide/alert.svg"
-        : state === "error"
-          ? "/icons/lucide/alert.svg"
-          : "/icons/lucide/save.svg";
-
-  return (
-    <div
-      className={styles.headerSaveStatus}
-      data-layout={layout}
-      data-state={state}
-      role="status"
-      aria-live="polite"
-      title={message}
-    >
-      <span className={styles.headerSaveStatusIconWrap} aria-hidden="true">
-        <ButtonIcon icon={icon} className={styles.headerSaveStatusIcon} />
-      </span>
-      <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
-        {message}
-      </p>
-      {layout === "banner" && !hasSavedDesignAccess ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onSignIn}
-        >
-          Sign in
-        </Button>
-      ) : null}
-      {layout === "banner" && onDismiss ? (
-        <button
-          type="button"
-          className={styles.headerSaveStatusDismiss}
-          aria-label="Dismiss save status"
-          onClick={onDismiss}
-        >
-          <ButtonIcon icon="/icons/lucide/x.svg" className={styles.headerSaveStatusDismissIcon} />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function SaveButtonLabel({
   hasSavedDesignAccess,
   state,
@@ -1681,7 +1818,7 @@ function SaveButtonLabel({
     </>
   ) : (
     <>
-      <ButtonIcon icon="/icons/lucide/log-in.svg" className={styles.saveButtonIcon} />
+      <ButtonIcon icon="/icons/lucide/alert.svg" data-state="alert" className={styles.alertButtonIcon} />
       Sign in to save
     </>
   );
@@ -1690,7 +1827,7 @@ function SaveButtonLabel({
 function getSaveStatusState(
   saveMessage: string,
   hasSavedDesignAccess: boolean,
-): "ready" | "saved" | "error" | "info" | "alert" {
+): "ready" | "saving" | "saved" | "error" | "info" | "alert" {
   if (!hasSavedDesignAccess && !saveMessage) {
     return "info";
   }
@@ -1699,7 +1836,14 @@ function getSaveStatusState(
     return "ready";
   }
 
-  if (saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
+  if (saveMessage.startsWith("Saving")) {
+    return "saving";
+  }
+
+  if (
+    saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX)
+  ) {
     return "saved";
   }
 
@@ -1707,5 +1851,71 @@ function getSaveStatusState(
     return "error";
   }
 
+  if (saveMessage.startsWith("Sync conflict")) {
+    return "alert";
+  }
+
+  if (saveMessage.startsWith("Local recovery")) {
+    return "info";
+  }
+
   return "info";
+}
+
+function duplicateDesignToNewTab(document: EditorDocumentState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const duplicateToken =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const localProjectId =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? `local_${crypto.randomUUID()}`
+      : `local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const normalizedTitle = document.project.title.trim() || "Untitled Design";
+  const duplicateDocument: EditorDocumentState = {
+    ...document,
+    project: {
+      ...document.project,
+      id: localProjectId,
+      title: `${normalizedTitle} (Copy)`,
+      createdAt: null,
+      updatedAt: null,
+    },
+    grid: {
+      ...document.grid,
+      cells: [...document.grid.cells],
+    },
+    palette: {
+      ...document.palette,
+      colorsById: { ...document.palette.colorsById },
+      customPalettesById: { ...document.palette.customPalettesById },
+      extractedPaletteIds: [...document.palette.extractedPaletteIds],
+      symbolAssignments: { ...document.palette.symbolAssignments },
+    },
+    trace: document.trace ? { ...document.trace } : null,
+    text: {
+      ...document.text,
+      entities: document.text.entities.map((entity) => ({ ...entity })),
+    },
+    metadata: {
+      ...document.metadata,
+      persistedVersionId: null,
+    },
+  };
+
+  window.localStorage.setItem(
+    `${DUPLICATE_STORAGE_PREFIX}${duplicateToken}`,
+    JSON.stringify(duplicateDocument),
+  );
+
+  const duplicateUrl = new URL(
+    `/editor/designs/${duplicateDocument.project.id ?? duplicateToken}`,
+    window.location.origin,
+  );
+  duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);
+  window.open(duplicateUrl.toString(), "_blank", "noopener,noreferrer");
 }

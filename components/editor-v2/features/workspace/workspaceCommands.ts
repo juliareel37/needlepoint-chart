@@ -151,6 +151,19 @@ export function createClearCanvasCommand(): EditorCommand {
   );
 }
 
+export function createApplyTraceConversionCommand(payload: {
+  replacements: Array<{ index: number; value: string | null }>;
+  extractedColorIds: string[];
+  activeColorId: string | null;
+}): EditorCommand {
+  return createCommand(
+    "grid.applyTraceConversion",
+    payload,
+    "toolbar",
+    { mode: "push", label: "Convert Image to Pattern" },
+  );
+}
+
 export function createSwapPaletteColorCommand(
   fromColorId: string,
   toColorId: string,

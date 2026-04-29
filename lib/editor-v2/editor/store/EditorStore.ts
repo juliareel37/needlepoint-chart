@@ -1,5 +1,6 @@
 import type { EditorCommand } from "../commands/types";
 import type { EditorEffect } from "./effects";
+import type { DocumentPatch } from "./patches";
 import type { EditorStoreState } from "./state";
 
 export interface EditorStore {
@@ -34,4 +35,5 @@ export interface EditorStoreEvent {
   type: "command" | "history" | "session" | "ui";
   commandId?: string;
   label?: string;
+  patches?: DocumentPatch[];
 }

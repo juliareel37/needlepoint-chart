@@ -15,6 +15,12 @@ export interface SavedEditorV2DocumentRecord {
   updatedAt: string;
 }
 
+export interface ListSavedEditorV2DocumentsResult {
+  documents: SavedEditorV2DocumentRecord[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}
+
 export interface SaveEditorV2DocumentResult {
   storageId: string;
   title: string;
@@ -22,25 +28,70 @@ export interface SaveEditorV2DocumentResult {
   gridHeight: number;
   createdAt: string;
   updatedAt: string;
+  versionToken: string;
+}
+
+export interface LoadEditorV2DocumentResult {
+  document: EditorDocumentState;
+  versionToken: string;
+  storageId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeleteEditorV2DocumentResult {
+  storageId: string;
 }
 
 export class EditorV2PersistenceError extends Error {
   status: number;
+  versionToken: string | null;
 
-  constructor(message: string, status = 500) {
+  constructor(message: string, status = 500, versionToken: string | null = null) {
     super(message);
     this.name = "EditorV2PersistenceError";
     this.status = status;
+    this.versionToken = versionToken;
   }
 }
 
-export async function listSavedEditorV2Documents(): Promise<SavedEditorV2DocumentRecord[]> {
-  const response = await fetch("/api/editor-v2/designs", {
+export async function listSavedEditorV2Documents({
+  limit,
+  offset,
+}: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ListSavedEditorV2DocumentsResult> {
+  const searchParams = new URLSearchParams();
+
+  if (typeof limit === "number") {
+    searchParams.set("limit", String(limit));
+  }
+
+  if (typeof offset === "number") {
+    searchParams.set("offset", String(offset));
+  }
+
+  const response = await fetch(
+    `/api/editor-v2/designs${searchParams.size ? `?${searchParams.toString()}` : ""}`,
+    {
     method: "GET",
     credentials: "same-origin",
-  });
+    },
+  );
   const body = (await response.json().catch(() => null)) as
-    | { designs?: Array<{ id: string; title: string; gridWidth: number; gridHeight: number; updatedAt: string }>; error?: string }
+    | {
+        designs?: Array<{
+          id: string;
+          title: string;
+          gridWidth: number;
+          gridHeight: number;
+          updatedAt: string;
+        }>;
+        hasMore?: boolean;
+        nextOffset?: number | null;
+        error?: string;
+      }
     | null;
 
   if (!response.ok) {
@@ -50,46 +101,65 @@ export async function listSavedEditorV2Documents(): Promise<SavedEditorV2Documen
     );
   }
 
-  return Array.isArray(body?.designs)
-    ? body.designs.map((design) => ({
+  return {
+    documents: Array.isArray(body?.designs)
+      ? body.designs.map((design) => ({
         storageId: design.id,
         title: design.title,
         gridWidth: design.gridWidth,
         gridHeight: design.gridHeight,
         updatedAt: design.updatedAt,
       }))
-    : [];
+      : [],
+    hasMore: body?.hasMore === true,
+    nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
+  };
 }
 
 export async function loadSavedEditorV2Document(
   storageId: string,
-): Promise<EditorDocumentState> {
+): Promise<LoadEditorV2DocumentResult> {
   const response = await fetch(`/api/editor-v2/designs/${storageId}`, {
     method: "GET",
     credentials: "same-origin",
   });
   const body = (await response.json().catch(() => null)) as
-    | ({ error?: string } & Partial<PersistedEditorV2DesignRecord>)
+    | ({ error?: string; versionToken?: string } & Partial<PersistedEditorV2DesignRecord>)
     | null;
 
-  if (!response.ok || !body?.data || !body.id || !body.createdAt || !body.updatedAt) {
+  if (
+    !response.ok ||
+    !body?.data ||
+    !body.id ||
+    !body.createdAt ||
+    !body.updatedAt ||
+    !body.versionToken
+  ) {
     throw new EditorV2PersistenceError(
       body?.error ?? "Couldn't load this design.",
       response.status,
+      body?.versionToken ?? null,
     );
   }
 
-  return hydrateEditorV2Document({
-    id: body.id,
+  return {
+    document: hydrateEditorV2Document({
+      id: body.id,
+      createdAt: body.createdAt,
+      updatedAt: body.updatedAt,
+      data: body.data,
+    }),
+    versionToken: body.versionToken,
+    storageId: body.id,
     createdAt: body.createdAt,
     updatedAt: body.updatedAt,
-    data: body.data,
-  });
+  };
 }
 
 export async function saveEditorV2Document(
   document: EditorDocumentState,
   storageId?: string,
+  baseVersion?: string | null,
 ): Promise<SaveEditorV2DocumentResult> {
   const response = await fetch(
     storageId ? `/api/editor-v2/designs/${storageId}` : "/api/editor-v2/designs",
@@ -101,6 +171,7 @@ export async function saveEditorV2Document(
       credentials: "same-origin",
       body: JSON.stringify({
         data: serializeEditorV2Document(document),
+        baseVersion: baseVersion ?? null,
       }),
     },
   );
@@ -112,6 +183,7 @@ export async function saveEditorV2Document(
         gridHeight?: number;
         createdAt?: string;
         updatedAt?: string;
+        versionToken?: string;
         error?: string;
       })
     | null;
@@ -123,11 +195,13 @@ export async function saveEditorV2Document(
     typeof body.gridWidth !== "number" ||
     typeof body.gridHeight !== "number" ||
     !body.createdAt ||
-    !body.updatedAt
+    !body.updatedAt ||
+    !body.versionToken
   ) {
     throw new EditorV2PersistenceError(
       body?.error ?? "Couldn't save this design.",
       response.status,
+      body?.versionToken ?? null,
     );
   }
 
@@ -138,5 +212,32 @@ export async function saveEditorV2Document(
     gridHeight: body.gridHeight,
     createdAt: body.createdAt,
     updatedAt: body.updatedAt,
+    versionToken: body.versionToken,
+  };
+}
+
+export async function deleteSavedEditorV2Document(
+  storageId: string,
+): Promise<DeleteEditorV2DocumentResult> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        error?: string;
+      }
+    | null;
+
+  if (!response.ok || !body?.id) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't delete this design.",
+      response.status,
+    );
+  }
+
+  return {
+    storageId: body.id,
   };
 }

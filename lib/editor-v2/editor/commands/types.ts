@@ -29,6 +29,7 @@ export type EditorCommandKind =
   | "grid.paint"
   | "grid.erase"
   | "grid.clear"
+  | "grid.applyTraceConversion"
   | "palette.swapColor"
   | "palette.deleteUsedColors"
   | "palette.mergeUsedColors"
@@ -113,6 +114,15 @@ export type EraseCellsCommand = BaseEditorCommand<
 >;
 
 export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", object>;
+
+export type ApplyTraceConversionCommand = BaseEditorCommand<
+  "grid.applyTraceConversion",
+  {
+    replacements: Array<{ index: number; value: string | null }>;
+    extractedColorIds: string[];
+    activeColorId: string | null;
+  }
+>;
 
 export type SwapPaletteColorCommand = BaseEditorCommand<
   "palette.swapColor",
@@ -414,6 +424,7 @@ export type EditorCommand =
   | PaintCellsCommand
   | EraseCellsCommand
   | ClearCanvasCommand
+  | ApplyTraceConversionCommand
   | SwapPaletteColorCommand
   | DeleteUsedColorsCommand
   | MergeUsedColorsCommand

@@ -9,15 +9,30 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET() {
+const DEFAULT_LIMIT = 6;
+const MAX_LIMIT = 24;
+
+export async function GET(req: Request) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const requestedLimit = Number(url.searchParams.get("limit"));
+  const requestedOffset = Number(url.searchParams.get("offset"));
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(MAX_LIMIT, Math.floor(requestedLimit)))
+    : DEFAULT_LIMIT;
+  const offset = Number.isFinite(requestedOffset)
+    ? Math.max(0, Math.floor(requestedOffset))
+    : 0;
+
   const designs = await prisma.editorDesign.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
+    skip: offset,
+    take: limit + 1,
     select: {
       id: true,
       title: true,
@@ -26,12 +41,16 @@ export async function GET() {
       updatedAt: true,
     },
   });
+  const hasMore = designs.length > limit;
+  const visibleDesigns = hasMore ? designs.slice(0, limit) : designs;
 
   return NextResponse.json({
-    designs: designs.map((design) => ({
+    designs: visibleDesigns.map((design) => ({
       ...design,
       updatedAt: design.updatedAt.toISOString(),
     })),
+    hasMore,
+    nextOffset: hasMore ? offset + visibleDesigns.length : null,
   });
 }
 
@@ -69,5 +88,6 @@ export async function POST(req: Request) {
     gridHeight: created.gridHeight,
     createdAt: created.createdAt.toISOString(),
     updatedAt: created.updatedAt.toISOString(),
+    versionToken: created.updatedAt.toISOString(),
   });
 }

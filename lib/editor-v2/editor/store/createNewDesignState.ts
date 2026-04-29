@@ -14,6 +14,7 @@ interface NewDesignSizingOptions {
   meshCount?: number | null;
   widthInches?: number | null;
   heightInches?: number | null;
+  projectId?: string | null;
 }
 
 export function createNewDesignState(
@@ -22,6 +23,7 @@ export function createNewDesignState(
   options: NewDesignSizingOptions = {},
 ): EditorStoreState {
   const state = createInitialEditorStoreState();
+  const localProjectId = options.projectId ?? createLocalProjectId();
   const {
     sizingMode = "stitches",
     meshCount = null,
@@ -35,6 +37,7 @@ export function createNewDesignState(
       ...state.document,
       project: {
         ...state.document.project,
+        id: localProjectId,
         title: DEFAULT_TITLE,
       },
       grid: {
@@ -59,6 +62,18 @@ export function createNewDesignState(
         colorId: DEFAULT_DMC_COLOR_ID,
       },
       eyedropperReturnTool: null,
+      persistence: {
+        ...state.session.persistence,
+        currentDraftId: localProjectId,
+      },
     },
   };
+}
+
+export function createLocalProjectId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `local_${crypto.randomUUID()}`;
+  }
+
+  return `local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }

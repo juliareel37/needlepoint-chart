@@ -7,37 +7,60 @@ import {
   FieldInput,
   SingleSelectDropdown,
 } from "@/components/design-system";
-import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
+import { SaveStatusCard } from "../SaveStatusCard";
 import styles from "../EditorV2Shell.module.css";
 
 interface DocumentPanelPageProps {
+  autoSaveEnabled: boolean;
   dispatch: EditorStore["dispatch"];
   documentTitle: string;
   hasSavedDesignAccess: boolean;
+  hasUnsavedChanges: boolean;
+  isAutoSavePanelStatusVisible: boolean;
   onLoadSelected: () => void;
+  renameRequestToken: number;
+  onSignIn: () => void;
   onStartOver: () => void;
+  recoveredLocalChanges: boolean;
+  saveMessage: string;
+  saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
 
 export function DocumentPanelPage({
+  autoSaveEnabled,
   dispatch,
   documentTitle,
   hasSavedDesignAccess,
+  hasUnsavedChanges,
+  isAutoSavePanelStatusVisible,
   onLoadSelected,
+  renameRequestToken,
+  onSignIn,
   onStartOver,
+  recoveredLocalChanges,
+  saveMessage,
+  saveMode,
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
-  const openSignIn = useOpenSignIn();
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(documentTitle);
   const commitOnBlurRef = useRef(true);
@@ -64,9 +87,32 @@ export function DocumentPanelPage({
     setIsRenaming(true);
   }
 
+  useEffect(() => {
+    if (renameRequestToken <= 0) {
+      return;
+    }
+
+    startRename();
+  }, [documentTitle, renameRequestToken]);
+
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
+        {isAutoSavePanelStatusVisible ? (
+          <div className={styles.sidebarSubsection}>
+            <SaveStatusCard
+              autoSaveEnabled={autoSaveEnabled}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              layout="panel"
+              onDismiss={null}
+              onSignIn={onSignIn}
+              recoveredLocalChanges={recoveredLocalChanges}
+              saveMessage={saveMessage}
+              saveMode={saveMode}
+            />
+          </div>
+        ) : null}
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarTitleBlock}>
             {isRenaming ? (
@@ -145,6 +191,10 @@ export function DocumentPanelPage({
               <SavedDesignSingleSelect
                 savedDocuments={savedDocuments}
                 savedDocumentsLoading={savedDocumentsLoading}
+                savedDocumentsHasMore={savedDocumentsHasMore}
+                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+                onOpenSavedDocuments={onOpenSavedDocuments}
+                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
               />
@@ -169,7 +219,7 @@ export function DocumentPanelPage({
                 type="button"
                 variant="primary"
                 className={styles.loadButton}
-                onClick={openSignIn}
+                onClick={onSignIn}
               >
                 Sign in
               </Button>
@@ -185,11 +235,19 @@ export function DocumentPanelPage({
 function SavedDesignSingleSelect({
   savedDocuments,
   savedDocumentsLoading,
+  savedDocumentsHasMore,
+  savedDocumentsLoadingMore,
+  onOpenSavedDocuments,
+  onLoadMoreSavedDocuments,
   selectedStorageId,
   setSelectedStorageId,
 }: {
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
+  savedDocumentsHasMore: boolean;
+  savedDocumentsLoadingMore: boolean;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  onLoadMoreSavedDocuments: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }) {
@@ -233,7 +291,25 @@ function SavedDesignSingleSelect({
         menuPlacement={useTopDropdownPlacement ? "top-start" : "bottom-start"}
         menuPortalToViewport={useTopDropdownPlacement}
         minWidth={0}
+        onOpenChange={(open) => {
+          if (open) {
+            void onOpenSavedDocuments();
+          }
+        }}
+        onReachEnd={() => {
+          if (savedDocumentsHasMore) {
+            void onLoadMoreSavedDocuments();
+          }
+        }}
         onValueChange={setSelectedStorageId}
+        menuFooter={
+          savedDocumentsLoadingMore ? (
+            <div className={styles.loadingDropdownState}>
+              <span className={styles.saveButtonSpinner} aria-hidden="true" />
+              Loading more designs...
+            </div>
+          ) : null
+        }
         placeholder={savedDocumentsLoading ? "Loading saved designs..." : "Load saved design"}
         wrapperStyle={{ width: "50vw" }}
         value={selectedStorageId}

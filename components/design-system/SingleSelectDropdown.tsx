@@ -46,6 +46,8 @@ export interface SingleSelectDropdownProps<TItem> {
   menuStyle?: CSSProperties;
   menuWidth?: string | number;
   minWidth?: string | number;
+  onReachEnd?: () => void;
+  onOpenChange?: (open: boolean) => void;
   onValueChange: (value: string, item: TItem) => void;
   placeholder: ReactNode;
   showChevron?: boolean;
@@ -56,6 +58,7 @@ export interface SingleSelectDropdownProps<TItem> {
   value: string;
   wrapperClassName?: string;
   wrapperStyle?: CSSProperties;
+  menuFooter?: ReactNode;
 }
 
 export function SingleSelectDropdown<TItem>({
@@ -78,6 +81,8 @@ export function SingleSelectDropdown<TItem>({
   menuStyle,
   menuWidth = "max-content",
   minWidth = 200,
+  onReachEnd,
+  onOpenChange,
   onValueChange,
   placeholder,
   showChevron = true,
@@ -88,6 +93,7 @@ export function SingleSelectDropdown<TItem>({
   value,
   wrapperClassName,
   wrapperStyle,
+  menuFooter,
 }: SingleSelectDropdownProps<TItem>) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -98,6 +104,10 @@ export function SingleSelectDropdown<TItem>({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [onOpenChange, open]);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -232,6 +242,29 @@ export function SingleSelectDropdown<TItem>({
     };
   }, [open, menuPortalToViewport, updatePortalStyle]);
 
+  const maybeLoadMore = useCallback(() => {
+    const menuElement = menuRef.current;
+
+    if (!menuElement || !onReachEnd) {
+      return;
+    }
+
+    const remainingScrollDistance =
+      menuElement.scrollHeight - menuElement.scrollTop - menuElement.clientHeight;
+
+    if (remainingScrollDistance <= 48) {
+      onReachEnd();
+    }
+  }, [onReachEnd]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    maybeLoadMore();
+  }, [items.length, maybeLoadMore, open]);
+
   const menuContent = open ? (
     <MenuSurface
       ref={menuRef}
@@ -248,9 +281,11 @@ export function SingleSelectDropdown<TItem>({
         ...portalStyle,
         ...menuStyle,
       }}
+      onScroll={maybeLoadMore}
     >
       {orderedItems.length ? (
-        orderedItems.map((item) => {
+        <>
+          {orderedItems.map((item) => {
           const itemValue = getItemValue(item);
           const active = itemValue === value;
           return (
@@ -275,7 +310,9 @@ export function SingleSelectDropdown<TItem>({
               {getItemLabel(item)}
             </MenuItem>
           );
-        })
+          })}
+          {menuFooter}
+        </>
       ) : (
         <MenuItem type="button" disabled>
           {emptyLabel}

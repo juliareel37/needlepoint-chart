@@ -23,11 +23,11 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/wippa_logo_icon.png"), type: "image/png" },
-      { url: assetPath("/favicon.png"), type: "image/png" },
+      { url: assetPath("/w.png"), type: "image/png" },
+      // { url: assetPath("/favicon.png"), type: "image/png" },
     ],
-    shortcut: assetPath("/wippa_logo_icon.png"),
-    apple: assetPath("/wippa_logo_icon.png"),
+    shortcut: assetPath("/w.png"),
+    apple: assetPath("/w.png"),
   },
 };
 
@@ -162,14 +162,14 @@ export default function RootLayout({
                   style={{ height: 24, width: "auto", display: "block" }}
                 />
                 {/* <Link
-                  href="/editor-v2/design-system"
+                  href="/editor/design-system"
                   style={headerUtilityLinkStyle}
                 >
                   V2 DS
                 </Link> */}
                 <div id="app-header-history" />
-                <div id="app-header-file-left" />
                 <div id="app-header-autosave" />
+                <div id="app-header-file-left" />
               </div>
               <div
                 id="app-header-title"

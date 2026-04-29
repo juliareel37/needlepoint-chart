@@ -1023,7 +1023,7 @@
 .headerActionGroup {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
 @media (max-width: 1000px) {
@@ -1048,6 +1048,46 @@
 }
 
 .headerPreviewButton {
+  white-space: nowrap;
+}
+
+.headerFileMenuGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerFileMenu {
+  position: relative;
+}
+
+.headerFileMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 28px;
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+}
+
+.headerFileMenuTriggerLabel {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.headerFileMenuSurface {
+  transform-origin: top left;
+}
+
+.headerFileMenuItemLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   white-space: nowrap;
 }
 
@@ -2077,20 +2117,26 @@
   color: var(--text-secondary);
 }
 
+.alertButtonIcon { 
+  background:var(--status-warning-base);
+  border-radius: 999px;
+}
+
 .headerSaveStatus {
   --header-save-status-badge-bg: color-mix(in srgb, var(--neutral-900) 10%, transparent);
   --header-save-status-icon-color: var(--neutral-700);
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
-  max-width: min(260px, 32vw);
+  /* min-width: 0; */
+  width: fit-content;
+  /* max-width: min(260px, 32vw); */
   padding: 4px 10px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 10px;
-  background: var(--surface-card);
+  /* background: var(--surface-card); */
   color: var(--text-primary);
-  box-shadow: var(--ui-shadow-md);
+  /* box-shadow: var(--ui-shadow-md); */
 }
 
 .headerSaveStatus[data-layout="banner"] {
@@ -2224,7 +2270,7 @@
 .traceSectionBody {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .traceSectionDivider {
@@ -2403,6 +2449,12 @@
   white-space: nowrap;
 }
 
+.traceInlineActionControl {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .traceSliderControl {
   min-width: 0;
 }
@@ -2454,9 +2506,10 @@
 }
 
 .traceSliderValue {
-  min-width: 52px;
+  min-width: 40px;
   text-align: right;
   color: var(--text-primary);
+  font-size: 12px;
 }
 
 .traceFieldGrid {

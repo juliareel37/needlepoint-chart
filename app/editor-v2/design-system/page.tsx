@@ -1,5 +1,5 @@
-import { EditorV2DesignSystemPage } from "./EditorV2DesignSystemPage";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <EditorV2DesignSystemPage />;
+  redirect("/editor/design-system");
 }
