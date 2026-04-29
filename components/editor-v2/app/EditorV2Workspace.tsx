@@ -35,6 +35,7 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges,
   initialDegradedLocalRecovery,
   initialLocalSnapshot,
+  isVersionHistoryMode,
   isVersionPreview,
   versionPreviewMeta,
   saveMode,
@@ -49,8 +50,11 @@ export function EditorV2Workspace({
   onSaveDocument,
   onLoadDocument,
   onListVersions,
+  onEnterVersionHistoryMode,
+  onExitVersionHistoryMode,
   onPreviewVersion,
   onExitVersionPreview,
+  onSelectCurrentVersionInHistoryMode,
   onRestoreVersion,
   onDeleteCurrentDesign,
   onStartOver,
@@ -65,6 +69,7 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges: boolean;
   initialDegradedLocalRecovery: boolean;
   initialLocalSnapshot: EditorV2LocalSnapshotRecord | null;
+  isVersionHistoryMode: boolean;
   isVersionPreview: boolean;
   versionPreviewMeta: {
     versionId: string;
@@ -88,12 +93,15 @@ export function EditorV2Workspace({
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onEnterVersionHistoryMode: () => void;
+  onExitVersionHistoryMode: () => void;
   onPreviewVersion: (
     storageId: string,
     versionId: string,
     currentDocument: EditorDocumentState,
   ) => Promise<void>;
   onExitVersionPreview: () => void;
+  onSelectCurrentVersionInHistoryMode: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
@@ -119,6 +127,7 @@ export function EditorV2Workspace({
     initialRecoveredLocalChanges,
     initialDegradedLocalRecovery,
     initialLocalSnapshot,
+    isVersionHistoryMode,
     isVersionPreview,
     saveMode,
     onSaveDocument,
@@ -180,6 +189,9 @@ export function EditorV2Workspace({
         }}
         onExitVersionPreview={onExitVersionPreview}
         onListVersions={onListVersions}
+        onEnterVersionHistoryMode={onEnterVersionHistoryMode}
+        onExitVersionHistoryMode={onExitVersionHistoryMode}
+        onSelectCurrentVersionInHistoryMode={onSelectCurrentVersionInHistoryMode}
         onRestoreVersion={async (storageId, versionId) => {
           try {
             const restored = await onRestoreVersion(storageId, versionId);
@@ -227,6 +239,7 @@ export function EditorV2Workspace({
         recoveredLocalChanges={controllerState.recoveredLocalChanges}
         saveButtonState={controllerState.saveButtonState}
         saveMessage={controllerState.saveMessage}
+        isVersionHistoryMode={isVersionHistoryMode}
         isVersionPreview={isVersionPreview}
         versionPreviewMeta={versionPreviewMeta}
         saveMode={saveMode}

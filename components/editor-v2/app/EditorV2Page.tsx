@@ -106,6 +106,7 @@ export function EditorV2Page({
   const [savedDocumentsErrorMessage, setSavedDocumentsErrorMessage] =
     useState<string | null>(null);
   const [setupErrorMessage, setSetupErrorMessage] = useState<string | null>(null);
+  const [isVersionHistoryMode, setIsVersionHistoryMode] = useState(false);
   const [versionPreviewSession, setVersionPreviewSession] =
     useState<VersionPreviewSession | null>(null);
   const previousRouteRef = useRef<
@@ -295,6 +296,7 @@ export function EditorV2Page({
       setSelectedStorageId(savedRecord.storageId);
       setCanvasLoadingKey("saved_route_handoff");
       setSetupModalOpen(false);
+      setIsVersionHistoryMode(false);
       setVersionPreviewSession(null);
 
       if (navigationMode === "push") {
@@ -388,6 +390,34 @@ export function EditorV2Page({
       instanceKey: `preview_exit_${versionPreviewSession.liveStorageId}_${Date.now()}`,
     });
     setVersionPreviewSession(null);
+  }, [openLoadedDesignState, versionPreviewSession]);
+
+  const previewCurrentVersionInHistoryMode = useCallback(() => {
+    if (!versionPreviewSession) {
+      return;
+    }
+
+    openLoadedDesignState({
+      document: versionPreviewSession.liveDocument,
+      storageId: versionPreviewSession.liveStorageId,
+      versionToken: versionPreviewSession.liveVersionToken ?? null,
+      instanceKey: `preview_current_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+    });
+    setVersionPreviewSession(null);
+  }, [openLoadedDesignState, versionPreviewSession]);
+
+  const exitVersionHistoryMode = useCallback(() => {
+    if (versionPreviewSession) {
+      openLoadedDesignState({
+        document: versionPreviewSession.liveDocument,
+        storageId: versionPreviewSession.liveStorageId,
+        versionToken: versionPreviewSession.liveVersionToken ?? null,
+        instanceKey: `version_history_exit_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+      });
+      setVersionPreviewSession(null);
+    }
+
+    setIsVersionHistoryMode(false);
   }, [openLoadedDesignState, versionPreviewSession]);
 
   useEffect(() => {
@@ -719,6 +749,7 @@ export function EditorV2Page({
         initialRecoveredLocalChanges={initialRecoveredLocalChanges}
         initialDegradedLocalRecovery={initialDegradedLocalRecovery}
         initialLocalSnapshot={initialLocalSnapshot}
+        isVersionHistoryMode={isVersionHistoryMode}
         isVersionPreview={versionPreviewSession !== null}
         versionPreviewMeta={
           versionPreviewSession
@@ -791,6 +822,12 @@ export function EditorV2Page({
           return savedRecord;
         }}
         onListVersions={async (storageId) => listEditorV2DesignVersions(storageId)}
+        onEnterVersionHistoryMode={() => {
+          setIsVersionHistoryMode(true);
+        }}
+        onExitVersionHistoryMode={() => {
+          exitVersionHistoryMode();
+        }}
         onPreviewVersion={async (storageId, versionId, currentDocument) => {
           await previewVersionInWorkspace({
             storageId,
@@ -800,6 +837,9 @@ export function EditorV2Page({
         }}
         onExitVersionPreview={() => {
           exitVersionPreview();
+        }}
+        onSelectCurrentVersionInHistoryMode={() => {
+          previewCurrentVersionInHistoryMode();
         }}
         onRestoreVersion={async (storageId, versionId) => {
           const restored = await restoreEditorV2DesignVersion(storageId, versionId);
@@ -821,6 +861,7 @@ export function EditorV2Page({
             nextSavedDocumentsOffsetRef.current,
             savedDocuments.length + 1,
           );
+          setIsVersionHistoryMode(false);
           setVersionPreviewSession(null);
           openLoadedDesignState({
             document: restored.document,

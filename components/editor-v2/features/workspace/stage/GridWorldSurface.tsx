@@ -34,6 +34,7 @@ interface GridWorldSurfaceProps {
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
+  interactionLocked?: boolean;
   onSurfaceReady?: () => void;
   previewMode: boolean;
   showGridlines: boolean;
@@ -50,6 +51,7 @@ export function GridWorldSurface({
   colorsById,
   dispatch,
   highlightedColorId,
+  interactionLocked = false,
   onSurfaceReady,
   previewMode,
   showGridlines,
@@ -114,7 +116,7 @@ export function GridWorldSurface({
   const textPlacementActive = Boolean(textPlacement);
   const iconPlacementActive = Boolean(iconPlacement);
   const paintDisabled =
-    tracePositioningEnabled || textPlacementActive || iconPlacementActive;
+    interactionLocked || tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -306,7 +308,7 @@ export function GridWorldSurface({
     activeTool,
     dispatch,
     dragPanningDisabled:
-      paintDisabled,
+      interactionLocked || paintDisabled,
     metrics,
     stageRef,
     stageSize,
@@ -455,8 +457,8 @@ export function GridWorldSurface({
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        cursor,
-        touchAction: "none",
+        cursor: interactionLocked ? "default" : cursor,
+        touchAction: interactionLocked ? "auto" : "none",
       }}
     >
       <div
@@ -562,7 +564,7 @@ export function GridWorldSurface({
               gridWidth={grid.width}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
-              interactionEnabled={!paintDisabled}
+              interactionEnabled={!interactionLocked && !paintDisabled}
               cancelPaintStroke={cancelPaintStroke}
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}

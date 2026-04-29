@@ -14,6 +14,10 @@
   transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
 
+.shellContent[data-version-history-mode="true"] {
+  display: block;
+}
+
 .shellContent[data-modal-open="true"] {
   /* filter: blur(18px) saturate(0.82); */
   opacity: 0.34;
@@ -848,6 +852,189 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
+}
+
+.versionHistoryLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 24px;
+  height: 100%;
+  min-height: 0;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(222, 214, 255, 0.5), transparent 30%),
+    linear-gradient(180deg, #f8f6ff 0%, #f6f3ee 100%);
+}
+
+.versionHistoryCanvasPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(125, 96, 197, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 60px rgba(56, 39, 102, 0.12);
+}
+
+.versionHistoryCanvasWorld {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(245, 241, 255, 0.9)),
+    var(--canvas-stage-bg);
+}
+
+.versionHistoryPanel {
+  min-height: 0;
+  display: flex;
+}
+
+.versionHistoryPanelCard {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  border: 1px solid rgba(125, 96, 197, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 24px 60px rgba(56, 39, 102, 0.12);
+  overflow: hidden;
+}
+
+.versionHistoryPanelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 28px 28px 20px;
+  border-bottom: 1px solid rgba(125, 96, 197, 0.12);
+}
+
+.versionHistoryPanelTitle {
+  margin: 0;
+}
+
+.versionHistoryPanelHint {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.versionHistoryTimeline {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 20px 20px 28px;
+}
+
+.versionHistoryTimelineItem {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 18px 18px 18px 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.versionHistoryTimelineItem:hover {
+  background: rgba(122, 81, 255, 0.05);
+}
+
+.versionHistoryTimelineItem[data-selected="true"] {
+  background: rgba(168, 130, 255, 0.14);
+}
+
+.versionHistoryTimelineMarker {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  border-radius: 999px;
+  border: 2px solid rgba(58, 42, 102, 0.9);
+  background: var(--surface-primary);
+}
+
+.versionHistoryTimelineItem[data-selected="true"] .versionHistoryTimelineMarker {
+  border-color: transparent;
+  background: #7c3aed;
+  box-shadow: 0 0 0 5px rgba(168, 130, 255, 0.18);
+}
+
+.versionHistoryTimelineLine {
+  position: absolute;
+  left: 8px;
+  top: 28px;
+  bottom: -10px;
+  width: 2px;
+  background: rgba(125, 96, 197, 0.18);
+}
+
+.versionHistoryTimelineItem[data-last="true"] .versionHistoryTimelineLine {
+  display: none;
+}
+
+.versionHistoryTimelineContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.versionHistoryTimelineTitle {
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.versionHistoryTimelineMeta {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.versionHistoryTimelineState {
+  padding: 8px 0 0 42px;
+  color: var(--text-secondary);
+}
+
+.versionHistoryPanelError {
+  margin: 0;
+  padding: 0 28px 24px;
+  color: var(--status-destructive-dark);
+}
+
+.versionHistoryHeaderTitle {
+  color: var(--text-primary);
+}
+
+.versionHistoryHeaderExitButton,
+.versionHistoryHeaderRestoreButton {
+  white-space: nowrap;
+}
+
+.versionHistoryEntryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--ui-border-reg);
+  background: color-mix(in srgb, var(--surface-secondary) 70%, white);
+}
+
+.versionHistoryEntryText {
+  margin: 0;
+  color: var(--text-secondary);
 }
 
 /* .floatingToolbar button {
@@ -2920,5 +3107,44 @@
   .colorPanelPageBody,
   .iconsPanelPageBody {
     padding-bottom: 28px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .versionHistoryLayout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
+    padding: 16px;
+  }
+
+  .versionHistoryPanel {
+    min-height: 0;
+  }
+
+  .versionHistoryTimelineTitle {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .versionHistoryLayout {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .versionHistoryPanelHeader {
+    padding: 20px 20px 16px;
+  }
+
+  .versionHistoryTimeline {
+    padding: 16px 14px 18px 20px;
+  }
+
+  .versionHistoryPanelError {
+    padding: 0 20px 20px;
+  }
+
+  .versionHistoryTimelineTitle {
+    font-size: 17px;
   }
 }

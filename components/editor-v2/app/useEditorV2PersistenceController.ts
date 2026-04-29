@@ -41,6 +41,7 @@ interface UseEditorV2PersistenceControllerArgs {
   initialRecoveredLocalChanges: boolean;
   initialDegradedLocalRecovery: boolean;
   initialLocalSnapshot: EditorV2LocalSnapshotRecord | null;
+  isVersionHistoryMode: boolean;
   isVersionPreview: boolean;
   saveMode: "manual" | "autosave";
   onSaveDocument: (
@@ -58,6 +59,7 @@ export function useEditorV2PersistenceController({
   initialRecoveredLocalChanges,
   initialDegradedLocalRecovery,
   initialLocalSnapshot,
+  isVersionHistoryMode,
   isVersionPreview,
   saveMode,
   onSaveDocument,
@@ -110,17 +112,17 @@ export function useEditorV2PersistenceController({
   }, [currentServerVersion]);
 
   useEffect(() => {
-    if (isVersionPreview) {
+    if (isVersionHistoryMode || isVersionPreview) {
       setSaveButtonState("idle");
       setSyncStatus("idle");
-      setSaveMessage("Viewing version preview. Changes won't be saved.");
+      setSaveMessage("Viewing version history. Changes won't be saved.");
       return;
     }
 
-    if (saveMessage === "Viewing version preview. Changes won't be saved.") {
+    if (saveMessage === "Viewing version history. Changes won't be saved.") {
       setSaveMessage("");
     }
-  }, [isVersionPreview, saveMessage]);
+  }, [isVersionHistoryMode, isVersionPreview, saveMessage]);
 
   useEffect(() => {
     latestLocalSequenceIdRef.current = initialLocalSnapshot?.latestLocalSequenceId ?? 0;
@@ -318,16 +320,16 @@ export function useEditorV2PersistenceController({
   );
 
   const handleManualSave = useCallback(async () => {
-    if (isVersionPreview) {
+    if (isVersionHistoryMode || isVersionPreview) {
       return;
     }
 
     await flushLocalSnapshot();
     await performServerSave("manual", true);
-  }, [flushLocalSnapshot, isVersionPreview, performServerSave]);
+  }, [flushLocalSnapshot, isVersionHistoryMode, isVersionPreview, performServerSave]);
 
   useEffect(() => {
-    if (isVersionPreview || saveMode !== "autosave" || !hasSavedDesignAccess) {
+    if (isVersionHistoryMode || isVersionPreview || saveMode !== "autosave" || !hasSavedDesignAccess) {
       return;
     }
 
@@ -378,10 +380,18 @@ export function useEditorV2PersistenceController({
         void performServerSave("autosave");
       }, SERVER_FLUSH_DEBOUNCE_MS);
     });
-  }, [hasSavedDesignAccess, isVersionPreview, performServerSave, saveMode, scheduleLocalSnapshot, store]);
+  }, [
+    hasSavedDesignAccess,
+    isVersionHistoryMode,
+    isVersionPreview,
+    performServerSave,
+    saveMode,
+    scheduleLocalSnapshot,
+    store,
+  ]);
 
   useEffect(() => {
-    if (isVersionPreview || saveMode !== "autosave" || !hasSavedDesignAccess) {
+    if (isVersionHistoryMode || isVersionPreview || saveMode !== "autosave" || !hasSavedDesignAccess) {
       return;
     }
 
@@ -406,10 +416,18 @@ export function useEditorV2PersistenceController({
     window.document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       window.document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [flushLocalSnapshot, hasSavedDesignAccess, isVersionPreview, performServerSave, saveMode]);
+  }, [
+    flushLocalSnapshot,
+    hasSavedDesignAccess,
+    isVersionHistoryMode,
+    isVersionPreview,
+    performServerSave,
+    saveMode,
+  ]);
 
   useEffect(() => {
     if (
+      isVersionHistoryMode ||
       isVersionPreview ||
       saveMode !== "autosave" ||
       !hasSavedDesignAccess ||
@@ -422,6 +440,7 @@ export function useEditorV2PersistenceController({
   }, [
     hasSavedDesignAccess,
     initialRecoveredLocalChanges,
+    isVersionHistoryMode,
     isVersionPreview,
     performServerSave,
     saveMode,

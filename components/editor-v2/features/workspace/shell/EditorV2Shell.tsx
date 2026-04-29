@@ -119,13 +119,17 @@ export function EditorV2Shell({
   onSaveDocument,
   onLoadDocument,
   onListVersions,
+  onEnterVersionHistoryMode,
+  onExitVersionHistoryMode,
   onPreviewVersion,
   onExitVersionPreview,
+  onSelectCurrentVersionInHistoryMode,
   onRestoreVersion,
   onStartOver,
   recoveredLocalChanges,
   saveButtonState,
   saveMessage,
+  isVersionHistoryMode,
   isVersionPreview,
   versionPreviewMeta,
   saveMode,
@@ -155,12 +159,15 @@ export function EditorV2Shell({
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onEnterVersionHistoryMode: () => void;
+  onExitVersionHistoryMode: () => void;
   onPreviewVersion: (
     storageId: string,
     versionId: string,
     currentDocument: EditorDocumentState,
   ) => Promise<void> | void;
   onExitVersionPreview: () => void;
+  onSelectCurrentVersionInHistoryMode: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
@@ -169,6 +176,7 @@ export function EditorV2Shell({
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
+  isVersionHistoryMode: boolean;
   isVersionPreview: boolean;
   versionPreviewMeta: {
     versionId: string;
@@ -253,6 +261,7 @@ export function EditorV2Shell({
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
+  const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null);
   const [headerAutosaveTarget, setHeaderAutosaveTarget] = useState<HTMLElement | null>(null);
   const [headerHistoryTarget, setHeaderHistoryTarget] = useState<HTMLElement | null>(null);
@@ -260,6 +269,14 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
+  const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>([]);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
+  const [selectedVersionHistoryId, setSelectedVersionHistoryId] = useState<"current" | string>(
+    "current",
+  );
+  const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
+    useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
     openSignIn({
       redirectUrl: createEditorV2AuthHandoffRedirectUrl(
@@ -337,13 +354,17 @@ export function EditorV2Shell({
       ),
     [state.document.grid.height, state.document.grid.width],
   );
+  const shellSidebarInset =
+    isVersionHistoryMode || sidebarCollapsed || isBottomPanelLayout
+      ? 0
+      : EXPANDED_SIDEBAR_WIDTH;
   const fitZoom = useMemo(() => {
     if (canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
       return 1;
     }
 
     const availableWidth = Math.max(
-      canvasWorldSize.width - (sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH),
+      canvasWorldSize.width - shellSidebarInset,
       1,
     );
     const availableHeight = Math.max(
@@ -362,14 +383,14 @@ export function EditorV2Shell({
     gridMetrics.surfaceWidth,
     mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
+    shellSidebarInset,
   ]);
   const zoomAnchor = useMemo(() => {
     if (canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
       return null;
     }
 
-    const visibleLeftInset =
-      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset = shellSidebarInset;
     const visibleCenterX =
       visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
     const visibleCanvasHeight = Math.max(
@@ -391,18 +412,16 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
-    isBottomPanelLayout,
     mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
-    sidebarCollapsed,
+    shellSidebarInset,
   ]);
   const textViewportCenter = useMemo(() => {
     if (viewport.zoom <= 0 || canvasWorldSize.width <= 0 || canvasWorldSize.height <= 0) {
       return null;
     }
 
-    const visibleLeftInset =
-      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset = shellSidebarInset;
     const visibleCenterX =
       visibleLeftInset + (canvasWorldSize.width - visibleLeftInset) / 2;
     const visibleCanvasHeight = Math.max(
@@ -426,9 +445,8 @@ export function EditorV2Shell({
     canvasWorldSize.width,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
-    isBottomPanelLayout,
     mobileVisibleTopInset,
-    sidebarCollapsed,
+    shellSidebarInset,
     viewport.offsetX,
     viewport.offsetY,
     viewport.zoom,
@@ -438,15 +456,13 @@ export function EditorV2Shell({
       return null;
     }
 
-    const visibleLeftInset =
-      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset = shellSidebarInset;
     const visibleCanvasWidth = Math.max(canvasWorldSize.width - visibleLeftInset, 1);
 
     return visibleCanvasWidth / viewport.zoom;
   }, [
     canvasWorldSize.width,
-    isBottomPanelLayout,
-    sidebarCollapsed,
+    shellSidebarInset,
     viewport.zoom,
   ]);
   const textViewportHeight = useMemo(() => {
@@ -472,8 +488,7 @@ export function EditorV2Shell({
       return;
     }
 
-    const visibleLeftInset =
-      sidebarCollapsed || isBottomPanelLayout ? 0 : EXPANDED_SIDEBAR_WIDTH;
+    const visibleLeftInset = shellSidebarInset;
     const availableLeft = visibleLeftInset;
     const availableTop = mobileVisibleTopInset;
     const availableWidth = canvasWorldSize.width - visibleLeftInset;
@@ -504,10 +519,9 @@ export function EditorV2Shell({
     fitZoom,
     gridMetrics.surfaceHeight,
     gridMetrics.surfaceWidth,
-    isBottomPanelLayout,
     mobileVisibleTopInset,
     mobileBottomPanelVisibleHeightRatio,
-    sidebarCollapsed,
+    shellSidebarInset,
     viewport.offsetX,
     viewport.offsetY,
   ]);
@@ -1093,6 +1107,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     setHeaderFileLeftTarget(window.document.getElementById("app-header-file-left"));
+    setHeaderTitleTarget(window.document.getElementById("app-header-title"));
     setHeaderActionsTarget(window.document.getElementById("app-header-actions"));
     setHeaderAutosaveTarget(window.document.getElementById("app-header-autosave"));
     setHeaderHistoryTarget(window.document.getElementById("app-header-history-right"));
@@ -1152,6 +1167,22 @@ export function EditorV2Shell({
   }, [isBottomPanelLayout]);
 
   useEffect(() => {
+    const appShellRoot = window.document.getElementById("app-shell-root");
+    if (!appShellRoot) {
+      return;
+    }
+
+    appShellRoot.setAttribute(
+      "data-editor-version-history-mode",
+      isVersionHistoryMode ? "true" : "false",
+    );
+
+    return () => {
+      appShellRoot.removeAttribute("data-editor-version-history-mode");
+    };
+  }, [isVersionHistoryMode]);
+
+  useEffect(() => {
     if (!errorNotification) {
       return;
     }
@@ -1174,6 +1205,103 @@ export function EditorV2Shell({
 
     return () => window.clearTimeout(timeoutId);
   }, [onDismissSuccessNotification, successNotification]);
+
+  const loadVersionHistory = useCallback(async () => {
+    if (!currentStorageId) {
+      setVersionHistory([]);
+      setVersionHistoryError(null);
+      return;
+    }
+
+    setVersionHistoryLoading(true);
+
+    try {
+      const versions = await onListVersions(currentStorageId);
+      setVersionHistory(versions);
+      setVersionHistoryError(null);
+    } catch (error) {
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't load version history.",
+      );
+    } finally {
+      setVersionHistoryLoading(false);
+    }
+  }, [currentStorageId, onListVersions]);
+
+  useEffect(() => {
+    if (!isVersionHistoryMode) {
+      setVersionHistoryError(null);
+      setVersionHistoryActionPendingId(null);
+      return;
+    }
+
+    void loadVersionHistory();
+  }, [isVersionHistoryMode, loadVersionHistory]);
+
+  useEffect(() => {
+    if (!isVersionHistoryMode) {
+      setSelectedVersionHistoryId("current");
+      return;
+    }
+
+    setSelectedVersionHistoryId(versionPreviewMeta?.versionId ?? "current");
+  }, [isVersionHistoryMode, versionPreviewMeta]);
+
+  const handleSelectVersionHistoryItem = useCallback(
+    async (versionId: "current" | string) => {
+      if (!currentStorageId) {
+        return;
+      }
+
+      setSelectedVersionHistoryId(versionId);
+      setVersionHistoryActionPendingId(versionId);
+
+      try {
+        if (versionId === "current") {
+          onSelectCurrentVersionInHistoryMode();
+          setVersionHistoryError(null);
+          return;
+        }
+
+        await onPreviewVersion(currentStorageId, versionId, document);
+        setVersionHistoryError(null);
+      } catch (error) {
+        setVersionHistoryError(
+          error instanceof Error ? error.message : "Couldn't preview this version.",
+        );
+      } finally {
+        setVersionHistoryActionPendingId(null);
+      }
+    },
+    [currentStorageId, document, onPreviewVersion, onSelectCurrentVersionInHistoryMode],
+  );
+
+  const handleRestoreSelectedVersion = useCallback(async () => {
+    if (
+      !currentStorageId ||
+      selectedVersionHistoryId === "current" ||
+      versionHistoryActionPendingId !== null
+    ) {
+      return;
+    }
+
+    setVersionHistoryActionPendingId(selectedVersionHistoryId);
+
+    try {
+      await onRestoreVersion(currentStorageId, selectedVersionHistoryId);
+      setVersionHistoryError(null);
+    } catch (error) {
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't restore this version.",
+      );
+      setVersionHistoryActionPendingId(null);
+    }
+  }, [
+    currentStorageId,
+    onRestoreVersion,
+    selectedVersionHistoryId,
+    versionHistoryActionPendingId,
+  ]);
 
   function handleHeaderMenuAction(value: string): void {
     if (value === "preview") {
@@ -1292,6 +1420,7 @@ export function EditorV2Shell({
   return (
     <main className={styles.shell}>
       {!setupModalOpen &&
+      !isVersionHistoryMode &&
       headerFileLeftTarget &&
       saveMode === "manual" &&
       !isVersionPreview &&
@@ -1313,7 +1442,7 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && !showDocumentPanelStatus && headerAutosaveTarget
+      {!setupModalOpen && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
               showHeaderSaveStatus ? (
@@ -1374,7 +1503,7 @@ export function EditorV2Shell({
             headerAutosaveTarget,
           )
         : null}
-      {!setupModalOpen && showTopSaveBanner && topBannerTarget
+      {!setupModalOpen && !isVersionHistoryMode && showTopSaveBanner && topBannerTarget
         ? createPortal(
             <SaveStatusCard
               autoSaveEnabled={false}
@@ -1390,7 +1519,7 @@ export function EditorV2Shell({
             topBannerTarget,
           )
         : null}
-      {!setupModalOpen && headerHistoryTarget && isBottomPanelLayout
+      {!setupModalOpen && !isVersionHistoryMode && headerHistoryTarget && isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerHistoryControls}>
               {previewMode ? (
@@ -1435,7 +1564,7 @@ export function EditorV2Shell({
             headerHistoryTarget,
           )
         : null}
-      {!setupModalOpen && headerOverflowTarget && isBottomPanelLayout
+      {!setupModalOpen && !isVersionHistoryMode && headerOverflowTarget && isBottomPanelLayout
         ? createPortal(
             <SingleSelectDropdown
               ariaLabel="More actions"
@@ -1465,7 +1594,7 @@ export function EditorV2Shell({
             headerOverflowTarget,
           )
         : null}
-      {!setupModalOpen && headerActionsTarget && !isBottomPanelLayout
+      {!setupModalOpen && !isVersionHistoryMode && headerActionsTarget && !isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerActionGroup}>
               {isCompactHistoryLayout ? (
@@ -1527,6 +1656,52 @@ export function EditorV2Shell({
                 )}
               </Button>
             </div>,
+            headerActionsTarget,
+          )
+        : null}
+      {!setupModalOpen && isVersionHistoryMode && headerFileLeftTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="sm"
+              className={styles.versionHistoryHeaderExitButton}
+              onClick={onExitVersionHistoryMode}
+            >
+              <ButtonIcon icon="/icons/lucide/arrow-left.svg" className={styles.saveButtonIcon} />
+              Exit version history
+            </Button>,
+            headerFileLeftTarget,
+          )
+        : null}
+      {!setupModalOpen && isVersionHistoryMode && headerTitleTarget
+        ? createPortal(
+            <div className={styles.versionHistoryHeaderTitle} style={typographyStyles.h4}>
+              Version history
+            </div>,
+            headerTitleTarget,
+          )
+        : null}
+      {!setupModalOpen && isVersionHistoryMode && headerActionsTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className={styles.versionHistoryHeaderRestoreButton}
+              disabled={
+                selectedVersionHistoryId === "current" || versionHistoryActionPendingId !== null
+              }
+              onClick={() => {
+                void handleRestoreSelectedVersion();
+              }}
+            >
+              {versionHistoryActionPendingId !== null &&
+              selectedVersionHistoryId !== "current" &&
+              versionHistoryActionPendingId === selectedVersionHistoryId
+                ? "Restoring..."
+                : "Restore this version"}
+            </Button>,
             headerActionsTarget,
           )
         : null}
@@ -1624,211 +1799,325 @@ export function EditorV2Shell({
         className={styles.shellContent}
         data-modal-open={setupModalOpen ? "true" : "false"}
         data-mobile-selection-docked={mobileSelectionDocked ? "true" : "false"}
+        data-version-history-mode={isVersionHistoryMode ? "true" : "false"}
       >
-        <EditorRail
-          activeSection={activeSidebarSection}
-          panelCollapsed={sidebarCollapsed}
-          onSelectSection={(section) => {
-            if (!sidebarCollapsed && activeSidebarSection === section) {
-              dispatch(createSetSidebarCollapsedCommand(true));
-              return;
-            }
+        {isVersionHistoryMode ? (
+          <section className={styles.versionHistoryLayout}>
+            <div className={styles.versionHistoryCanvasPane}>
+              <div className={styles.canvasStage}>
+                {canvasLoading ? (
+                  <div className={styles.canvasLoadingOverlay} role="status" aria-live="polite">
+                    <div className={styles.canvasLoadingCard}>
+                      <span className={styles.canvasLoadingSpinner} aria-hidden="true" />
+                      <span style={{ ...typographyStyles.p2 }}>Loading design...</span>
+                    </div>
+                  </div>
+                ) : null}
 
-            dispatch(createSetActiveSidebarSectionCommand(section));
-            dispatch(createSetSidebarCollapsedCommand(false));
-          }}
-        />
-
-        <section className={styles.canvasColumn}>
-          <div className={styles.canvasStage}>
-            {canvasLoading ? (
-              <div className={styles.canvasLoadingOverlay} role="status" aria-live="polite">
-                <div className={styles.canvasLoadingCard}>
-                  <span className={styles.canvasLoadingSpinner} aria-hidden="true" />
-                  <span style={{ ...typographyStyles.p2 }}>Loading design...</span>
-                </div>
-              </div>
-            ) : null}
-
-            <div
-              className={styles.sidePanelOverlay}
-              data-collapsed={sidebarCollapsed ? "true" : "false"}
-              data-mobile-canvas-focus={isBottomPanelCanvasFocusActive ? "true" : "false"}
-            >
-              <EditorSidebar
-                activeSection={activeSidebarSection}
-                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                activeColor={activeColor}
-                activeColorId={activeColorId}
-                colorsById={colorsById}
-                documentTitle={title}
-                hasSavedDesignAccess={hasSavedDesignAccess}
-                hasUnsavedChanges={hasUnsavedChanges}
-                isDocumentPanelStatusVisible={showDocumentPanelStatus}
-                isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
-                palette={palette}
-                renameRequestToken={renameRequestToken}
-                gridMetrics={gridMetrics}
-                onScopeModeChange={handleUsedColorsScopeModeChange}
-                selectionScopeActive={selectionScopeActive}
-                selectionControlActive={selectionControlActive}
-                selectionPromptVisible={usedColorsSelectionPromptVisible}
-                showRuler={showRuler}
-                savedDocuments={savedDocuments}
-                savedDocumentsLoading={savedDocumentsLoading}
-                savedDocumentsHasMore={savedDocumentsHasMore}
-                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
-                onOpenSavedDocuments={onOpenSavedDocuments}
-                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
-                currentStorageId={currentStorageId}
-                onListVersions={onListVersions}
-                onPreviewVersion={onPreviewVersion}
-                onExitVersionPreview={onExitVersionPreview}
-                onRestoreVersion={onRestoreVersion}
-                isVersionPreview={isVersionPreview}
-                versionPreviewMeta={versionPreviewMeta}
-                selectedStorageId={selectedStorageId}
-                setSelectedStorageId={setSelectedStorageId}
-                onLoadSelected={() => {
-                  const selectedRecord = savedDocuments.find(
-                    (record) => record.storageId === selectedStorageId,
-                  );
-                  if (!selectedRecord) return;
-                  void onLoadDocument(selectedRecord);
-                }}
-                onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
-                onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
-                onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
-                onSignIn={openSignInForCurrentDesign}
-                onStartOver={onStartOver}
-                previewMode={previewMode}
-                previewModeDisabled={previewModeDisabled}
-                trace={trace}
-                traceRepositionActive={traceRepositionActive}
-                traceRepositionOrigin={traceRepositionOrigin}
-                textPlacement={textPlacement}
-                iconPlacement={iconPlacement}
-                isBottomPanelLayout={isBottomPanelLayout}
-                usedColors={usedColors}
-                document={document}
-                dispatch={dispatch}
-                highlightedColorId={highlightedColorId}
-                recoveredLocalChanges={recoveredLocalChanges}
-                saveMessage={saveMessage}
-                saveMode={saveMode}
-                onHighlightColorChange={setHighlightedColorId}
-                showGridlines={showGridlines}
-                showSymbols={showSymbols}
-                textViewportCenter={textViewportCenter}
-                textViewportWidth={textViewportWidth}
-                textViewportHeight={textViewportHeight}
-              />
-            </div>
-
-            {previewMode || isBottomPanelCanvasFocusActive ? null : (
-              <div
-                ref={stageToolbarTopRef}
-                className={styles.stageToolbarTop}
-                style={{
-                  ["--stage-toolbar-left-inset" as string]:
-                    sidebarCollapsed || isBottomPanelLayout
-                      ? "0px"
-                      : `${EXPANDED_SIDEBAR_WIDTH}px`,
-                }}
-              >
-                {traceRepositionActive && trace ? (
-                  <TraceRepositionToolbar
-                    dispatch={dispatch}
-                    trace={trace}
-                  />
-                ) : textPlacement ? (
-                  <TextPlacementToolbar
-                    activeColorHex={activeColor?.hex ?? null}
-                    activeColorId={activeColorId}
-                    dispatch={dispatch}
-                    featuredColorIds={featuredColorIds}
-                    grid={document.grid}
-                    gridMetrics={gridMetrics}
-                    palette={palette}
-                    placement={textPlacement}
-                    showSymbols={showSymbols}
-                    symbolAssignments={document.palette.symbolAssignments}
-                  />
-                ) : iconPlacement ? (
-                  <IconPlacementToolbar
-                    activeColorHex={activeColor?.hex ?? null}
-                    activeColorId={activeColorId}
-                    dispatch={dispatch}
-                    featuredColorIds={featuredColorIds}
-                    grid={document.grid}
-                    gridMetrics={gridMetrics}
-                    palette={palette}
-                    placement={iconPlacement}
-                    showSymbols={showSymbols}
-                    symbolAssignments={document.palette.symbolAssignments}
-                  />
-                ) : (
-                  <FloatingToolbar
-                    activeColor={activeColor}
+                <div
+                  ref={canvasWorldRef}
+                  className={[styles.canvasWorld, styles.versionHistoryCanvasWorld].join(" ")}
+                  data-loading={canvasLoading ? "true" : "false"}
+                >
+                  <GridWorldSurface
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
-                    canRedo={canRedo}
-                    canUndo={canUndo}
+                    colorsById={colorsById}
                     dispatch={dispatch}
-                    hasPaintedCells={hasPaintedCells}
-                    featuredColorIds={featuredColorIds}
-                    palette={palette}
-                    selectionBounds={selectionBounds}
-                    selectionCommitted={selectionCommitted}
-                    selectionMode={state.session.selection.mode}
-                    selectionShape={state.session.selection.shape}
-                    trace={trace}
-                    mirrorSessionActive={Boolean(mirrorSession)}
-                    isBottomPanelLayout={isBottomPanelLayout}
-                    selectionRequestKey={selectionRequestKey}
+                    highlightedColorId={highlightedColorId}
+                    interactionLocked
+                    onSurfaceReady={onCanvasReady}
+                    previewMode={previewMode}
+                    showGridlines={showGridlines}
+                    showRuler={showRuler}
                     showSymbols={showSymbols}
-                    symbolAssignments={document.palette.symbolAssignments}
+                    state={state}
+                    zoomAnchor={zoomAnchor}
                   />
-                )}
+                </div>
               </div>
-            )}
-
-            {previewMode ? null : (
-              <div className={styles.stageToolbarBottomRight}>
-                <ViewportToolbar
-                  dispatch={dispatch}
-                  fitZoom={fitZoom}
-                  onFitToGrid={fitToGrid}
-                  zoomAnchor={zoomAnchor}
-                  viewport={viewport}
-                />
-              </div>
-            )}
-
-            <div
-              ref={canvasWorldRef}
-              className={styles.canvasWorld}
-              data-loading={canvasLoading ? "true" : "false"}
-            >
-              <GridWorldSurface
-                activeColorId={activeColorId}
-                activeTool={activeTool}
-                brushSize={brushSize}
-                colorsById={colorsById}
-                dispatch={dispatch}
-                highlightedColorId={highlightedColorId}
-                onSurfaceReady={onCanvasReady}
-                previewMode={previewMode}
-                showGridlines={showGridlines}
-                showRuler={showRuler}
-                showSymbols={showSymbols}
-                state={state}
-                zoomAnchor={zoomAnchor}
-              />
             </div>
-          </div>
-        </section>
+
+            <aside className={styles.versionHistoryPanel}>
+              <div className={styles.versionHistoryPanelCard}>
+                <div className={styles.versionHistoryPanelHeader}>
+                  <h2 className={styles.versionHistoryPanelTitle} style={typographyStyles.h3}>
+                    Version history
+                  </h2>
+                  <p className={styles.versionHistoryPanelHint} style={typographyStyles.p2}>
+                    Select a point in time to preview it on the canvas.
+                  </p>
+                </div>
+
+                <div className={styles.versionHistoryTimeline} role="list" aria-label="Version history timeline">
+                  <button
+                    type="button"
+                    className={styles.versionHistoryTimelineItem}
+                    data-selected={selectedVersionHistoryId === "current" ? "true" : "false"}
+                    onClick={() => {
+                      void handleSelectVersionHistoryItem("current");
+                    }}
+                  >
+                    <span className={styles.versionHistoryTimelineMarker} aria-hidden="true" />
+                    <span className={styles.versionHistoryTimelineLine} aria-hidden="true" />
+                    <span className={styles.versionHistoryTimelineContent}>
+                      <span className={styles.versionHistoryTimelineTitle}>Current version</span>
+                      <span className={styles.versionHistoryTimelineMeta}>Live design</span>
+                    </span>
+                  </button>
+
+                  {versionHistoryLoading ? (
+                    <div className={styles.versionHistoryTimelineState} style={typographyStyles.p2}>
+                      Loading version history...
+                    </div>
+                  ) : versionHistory.length === 0 ? (
+                    <div className={styles.versionHistoryTimelineState} style={typographyStyles.p2}>
+                      No saved versions yet.
+                    </div>
+                  ) : (
+                    versionHistory.map((version, index) => {
+                      const isSelected = selectedVersionHistoryId === version.id;
+                      const isPending = versionHistoryActionPendingId === version.id;
+
+                      return (
+                        <button
+                          key={version.id}
+                          type="button"
+                          className={styles.versionHistoryTimelineItem}
+                          data-selected={isSelected ? "true" : "false"}
+                          data-last={index === versionHistory.length - 1 ? "true" : "false"}
+                          onClick={() => {
+                            void handleSelectVersionHistoryItem(version.id);
+                          }}
+                        >
+                          <span className={styles.versionHistoryTimelineMarker} aria-hidden="true" />
+                          <span className={styles.versionHistoryTimelineLine} aria-hidden="true" />
+                          <span className={styles.versionHistoryTimelineContent}>
+                            <span className={styles.versionHistoryTimelineTitle}>
+                              {isPending ? "Loading preview..." : formatVersionHistoryTimestamp(version.createdAt)}
+                            </span>
+                            <span className={styles.versionHistoryTimelineMeta}>
+                              {formatVersionHistorySaveSource(version.saveSource)}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {versionHistoryError ? (
+                  <p className={styles.versionHistoryPanelError} style={typographyStyles.p2}>
+                    {versionHistoryError}
+                  </p>
+                ) : null}
+              </div>
+            </aside>
+          </section>
+        ) : (
+          <>
+            <EditorRail
+              activeSection={activeSidebarSection}
+              panelCollapsed={sidebarCollapsed}
+              onSelectSection={(section) => {
+                if (!sidebarCollapsed && activeSidebarSection === section) {
+                  dispatch(createSetSidebarCollapsedCommand(true));
+                  return;
+                }
+
+                dispatch(createSetActiveSidebarSectionCommand(section));
+                dispatch(createSetSidebarCollapsedCommand(false));
+              }}
+            />
+
+            <section className={styles.canvasColumn}>
+              <div className={styles.canvasStage}>
+                {canvasLoading ? (
+                  <div className={styles.canvasLoadingOverlay} role="status" aria-live="polite">
+                    <div className={styles.canvasLoadingCard}>
+                      <span className={styles.canvasLoadingSpinner} aria-hidden="true" />
+                      <span style={{ ...typographyStyles.p2 }}>Loading design...</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div
+                  className={styles.sidePanelOverlay}
+                  data-collapsed={sidebarCollapsed ? "true" : "false"}
+                  data-mobile-canvas-focus={isBottomPanelCanvasFocusActive ? "true" : "false"}
+                >
+                  <EditorSidebar
+                    activeSection={activeSidebarSection}
+                    autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                    activeColor={activeColor}
+                    activeColorId={activeColorId}
+                    colorsById={colorsById}
+                    documentTitle={title}
+                    hasSavedDesignAccess={hasSavedDesignAccess}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    isDocumentPanelStatusVisible={showDocumentPanelStatus}
+                    isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
+                    palette={palette}
+                    renameRequestToken={renameRequestToken}
+                    gridMetrics={gridMetrics}
+                    onScopeModeChange={handleUsedColorsScopeModeChange}
+                    selectionScopeActive={selectionScopeActive}
+                    selectionControlActive={selectionControlActive}
+                    selectionPromptVisible={usedColorsSelectionPromptVisible}
+                    showRuler={showRuler}
+                    savedDocuments={savedDocuments}
+                    savedDocumentsLoading={savedDocumentsLoading}
+                    savedDocumentsHasMore={savedDocumentsHasMore}
+                    savedDocumentsLoadingMore={savedDocumentsLoadingMore}
+                    onOpenSavedDocuments={onOpenSavedDocuments}
+                    onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
+                    currentStorageId={currentStorageId}
+                    onEnterVersionHistoryMode={onEnterVersionHistoryMode}
+                    selectedStorageId={selectedStorageId}
+                    setSelectedStorageId={setSelectedStorageId}
+                    onLoadSelected={() => {
+                      const selectedRecord = savedDocuments.find(
+                        (record) => record.storageId === selectedStorageId,
+                      );
+                      if (!selectedRecord) return;
+                      void onLoadDocument(selectedRecord);
+                    }}
+                    onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
+                    onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
+                    onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
+                    onSignIn={openSignInForCurrentDesign}
+                    onStartOver={onStartOver}
+                    previewMode={previewMode}
+                    previewModeDisabled={previewModeDisabled}
+                    trace={trace}
+                    traceRepositionActive={traceRepositionActive}
+                    traceRepositionOrigin={traceRepositionOrigin}
+                    textPlacement={textPlacement}
+                    iconPlacement={iconPlacement}
+                    isBottomPanelLayout={isBottomPanelLayout}
+                    usedColors={usedColors}
+                    document={document}
+                    dispatch={dispatch}
+                    highlightedColorId={highlightedColorId}
+                    recoveredLocalChanges={recoveredLocalChanges}
+                    saveMessage={saveMessage}
+                    saveMode={saveMode}
+                    onHighlightColorChange={setHighlightedColorId}
+                    showGridlines={showGridlines}
+                    showSymbols={showSymbols}
+                    textViewportCenter={textViewportCenter}
+                    textViewportWidth={textViewportWidth}
+                    textViewportHeight={textViewportHeight}
+                  />
+                </div>
+
+                {previewMode || isBottomPanelCanvasFocusActive ? null : (
+                  <div
+                    ref={stageToolbarTopRef}
+                    className={styles.stageToolbarTop}
+                    style={{
+                      ["--stage-toolbar-left-inset" as string]:
+                        sidebarCollapsed || isBottomPanelLayout
+                          ? "0px"
+                          : `${EXPANDED_SIDEBAR_WIDTH}px`,
+                    }}
+                  >
+                    {traceRepositionActive && trace ? (
+                      <TraceRepositionToolbar
+                        dispatch={dispatch}
+                        trace={trace}
+                      />
+                    ) : textPlacement ? (
+                      <TextPlacementToolbar
+                        activeColorHex={activeColor?.hex ?? null}
+                        activeColorId={activeColorId}
+                        dispatch={dispatch}
+                        featuredColorIds={featuredColorIds}
+                        grid={document.grid}
+                        gridMetrics={gridMetrics}
+                        palette={palette}
+                        placement={textPlacement}
+                        showSymbols={showSymbols}
+                        symbolAssignments={document.palette.symbolAssignments}
+                      />
+                    ) : iconPlacement ? (
+                      <IconPlacementToolbar
+                        activeColorHex={activeColor?.hex ?? null}
+                        activeColorId={activeColorId}
+                        dispatch={dispatch}
+                        featuredColorIds={featuredColorIds}
+                        grid={document.grid}
+                        gridMetrics={gridMetrics}
+                        palette={palette}
+                        placement={iconPlacement}
+                        showSymbols={showSymbols}
+                        symbolAssignments={document.palette.symbolAssignments}
+                      />
+                    ) : (
+                      <FloatingToolbar
+                        activeColor={activeColor}
+                        activeColorId={activeColorId}
+                        activeTool={activeTool}
+                        brushSize={brushSize}
+                        canRedo={canRedo}
+                        canUndo={canUndo}
+                        dispatch={dispatch}
+                        hasPaintedCells={hasPaintedCells}
+                        featuredColorIds={featuredColorIds}
+                        palette={palette}
+                        selectionBounds={selectionBounds}
+                        selectionCommitted={selectionCommitted}
+                        selectionMode={state.session.selection.mode}
+                        selectionShape={state.session.selection.shape}
+                        trace={trace}
+                        mirrorSessionActive={Boolean(mirrorSession)}
+                        isBottomPanelLayout={isBottomPanelLayout}
+                        selectionRequestKey={selectionRequestKey}
+                        showSymbols={showSymbols}
+                        symbolAssignments={document.palette.symbolAssignments}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {previewMode ? null : (
+                  <div className={styles.stageToolbarBottomRight}>
+                    <ViewportToolbar
+                      dispatch={dispatch}
+                      fitZoom={fitZoom}
+                      onFitToGrid={fitToGrid}
+                      zoomAnchor={zoomAnchor}
+                      viewport={viewport}
+                    />
+                  </div>
+                )}
+
+                <div
+                  ref={canvasWorldRef}
+                  className={styles.canvasWorld}
+                  data-loading={canvasLoading ? "true" : "false"}
+                >
+                  <GridWorldSurface
+                    activeColorId={activeColorId}
+                    activeTool={activeTool}
+                    brushSize={brushSize}
+                    colorsById={colorsById}
+                    dispatch={dispatch}
+                    highlightedColorId={highlightedColorId}
+                    onSurfaceReady={onCanvasReady}
+                    previewMode={previewMode}
+                    showGridlines={showGridlines}
+                    showRuler={showRuler}
+                    showSymbols={showSymbols}
+                    state={state}
+                    zoomAnchor={zoomAnchor}
+                  />
+                </div>
+              </div>
+            </section>
+          </>
+        )}
       </div>
 
       {mounted && setupModalOpen
@@ -1841,6 +2130,29 @@ export function EditorV2Shell({
         : null}
     </main>
   );
+}
+
+function formatVersionHistoryTimestamp(value: string): string {
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatVersionHistorySaveSource(
+  value: EditorDesignVersionListItem["saveSource"],
+): string {
+  if (value === "AUTOSAVE") {
+    return "Autosave snapshot";
+  }
+
+  if (value === "RESTORE") {
+    return "Restore snapshot";
+  }
+
+  return "Manual save";
 }
 
 function SaveButtonLabel({

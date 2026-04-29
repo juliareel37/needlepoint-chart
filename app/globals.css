@@ -1097,7 +1097,7 @@ input[type="number"] {
   #app-shell-root[data-mobile-header-overflow-auth="true"] .app-header-sign-in-button {
     display: none !important;
   }
-  .app-header-title-slot {
+.app-header-title-slot {
     position: static !important;
     left: auto !important;
     transform: none !important;
@@ -1510,4 +1510,14 @@ input[type="number"] {
   .canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"]:hover .toolbar-icon {
     background: transparent !important;
   }
+}
+
+#app-shell-root[data-editor-version-history-mode="true"] .app-header-auth,
+#app-shell-root[data-editor-version-history-mode="true"] .app-shell-header img,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-history,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-autosave,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-file-right,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-history-right,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-overflow-right {
+  display: none !important;
 }
