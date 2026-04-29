@@ -30,6 +30,7 @@ import type {
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
+  LoadEditorV2VersionResult,
   RestoreEditorV2VersionResult,
 } from "../../../app/editorV2ServerPersistence";
 import type {
@@ -118,11 +119,15 @@ export function EditorV2Shell({
   onSaveDocument,
   onLoadDocument,
   onListVersions,
+  onPreviewVersion,
+  onExitVersionPreview,
   onRestoreVersion,
   onStartOver,
   recoveredLocalChanges,
   saveButtonState,
   saveMessage,
+  isVersionPreview,
+  versionPreviewMeta,
   saveMode,
   savedDocuments,
   savedDocumentsLoading,
@@ -150,6 +155,12 @@ export function EditorV2Shell({
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onPreviewVersion: (
+    storageId: string,
+    versionId: string,
+    currentDocument: EditorDocumentState,
+  ) => Promise<void> | void;
+  onExitVersionPreview: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
@@ -158,6 +169,12 @@ export function EditorV2Shell({
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
+  isVersionPreview: boolean;
+  versionPreviewMeta: {
+    versionId: string;
+    createdAt: string;
+    saveSource: LoadEditorV2VersionResult["saveSource"];
+  } | null;
   saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
@@ -1277,6 +1294,7 @@ export function EditorV2Shell({
       {!setupModalOpen &&
       headerFileLeftTarget &&
       saveMode === "manual" &&
+      !isVersionPreview &&
       hasSavedDesignAccess
         ? createPortal(
             <Button
@@ -1664,7 +1682,11 @@ export function EditorV2Shell({
                 onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                 currentStorageId={currentStorageId}
                 onListVersions={onListVersions}
+                onPreviewVersion={onPreviewVersion}
+                onExitVersionPreview={onExitVersionPreview}
                 onRestoreVersion={onRestoreVersion}
+                isVersionPreview={isVersionPreview}
+                versionPreviewMeta={versionPreviewMeta}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
                 onLoadSelected={() => {

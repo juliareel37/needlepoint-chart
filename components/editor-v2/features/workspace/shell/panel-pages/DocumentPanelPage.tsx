@@ -8,9 +8,10 @@ import {
   SingleSelectDropdown,
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
-import type { EditorStore } from "@/lib/editor-v2/editor/store";
+import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
 import type {
   EditorDesignVersionListItem,
+  LoadEditorV2VersionResult,
   RestoreEditorV2VersionResult,
   SavedEditorV2DocumentRecord,
 } from "../../../../app/editorV2ServerPersistence";
@@ -21,6 +22,7 @@ import styles from "../EditorV2Shell.module.css";
 interface DocumentPanelPageProps {
   autoSaveEnabled: boolean;
   dispatch: EditorStore["dispatch"];
+  currentDocument: EditorDocumentState;
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
@@ -40,10 +42,22 @@ interface DocumentPanelPageProps {
   onLoadMoreSavedDocuments: () => Promise<void> | void;
   currentStorageId: string;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onPreviewVersion: (
+    storageId: string,
+    versionId: string,
+    currentDocument: EditorDocumentState,
+  ) => Promise<void> | void;
+  onExitVersionPreview: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
+  isVersionPreview: boolean;
+  versionPreviewMeta: {
+    versionId: string;
+    createdAt: string;
+    saveSource: LoadEditorV2VersionResult["saveSource"];
+  } | null;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
@@ -51,6 +65,7 @@ interface DocumentPanelPageProps {
 export function DocumentPanelPage({
   autoSaveEnabled,
   dispatch,
+  currentDocument,
   documentTitle,
   hasSavedDesignAccess,
   hasUnsavedChanges,
@@ -70,7 +85,11 @@ export function DocumentPanelPage({
   onLoadMoreSavedDocuments,
   currentStorageId,
   onListVersions,
+  onPreviewVersion,
+  onExitVersionPreview,
   onRestoreVersion,
+  isVersionPreview,
+  versionPreviewMeta,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
@@ -80,6 +99,7 @@ export function DocumentPanelPage({
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
   const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState("");
+  const [previewingVersionId, setPreviewingVersionId] = useState<string | null>(null);
   const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null);
   const commitOnBlurRef = useRef(true);
 
@@ -119,8 +139,15 @@ export function DocumentPanelPage({
     setVersionHistory([]);
     setVersionHistoryError(null);
     setSelectedVersionId("");
+    setPreviewingVersionId(null);
     setRestoringVersionId(null);
   }, [currentStorageId]);
+
+  useEffect(() => {
+    if (versionPreviewMeta?.versionId) {
+      setSelectedVersionId(versionPreviewMeta.versionId);
+    }
+  }, [versionPreviewMeta]);
 
   async function loadVersionHistory() {
     if (!currentStorageId) {
@@ -162,6 +189,24 @@ export function DocumentPanelPage({
       );
     } finally {
       setRestoringVersionId(null);
+    }
+  }
+
+  async function handlePreviewSelectedVersion() {
+    if (!currentStorageId || !selectedVersionId) {
+      return;
+    }
+
+    setPreviewingVersionId(selectedVersionId);
+    try {
+      await onPreviewVersion(currentStorageId, selectedVersionId, currentDocument);
+      setVersionHistoryError(null);
+    } catch (error) {
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't preview this version.",
+      );
+    } finally {
+      setPreviewingVersionId(null);
     }
   }
 
@@ -357,23 +402,64 @@ export function DocumentPanelPage({
                 <Button
                   type="button"
                   variant="primary"
-                  disabled={!selectedVersionId || restoringVersionId !== null}
+                  disabled={
+                    !selectedVersionId ||
+                    restoringVersionId !== null ||
+                    previewingVersionId !== null
+                  }
                   onClick={() => {
-                    void handleRestoreSelectedVersion();
+                    void handlePreviewSelectedVersion();
                   }}
                   className={styles.loadButton}
                 >
-                  {restoringVersionId === selectedVersionId ? "Restoring..." : "Restore"}
+                  {previewingVersionId === selectedVersionId ? "Previewing..." : "Preview"}
                 </Button>
               </div>
 
-              {selectedVersion ? (
+              {isVersionPreview && versionPreviewMeta ? (
+                <div className={styles.versionPreviewCard}>
+                  <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
+                    Viewing {formatVersionTimestamp(versionPreviewMeta.createdAt)}
+                  </p>
+                  <p className={styles.versionPreviewMeta} style={typographyStyles.p2}>
+                    Loaded from a {formatSaveSourceLabel(versionPreviewMeta.saveSource)} snapshot.
+                  </p>
+                  <div className={styles.versionPreviewActions}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={onExitVersionPreview}
+                    >
+                      Back to current
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      disabled={
+                        !selectedVersionId ||
+                        restoringVersionId !== null ||
+                        selectedVersionId !== versionPreviewMeta.versionId
+                      }
+                      onClick={() => {
+                        void handleRestoreSelectedVersion();
+                      }}
+                    >
+                      {restoringVersionId === versionPreviewMeta.versionId
+                        ? "Restoring..."
+                        : "Restore this version"}
+                    </Button>
+                  </div>
+                </div>
+              ) : selectedVersion ? (
                 <div className={styles.versionPreviewCard}>
                   <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
                     {formatVersionTimestamp(selectedVersion.createdAt)}
                   </p>
                   <p className={styles.versionPreviewMeta} style={typographyStyles.p2}>
                     Saved via {formatSaveSourceLabel(selectedVersion.saveSource)}.
+                  </p>
+                  <p className={styles.versionPreviewMeta} style={typographyStyles.p2}>
+                    Preview it in the editor, then decide whether to restore it.
                   </p>
                 </div>
               ) : (

@@ -19,10 +19,12 @@ import {
   deleteSavedEditorV2Document,
   listEditorV2DesignVersions,
   listSavedEditorV2Documents,
+  loadEditorV2DesignVersion,
   loadSavedEditorV2Document,
   restoreEditorV2DesignVersion,
   saveEditorV2Document,
   type EditorDesignVersionListItem,
+  type LoadEditorV2VersionResult,
   type SaveEditorV2DocumentResult,
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
@@ -54,6 +56,15 @@ const PENDING_SAVED_ROUTE_HANDOFF_STORAGE_KEY = "editor-v2-pending-saved-route";
 const SAVED_DOCUMENTS_PAGE_SIZE = 6;
 const AUTH_HANDOFF_LOCAL_RESTORE_DELAY_MS = 1500;
 const pendingSavedRouteHandoffCache = new Map<string, PendingSavedRouteHandoff>();
+
+interface VersionPreviewSession {
+  liveDocument: EditorDocumentState;
+  liveStorageId: string;
+  liveVersionToken: string | null;
+  previewVersionId: string;
+  previewCreatedAt: string;
+  previewSaveSource: LoadEditorV2VersionResult["saveSource"];
+}
 
 export function EditorV2Page({
   routeMode,
@@ -95,6 +106,8 @@ export function EditorV2Page({
   const [savedDocumentsErrorMessage, setSavedDocumentsErrorMessage] =
     useState<string | null>(null);
   const [setupErrorMessage, setSetupErrorMessage] = useState<string | null>(null);
+  const [versionPreviewSession, setVersionPreviewSession] =
+    useState<VersionPreviewSession | null>(null);
   const previousRouteRef = useRef<
     { mode: "entry" | "saved"; storageId: string | null } | undefined
   >(undefined);
@@ -127,6 +140,7 @@ export function EditorV2Page({
     setSelectedStorageId("");
     setSetupErrorMessage(null);
     setCanvasLoadingKey(null);
+    setVersionPreviewSession(null);
   }, []);
 
   const openEntryRoute = useCallback(
@@ -281,6 +295,7 @@ export function EditorV2Page({
       setSelectedStorageId(savedRecord.storageId);
       setCanvasLoadingKey("saved_route_handoff");
       setSetupModalOpen(false);
+      setVersionPreviewSession(null);
 
       if (navigationMode === "push") {
         router.push(nextRoute);
@@ -304,7 +319,7 @@ export function EditorV2Page({
     }: {
       document: EditorDocumentState;
       storageId: string;
-      versionToken: string;
+      versionToken: string | null;
       instanceKey: string;
       recoveredLocalChanges?: boolean;
       degradedLocalRecovery?: boolean;
@@ -328,6 +343,52 @@ export function EditorV2Page({
     },
     [],
   );
+
+  const previewVersionInWorkspace = useCallback(
+    async ({
+      storageId,
+      versionId,
+      currentDocument,
+    }: {
+      storageId: string;
+      versionId: string;
+      currentDocument: EditorDocumentState;
+    }) => {
+      const loadedVersion = await loadEditorV2DesignVersion(storageId, versionId);
+      const baseLiveDocument = versionPreviewSession?.liveDocument ?? currentDocument;
+      const baseLiveVersionToken =
+        versionPreviewSession?.liveVersionToken ?? currentServerVersion;
+      setVersionPreviewSession({
+        liveDocument: baseLiveDocument,
+        liveStorageId: storageId,
+        liveVersionToken: baseLiveVersionToken,
+        previewVersionId: loadedVersion.versionId,
+        previewCreatedAt: loadedVersion.createdAt,
+        previewSaveSource: loadedVersion.saveSource,
+      });
+      openLoadedDesignState({
+        document: loadedVersion.document,
+        storageId,
+        versionToken: baseLiveVersionToken ?? null,
+        instanceKey: `preview_${storageId}_${loadedVersion.versionId}_${Date.now()}`,
+      });
+    },
+    [currentServerVersion, openLoadedDesignState, versionPreviewSession],
+  );
+
+  const exitVersionPreview = useCallback(() => {
+    if (!versionPreviewSession) {
+      return;
+    }
+
+    openLoadedDesignState({
+      document: versionPreviewSession.liveDocument,
+      storageId: versionPreviewSession.liveStorageId,
+      versionToken: versionPreviewSession.liveVersionToken ?? null,
+      instanceKey: `preview_exit_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+    });
+    setVersionPreviewSession(null);
+  }, [openLoadedDesignState, versionPreviewSession]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -502,6 +563,7 @@ export function EditorV2Page({
   const loadDesignIntoWorkspace = useCallback(async (storageId: string) => {
     const instanceKey = `loaded_${storageId}_${Date.now()}`;
     setCanvasLoadingKey(instanceKey);
+    setVersionPreviewSession(null);
 
     try {
       const loaded = await loadSavedEditorV2Document(storageId);
@@ -657,6 +719,16 @@ export function EditorV2Page({
         initialRecoveredLocalChanges={initialRecoveredLocalChanges}
         initialDegradedLocalRecovery={initialDegradedLocalRecovery}
         initialLocalSnapshot={initialLocalSnapshot}
+        isVersionPreview={versionPreviewSession !== null}
+        versionPreviewMeta={
+          versionPreviewSession
+            ? {
+                versionId: versionPreviewSession.previewVersionId,
+                createdAt: versionPreviewSession.previewCreatedAt,
+                saveSource: versionPreviewSession.previewSaveSource,
+              }
+            : null
+        }
         saveMode={EDITOR_V2_SAVE_MODE}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
@@ -719,6 +791,16 @@ export function EditorV2Page({
           return savedRecord;
         }}
         onListVersions={async (storageId) => listEditorV2DesignVersions(storageId)}
+        onPreviewVersion={async (storageId, versionId, currentDocument) => {
+          await previewVersionInWorkspace({
+            storageId,
+            versionId,
+            currentDocument,
+          });
+        }}
+        onExitVersionPreview={() => {
+          exitVersionPreview();
+        }}
         onRestoreVersion={async (storageId, versionId) => {
           const restored = await restoreEditorV2DesignVersion(storageId, versionId);
           setSavedDocuments((existing) => {
@@ -739,6 +821,7 @@ export function EditorV2Page({
             nextSavedDocumentsOffsetRef.current,
             savedDocuments.length + 1,
           );
+          setVersionPreviewSession(null);
           openLoadedDesignState({
             document: restored.document,
             storageId: restored.storageId,

@@ -5,6 +5,7 @@ import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
 import type {
   EditorDesignVersionListItem,
+  LoadEditorV2VersionResult,
   RestoreEditorV2VersionResult,
   SaveEditorV2DocumentResult,
   SavedEditorV2DocumentRecord,
@@ -34,6 +35,8 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges,
   initialDegradedLocalRecovery,
   initialLocalSnapshot,
+  isVersionPreview,
+  versionPreviewMeta,
   saveMode,
   savedDocuments,
   savedDocumentsLoading,
@@ -46,6 +49,8 @@ export function EditorV2Workspace({
   onSaveDocument,
   onLoadDocument,
   onListVersions,
+  onPreviewVersion,
+  onExitVersionPreview,
   onRestoreVersion,
   onDeleteCurrentDesign,
   onStartOver,
@@ -60,6 +65,12 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges: boolean;
   initialDegradedLocalRecovery: boolean;
   initialLocalSnapshot: EditorV2LocalSnapshotRecord | null;
+  isVersionPreview: boolean;
+  versionPreviewMeta: {
+    versionId: string;
+    createdAt: string;
+    saveSource: LoadEditorV2VersionResult["saveSource"];
+  } | null;
   saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
@@ -73,9 +84,16 @@ export function EditorV2Workspace({
     document: EditorDocumentState,
     storageId?: string,
     baseVersion?: string | null,
+    saveSource?: "manual" | "autosave",
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onPreviewVersion: (
+    storageId: string,
+    versionId: string,
+    currentDocument: EditorDocumentState,
+  ) => Promise<void>;
+  onExitVersionPreview: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
@@ -101,6 +119,7 @@ export function EditorV2Workspace({
     initialRecoveredLocalChanges,
     initialDegradedLocalRecovery,
     initialLocalSnapshot,
+    isVersionPreview,
     saveMode,
     onSaveDocument,
   });
@@ -147,6 +166,19 @@ export function EditorV2Workspace({
             });
           }
         }}
+        onPreviewVersion={async (storageId, versionId, currentDocument) => {
+          try {
+            await onPreviewVersion(storageId, versionId, currentDocument);
+            setErrorNotification(null);
+          } catch (error) {
+            setErrorNotification({
+              title: "Couldn't preview version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
+          }
+        }}
+        onExitVersionPreview={onExitVersionPreview}
         onListVersions={onListVersions}
         onRestoreVersion={async (storageId, versionId) => {
           try {
@@ -195,6 +227,8 @@ export function EditorV2Workspace({
         recoveredLocalChanges={controllerState.recoveredLocalChanges}
         saveButtonState={controllerState.saveButtonState}
         saveMessage={controllerState.saveMessage}
+        isVersionPreview={isVersionPreview}
+        versionPreviewMeta={versionPreviewMeta}
         saveMode={saveMode}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}

@@ -16,6 +16,7 @@ import type {
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import type {
   EditorDesignVersionListItem,
+  LoadEditorV2VersionResult,
   RestoreEditorV2VersionResult,
   SavedEditorV2DocumentRecord,
 } from "../../../app/editorV2ServerPersistence";
@@ -48,10 +49,22 @@ interface EditorSidebarProps {
   onLoadMoreSavedDocuments: () => Promise<void> | void;
   currentStorageId: string;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onPreviewVersion: (
+    storageId: string,
+    versionId: string,
+    currentDocument: EditorDocumentState,
+  ) => Promise<void> | void;
+  onExitVersionPreview: () => void;
   onRestoreVersion: (
     storageId: string,
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
+  isVersionPreview: boolean;
+  versionPreviewMeta: {
+    versionId: string;
+    createdAt: string;
+    saveSource: LoadEditorV2VersionResult["saveSource"];
+  } | null;
   selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -110,7 +123,11 @@ export function EditorSidebar({
   onLoadMoreSavedDocuments,
   currentStorageId,
   onListVersions,
+  onPreviewVersion,
+  onExitVersionPreview,
   onRestoreVersion,
+  isVersionPreview,
+  versionPreviewMeta,
   selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
@@ -238,6 +255,7 @@ export function EditorSidebar({
             <DocumentPanelPage
               autoSaveEnabled={autoSaveEnabled}
               dispatch={dispatch}
+              currentDocument={document}
               documentTitle={documentTitle}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
@@ -257,7 +275,11 @@ export function EditorSidebar({
               onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
               currentStorageId={currentStorageId}
               onListVersions={onListVersions}
+              onPreviewVersion={onPreviewVersion}
+              onExitVersionPreview={onExitVersionPreview}
               onRestoreVersion={onRestoreVersion}
+              isVersionPreview={isVersionPreview}
+              versionPreviewMeta={versionPreviewMeta}
               selectedStorageId={selectedStorageId}
               setSelectedStorageId={setSelectedStorageId}
             />
