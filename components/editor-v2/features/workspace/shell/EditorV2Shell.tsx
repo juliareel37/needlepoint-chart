@@ -81,8 +81,8 @@ const HEADER_FILE_MENU_ITEMS = [
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
-  { id: "save-version", label: "Save version", icon: "/icons/lucide/save.svg" },
   { id: "version-history", label: "Version history", icon: "/icons/lucide/history.svg" },
+  { id: "save-version", label: "Save snapshot", icon: "/icons/lucide/save.svg" },
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
@@ -2113,7 +2113,6 @@ export function EditorV2Shell({
                     onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                     currentStorageId={currentStorageId}
                     onEnterVersionHistoryMode={onEnterVersionHistoryMode}
-                    onSaveVersionSnapshot={onSaveVersionSnapshot}
                     selectedStorageId={selectedStorageId}
                     setSelectedStorageId={setSelectedStorageId}
                     onLoadSelected={() => {

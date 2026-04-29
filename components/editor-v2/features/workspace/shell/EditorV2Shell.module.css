@@ -1303,6 +1303,8 @@
 
 .headerFileMenuSurface {
   transform-origin: top left;
+  max-height: 400px !important;
+  width: 220px !important;
 }
 
 .headerFileMenuItemLabel {
@@ -1340,6 +1342,9 @@
 
 .headerOverflowSurface {
   transform-origin: top right;
+  max-height: 350px !important;
+  height: 500px !important;
+  width: 180px !important;
 }
 
 .headerOverflowItemLabel {
