@@ -305,7 +305,18 @@ export function LibraryPageClient({
             updatedAt: saved.updatedAt,
             updatedLabel: "Edited just now",
             colorCount: countUsedColors(loaded.document.grid.cells),
+            previewUrl: loaded.document.trace?.previewUrl ?? null,
             thumbnailUrl: loaded.document.trace?.thumbnailUrl ?? null,
+            tracePlacement: loaded.document.trace
+              ? {
+                  imageWidth: loaded.document.trace.imageWidth,
+                  imageHeight: loaded.document.trace.imageHeight,
+                  offsetX: loaded.document.trace.offsetX,
+                  offsetY: loaded.document.trace.offsetY,
+                  scale: loaded.document.trace.scale,
+                  rotation: loaded.document.trace.rotation,
+                }
+              : null,
             stitchSnapshot: buildLibraryStitchSnapshot({
               gridWidth: loaded.document.grid.width,
               gridHeight: loaded.document.grid.height,
@@ -706,6 +717,8 @@ export function LibraryPageClient({
                         <div className={styles.thumbnail}>
                           <StitchThumbnailCanvas
                             snapshot={design.stitchSnapshot}
+                            traceThumbnailUrl={design.previewUrl}
+                            tracePlacement={design.tracePlacement}
                             className={styles.thumbnailCanvas}
                           />
                         </div>
@@ -803,6 +816,8 @@ export function LibraryPageClient({
                         <span className={styles.listThumbnailFrame}>
                           <StitchThumbnailCanvas
                             snapshot={design.stitchSnapshot}
+                            traceThumbnailUrl={design.previewUrl}
+                            tracePlacement={design.tracePlacement}
                             className={styles.listThumbnailCanvas}
                           />
                         </span>

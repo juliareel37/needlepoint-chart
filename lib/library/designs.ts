@@ -13,8 +13,19 @@ export interface LibraryDesignRecord {
   updatedAt: string;
   updatedLabel: string;
   colorCount: number | null;
+  previewUrl: string | null;
   thumbnailUrl: string | null;
+  tracePlacement: LibraryTracePlacement | null;
   stitchSnapshot: LibraryStitchSnapshot | null;
+}
+
+export interface LibraryTracePlacement {
+  imageWidth: number | null;
+  imageHeight: number | null;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  rotation: number;
 }
 
 export interface LibraryDesignPage {
@@ -73,7 +84,18 @@ export async function loadLibraryDesignPage({
         updatedAt: design.updatedAt.toISOString(),
         updatedLabel: formatUpdatedLabel(design.updatedAt),
         colorCount: parsed ? countUsedColors(parsed.grid.cells) : null,
+        previewUrl: parsed?.trace?.previewUrl ?? null,
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
+        tracePlacement: parsed?.trace
+          ? {
+              imageWidth: parsed.trace.imageWidth,
+              imageHeight: parsed.trace.imageHeight,
+              offsetX: parsed.trace.offsetX,
+              offsetY: parsed.trace.offsetY,
+              scale: parsed.trace.scale,
+              rotation: parsed.trace.rotation,
+            }
+          : null,
         stitchSnapshot: parsed
           ? buildLibraryStitchSnapshot({
               gridWidth: parsed.grid.width,
