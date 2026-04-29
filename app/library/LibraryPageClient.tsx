@@ -386,32 +386,6 @@ export function LibraryPageClient({
     );
   }
 
-  async function flushPendingDeletion() {
-    const currentPendingDeletion = pendingDeletionRef.current;
-
-    if (!currentPendingDeletion) {
-      return true;
-    }
-
-    clearPendingDeletionTimeout();
-
-    try {
-      await commitPendingDeletionToServer(currentPendingDeletion);
-      setPendingDeletion(null);
-      setSuccessNotification(null);
-      return true;
-    } catch (error) {
-      restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
-      setTotalCount(currentPendingDeletion.previousTotalCount);
-      setPendingDeletion(null);
-      setSuccessNotification(null);
-      setCardActionError(
-        error instanceof Error ? error.message : "Couldn't delete design.",
-      );
-      return false;
-    }
-  }
-
   function schedulePendingDeletion(
     nextPendingDeletion: PendingDeletion,
     notification: LibrarySuccessNotification,
@@ -460,6 +434,30 @@ export function LibraryPageClient({
     setSuccessNotification(null);
   }
 
+  function extendPendingDeletion(nextDesignIds: string[]) {
+    const currentPendingDeletion = pendingDeletionRef.current;
+
+    if (!currentPendingDeletion) {
+      return {
+        mergedPendingDeletion: null,
+        mergedCount: nextDesignIds.length,
+      };
+    }
+
+    const mergedDesignIds = Array.from(
+      new Set([...currentPendingDeletion.designIds, ...nextDesignIds]),
+    );
+
+    return {
+      mergedPendingDeletion: {
+        designIds: mergedDesignIds,
+        previousDesigns: currentPendingDeletion.previousDesigns,
+        previousTotalCount: currentPendingDeletion.previousTotalCount,
+      } satisfies PendingDeletion,
+      mergedCount: mergedDesignIds.length,
+    };
+  }
+
   async function handleConfirmDelete() {
     if (!deleteConfirmation) {
       return;
@@ -469,16 +467,14 @@ export function LibraryPageClient({
     setBulkDeletePending(true);
 
     try {
-      const flushedPendingDeletion = await flushPendingDeletion();
-
-      if (!flushedPendingDeletion) {
-        return;
-      }
-
       if (deleteConfirmation.kind === "single") {
         const designId = deleteConfirmation.design.id;
         const designTitle = deleteConfirmation.design.title;
-        const previousDesigns = designs;
+        const { mergedPendingDeletion, mergedCount } = extendPendingDeletion([designId]);
+        const previousDesigns =
+          mergedPendingDeletion?.previousDesigns ?? designs;
+        const previousTotalCount =
+          mergedPendingDeletion?.previousTotalCount ?? totalCount;
 
         setDesigns((existing) => existing.filter((record) => record.id !== designId));
         setSelectedDesignIds((current) => {
@@ -487,14 +483,18 @@ export function LibraryPageClient({
           return next;
         });
         schedulePendingDeletion(
-          {
+          mergedPendingDeletion ?? {
             designIds: [designId],
             previousDesigns,
-            previousTotalCount: totalCount,
+            previousTotalCount,
           },
           {
-            title: "Design deleted",
-            description: `"${designTitle}" was removed from your saved designs.`,
+            title:
+              mergedCount === 1 ? "Design deleted" : `Deleted ${mergedCount} designs`,
+            description:
+              mergedCount === 1
+                ? `"${designTitle}" was removed from your saved designs.`
+                : `${mergedCount} designs were removed from your saved designs.`,
           },
         );
         setTotalCount((current) => Math.max(0, current - 1));
@@ -502,30 +502,36 @@ export function LibraryPageClient({
         return;
       }
 
-      const previousDesigns = designs;
       const deletedCount = deleteConfirmation.designIds.length;
+      const { mergedPendingDeletion, mergedCount } = extendPendingDeletion(
+        deleteConfirmation.designIds,
+      );
+      const previousDesigns =
+        mergedPendingDeletion?.previousDesigns ?? designs;
+      const previousTotalCount =
+        mergedPendingDeletion?.previousTotalCount ?? totalCount;
       const idsToDelete = new Set(deleteConfirmation.designIds);
       setDesigns((existing) =>
         existing.filter((design) => !idsToDelete.has(design.id)),
       );
       setSelectedDesignIds(new Set<string>());
       schedulePendingDeletion(
-        {
+        mergedPendingDeletion ?? {
           designIds: [...deleteConfirmation.designIds],
           previousDesigns,
-          previousTotalCount: totalCount,
+          previousTotalCount,
         },
         {
           title:
-            deletedCount === 1 ? "Deleted 1 design" : `Deleted ${deletedCount} designs`,
+            mergedCount === 1 ? "Deleted 1 design" : `Deleted ${mergedCount} designs`,
           description:
-            deletedCount === 1
+            mergedCount === 1
               ? "The selected design was removed from your saved designs."
-              : "The selected designs were removed from your saved designs.",
+              : `${mergedCount} designs were removed from your saved designs.`,
         },
       );
       setTotalCount((current) =>
-        Math.max(0, current - deleteConfirmation.designIds.length),
+        Math.max(0, current - deletedCount),
       );
       setDeleteConfirmation(null);
     } catch (error) {
