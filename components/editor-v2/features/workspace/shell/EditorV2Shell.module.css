@@ -857,11 +857,12 @@
 .versionHistoryLayout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
-  gap: 24px;
+  /* gap: 24px; */
   height: 100%;
   min-height: 0;
-  padding: 24px;
+  /* padding: 24px; */
   background: var(--canvas-stage-bg);
+  /* background: grey; */
   /* background:
     radial-gradient(circle at top left, rgba(222, 214, 255, 0.5), transparent 30%),
     linear-gradient(180deg, #f8f6ff 0%, #f6f3ee 100%); */
@@ -872,7 +873,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border-radius: 28px;
+  /* border-radius: 28px; */
   overflow: hidden;
   /* border: 1px solid rgba(125, 96, 197, 0.16);
   background: rgba(255, 255, 255, 0.72);
@@ -888,6 +889,7 @@
 .versionHistoryPanel {
   min-height: 0;
   display: flex;
+  padding: 48px 40px 48px 0px;
 }
 
 .versionHistoryPanelCard {
@@ -907,7 +909,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 28px 28px 20px;
+  padding: 16px 24px;
   border-bottom: 1px solid rgba(125, 96, 197, 0.12);
 }
 
@@ -2909,15 +2911,19 @@
   .versionHistoryLayout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
-    padding: 16px;
+    gap: 0;
+    /* padding: 16px; */
   }
 
   .versionHistoryPanel {
     min-height: 0;
+    padding: 0px;
   }
 
   .versionHistoryPanelCard {
     max-height: 100%;
+    border-radius: 0px;
+    box-shadow: var(--ui-shadow-md);
   }
 
   .rail {
@@ -3148,13 +3154,13 @@
 }
 
 @media (max-width: 640px) {
-  .versionHistoryLayout {
+  /* .versionHistoryLayout {
     gap: 12px;
     padding: 12px;
-  }
+  } */
 
   .versionHistoryPanelHeader {
-    padding: 20px 20px 16px;
+    padding: 16px 24px;
   }
 
   .versionHistoryTimeline {

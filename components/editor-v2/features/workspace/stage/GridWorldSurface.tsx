@@ -313,6 +313,7 @@ export function GridWorldSurface({
     stageRef,
     stageSize,
     viewport,
+    viewportInteractionDisabled: interactionLocked,
     zoomAnchor,
   });
 

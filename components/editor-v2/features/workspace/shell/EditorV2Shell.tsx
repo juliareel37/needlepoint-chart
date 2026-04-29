@@ -1752,14 +1752,14 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && isVersionHistoryMode && headerTitleTarget
+      {/* {!setupModalOpen && isVersionHistoryMode && headerTitleTarget
         ? createPortal(
             <div className={styles.versionHistoryHeaderTitle} style={typographyStyles.h4}>
               Version history
             </div>,
             headerTitleTarget,
           )
-        : null}
+        : null} */}
       {!setupModalOpen && isVersionHistoryMode && headerActionsTarget
         ? createPortal(
             <Button

@@ -31,6 +31,7 @@ interface UseStagePanInteractionsOptions {
   stageRef: RefObject<HTMLDivElement | null>;
   stageSize: StageSize;
   viewport: ViewportState;
+  viewportInteractionDisabled?: boolean;
   zoomAnchor: { x: number; y: number } | null;
 }
 
@@ -42,6 +43,7 @@ export function useStagePanInteractions({
   stageRef,
   stageSize,
   viewport,
+  viewportInteractionDisabled = false,
   zoomAnchor,
 }: UseStagePanInteractionsOptions) {
   const ZOOM_INTERACTION_SETTLE_DELAY_MS = 120;
@@ -60,7 +62,8 @@ export function useStagePanInteractions({
   const zoomInteractionTimeoutRef = useRef<number | null>(null);
   const viewportRef = useRef(viewport);
   const zoomAnchorRef = useRef(zoomAnchor);
-  const panToolActive = activeTool === "pan" && !dragPanningDisabled;
+  const panToolActive =
+    activeTool === "pan" && !dragPanningDisabled && !viewportInteractionDisabled;
   const cursor = isPanDragging
     ? "grabbing"
     : activeTool === "eyedropper" || activeTool === "fill"
@@ -169,6 +172,10 @@ export function useStagePanInteractions({
   }, [dragPanningDisabled, stopPanDragging]);
 
   useEffect(() => {
+    if (viewportInteractionDisabled) {
+      return;
+    }
+
     const stageElement = stageRef.current;
 
     if (!stageElement) {
@@ -368,6 +375,7 @@ export function useStagePanInteractions({
     stageSize.width,
     scheduleZoomInteractionEnd,
     startPanDragging,
+    viewportInteractionDisabled,
   ]);
 
   useEffect(() => {
@@ -479,7 +487,10 @@ export function useStagePanInteractions({
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
     const isMiddleMouseButton = event.button === 1;
     const isSpaceDrag =
-      event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
+      event.button === 0 &&
+      isSpacePressedRef.current &&
+      !dragPanningDisabled &&
+      !viewportInteractionDisabled;
     const isPanToolDrag = event.button === 0 && panToolActive;
 
     if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
@@ -500,7 +511,10 @@ export function useStagePanInteractions({
     if (event.pointerType === "mouse") {
       const isMiddleMouseButton = event.button === 1;
       const isSpaceDrag =
-        event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
+        event.button === 0 &&
+        isSpacePressedRef.current &&
+        !dragPanningDisabled &&
+        !viewportInteractionDisabled;
       const isPanToolDrag = event.button === 0 && panToolActive;
 
       if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
@@ -518,7 +532,7 @@ export function useStagePanInteractions({
       return;
     }
 
-    if (dragPanningDisabled || !panToolActive) {
+    if (dragPanningDisabled || viewportInteractionDisabled || !panToolActive) {
       return;
     }
 
