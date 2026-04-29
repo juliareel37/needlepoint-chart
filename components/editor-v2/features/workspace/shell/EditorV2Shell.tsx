@@ -1775,12 +1775,7 @@ export function EditorV2Shell({
               }}
             >
               <ButtonIcon icon="/icons/lucide/rotate-ccw.svg"/>
-
-              {versionHistoryActionPendingId !== null &&
-              selectedVersionHistoryId !== "current" &&
-              versionHistoryActionPendingId === selectedVersionHistoryId
-                ? "Restoring..."
-                : "Restore this version"}
+              Restore this version
             </Button>,
             headerActionsTarget,
           )
@@ -1925,9 +1920,9 @@ export function EditorV2Shell({
                   <h2 className={styles.versionHistoryPanelTitle} style={typographyStyles.h3}>
                     Version history
                   </h2>
-                  <p className={styles.versionHistoryPanelHint} style={typographyStyles.p2}>
+                  {/* <p className={styles.versionHistoryPanelHint} style={typographyStyles.p2}>
                     Select a point in time to preview it on the canvas.
-                  </p>
+                  </p> */}
                 </div>
 
                 <div className={styles.versionHistoryTimeline} role="list" aria-label="Version history timeline">

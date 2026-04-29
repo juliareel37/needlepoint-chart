@@ -974,10 +974,14 @@
 .versionHistoryTimelineLine {
   position: absolute;
   left: 36px;
-  top: 28px;
-  bottom: -10px;
+  top: -18px;
+  bottom: -24px;
   width: 2px;
   background: var(--brand-200);
+}
+
+.versionHistoryTimeline > .versionHistoryTimelineItem:first-child .versionHistoryTimelineLine {
+  top: 31px;
 }
 
 .versionHistoryTimelineItem[data-last="true"] .versionHistoryTimelineLine {
