@@ -63,7 +63,11 @@ export function createEditorStateFromDocument(
         saving: false,
         loading: false,
         lastLoadedAt: now,
-        restoreSource: normalizedDocument.project.id ? "server" : "none",
+        restoreSource: normalizedDocument.metadata.persistedVersionId
+          ? "version-preview"
+          : normalizedDocument.project.id
+            ? "server"
+            : "none",
         versionPreview: null,
       },
     },

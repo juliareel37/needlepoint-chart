@@ -9,7 +9,11 @@ import {
 } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
-import type { SavedEditorV2DocumentRecord } from "../../../../app/editorV2ServerPersistence";
+import type {
+  EditorDesignVersionListItem,
+  RestoreEditorV2VersionResult,
+  SavedEditorV2DocumentRecord,
+} from "../../../../app/editorV2ServerPersistence";
 import { createSetProjectTitleCommand } from "../../workspaceCommands";
 import { SaveStatusCard } from "../SaveStatusCard";
 import styles from "../EditorV2Shell.module.css";
@@ -34,6 +38,12 @@ interface DocumentPanelPageProps {
   savedDocumentsLoadingMore: boolean;
   onOpenSavedDocuments: () => Promise<void> | void;
   onLoadMoreSavedDocuments: () => Promise<void> | void;
+  currentStorageId: string;
+  onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
@@ -58,12 +68,22 @@ export function DocumentPanelPage({
   savedDocumentsLoadingMore,
   onOpenSavedDocuments,
   onLoadMoreSavedDocuments,
+  currentStorageId,
+  onListVersions,
+  onRestoreVersion,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(documentTitle);
+  const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>([]);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  const [versionHistoryError, setVersionHistoryError] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState("");
+  const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null);
   const commitOnBlurRef = useRef(true);
+
+  const selectedVersion = versionHistory.find((version) => version.id === selectedVersionId) ?? null;
 
   function cancelRename() {
     setDraftTitle(documentTitle);
@@ -94,6 +114,56 @@ export function DocumentPanelPage({
 
     startRename();
   }, [documentTitle, renameRequestToken]);
+
+  useEffect(() => {
+    setVersionHistory([]);
+    setVersionHistoryError(null);
+    setSelectedVersionId("");
+    setRestoringVersionId(null);
+  }, [currentStorageId]);
+
+  async function loadVersionHistory() {
+    if (!currentStorageId) {
+      return;
+    }
+
+    setVersionHistoryLoading(true);
+    try {
+      const versions = await onListVersions(currentStorageId);
+      setVersionHistory(versions);
+      setVersionHistoryError(null);
+      setSelectedVersionId((current) =>
+        current && versions.some((version) => version.id === current)
+          ? current
+          : versions[0]?.id ?? "",
+      );
+    } catch (error) {
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't load version history.",
+      );
+    } finally {
+      setVersionHistoryLoading(false);
+    }
+  }
+
+  async function handleRestoreSelectedVersion() {
+    if (!currentStorageId || !selectedVersionId) {
+      return;
+    }
+
+    setRestoringVersionId(selectedVersionId);
+    try {
+      await onRestoreVersion(currentStorageId, selectedVersionId);
+      setVersionHistoryError(null);
+      await loadVersionHistory();
+    } catch (error) {
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't restore this version.",
+      );
+    } finally {
+      setRestoringVersionId(null);
+    }
+  }
 
   return (
     <section className={styles.sidebarSection}>
@@ -227,6 +297,99 @@ export function DocumentPanelPage({
           )}
 
         </div>
+
+        <div className={styles.sidebarSubsection}>
+          <div className={styles.sidebarSubsectionHeaderRow}>
+            <h3 style={typographyStyles.h5}>Version history</h3>
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="sm"
+              disabled={!currentStorageId || versionHistoryLoading}
+              onClick={() => {
+                void loadVersionHistory();
+              }}
+            >
+              {versionHistoryLoading ? "Loading..." : "Refresh"}
+            </Button>
+          </div>
+
+          {!currentStorageId ? (
+            <p className={styles.emptyMessage} style={typographyStyles.p2}>
+              Save this design to start tracking version history.
+            </p>
+          ) : (
+            <>
+              <div className={styles.loadDesignButtonRow}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
+                    Choose a version
+                  </p>
+                  <SingleSelectDropdown
+                    ariaLabel="Design version history"
+                    emptyLabel={
+                      versionHistoryLoading ? (
+                        <span className={styles.loadingDropdownState}>
+                          <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                          Loading version history...
+                        </span>
+                      ) : "No versions yet"
+                    }
+                    getItemLabel={formatVersionLabel}
+                    getItemValue={(record) => record.id}
+                    items={versionHistory}
+                    menuMaxHeight={240}
+                    menuMatchTriggerWidth
+                    minWidth={0}
+                    onOpenChange={(open) => {
+                      if (open && versionHistory.length === 0 && !versionHistoryLoading) {
+                        void loadVersionHistory();
+                      }
+                    }}
+                    onValueChange={setSelectedVersionId}
+                    placeholder={
+                      versionHistoryLoading ? "Loading version history..." : "Select a version"
+                    }
+                    value={selectedVersionId}
+                    wrapperStyle={{ width: "50vw" }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={!selectedVersionId || restoringVersionId !== null}
+                  onClick={() => {
+                    void handleRestoreSelectedVersion();
+                  }}
+                  className={styles.loadButton}
+                >
+                  {restoringVersionId === selectedVersionId ? "Restoring..." : "Restore"}
+                </Button>
+              </div>
+
+              {selectedVersion ? (
+                <div className={styles.versionPreviewCard}>
+                  <p className={styles.sidebarDocumentLabel} style={typographyStyles.p2}>
+                    {formatVersionTimestamp(selectedVersion.createdAt)}
+                  </p>
+                  <p className={styles.versionPreviewMeta} style={typographyStyles.p2}>
+                    Saved via {formatSaveSourceLabel(selectedVersion.saveSource)}.
+                  </p>
+                </div>
+              ) : (
+                <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                  The newest 50 versions are kept for this design.
+                </p>
+              )}
+
+              {versionHistoryError ? (
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  {versionHistoryError}
+                </p>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -322,4 +485,31 @@ function SavedDesignSingleSelect({
 
 function formatSavedDesignLabel(record: SavedEditorV2DocumentRecord): string {
   return `${record.title || "Untitled Design"} (${record.gridWidth}x${record.gridHeight})`;
+}
+
+function formatVersionLabel(record: EditorDesignVersionListItem): string {
+  return `${formatVersionTimestamp(record.createdAt)} • ${formatSaveSourceLabel(record.saveSource)}`;
+}
+
+function formatVersionTimestamp(value: string): string {
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatSaveSourceLabel(
+  value: EditorDesignVersionListItem["saveSource"],
+): string {
+  if (value === "AUTOSAVE") {
+    return "autosave";
+  }
+
+  if (value === "RESTORE") {
+    return "restore";
+  }
+
+  return "manual save";
 }

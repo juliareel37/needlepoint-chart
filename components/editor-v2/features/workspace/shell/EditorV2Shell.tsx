@@ -29,6 +29,10 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
+  EditorDesignVersionListItem,
+  RestoreEditorV2VersionResult,
+} from "../../../app/editorV2ServerPersistence";
+import type {
   DeleteButtonState,
   ExportButtonState,
   EditorV2ErrorNotification,
@@ -113,6 +117,8 @@ export function EditorV2Shell({
   onExportDocument,
   onSaveDocument,
   onLoadDocument,
+  onListVersions,
+  onRestoreVersion,
   onStartOver,
   recoveredLocalChanges,
   saveButtonState,
@@ -143,6 +149,11 @@ export function EditorV2Shell({
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
+  onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
   onStartOver: () => void;
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
@@ -1651,6 +1662,9 @@ export function EditorV2Shell({
                 savedDocumentsLoadingMore={savedDocumentsLoadingMore}
                 onOpenSavedDocuments={onOpenSavedDocuments}
                 onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
+                currentStorageId={currentStorageId}
+                onListVersions={onListVersions}
+                onRestoreVersion={onRestoreVersion}
                 selectedStorageId={selectedStorageId}
                 setSelectedStorageId={setSelectedStorageId}
                 onLoadSelected={() => {

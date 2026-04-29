@@ -17,9 +17,12 @@ import {
 import { EditorV2Workspace } from "./EditorV2Workspace";
 import {
   deleteSavedEditorV2Document,
+  listEditorV2DesignVersions,
   listSavedEditorV2Documents,
   loadSavedEditorV2Document,
+  restoreEditorV2DesignVersion,
   saveEditorV2Document,
+  type EditorDesignVersionListItem,
   type SaveEditorV2DocumentResult,
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
@@ -289,6 +292,43 @@ export function EditorV2Page({
     [resetCurrentDesignState, router, savedDocuments.length],
   );
 
+  const openLoadedDesignState = useCallback(
+    ({
+      document,
+      storageId,
+      versionToken,
+      instanceKey,
+      recoveredLocalChanges = false,
+      degradedLocalRecovery = false,
+      localSnapshot = null,
+    }: {
+      document: EditorDocumentState;
+      storageId: string;
+      versionToken: string;
+      instanceKey: string;
+      recoveredLocalChanges?: boolean;
+      degradedLocalRecovery?: boolean;
+      localSnapshot?: EditorV2LocalSnapshotRecord | null;
+    }) => {
+      setCurrentStorageId(storageId);
+      setCurrentServerVersion(versionToken);
+      setSelectedStorageId(storageId);
+      setInitialRecoveredLocalChanges(recoveredLocalChanges);
+      setInitialDegradedLocalRecovery(degradedLocalRecovery);
+      setInitialLocalSnapshot(localSnapshot);
+      setSetupErrorMessage(null);
+      setDesignConfig({
+        kind: "loaded",
+        document,
+        storageId,
+        instanceKey,
+      });
+      setCanvasLoadingKey(instanceKey);
+      setSetupModalOpen(false);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -473,25 +513,20 @@ export function EditorV2Page({
       const document = shouldRecover && localSnapshot
         ? localSnapshot.document
         : loaded.document;
-      setCurrentStorageId(loaded.storageId);
-      setCurrentServerVersion(loaded.versionToken);
-      setSelectedStorageId(storageId);
-      setInitialRecoveredLocalChanges(shouldRecover);
-      setInitialDegradedLocalRecovery(localSnapshot?.degradedLocalRecovery ?? false);
-      setInitialLocalSnapshot(shouldRecover ? localSnapshot : null);
-      setSetupErrorMessage(null);
-      setDesignConfig({
-        kind: "loaded",
+      openLoadedDesignState({
         document,
         storageId,
+        versionToken: loaded.versionToken,
         instanceKey,
+        recoveredLocalChanges: shouldRecover,
+        degradedLocalRecovery: localSnapshot?.degradedLocalRecovery ?? false,
+        localSnapshot: shouldRecover ? localSnapshot : null,
       });
-      setSetupModalOpen(false);
     } catch (error) {
       setCanvasLoadingKey(null);
       throw error;
     }
-  }, []);
+  }, [openLoadedDesignState]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -631,7 +666,12 @@ export function EditorV2Page({
         onLoadMoreSavedDocuments={loadMoreSavedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        onSaveDocument={async (document, storageId, baseVersion) => {
+        onSaveDocument={async (
+          document,
+          storageId,
+          baseVersion,
+          saveSource: "manual" | "autosave" = "manual",
+        ) => {
           if (!isLoaded || !isSignedIn) {
             openSignIn({
               redirectUrl: createEditorV2AuthHandoffRedirectUrl(
@@ -648,6 +688,7 @@ export function EditorV2Page({
             document,
             storageId,
             baseVersion,
+            saveSource,
           );
           setCurrentStorageId(savedRecord.storageId);
           setCurrentServerVersion(savedRecord.versionToken);
@@ -676,6 +717,36 @@ export function EditorV2Page({
           );
           router.replace(`/editor/designs/${savedRecord.storageId}`);
           return savedRecord;
+        }}
+        onListVersions={async (storageId) => listEditorV2DesignVersions(storageId)}
+        onRestoreVersion={async (storageId, versionId) => {
+          const restored = await restoreEditorV2DesignVersion(storageId, versionId);
+          setSavedDocuments((existing) => {
+            const nextRecord: SavedEditorV2DocumentRecord = {
+              storageId: restored.storageId,
+              title: restored.title,
+              gridWidth: restored.gridWidth,
+              gridHeight: restored.gridHeight,
+              updatedAt: restored.updatedAt,
+            };
+
+            return [
+              nextRecord,
+              ...existing.filter((record) => record.storageId !== nextRecord.storageId),
+            ];
+          });
+          nextSavedDocumentsOffsetRef.current = Math.max(
+            nextSavedDocumentsOffsetRef.current,
+            savedDocuments.length + 1,
+          );
+          openLoadedDesignState({
+            document: restored.document,
+            storageId: restored.storageId,
+            versionToken: restored.versionToken,
+            instanceKey: `restored_${restored.storageId}_${Date.now()}`,
+          });
+          router.replace(`/editor/designs/${restored.storageId}`);
+          return restored;
         }}
         onLoadDocument={async (record) => {
           setSelectedStorageId(record.storageId);
@@ -748,7 +819,12 @@ export function EditorV2Page({
 
                 try {
                   const persistedDraft = createPersistedDraftDocument(config);
-                  const savedRecord = await saveEditorV2Document(persistedDraft);
+                  const savedRecord = await saveEditorV2Document(
+                    persistedDraft,
+                    undefined,
+                    null,
+                    "manual",
+                  );
                   applySavedRouteState(persistedDraft, savedRecord, "push");
                 } catch (error) {
                   setSetupErrorMessage(

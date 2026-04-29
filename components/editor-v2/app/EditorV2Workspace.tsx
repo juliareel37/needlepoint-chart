@@ -4,6 +4,8 @@ import { useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
 import type {
+  EditorDesignVersionListItem,
+  RestoreEditorV2VersionResult,
   SaveEditorV2DocumentResult,
   SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
@@ -43,6 +45,8 @@ export function EditorV2Workspace({
   setSelectedStorageId,
   onSaveDocument,
   onLoadDocument,
+  onListVersions,
+  onRestoreVersion,
   onDeleteCurrentDesign,
   onStartOver,
   setupModal,
@@ -71,6 +75,11 @@ export function EditorV2Workspace({
     baseVersion?: string | null,
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
+  onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
   setupModal: ReactNode;
@@ -136,6 +145,25 @@ export function EditorV2Workspace({
               title: "Couldn't load design",
               description: getErrorMessage(error, "Try again in a moment."),
             });
+          }
+        }}
+        onListVersions={onListVersions}
+        onRestoreVersion={async (storageId, versionId) => {
+          try {
+            const restored = await onRestoreVersion(storageId, versionId);
+            setSuccessNotification({
+              title: "Version restored",
+              description: "The selected version is now the current design.",
+            });
+            setErrorNotification(null);
+            return restored;
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't restore version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
           }
         }}
         onDeleteCurrentDesign={async (document) => {

@@ -31,6 +31,31 @@ export interface SaveEditorV2DocumentResult {
   versionToken: string;
 }
 
+export interface EditorDesignVersionListItem {
+  id: string;
+  createdAt: string;
+  saveSource: "MANUAL" | "AUTOSAVE" | "RESTORE" | null;
+}
+
+export interface LoadEditorV2VersionResult {
+  versionId: string;
+  designId: string;
+  document: EditorDocumentState;
+  createdAt: string;
+  saveSource: "MANUAL" | "AUTOSAVE" | "RESTORE" | null;
+}
+
+export interface RestoreEditorV2VersionResult {
+  storageId: string;
+  title: string;
+  gridWidth: number;
+  gridHeight: number;
+  updatedAt: string;
+  versionToken: string;
+  restoredVersionId: string;
+  document: EditorDocumentState;
+}
+
 export interface LoadEditorV2DocumentResult {
   document: EditorDocumentState;
   versionToken: string;
@@ -160,6 +185,7 @@ export async function saveEditorV2Document(
   document: EditorDocumentState,
   storageId?: string,
   baseVersion?: string | null,
+  saveSource: "manual" | "autosave" = "manual",
 ): Promise<SaveEditorV2DocumentResult> {
   const response = await fetch(
     storageId ? `/api/editor-v2/designs/${storageId}` : "/api/editor-v2/designs",
@@ -172,6 +198,7 @@ export async function saveEditorV2Document(
       body: JSON.stringify({
         data: serializeEditorV2Document(document),
         baseVersion: baseVersion ?? null,
+        saveSource,
       }),
     },
   );
@@ -213,6 +240,148 @@ export async function saveEditorV2Document(
     createdAt: body.createdAt,
     updatedAt: body.updatedAt,
     versionToken: body.versionToken,
+  };
+}
+
+export async function listEditorV2DesignVersions(
+  storageId: string,
+): Promise<EditorDesignVersionListItem[]> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}/versions`, {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        versions?: Array<{
+          id: string;
+          createdAt: string;
+          saveSource: "MANUAL" | "AUTOSAVE" | "RESTORE" | null;
+        }>;
+        error?: string;
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't load version history.",
+      response.status,
+    );
+  }
+
+  return Array.isArray(body?.versions) ? body.versions : [];
+}
+
+export async function loadEditorV2DesignVersion(
+  storageId: string,
+  versionId: string,
+): Promise<LoadEditorV2VersionResult> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}/versions/${versionId}`, {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        versionId?: string;
+        designId?: string;
+        createdAt?: string;
+        saveSource?: "MANUAL" | "AUTOSAVE" | "RESTORE" | null;
+        data?: PersistedEditorV2DesignRecord["data"];
+        error?: string;
+      }
+    | null;
+
+  if (
+    !response.ok ||
+    !body?.versionId ||
+    !body.designId ||
+    !body.createdAt ||
+    !body.data
+  ) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't load this version.",
+      response.status,
+    );
+  }
+
+  const document = hydrateEditorV2Document({
+    id: body.designId,
+    createdAt: body.createdAt,
+    updatedAt: body.createdAt,
+    data: body.data,
+  });
+  document.metadata.persistedVersionId = body.versionId;
+
+  return {
+    versionId: body.versionId,
+    designId: body.designId,
+    createdAt: body.createdAt,
+    saveSource: body.saveSource ?? null,
+    document,
+  };
+}
+
+export async function restoreEditorV2DesignVersion(
+  storageId: string,
+  versionId: string,
+): Promise<RestoreEditorV2VersionResult> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}/versions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ versionId }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        storageId?: string;
+        title?: string;
+        gridWidth?: number;
+        gridHeight?: number;
+        updatedAt?: string;
+        versionToken?: string;
+        restoredVersionId?: string;
+        data?: PersistedEditorV2DesignRecord["data"];
+        error?: string;
+      }
+    | null;
+
+  if (
+    !response.ok ||
+    !body?.storageId ||
+    !body.title ||
+    typeof body.gridWidth !== "number" ||
+    typeof body.gridHeight !== "number" ||
+    !body.updatedAt ||
+    !body.versionToken ||
+    !body.restoredVersionId ||
+    !body.data
+  ) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't restore this version.",
+      response.status,
+      body?.versionToken ?? null,
+    );
+  }
+
+  const document = hydrateEditorV2Document({
+    id: body.storageId,
+    createdAt: body.updatedAt,
+    updatedAt: body.updatedAt,
+    data: body.data,
+  });
+  document.metadata.persistedVersionId = body.restoredVersionId;
+
+  return {
+    storageId: body.storageId,
+    title: body.title,
+    gridWidth: body.gridWidth,
+    gridHeight: body.gridHeight,
+    updatedAt: body.updatedAt,
+    versionToken: body.versionToken,
+    restoredVersionId: body.restoredVersionId,
+    document,
   };
 }
 

@@ -46,6 +46,7 @@ interface UseEditorV2PersistenceControllerArgs {
     document: EditorDocumentState,
     storageId?: string,
     baseVersion?: string | null,
+    saveSource?: "manual" | "autosave",
   ) => Promise<SaveEditorV2DocumentResult | null>;
 }
 
@@ -256,6 +257,7 @@ export function useEditorV2PersistenceController({
           document,
           storageIdRef.current || undefined,
           serverVersionRef.current,
+          reason,
         );
 
         if (!result) {

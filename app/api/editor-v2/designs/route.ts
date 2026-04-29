@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, SaveSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   normalizeProjectTitle,
   parsePersistedEditorV2Design,
 } from "@/lib/editor-v2/persistence/designs";
+import {
+  cleanupPrunedVersionBlobs,
+  createEditorDesignVersionSnapshot,
+  hashPersistedEditorV2Design,
+} from "@/lib/editor-v2/server/versioning";
+import { deleteBlobIfExists } from "@/lib/blob";
 import { loadLibraryDesignPage } from "@/lib/library/designs";
 
 export const runtime = "nodejs";
 
 const DEFAULT_LIMIT = 6;
 const MAX_LIMIT = 24;
+
+type SaveSourceInput = "manual" | "autosave";
+
+function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
+  return value === "autosave" ? SaveSource.AUTOSAVE : SaveSource.MANUAL;
+}
 
 export async function GET(req: Request) {
   const { userId } = await auth();
@@ -43,7 +55,7 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { data?: unknown }
+    | { data?: unknown; saveSource?: SaveSourceInput }
     | null;
   const data = parsePersistedEditorV2Design(body?.data);
 
@@ -52,24 +64,55 @@ export async function POST(req: Request) {
   }
 
   const title = normalizeProjectTitle(data.project.title);
-  const created = await prisma.editorDesign.create({
-    data: {
-      userId,
-      title,
-      data: data as unknown as Prisma.InputJsonValue,
-      gridWidth: data.grid.width,
-      gridHeight: data.grid.height,
-    },
+  const saveSource = toPrismaSaveSource(body?.saveSource);
+  const now = new Date();
+  const dataHash = hashPersistedEditorV2Design(data);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const createdDesign = await tx.editorDesign.create({
+      data: {
+        userId,
+        title,
+        data: data as unknown as Prisma.InputJsonValue,
+        gridWidth: data.grid.width,
+        gridHeight: data.grid.height,
+        lastSaveSource: saveSource,
+        lastVersionAt: now,
+        lastVersionHash: dataHash,
+      },
+    });
+
+    const prunedVersions = await createEditorDesignVersionSnapshot(tx, {
+      designId: createdDesign.id,
+      data,
+      dataHash,
+      saveSource,
+    });
+    const orphanedBlobUrls = await cleanupPrunedVersionBlobs({
+      client: tx,
+      designId: createdDesign.id,
+      currentDesignData: data,
+      prunedVersions,
+    });
+
+    return {
+      createdDesign,
+      orphanedBlobUrls,
+    };
   });
+
+  for (const url of created.orphanedBlobUrls) {
+    void deleteBlobIfExists(url);
+  }
 
   return NextResponse.json({
     ok: true,
-    id: created.id,
-    title: created.title,
-    gridWidth: created.gridWidth,
-    gridHeight: created.gridHeight,
-    createdAt: created.createdAt.toISOString(),
-    updatedAt: created.updatedAt.toISOString(),
-    versionToken: created.updatedAt.toISOString(),
+    id: created.createdDesign.id,
+    title: created.createdDesign.title,
+    gridWidth: created.createdDesign.gridWidth,
+    gridHeight: created.createdDesign.gridHeight,
+    createdAt: created.createdDesign.createdAt.toISOString(),
+    updatedAt: created.createdDesign.updatedAt.toISOString(),
+    versionToken: created.createdDesign.updatedAt.toISOString(),
   });
 }

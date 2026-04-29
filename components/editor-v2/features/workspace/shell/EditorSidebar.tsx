@@ -14,7 +14,11 @@ import type {
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
-import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
+import type {
+  EditorDesignVersionListItem,
+  RestoreEditorV2VersionResult,
+  SavedEditorV2DocumentRecord,
+} from "../../../app/editorV2ServerPersistence";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -42,6 +46,12 @@ interface EditorSidebarProps {
   savedDocumentsLoadingMore: boolean;
   onOpenSavedDocuments: () => Promise<void> | void;
   onLoadMoreSavedDocuments: () => Promise<void> | void;
+  currentStorageId: string;
+  onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
   selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -98,6 +108,9 @@ export function EditorSidebar({
   savedDocumentsLoadingMore,
   onOpenSavedDocuments,
   onLoadMoreSavedDocuments,
+  currentStorageId,
+  onListVersions,
+  onRestoreVersion,
   selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
@@ -242,6 +255,9 @@ export function EditorSidebar({
               savedDocumentsLoadingMore={savedDocumentsLoadingMore}
               onOpenSavedDocuments={onOpenSavedDocuments}
               onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
+              currentStorageId={currentStorageId}
+              onListVersions={onListVersions}
+              onRestoreVersion={onRestoreVersion}
               selectedStorageId={selectedStorageId}
               setSelectedStorageId={setSelectedStorageId}
             />

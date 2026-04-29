@@ -1,12 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SaveSource } from "@prisma/client";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
-const { authMock, countMock, findManyMock, createMock } = vi.hoisted(() => ({
+const {
+  authMock,
+  countMock,
+  findManyMock,
+  createMock,
+  versionCreateMock,
+  versionFindManyMock,
+  versionDeleteManyMock,
+  transactionMock,
+  deleteBlobIfExistsMock,
+} = vi.hoisted(() => ({
   authMock: vi.fn(),
   countMock: vi.fn(),
   findManyMock: vi.fn(),
   createMock: vi.fn(),
+  versionCreateMock: vi.fn(),
+  versionFindManyMock: vi.fn(),
+  versionDeleteManyMock: vi.fn(),
+  transactionMock: vi.fn(),
+  deleteBlobIfExistsMock: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -15,11 +31,31 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    $transaction: transactionMock,
     editorDesign: {
       count: countMock,
       findMany: findManyMock,
       create: createMock,
     },
+    editorDesignVersion: {
+      create: versionCreateMock,
+      findMany: versionFindManyMock,
+      deleteMany: versionDeleteManyMock,
+    },
+  },
+}));
+
+vi.mock("@/lib/blob", () => ({
+  deleteBlobIfExists: deleteBlobIfExistsMock,
+  extractEditorV2TraceBlobUrls: (data: unknown) => {
+    if (!data || typeof data !== "object") return [];
+    const trace = (data as { trace?: Record<string, unknown> }).trace;
+    if (!trace) return [];
+    return [
+      trace.previewUrl,
+      trace.thumbnailUrl,
+      trace.originalUrl,
+    ].filter((value): value is string => typeof value === "string");
   },
 }));
 
@@ -28,6 +64,19 @@ import { GET, POST } from "./route";
 describe("editor-v2 design collection routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        editorDesign: {
+          create: createMock,
+        },
+        editorDesignVersion: {
+          create: versionCreateMock,
+          findMany: versionFindManyMock,
+          deleteMany: versionDeleteManyMock,
+        },
+      }),
+    );
+    versionFindManyMock.mockResolvedValue([]);
   });
 
   it("rejects unauthenticated create requests", async () => {
@@ -100,7 +149,9 @@ describe("editor-v2 design collection routes", () => {
           updatedAt: "2026-04-16T12:00:00.000Z",
           updatedLabel: expect.any(String),
           colorCount: expect.any(Number),
+          previewUrl: null,
           thumbnailUrl: null,
+          tracePlacement: null,
           stitchSnapshot: {
             width: 20,
             height: 15,
@@ -193,6 +244,17 @@ describe("editor-v2 design collection routes", () => {
         data,
         gridWidth: 4,
         gridHeight: 3,
+        lastSaveSource: SaveSource.MANUAL,
+        lastVersionAt: expect.any(Date),
+        lastVersionHash: expect.any(String),
+      },
+    });
+    expect(versionCreateMock).toHaveBeenCalledWith({
+      data: {
+        designId: "design_123",
+        data,
+        dataHash: expect.any(String),
+        saveSource: SaveSource.MANUAL,
       },
     });
     expect(body).toEqual({
@@ -204,6 +266,39 @@ describe("editor-v2 design collection routes", () => {
       createdAt: "2026-04-16T12:00:00.000Z",
       updatedAt: "2026-04-16T12:00:00.000Z",
       versionToken: "2026-04-16T12:00:00.000Z",
+    });
+  });
+
+  it("creates the initial version with autosave metadata when requested", async () => {
+    const state = createNewDesignState(3, 3);
+    const data = serializeEditorV2Document(state.document);
+
+    authMock.mockResolvedValue({ userId: "user_1" });
+    createMock.mockResolvedValue({
+      id: "design_234",
+      title: "Untitled Design",
+      gridWidth: 3,
+      gridHeight: 3,
+      createdAt: new Date("2026-04-16T12:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:00:00.000Z"),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/editor-v2/designs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, saveSource: "autosave" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(versionCreateMock).toHaveBeenCalledWith({
+      data: {
+        designId: "design_234",
+        data,
+        dataHash: expect.any(String),
+        saveSource: SaveSource.AUTOSAVE,
+      },
     });
   });
 });
