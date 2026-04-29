@@ -7,6 +7,8 @@ import {
   Button,
   ButtonIcon,
   FieldInput,
+  Modal,
+  Notification,
   SegmentedControl,
   SingleSelectDropdown,
 } from "@/components/design-system";
@@ -36,6 +38,23 @@ const cardMenuItems = [
 type CardMenuItem = (typeof cardMenuItems)[number];
 type CardMenuAction = (typeof cardMenuItems)[number]["id"];
 type LibraryViewMode = "grid" | "list";
+type DeleteConfirmationState =
+  | {
+      kind: "single";
+      design: LibraryDesignRecord;
+    }
+  | {
+      kind: "bulk";
+      designIds: string[];
+    };
+type LibrarySuccessNotification = {
+  title: string;
+  description?: string;
+};
+type PendingDeletion = {
+  designIds: string[];
+  previousDesigns: LibraryDesignRecord[];
+};
 
 async function fetchLibraryPage(offset: number) {
   const searchParams = new URLSearchParams({
@@ -99,11 +118,18 @@ export function LibraryPageClient({
     () => new Set(),
   );
   const [bulkDeletePending, setBulkDeletePending] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] =
+    useState<DeleteConfirmationState | null>(null);
+  const [successNotification, setSuccessNotification] =
+    useState<LibrarySuccessNotification | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
   const [pendingCardAction, setPendingCardAction] = useState<{
     designId: string;
     action: CardMenuAction;
   } | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const pendingDeletionTimeoutRef = useRef<number | null>(null);
+  const pendingDeletionRef = useRef<PendingDeletion | null>(null);
 
   const loadingCards = useMemo(
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
@@ -112,6 +138,10 @@ export function LibraryPageClient({
   const selectedDesignCount = selectedDesignIds.size;
   const allLoadedDesignsSelected =
     designs.length > 0 && selectedDesignCount === designs.length;
+
+  useEffect(() => {
+    pendingDeletionRef.current = pendingDeletion;
+  }, [pendingDeletion]);
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError) {
@@ -162,6 +192,15 @@ export function LibraryPageClient({
     return () => observer.disconnect();
   }, [designs.length, hasMore, loadMoreError, loadingMore, nextOffset]);
 
+  useEffect(
+    () => () => {
+      if (pendingDeletionTimeoutRef.current !== null) {
+        window.clearTimeout(pendingDeletionTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   async function handleCreateDesign(config: EditorV2DesignConfigNew) {
     setCreatingDesign(true);
     setSetupErrorMessage(null);
@@ -195,6 +234,14 @@ export function LibraryPageClient({
       return;
     }
 
+    if (menuAction === "delete") {
+      setDeleteConfirmation({
+        kind: "single",
+        design,
+      });
+      return;
+    }
+
     setPendingCardAction({ designId: design.id, action: menuAction });
 
     try {
@@ -224,23 +271,6 @@ export function LibraryPageClient({
         return;
       }
 
-      if (menuAction === "delete") {
-        const confirmed = window.confirm(
-          `Delete "${design.title}" from your saved designs?`,
-        );
-
-        if (!confirmed) {
-          return;
-        }
-
-        await deleteSavedEditorV2Document(design.id);
-        setDesigns((existing) => existing.filter((record) => record.id !== design.id));
-        setSelectedDesignIds((current) => {
-          const next = new Set(current);
-          next.delete(design.id);
-          return next;
-        });
-      }
     } catch (error) {
       setCardActionError(
         error instanceof Error ? error.message : "Couldn't complete that action.",
@@ -274,20 +304,117 @@ export function LibraryPageClient({
     setSelectedDesignIds(new Set(designs.map((design) => design.id)));
   }
 
-  async function handleDeleteSelectedDesigns() {
+  function handleRequestDeleteSelectedDesigns() {
     if (selectedDesignIds.size === 0) {
       return;
     }
 
-    const designsToDelete = designs.filter((design) => selectedDesignIds.has(design.id));
-    const idsToDelete = new Set(designsToDelete.map((design) => design.id));
-    const confirmed = window.confirm(
-      `Delete ${designsToDelete.length} selected design${
-        designsToDelete.length === 1 ? "" : "s"
-      } from your saved designs?`,
-    );
+    setDeleteConfirmation({
+      kind: "bulk",
+      designIds: designs
+        .filter((design) => selectedDesignIds.has(design.id))
+        .map((design) => design.id),
+    });
+  }
 
-    if (!confirmed) {
+  function clearPendingDeletionTimeout() {
+    if (pendingDeletionTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(pendingDeletionTimeoutRef.current);
+    pendingDeletionTimeoutRef.current = null;
+  }
+
+  function restoreDesignSnapshot(previousDesigns: LibraryDesignRecord[]) {
+    setDesigns((current) => {
+      const snapshotIds = new Set(previousDesigns.map((design) => design.id));
+      const extras = current.filter((design) => !snapshotIds.has(design.id));
+      return [...previousDesigns, ...extras];
+    });
+  }
+
+  async function commitPendingDeletionToServer(nextPendingDeletion: PendingDeletion) {
+    await Promise.all(
+      nextPendingDeletion.designIds.map((designId) =>
+        deleteSavedEditorV2Document(designId),
+      ),
+    );
+  }
+
+  async function flushPendingDeletion() {
+    const currentPendingDeletion = pendingDeletionRef.current;
+
+    if (!currentPendingDeletion) {
+      return true;
+    }
+
+    clearPendingDeletionTimeout();
+
+    try {
+      await commitPendingDeletionToServer(currentPendingDeletion);
+      setPendingDeletion(null);
+      setSuccessNotification(null);
+      return true;
+    } catch (error) {
+      restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+      setPendingDeletion(null);
+      setSuccessNotification(null);
+      setCardActionError(
+        error instanceof Error ? error.message : "Couldn't delete design.",
+      );
+      return false;
+    }
+  }
+
+  function schedulePendingDeletion(
+    nextPendingDeletion: PendingDeletion,
+    notification: LibrarySuccessNotification,
+  ) {
+    clearPendingDeletionTimeout();
+    setPendingDeletion(nextPendingDeletion);
+    setSuccessNotification(notification);
+    pendingDeletionTimeoutRef.current = window.setTimeout(() => {
+      const currentPendingDeletion = pendingDeletionRef.current;
+
+      if (!currentPendingDeletion) {
+        return;
+      }
+
+      void commitPendingDeletionToServer(currentPendingDeletion)
+        .then(() => {
+          setPendingDeletion(null);
+          setSuccessNotification(null);
+        })
+        .catch((error) => {
+          restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+          setPendingDeletion(null);
+          setSuccessNotification(null);
+          setCardActionError(
+            error instanceof Error ? error.message : "Couldn't delete design.",
+          );
+        })
+        .finally(() => {
+          clearPendingDeletionTimeout();
+        });
+    }, 5000);
+  }
+
+  function handleUndoPendingDeletion() {
+    const currentPendingDeletion = pendingDeletionRef.current;
+
+    if (!currentPendingDeletion) {
+      return;
+    }
+
+    clearPendingDeletionTimeout();
+    restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
+    setPendingDeletion(null);
+    setSuccessNotification(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteConfirmation) {
       return;
     }
 
@@ -295,16 +422,62 @@ export function LibraryPageClient({
     setBulkDeletePending(true);
 
     try {
-      await Promise.all(
-        designsToDelete.map((design) => deleteSavedEditorV2Document(design.id)),
-      );
+      const flushedPendingDeletion = await flushPendingDeletion();
+
+      if (!flushedPendingDeletion) {
+        return;
+      }
+
+      if (deleteConfirmation.kind === "single") {
+        const designId = deleteConfirmation.design.id;
+        const designTitle = deleteConfirmation.design.title;
+        const previousDesigns = designs;
+
+        setDesigns((existing) => existing.filter((record) => record.id !== designId));
+        setSelectedDesignIds((current) => {
+          const next = new Set(current);
+          next.delete(designId);
+          return next;
+        });
+        schedulePendingDeletion(
+          {
+            designIds: [designId],
+            previousDesigns,
+          },
+          {
+            title: "Design deleted",
+            description: `"${designTitle}" was removed from your saved designs.`,
+          },
+        );
+        setDeleteConfirmation(null);
+        return;
+      }
+
+      const previousDesigns = designs;
+      const deletedCount = deleteConfirmation.designIds.length;
+      const idsToDelete = new Set(deleteConfirmation.designIds);
       setDesigns((existing) =>
         existing.filter((design) => !idsToDelete.has(design.id)),
       );
       setSelectedDesignIds(new Set<string>());
+      schedulePendingDeletion(
+        {
+          designIds: [...deleteConfirmation.designIds],
+          previousDesigns,
+        },
+        {
+          title:
+            deletedCount === 1 ? "Deleted 1 design" : `Deleted ${deletedCount} designs`,
+          description:
+            deletedCount === 1
+              ? "The selected design was removed from your saved designs."
+              : "The selected designs were removed from your saved designs.",
+        },
+      );
+      setDeleteConfirmation(null);
     } catch (error) {
       setCardActionError(
-        error instanceof Error ? error.message : "Couldn't delete selected designs.",
+        error instanceof Error ? error.message : "Couldn't delete design.",
       );
     } finally {
       setBulkDeletePending(false);
@@ -668,6 +841,64 @@ export function LibraryPageClient({
         </div>
       ) : null}
 
+      <Modal
+        isOpen={deleteConfirmation !== null}
+        title={
+          deleteConfirmation?.kind === "bulk"
+            ? `Delete ${deleteConfirmation.designIds.length} design${
+                deleteConfirmation.designIds.length === 1 ? "" : "s"
+              }?`
+            : "Delete this design?"
+        }
+        description={
+          deleteConfirmation?.kind === "bulk"
+            ? `This will permanently delete ${deleteConfirmation.designIds.length} selected design${
+                deleteConfirmation.designIds.length === 1 ? "" : "s"
+              } from your saved designs.`
+            : "This will permanently delete the selected design from your saved designs."
+        }
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel={
+          deleteConfirmation?.kind === "bulk"
+            ? bulkDeletePending
+              ? "Deleting..."
+              : deleteConfirmation.designIds.length === 1
+                ? "Delete design"
+                : "Delete designs"
+            : bulkDeletePending
+              ? "Deleting..."
+              : "Delete design"
+        }
+        confirmVariant="destructive"
+        onDismiss={() => {
+          if (bulkDeletePending) {
+            return;
+          }
+
+          setDeleteConfirmation(null);
+        }}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+        confirmDisabled={bulkDeletePending}
+        dismissDisabled={bulkDeletePending}
+      />
+
+      {successNotification ? (
+        <div className={styles.notificationOverlayTop}>
+          <div className={styles.notificationStack} data-auto-dismiss="true">
+            <Notification
+              tone="success"
+              title={successNotification.title}
+              description={successNotification.description}
+              actionLabel="Undo"
+              onAction={handleUndoPendingDeletion}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {selectedDesignCount > 0 ? (
         <div className={styles.bulkBarOverlay}>
           <div className={styles.bulkBar} role="toolbar" aria-label="Bulk actions">
@@ -703,7 +934,7 @@ export function LibraryPageClient({
               type="button"
               className={`${styles.bulkBarAction} ${styles.bulkBarDeleteAction}`}
               onClick={() => {
-                void handleDeleteSelectedDesigns();
+                handleRequestDeleteSelectedDesigns();
               }}
               disabled={bulkDeletePending}
             >

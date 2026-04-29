@@ -72,6 +72,30 @@
   margin-bottom: 18px;
 }
 
+.notificationOverlayTop {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: var(--z-notification);
+  width: min(320px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.notificationStack {
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.notificationStack[data-auto-dismiss="true"] {
+  animation: libraryNotificationFadeOut 5000ms ease forwards;
+}
+
+.notificationStack > * {
+  pointer-events: auto;
+}
+
 .bulkBarOverlay {
   position: fixed;
   left: 50%;
@@ -719,6 +743,19 @@
 
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes libraryNotificationFadeOut {
+  0%,
+  82% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
