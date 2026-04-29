@@ -774,6 +774,7 @@ export function EditorV2Page({
           storageId,
           baseVersion,
           saveSource: "manual" | "autosave" = "manual",
+          forceVersion = false,
         ) => {
           if (!isLoaded || !isSignedIn) {
             openSignIn({
@@ -792,6 +793,7 @@ export function EditorV2Page({
             storageId,
             baseVersion,
             saveSource,
+            forceVersion,
           );
           setCurrentStorageId(savedRecord.storageId);
           setCurrentServerVersion(savedRecord.versionToken);

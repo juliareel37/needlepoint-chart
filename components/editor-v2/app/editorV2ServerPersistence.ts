@@ -186,6 +186,7 @@ export async function saveEditorV2Document(
   storageId?: string,
   baseVersion?: string | null,
   saveSource: "manual" | "autosave" = "manual",
+  forceVersion = false,
 ): Promise<SaveEditorV2DocumentResult> {
   const response = await fetch(
     storageId ? `/api/editor-v2/designs/${storageId}` : "/api/editor-v2/designs",
@@ -198,6 +199,7 @@ export async function saveEditorV2Document(
       body: JSON.stringify({
         data: serializeEditorV2Document(document),
         baseVersion: baseVersion ?? null,
+        forceVersion,
         saveSource,
       }),
     },

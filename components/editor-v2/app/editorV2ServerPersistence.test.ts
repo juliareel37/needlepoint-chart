@@ -38,6 +38,7 @@ describe("editorV2ServerPersistence", () => {
       body: JSON.stringify({
         data: serializeEditorV2Document(document),
         baseVersion: "2026-04-16T11:00:00.000Z",
+        forceVersion: false,
         saveSource: "autosave",
       }),
     });
@@ -70,6 +71,46 @@ describe("editorV2ServerPersistence", () => {
       body: JSON.stringify({
         data: serializeEditorV2Document(document),
         baseVersion: null,
+        forceVersion: false,
+        saveSource: "manual",
+      }),
+    });
+  });
+
+  it("can request a forced manual version snapshot", async () => {
+    const document = createNewDesignState(2, 2).document;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "design_123",
+        title: "Untitled Design",
+        gridWidth: 2,
+        gridHeight: 2,
+        createdAt: "2026-04-16T12:00:00.000Z",
+        updatedAt: "2026-04-16T12:00:00.000Z",
+        versionToken: "2026-04-16T12:00:00.000Z",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveEditorV2Document(
+      document,
+      "design_123",
+      "2026-04-16T11:00:00.000Z",
+      "manual",
+      true,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/editor-v2/designs/design_123", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        data: serializeEditorV2Document(document),
+        baseVersion: "2026-04-16T11:00:00.000Z",
+        forceVersion: true,
         saveSource: "manual",
       }),
     });

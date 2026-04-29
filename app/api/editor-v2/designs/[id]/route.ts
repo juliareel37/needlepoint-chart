@@ -77,13 +77,19 @@ export async function PUT(req: Request, context: RouteContext) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { data?: unknown; baseVersion?: unknown; saveSource?: SaveSourceInput }
+    | {
+        data?: unknown;
+        baseVersion?: unknown;
+        forceVersion?: unknown;
+        saveSource?: SaveSourceInput;
+      }
     | null;
   const data = parsePersistedEditorV2Design(body?.data);
   if (!data) {
     return NextResponse.json({ error: "Invalid design payload" }, { status: 400 });
   }
   const saveSource = toPrismaSaveSource(body?.saveSource);
+  const forceVersion = body?.forceVersion === true;
   const dataHash = hashPersistedEditorV2Design(data);
   const now = new Date();
 
@@ -115,12 +121,14 @@ export async function PUT(req: Request, context: RouteContext) {
     );
   }
 
-  const shouldVersion = shouldCreateEditorDesignVersion({
-    saveSource,
-    dataHash,
-    existing,
-    now,
-  });
+  const shouldVersion =
+    (forceVersion && dataHash !== existing.lastVersionHash) ||
+    shouldCreateEditorDesignVersion({
+      saveSource,
+      dataHash,
+      existing,
+      now,
+    });
 
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.editorDesign.update({

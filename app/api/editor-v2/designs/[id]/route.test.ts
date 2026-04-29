@@ -170,6 +170,62 @@ describe("editor-v2 individual design routes", () => {
     });
   });
 
+  it("creates a version snapshot when forceVersion is requested in autosave mode", async () => {
+    const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
+
+    authMock.mockResolvedValue({ userId: "user_1" });
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      data: { trace: null },
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+      lastVersionAt: new Date("2026-04-16T12:09:00.000Z"),
+      lastVersionHash: "older_hash",
+    });
+    updateMock.mockResolvedValue({
+      id: "design_123",
+      title: "Untitled Design",
+      gridWidth: 5,
+      gridHeight: 6,
+      createdAt: new Date("2026-04-16T12:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+    });
+
+    const response = await PUT(
+      new Request("http://localhost", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data,
+          forceVersion: true,
+          saveSource: "autosave",
+        }),
+      }),
+      { params: { id: "design_123" } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateMock).toHaveBeenCalledWith({
+      where: { id: "design_123" },
+      data: {
+        title: "Untitled Design",
+        data,
+        gridWidth: 5,
+        gridHeight: 6,
+        lastSaveSource: SaveSource.AUTOSAVE,
+        lastVersionAt: expect.any(Date),
+        lastVersionHash: expect.any(String),
+      },
+    });
+    expect(versionCreateMock).toHaveBeenCalledWith({
+      data: {
+        designId: "design_123",
+        data,
+        dataHash: expect.any(String),
+        saveSource: SaveSource.AUTOSAVE,
+      },
+    });
+  });
+
   it("rejects stale baseVersion updates", async () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 

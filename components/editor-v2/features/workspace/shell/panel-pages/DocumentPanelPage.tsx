@@ -36,6 +36,7 @@ interface DocumentPanelPageProps {
   onLoadMoreSavedDocuments: () => Promise<void> | void;
   currentStorageId: string;
   onEnterVersionHistoryMode: () => void;
+  onSaveVersionSnapshot: () => Promise<void> | void;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
 }
@@ -62,6 +63,7 @@ export function DocumentPanelPage({
   onLoadMoreSavedDocuments,
   currentStorageId,
   onEnterVersionHistoryMode,
+  onSaveVersionSnapshot,
   selectedStorageId,
   setSelectedStorageId,
 }: DocumentPanelPageProps) {
@@ -241,16 +243,22 @@ export function DocumentPanelPage({
               Save this design to start tracking version history.
             </p>
           ) : (
-            <div 
-            // className={styles.versionHistoryEntryCard}
-            >
+            <div>
               {/* <p className={styles.versionHistoryEntryText} style={typographyStyles.p2}>
                 Open a dedicated version history view to preview older states and restore one when you're ready.
               </p> */}
-              <Button type="button" variant="secondary" onClick={onEnterVersionHistoryMode}>
-                <ButtonIcon icon="/icons/lucide/history.svg" className={styles.saveButtonIcon} />
-                View version history
-              </Button>
+              <div className={styles.panelRow}>
+                {saveMode === "autosave" ? (
+                  <Button type="button" variant="secondary" onClick={() => void onSaveVersionSnapshot()}>
+                    <ButtonIcon icon="/icons/lucide/save.svg" className={styles.saveButtonIcon} />
+                    Save version now
+                  </Button>
+                ) : null}
+                <Button type="button" variant="secondary" onClick={onEnterVersionHistoryMode}>
+                  <ButtonIcon icon="/icons/lucide/history.svg" className={styles.saveButtonIcon} />
+                  View version history
+                </Button>
+              </div>
             </div>
           )}
         </div>

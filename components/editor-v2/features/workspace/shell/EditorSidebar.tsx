@@ -46,6 +46,7 @@ interface EditorSidebarProps {
   onLoadMoreSavedDocuments: () => Promise<void> | void;
   currentStorageId: string;
   onEnterVersionHistoryMode: () => void;
+  onSaveVersionSnapshot: () => Promise<void> | void;
   selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -104,6 +105,7 @@ export function EditorSidebar({
   onLoadMoreSavedDocuments,
   currentStorageId,
   onEnterVersionHistoryMode,
+  onSaveVersionSnapshot,
   selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
@@ -250,6 +252,7 @@ export function EditorSidebar({
               onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
               currentStorageId={currentStorageId}
               onEnterVersionHistoryMode={onEnterVersionHistoryMode}
+              onSaveVersionSnapshot={onSaveVersionSnapshot}
               selectedStorageId={selectedStorageId}
               setSelectedStorageId={setSelectedStorageId}
             />

@@ -79,6 +79,7 @@ const HEADER_FILE_MENU_ITEMS = [
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "save-version", label: "Save version", icon: "/icons/lucide/save.svg" },
   { id: "version-history", label: "Version history", icon: "/icons/lucide/history.svg" },
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
@@ -119,6 +120,7 @@ export function EditorV2Shell({
   onDismissSuccessNotification,
   onExportDocument,
   onSaveDocument,
+  onSaveVersionSnapshot,
   onLoadDocument,
   onListVersions,
   onEnterVersionHistoryMode,
@@ -159,6 +161,7 @@ export function EditorV2Shell({
   onDismissSuccessNotification: () => void;
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
   onSaveDocument: (document: EditorDocumentState) => Promise<void> | void;
+  onSaveVersionSnapshot: () => Promise<void> | void;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
   onEnterVersionHistoryMode: () => void;
@@ -1178,6 +1181,13 @@ export function EditorV2Shell({
     ((saveMode === "autosave" && showSaveStatus) ||
       (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
   const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
+  const headerFileMenuItems = useMemo(
+    () =>
+      HEADER_FILE_MENU_ITEMS.filter((item) =>
+        saveMode === "autosave" ? true : item.id !== "save-version",
+      ),
+    [saveMode],
+  );
   const showLoggedOutTopBanner = !hasSavedDesignAccess && !saveBannerDismissed;
   const showTopSaveBanner = showLoggedOutTopBanner;
   const showSaveConfirmationOverlay =
@@ -1413,6 +1423,11 @@ export function EditorV2Shell({
       return;
     }
 
+    if (value === "save-version") {
+      void onSaveVersionSnapshot();
+      return;
+    }
+
     if (value === "download") {
       void onExportDocument(document);
       return;
@@ -1471,6 +1486,22 @@ export function EditorV2Shell({
           <span>
             {exportButtonState === "exporting" ? "Exporting..." : item.label}
           </span>
+        </span>
+      );
+    }
+
+    if (item.id === "save-version") {
+      return (
+        <span className={styles.headerOverflowItemLabel}>
+          {saveButtonState === "saving" ? (
+            <span className={styles.saveButtonSpinner} aria-hidden="true" />
+          ) : (
+            <ButtonIcon
+              icon="/icons/lucide/save.svg"
+              className={styles.saveButtonIcon}
+            />
+          )}
+          <span>{saveButtonState === "saving" ? "Saving version..." : item.label}</span>
         </span>
       );
     }
@@ -1539,7 +1570,7 @@ export function EditorV2Shell({
               <div className={styles.headerFileMenuGroup}>
                 <SingleSelectDropdown
                   ariaLabel="File actions"
-                  items={[...HEADER_FILE_MENU_ITEMS]}
+                  items={headerFileMenuItems}
                   value=""
                   placeholder="File"
                   triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
@@ -1553,6 +1584,8 @@ export function EditorV2Shell({
                   getItemValue={(item) => item.id}
                   getItemLabel={renderHeaderMenuItemLabel}
                   getItemDisabled={(item) =>
+                    (item.id === "save-version" &&
+                      (!hasSavedDesignAccess || saveButtonState === "saving")) ||
                     (item.id === "version-history" && !currentStorageId) ||
                     (item.id === "download" && exportButtonState === "exporting") ||
                     (item.id === "delete" && deleteButtonState === "deleting")
@@ -1973,7 +2006,9 @@ export function EditorV2Shell({
                               {isPending ? "Loading preview..." : formatVersionHistoryTimestamp(version.createdAt)}
                             </span>
                             <span className={styles.versionHistoryTimelineMeta}>
-                              {formatVersionHistorySaveSource(version.saveSource)}
+                              {formatVersionHistorySaveSource(version.saveSource, {
+                                isInitialSnapshot: index === versionHistory.length - 1,
+                              })}
                             </span>
                           </span>
                         </button>
@@ -2049,6 +2084,7 @@ export function EditorV2Shell({
                     onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
                     currentStorageId={currentStorageId}
                     onEnterVersionHistoryMode={onEnterVersionHistoryMode}
+                    onSaveVersionSnapshot={onSaveVersionSnapshot}
                     selectedStorageId={selectedStorageId}
                     setSelectedStorageId={setSelectedStorageId}
                     onLoadSelected={() => {
@@ -2218,7 +2254,12 @@ function formatVersionHistoryTimestamp(value: string): string {
 
 function formatVersionHistorySaveSource(
   value: EditorDesignVersionListItem["saveSource"],
+  options?: { isInitialSnapshot?: boolean },
 ): string {
+  if (options?.isInitialSnapshot && value === "MANUAL") {
+    return "Initial canvas state";
+  }
+
   if (value === "AUTOSAVE") {
     return "Autosave snapshot";
   }

@@ -90,6 +90,7 @@ export function EditorV2Workspace({
     storageId?: string,
     baseVersion?: string | null,
     saveSource?: "manual" | "autosave",
+    forceVersion?: boolean,
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
   onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
@@ -120,7 +121,8 @@ export function EditorV2Workspace({
   const [successNotification, setSuccessNotification] =
     useState<EditorV2SuccessNotification | null>(null);
 
-  const { controllerState, handleManualSave } = useEditorV2PersistenceController({
+  const { controllerState, handleManualSave, handleManualVersionSnapshot } =
+    useEditorV2PersistenceController({
     currentStorageId,
     currentServerVersion,
     hasSavedDesignAccess,
@@ -161,6 +163,10 @@ export function EditorV2Workspace({
         }}
         onSaveDocument={async (_nextDocument) => {
           await handleManualSave();
+          setErrorNotification(null);
+        }}
+        onSaveVersionSnapshot={async () => {
+          await handleManualVersionSnapshot();
           setErrorNotification(null);
         }}
         onLoadDocument={async (record) => {

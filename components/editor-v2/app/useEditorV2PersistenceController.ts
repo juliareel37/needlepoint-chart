@@ -24,6 +24,7 @@ import type { DocumentPatch } from "@/lib/editor-v2/editor/store";
 const LOCAL_FLUSH_DEBOUNCE_MS = 250;
 const SERVER_FLUSH_DEBOUNCE_MS = 2000;
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const MANUAL_VERSION_SNAPSHOT_SUCCESS_PREFIX = "Version saved at ";
 const MANUAL_SAVE_BUTTON_SUCCESS_DURATION_MS = 2500;
 
 export interface EditorV2PersistenceUiState {
@@ -49,6 +50,7 @@ interface UseEditorV2PersistenceControllerArgs {
     storageId?: string,
     baseVersion?: string | null,
     saveSource?: "manual" | "autosave",
+    forceVersion?: boolean,
   ) => Promise<SaveEditorV2DocumentResult | null>;
 }
 
@@ -199,6 +201,8 @@ export function useEditorV2PersistenceController({
       result: SaveEditorV2DocumentResult,
       sequenceId: number,
       hash: string,
+      reason: "manual" | "autosave",
+      forceVersion: boolean,
     ) => {
       const previousKey = localKeyRef.current;
       const currentDocument = store.getState().document;
@@ -221,7 +225,11 @@ export function useEditorV2PersistenceController({
         );
         setSaveButtonState("saved");
         setSaveMessage(
-          `${saveMode === "autosave" ? AUTOSAVE_SUCCESS_PREFIX : "Saved at "}${new Date(result.updatedAt).toLocaleTimeString([], {
+          `${forceVersion
+            ? MANUAL_VERSION_SNAPSHOT_SUCCESS_PREFIX
+            : reason === "autosave"
+              ? AUTOSAVE_SUCCESS_PREFIX
+              : "Saved at "}${new Date(result.updatedAt).toLocaleTimeString([], {
             hour: "numeric",
             minute: "2-digit",
           })}`,
@@ -240,17 +248,22 @@ export function useEditorV2PersistenceController({
         await deleteLocalSnapshot(previousKey);
       }
     },
-    [dispatch, persistSnapshot, saveMode, store],
+    [dispatch, persistSnapshot, store],
   );
 
   const performServerSave = useCallback(
-    async (reason: "manual" | "autosave", force = false) => {
+    async (
+      reason: "manual" | "autosave",
+      options?: { forceSave?: boolean; forceVersion?: boolean },
+    ) => {
+      const forceSave = options?.forceSave ?? false;
+      const forceVersion = options?.forceVersion ?? false;
       const document = store.getState().document;
       const { hash } = computeSerializedDocumentHash(document);
       const sequenceId = latestLocalSequenceIdRef.current;
 
       if (
-        !force &&
+        !forceSave &&
         reason === "autosave" &&
         hash === lastSerializedHashRef.current &&
         sequenceId <= latestSyncAppliedSequenceIdRef.current
@@ -275,6 +288,7 @@ export function useEditorV2PersistenceController({
           storageIdRef.current || undefined,
           serverVersionRef.current,
           reason,
+          forceVersion,
         );
 
         if (!result) {
@@ -284,7 +298,7 @@ export function useEditorV2PersistenceController({
           return;
         }
 
-        await applySuccessfulSave(result, sequenceId, hash);
+        await applySuccessfulSave(result, sequenceId, hash, reason, forceVersion);
       } catch (error) {
         const persistenceError = error as EditorV2PersistenceError | Error;
         const versionToken =
@@ -325,7 +339,16 @@ export function useEditorV2PersistenceController({
     }
 
     await flushLocalSnapshot();
-    await performServerSave("manual", true);
+    await performServerSave("manual", { forceSave: true });
+  }, [flushLocalSnapshot, isVersionHistoryMode, isVersionPreview, performServerSave]);
+
+  const handleManualVersionSnapshot = useCallback(async () => {
+    if (isVersionHistoryMode || isVersionPreview) {
+      return;
+    }
+
+    await flushLocalSnapshot();
+    await performServerSave("manual", { forceSave: true, forceVersion: true });
   }, [flushLocalSnapshot, isVersionHistoryMode, isVersionPreview, performServerSave]);
 
   useEffect(() => {
@@ -365,7 +388,9 @@ export function useEditorV2PersistenceController({
         }
 
         pendingLocalFlushRef.current = false;
-        void flushLocalSnapshot().then(() => performServerSave("autosave", true));
+        void flushLocalSnapshot().then(() =>
+          performServerSave("autosave", { forceSave: true }),
+        );
         return;
       }
 
@@ -436,7 +461,7 @@ export function useEditorV2PersistenceController({
       return;
     }
 
-    void performServerSave("autosave", true);
+    void performServerSave("autosave", { forceSave: true });
   }, [
     hasSavedDesignAccess,
     initialRecoveredLocalChanges,
@@ -489,6 +514,7 @@ export function useEditorV2PersistenceController({
   return {
     controllerState,
     handleManualSave,
+    handleManualVersionSnapshot,
   };
 }
 
