@@ -10,6 +10,7 @@ export interface LibraryDesignRecord {
   title: string;
   gridWidth: number;
   gridHeight: number;
+  createdAt: string;
   updatedAt: string;
   updatedLabel: string;
   colorCount: number | null;
@@ -61,6 +62,7 @@ export async function loadLibraryDesignPage({
         title: true,
         gridWidth: true,
         gridHeight: true,
+        createdAt: true,
         updatedAt: true,
         data: true,
       },
@@ -81,6 +83,7 @@ export async function loadLibraryDesignPage({
           : normalizeProjectTitle(design.title),
         gridWidth: design.gridWidth,
         gridHeight: design.gridHeight,
+        createdAt: design.createdAt.toISOString(),
         updatedAt: design.updatedAt.toISOString(),
         updatedLabel: formatUpdatedLabel(design.updatedAt),
         colorCount: parsed ? countUsedColors(parsed.grid.cells) : null,

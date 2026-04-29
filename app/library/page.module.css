@@ -247,6 +247,49 @@
   width: auto;
 }
 
+.viewControls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sortDropdown {
+  position: relative;
+}
+
+.sortTrigger {
+  min-width: 0 !important;
+  padding-inline: 10px !important;
+}
+
+.sortTriggerLabel {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sortTriggerPrefix {
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.sortTriggerValue {
+  min-width: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.sortMenu {
+  min-width: 210px;
+}
+
 .viewToggleItem {
   min-width: 34px;
   padding: 4px 10px;
@@ -393,6 +436,7 @@
   color: var(--text-tertiary);
 }
 
+.card:has(.cardSelectionInputCard:focus-visible),
 .card:has(.cardSelectionInput:focus-visible),
 .card:has(.cardTitleLink:focus-visible),
 .card:has(.cardDetailsLink:focus-visible) {
@@ -401,6 +445,7 @@
 }
 
 .card {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--ui-border-reg);
   border-radius: 20px;
@@ -432,6 +477,15 @@
 }
 
 .cardSelectionInput {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cardSelectionInputCard {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -591,6 +645,8 @@
 }
 
 .cardMenuAnchor {
+  position: relative;
+  z-index: 3;
   flex: 0 0 auto;
 }
 
@@ -728,12 +784,20 @@
   }
 }
 
+.card[data-touch-open="true"] {
+  cursor: pointer;
+}
+
+.card:has(.cardSelectionInputCard:focus-visible) .thumbnailCanvas,
 .card:has(.cardSelectionInput:focus-visible) .thumbnailCanvas,
 .card:has(.cardTitleLink:focus-visible) .thumbnailCanvas,
 .card:has(.cardDetailsLink:focus-visible) .thumbnailCanvas {
   transform: scale(1.08);
 }
 
+.card[data-touch-selection-mode="true"] .thumbnail::after,
+.card:has(.cardSelectionInputCard:focus-visible) .thumbnail::after,
+.card[data-selected="true"] .thumbnail::after,
 .card:has(.cardSelectionInput:focus-visible) .thumbnail::after,
 .card:has(.cardTitleLink:focus-visible) .thumbnail::after,
 .card:has(.cardDetailsLink:focus-visible) .thumbnail::after,
@@ -742,6 +806,9 @@
   opacity: 1;
 }
 
+.card[data-touch-selection-mode="true"] .cardCheckbox,
+.card[data-selected="true"] .cardCheckbox,
+.card:has(.cardSelectionInputCard:focus-visible) .cardCheckbox,
 .card:has(.cardCheckboxInput:focus-visible) .cardCheckbox,
 .card:has(.cardCheckboxInput:checked) .cardCheckbox,
 .card:has(.cardSelectionInput:focus-visible) .cardCheckbox {
@@ -826,6 +893,11 @@
     flex-wrap: wrap;
   }
 
+  .viewControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .bulkBar {
     width: 100%;
     max-width: none;
@@ -885,6 +957,20 @@
     align-items: flex-start;
   }
 
+  .viewControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sortTrigger {
+    max-width: min(58vw, 240px);
+  }
+
+  .sortTriggerValue {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .bulkBar {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -920,6 +1006,7 @@
   .grid {
     /* grid-template-columns: 1fr; */
     gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .listView {

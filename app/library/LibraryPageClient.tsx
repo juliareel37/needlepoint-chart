@@ -35,9 +35,18 @@ const cardMenuItems = [
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
+const sortOptions = [
+  { id: "updated-desc", label: "Last edited date" },
+  { id: "created-desc", label: "Created date" },
+  { id: "name-asc", label: "Name" },
+  { id: "size-desc", label: "Size" },
+  { id: "colors-desc", label: "Num colors" },
+] as const;
 
 type CardMenuItem = (typeof cardMenuItems)[number];
 type CardMenuAction = (typeof cardMenuItems)[number]["id"];
+type SortOption = (typeof sortOptions)[number];
+type LibrarySortMode = SortOption["id"];
 type LibraryViewMode = "grid" | "list";
 type DeleteConfirmationState =
   | {
@@ -57,6 +66,10 @@ type PendingDeletion = {
   previousDesigns: LibraryDesignRecord[];
   previousTotalCount: number;
 };
+type NavigableDesignClickEvent = Pick<
+  MouseEvent,
+  "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "preventDefault"
+>;
 
 function countUsedColors(cells: Array<string | null>) {
   return new Set(cells.filter((cellId): cellId is string => Boolean(cellId))).size;
@@ -125,6 +138,7 @@ export function LibraryPageClient({
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [cardActionError, setCardActionError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<LibraryViewMode>("grid");
+  const [sortMode, setSortMode] = useState<LibrarySortMode>("updated-desc");
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -139,6 +153,8 @@ export function LibraryPageClient({
     action: CardMenuAction;
   } | null>(null);
   const [openingDesignId, setOpeningDesignId] = useState<string | null>(null);
+  const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
+  const [touchSelectionMode, setTouchSelectionMode] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const pendingDeletionTimeoutRef = useRef<number | null>(null);
   const pendingDeletionRef = useRef<PendingDeletion | null>(null);
@@ -148,6 +164,45 @@ export function LibraryPageClient({
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
     [],
   );
+  const sortedDesigns = useMemo(() => {
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+
+    return [...designs].sort((left, right) => {
+      if (sortMode === "updated-desc") {
+        return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+      }
+
+      if (sortMode === "created-desc") {
+        return Date.parse(right.createdAt) - Date.parse(left.createdAt);
+      }
+
+      if (sortMode === "name-asc") {
+        return collator.compare(left.title, right.title);
+      }
+
+      if (sortMode === "size-desc") {
+        const sizeDifference =
+          right.gridWidth * right.gridHeight - left.gridWidth * left.gridHeight;
+        if (sizeDifference !== 0) {
+          return sizeDifference;
+        }
+
+        return collator.compare(left.title, right.title);
+      }
+
+      const leftColorCount = left.colorCount ?? -1;
+      const rightColorCount = right.colorCount ?? -1;
+      const colorDifference = rightColorCount - leftColorCount;
+      if (colorDifference !== 0) {
+        return colorDifference;
+      }
+
+      return collator.compare(left.title, right.title);
+    });
+  }, [designs, sortMode]);
   const selectedDesignCount = selectedDesignIds.size;
   const allLoadedDesignsSelected =
     designs.length > 0 && selectedDesignCount === designs.length;
@@ -218,8 +273,60 @@ export function LibraryPageClient({
     [],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(any-pointer: coarse)");
+    const hoverPointerQuery = window.matchMedia("(any-hover: hover)");
+    const primaryCoarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const primaryHoverQuery = window.matchMedia("(hover: hover)");
+
+    const update = () => {
+      const hasTouchPoints =
+        typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+      const hasCoarsePointer =
+        coarsePointerQuery.matches || primaryCoarsePointerQuery.matches || hasTouchPoints;
+      const hasHoverPointer =
+        hoverPointerQuery.matches || primaryHoverQuery.matches;
+
+      setTouchPrimaryInput(hasCoarsePointer && !hasHoverPointer);
+    };
+
+    update();
+
+    const queries = [
+      coarsePointerQuery,
+      hoverPointerQuery,
+      primaryCoarsePointerQuery,
+      primaryHoverQuery,
+    ];
+
+    const addListener = (query: MediaQueryList) => {
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+      }
+
+      query.addListener(update);
+      return () => query.removeListener(update);
+    };
+
+    const cleanups = queries.map(addListener);
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!touchPrimaryInput && touchSelectionMode) {
+      setTouchSelectionMode(false);
+    }
+  }, [touchPrimaryInput, touchSelectionMode]);
+
   function navigateToDesign(
-    event: Pick<MouseEvent, "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "preventDefault">,
+    event: NavigableDesignClickEvent,
     designId: string,
   ) {
     if (
@@ -246,6 +353,35 @@ export function LibraryPageClient({
     designOpenTimeoutRef.current = window.setTimeout(() => {
       router.push(`/editor/designs/${designId}`);
     }, DESIGN_OPEN_TRANSITION_MS);
+  }
+
+  function handleTouchSelectionModeToggle() {
+    setTouchSelectionMode((current) => {
+      if (current) {
+        setSelectedDesignIds(new Set<string>());
+      }
+
+      return !current;
+    });
+  }
+
+  function handleTouchCardOpen(
+    event: React.MouseEvent<HTMLElement>,
+    designId: string,
+  ) {
+    if (event.defaultPrevented || touchSelectionMode || !touchPrimaryInput) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("[data-card-menu='true']")
+    ) {
+      return;
+    }
+
+    navigateToDesign(event.nativeEvent, designId);
   }
 
   async function handleCreateDesign(config: EditorV2DesignConfigNew) {
@@ -302,6 +438,7 @@ export function LibraryPageClient({
             title: saved.title,
             gridWidth: saved.gridWidth,
             gridHeight: saved.gridHeight,
+            createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
             updatedLabel: "Edited just now",
             colorCount: countUsedColors(loaded.document.grid.cells),
@@ -587,7 +724,7 @@ export function LibraryPageClient({
 
   function renderDesignMenu(design: LibraryDesignRecord) {
     return (
-      <div className={styles.cardMenuAnchor}>
+      <div className={styles.cardMenuAnchor} data-card-menu="true">
         <SingleSelectDropdown<CardMenuItem>
           ariaLabel={`Actions for ${design.title}`}
           items={[...cardMenuItems]}
@@ -614,6 +751,9 @@ export function LibraryPageClient({
       </div>
     );
   }
+
+  const selectedSortOption =
+    sortOptions.find((option) => option.id === sortMode) ?? sortOptions[0];
 
   return (
     <main
@@ -671,36 +811,92 @@ export function LibraryPageClient({
             <span className={styles.viewSummaryCount}>({totalCount})</span>
           </div>
 
-          <SegmentedControl<LibraryViewMode>
-            ariaLabel="Design library view"
-            className={styles.viewToggle}
-            itemClassName={styles.viewToggleItem}
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              {
-                value: "list",
-                label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
-              },
-              {
-                value: "grid",
-                label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
-              },
-            ]}
-          />
+          <div className={styles.viewControls}>
+            <SingleSelectDropdown<SortOption>
+              ariaLabel="Sort designs"
+              items={[...sortOptions]}
+              value={sortMode}
+              placeholder="Sort"
+              triggerVariant="ghost"
+              triggerLabel={
+                <span className={styles.sortTriggerLabel}>
+                  <span className={styles.sortTriggerPrefix}>Sort</span>
+                  <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
+                </span>
+              }
+              getItemValue={(item) => item.id}
+              getItemLabel={(item) => item.label}
+              onValueChange={(value) => {
+                setSortMode(value as LibrarySortMode);
+              }}
+              triggerClassName={styles.sortTrigger}
+              wrapperClassName={styles.sortDropdown}
+              menuClassName={styles.sortMenu}
+              minWidth="auto"
+              menuPlacement="bottom-end"
+              menuPortalToViewport
+              openOnHover={!touchPrimaryInput}
+            />
+
+            <SegmentedControl<LibraryViewMode>
+              ariaLabel="Design library view"
+              className={styles.viewToggle}
+              itemClassName={styles.viewToggleItem}
+              value={viewMode}
+              onChange={setViewMode}
+              options={[
+                {
+                  value: "list",
+                  label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
+                },
+                {
+                  value: "grid",
+                  label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
+                },
+              ]}
+            />
+
+            {touchPrimaryInput ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                active={touchSelectionMode}
+                onClick={handleTouchSelectionModeToggle}
+              >
+                <ButtonIcon
+                  icon={
+                    touchSelectionMode
+                      ? "/icons/lucide/x.svg"
+                      : "/icons/lucide/square-check.svg"
+                  }
+                />
+                {touchSelectionMode ? "Done" : "Select"}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {designs.length > 0 ? (
           <>
             {viewMode === "grid" ? (
               <section className={styles.grid} aria-label="Saved designs">
-                {designs.map((design) => {
+                {sortedDesigns.map((design) => {
                   const isSelected = selectedDesignIds.has(design.id);
+                  const cardSelectable = !touchPrimaryInput || touchSelectionMode;
                   return (
-                    <article key={design.id} className={styles.card}>
-                      <label
-                        className={`${styles.thumbnailShell} ${styles.cardSelectionSurface}`}
-                      >
+                    <article
+                      key={design.id}
+                      className={styles.card}
+                      data-selectable={cardSelectable ? "true" : "false"}
+                      data-selected={isSelected ? "true" : "false"}
+                      data-touch-open={touchPrimaryInput && !touchSelectionMode ? "true" : "false"}
+                      data-touch-selection-mode={
+                        touchPrimaryInput && touchSelectionMode ? "true" : "false"
+                      }
+                      onClick={(event) => handleTouchCardOpen(event, design.id)}
+                    >
+                      {touchPrimaryInput && touchSelectionMode ? (
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -710,9 +906,28 @@ export function LibraryPageClient({
                               event.currentTarget.checked,
                             );
                           }}
-                          className={styles.cardSelectionInput}
+                          className={styles.cardSelectionInputCard}
                           aria-label={`Select ${design.title}`}
                         />
+                      ) : null}
+
+                      <div
+                        className={`${styles.thumbnailShell} ${styles.cardSelectionSurface}`}
+                      >
+                        {!touchPrimaryInput ? (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(event) => {
+                              handleDesignSelectionChange(
+                                design.id,
+                                event.currentTarget.checked,
+                              );
+                            }}
+                            className={styles.cardSelectionInput}
+                            aria-label={`Select ${design.title}`}
+                          />
+                        ) : null}
 
                         <div className={styles.thumbnail}>
                           <StitchThumbnailCanvas
@@ -723,21 +938,23 @@ export function LibraryPageClient({
                           />
                         </div>
 
-                        <span className={styles.cardCheckbox}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            className={styles.cardCheckboxInput}
-                            readOnly
-                            tabIndex={-1}
-                            aria-hidden="true"
-                          />
-                          <span
-                            className={styles.cardCheckboxIndicator}
-                            aria-hidden="true"
-                          />
-                        </span>
-                      </label>
+                        {cardSelectable ? (
+                          <span className={styles.cardCheckbox}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              className={styles.cardCheckboxInput}
+                              readOnly
+                              tabIndex={-1}
+                              aria-hidden="true"
+                            />
+                            <span
+                              className={styles.cardCheckboxIndicator}
+                              aria-hidden="true"
+                            />
+                          </span>
+                        ) : null}
+                      </div>
 
                       <div className={styles.cardBody}>
                         <div className={styles.cardTopRow}>
@@ -806,7 +1023,7 @@ export function LibraryPageClient({
                 </div>
 
                 <div className={styles.listBody}>
-                  {designs.map((design) => (
+                  {sortedDesigns.map((design) => (
                     <article key={design.id} className={styles.listRow}>
                       <Link
                         href={`/editor/designs/${design.id}`}

@@ -1832,7 +1832,7 @@ function SaveButtonLabel({
   ) : (
     <>
       <ButtonIcon icon="/icons/lucide/alert.svg" data-state="alert" className={styles.alertButtonIcon} />
-      Sign in to save
+      Sign in or create an account to save your work.
     </>
   );
 }
