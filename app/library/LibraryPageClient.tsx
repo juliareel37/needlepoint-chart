@@ -496,6 +496,9 @@ export function LibraryPageClient({
 
   function handleClearSelection() {
     setSelectedDesignIds(new Set<string>());
+    if (touchPrimaryInput) {
+      setTouchSelectionMode(false);
+    }
   }
 
   function handleSelectAllDesigns() {
