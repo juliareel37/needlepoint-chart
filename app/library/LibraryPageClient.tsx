@@ -386,6 +386,26 @@ export function LibraryPageClient({
     navigateToDesign(event.nativeEvent, designId);
   }
 
+  function handleTouchListRowSelect(
+    event: React.MouseEvent<HTMLElement>,
+    designId: string,
+  ) {
+    if (!touchPrimaryInput || !touchSelectionMode) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("[data-card-menu='true']")
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    handleDesignSelectionChange(designId, !selectedDesignIds.has(designId));
+  }
+
   async function handleCreateDesign(config: EditorV2DesignConfigNew) {
     setCreatingDesign(true);
     setSetupErrorMessage(null);
@@ -1106,8 +1126,22 @@ export function LibraryPageClient({
                   : null}
               </section>
             ) : (
-              <section className={styles.listView} aria-label="Saved designs list">
-                <div className={styles.listHeader}>
+              <section
+                className={styles.listView}
+                aria-label="Saved designs list"
+                data-touch-selection-mode={
+                  touchPrimaryInput && touchSelectionMode ? "true" : "false"
+                }
+              >
+                <div
+                  className={styles.listHeader}
+                  data-touch-selection-mode={
+                    touchPrimaryInput && touchSelectionMode ? "true" : "false"
+                  }
+                >
+                  {touchPrimaryInput && touchSelectionMode ? (
+                    <span aria-hidden="true" />
+                  ) : null}
                   <span className={styles.listHeaderName}>Name</span>
                   <span>Size</span>
                   <span>Colors</span>
@@ -1116,12 +1150,35 @@ export function LibraryPageClient({
                 </div>
 
                 <div className={styles.listBody}>
-                  {sortedDesigns.map((design) => (
-                    <article key={design.id} className={styles.listRow}>
+                  {sortedDesigns.map((design) => {
+                    const isSelected = selectedDesignIds.has(design.id);
+
+                    return (
+                    <article
+                      key={design.id}
+                      className={styles.listRow}
+                      data-touch-selection-mode={
+                        touchPrimaryInput && touchSelectionMode ? "true" : "false"
+                      }
+                      data-selected={isSelected ? "true" : "false"}
+                      onClick={(event) => handleTouchListRowSelect(event, design.id)}
+                    >
+                      {touchPrimaryInput && touchSelectionMode ? (
+                        <span className={styles.listSelectionCell} aria-hidden="true">
+                          <span className={styles.listSelectionIndicator} />
+                        </span>
+                      ) : null}
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listNameCell}
-                        onClick={(event) => navigateToDesign(event, design.id)}
+                        onClick={(event) => {
+                          if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          navigateToDesign(event, design.id);
+                        }}
                       >
                         <span className={styles.listThumbnailFrame}>
                           <StitchThumbnailCanvas
@@ -1154,14 +1211,28 @@ export function LibraryPageClient({
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
-                        onClick={(event) => navigateToDesign(event, design.id)}
+                        onClick={(event) => {
+                          if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          navigateToDesign(event, design.id);
+                        }}
                       >
                         {design.gridWidth} × {design.gridHeight} cells
                       </Link>
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
-                        onClick={(event) => navigateToDesign(event, design.id)}
+                        onClick={(event) => {
+                          if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          navigateToDesign(event, design.id);
+                        }}
                       >
                         {typeof design.colorCount === "number"
                           ? `${design.colorCount} ${
@@ -1172,14 +1243,21 @@ export function LibraryPageClient({
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
-                        onClick={(event) => navigateToDesign(event, design.id)}
+                        onClick={(event) => {
+                          if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          navigateToDesign(event, design.id);
+                        }}
                       >
                         {design.updatedLabel.replace(/^Edited /, "")}
                       </Link>
 
                       {renderDesignMenu(design)}
                     </article>
-                  ))}
+                  )})}
 
                   {loadingMore
                     ? loadingCards.map((card) => (
