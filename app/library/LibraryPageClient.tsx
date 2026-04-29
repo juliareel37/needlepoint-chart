@@ -40,7 +40,7 @@ const sortOptions = [
   { id: "created-desc", label: "Created date" },
   { id: "name-asc", label: "Name" },
   { id: "size-desc", label: "Size" },
-  { id: "colors-desc", label: "Num colors" },
+  { id: "colors-desc", label: "Color count" },
 ] as const;
 
 type CardMenuItem = (typeof cardMenuItems)[number];
