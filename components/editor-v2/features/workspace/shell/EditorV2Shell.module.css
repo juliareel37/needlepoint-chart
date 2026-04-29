@@ -249,11 +249,8 @@
 }
 
 
-
 .sidebarTitleBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: none;
 }
 
 .sidebarPageIntro {
@@ -270,33 +267,107 @@
   margin: 0;
 }
 
+.editableTitleRoot {
+  min-width: 0;
+}
+
+.editableTitleRootPanel {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.editableTitleRootHeader {
+  display: none;
+  justify-content: center;
+  max-width: 100%;
+}
+
 .editableTitleTrigger {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  width: fit-content;
   max-width: 100%;
   min-width: 0;
-  padding: 8px 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
   background: transparent;
+  border: 0;
+  padding: 0;
   color: var(--text-primary);
   text-align: left;
   cursor: text;
   transition:
     color 140ms ease,
+    opacity 140ms ease;
+}
+
+.editableTitleTrigger:focus-visible {
+  color: var(--text-primary);
+  outline: none;
+}
+
+.editableTitleSurface {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  transition:
     border-color 140ms ease,
     background-color 140ms ease,
     box-shadow 140ms ease;
 }
 
-.editableTitleTrigger:focus-visible {
+.editableTitleTrigger:focus-visible .editableTitleSurface {
   border-color: var(--ui-border-subtle);
   background: var(--surface-card);
-  color: var(--text-primary);
-  box-shadow: var(--ui-shadow-sm);
+}
+
+.editableTitleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editableTitleInput {
+  max-width: 100%;
+}
+
+.editableTitleInputPanel {
+  width: auto;
+  min-width: 12ch;
+  max-width: min(100%, 32ch);
+}
+
+.editableTitleInputHeader {
+  width: auto;
+  min-width: 12ch;
+  max-width: min(100%, 32ch);
+}
+
+.documentPanelTitle {
+  width: auto;
+  max-width: 100%;
+}
+
+.documentPanelTitleRow {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.documentPanelTitleStatus {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.headerDesignTitle {
+  width: auto;
+  max-width: 100%;
 }
 
 .titleHoverIcon {
@@ -2769,6 +2840,10 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .titleHoverIcon {
+    opacity: 0;
+  }
+
   .sidebarColorPreviewSection:hover .sidebarHeaderAction {
     background: var(--button-ghost2-hover);
     color: var(--text-primary);
@@ -2780,11 +2855,19 @@
   }
 
   .editableTitleTrigger:hover {
-    border-color: var(--ui-border-subtle);
-    background: var(--surface-card);
     color: var(--text-primary);
-    box-shadow: var(--ui-shadow-sm);
   }
+
+  .editableTitleTrigger:hover .editableTitleSurface {
+    border-color: var(--ui-border-reg);
+    background: var(--surface-card);
+  }
+
+  .editableTitleTrigger:hover .titleHoverIcon,
+  .editableTitleTrigger:focus-visible .titleHoverIcon {
+    opacity: 0.65;
+  }
+
   .sidebarDetailCard:hover {
     border-color: color-mix(in srgb, var(--brand-300) 64%, var(--ui-border-subtle));
     background: color-mix(in srgb, var(--surface-card) 84%, var(--brand-100));
@@ -2988,14 +3071,42 @@
 
 
 @media (max-width: 768px) {
-  .headerHistoryControls {
-    display: inline-flex;
-    gap: 6px;
-  }
-    .toolbarHistoryControl,
-  .toolbarHistoryDivider {
+
+  .editableTitleRootHeader {
     display: none;
   }
+
+  .documentPanelTitleRow {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .documentPanelTitleRow .sidebarTitleBlock {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .documentPanelTitleStatus {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .documentPanelTitleRow .editableTitleTrigger {
+    color: var(--text-primary);
+  }
+
+  .documentPanelTitleRow .editableTitleSurface {
+    border-color: var(--ui-border-reg);
+    background: var(--surface-card);
+  }
+
+  .documentPanelTitleRow .titleHoverIcon {
+    opacity: 0.65;
+  }
+
 
   .floatingToolbar {
   }
@@ -3020,6 +3131,13 @@
   flex-direction: row;
   align-items: end;
   gap: 12px;
+}
+
+
+.sidebarTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
   /* .iconLibraryGrid {
     grid-template-columns: 1fr;
@@ -3155,6 +3273,14 @@
 }
 
 @media (min-width: 769px) {
+  .documentPanelTitle {
+    display: none;
+  }
+
+  .editableTitleRootHeader {
+    display: block;
+  }
+
   .colorPanelPageBody,
   .iconsPanelPageBody {
     padding-bottom: 28px;
@@ -3166,6 +3292,15 @@
     gap: 12px;
     padding: 12px;
   } */
+  .headerHistoryControls {
+    display: inline-flex;
+    gap: 6px;
+  }
+    .toolbarHistoryControl,
+  .toolbarHistoryDivider {
+    display: none;
+  }
+  
 
   .versionHistoryPanelHeader {
     padding: 16px 24px;

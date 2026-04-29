@@ -61,6 +61,7 @@ import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
+import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
 import styles from "./EditorV2Shell.module.css";
 
@@ -1451,8 +1452,10 @@ export function EditorV2Shell({
     }
 
     if (value === "rename") {
-      dispatch(createSetActiveSidebarSectionCommand("document"));
-      dispatch(createSetSidebarCollapsedCommand(false));
+      if (isBottomPanelLayout) {
+        dispatch(createSetActiveSidebarSectionCommand("document"));
+        dispatch(createSetSidebarCollapsedCommand(false));
+      }
       setRenameRequestToken((currentValue) => currentValue + 1);
       return;
     }
@@ -1811,6 +1814,18 @@ export function EditorV2Shell({
               </Button>
             </div>,
             headerActionsTarget,
+          )
+        : null}
+      {!setupModalOpen && !isVersionHistoryMode && headerTitleTarget
+        ? createPortal(
+            <EditableDesignTitle
+              className={styles.headerDesignTitle}
+              dispatch={dispatch}
+              documentTitle={title}
+              renameRequestToken={renameRequestToken}
+              variant="header"
+            />,
+            headerTitleTarget,
           )
         : null}
       {!setupModalOpen && isVersionHistoryMode && headerFileLeftTarget
