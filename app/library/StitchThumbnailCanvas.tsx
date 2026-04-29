@@ -30,39 +30,39 @@ export function StitchThumbnailCanvas({
   tracePlacement?: LibraryTracePlacement | null;
   className?: string;
 }) {
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const traceImageCacheRef = useRef<Map<string, HTMLImageElement | null>>(new Map());
-  const aspectRatio = snapshot ? snapshot.width / Math.max(snapshot.height, 1) : 1;
-  const frameStyle =
-    aspectRatio >= 1
-      ? {
-          width: "100%",
-          height: `${100 / aspectRatio}%`,
-        }
-      : {
-          width: `${aspectRatio * 100}%`,
-          height: "100%",
-        };
 
   useEffect(() => {
+    const frame = frameRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) {
+    if (!frame || !canvas) {
       return;
     }
 
     const render = () => {
+      const currentFrame = frameRef.current;
       const currentCanvas = canvasRef.current;
-      if (!currentCanvas) {
+      if (!currentFrame || !currentCanvas) {
         return;
       }
 
-      const bounds = currentCanvas.getBoundingClientRect();
+      const bounds = currentFrame.getBoundingClientRect();
       const width = Math.max(1, Math.round(bounds.width));
       const height = Math.max(1, Math.round(bounds.height));
       const dpr = window.devicePixelRatio || 1;
-      currentCanvas.width = Math.max(1, Math.round(width * dpr));
-      currentCanvas.height = Math.max(1, Math.round(height * dpr));
+      const targetWidth = Math.max(1, Math.round(width * dpr));
+      const targetHeight = Math.max(1, Math.round(height * dpr));
+
+      if (currentCanvas.width !== targetWidth) {
+        currentCanvas.width = targetWidth;
+      }
+
+      if (currentCanvas.height !== targetHeight) {
+        currentCanvas.height = targetHeight;
+      }
 
       const context = currentCanvas.getContext("2d");
       if (!context) {
@@ -205,13 +205,18 @@ export function StitchThumbnailCanvas({
 
     render();
     const observer = new ResizeObserver(() => render());
-    observer.observe(canvas);
+    observer.observe(frame);
 
     return () => observer.disconnect();
   }, [snapshot, tracePlacement, traceThumbnailUrl]);
 
   return (
-    <div className={className} style={frameStyle} aria-hidden="true">
+    <div
+      ref={frameRef}
+      className={className}
+      style={{ width: "100%", height: "100%" }}
+      aria-hidden="true"
+    >
       <canvas
         ref={canvasRef}
         style={{ display: "block", width: "100%", height: "100%" }}

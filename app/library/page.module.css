@@ -627,6 +627,13 @@
   transition: transform 220ms ease, filter 180ms ease;
 }
 
+@media (hover: none), (pointer: coarse) {
+  .thumbnail::after,
+  .thumbnailCanvas {
+    transition: none;
+  }
+}
+
 .cardCheckbox {
   position: absolute;
   top: 14px;
