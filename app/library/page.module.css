@@ -27,7 +27,11 @@
 .content {
   width: min(1240px, 100%);
   margin: 0 auto;
-  padding: 40px 24px 56px;
+  padding: 40px 24px calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+.contentWithBulkBar {
+  padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
 }
 
 .header {
@@ -66,6 +70,117 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.bulkBarOverlay {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  width: min(1240px, calc(100% - 48px));
+  z-index: calc(var(--z-modal) - 1);
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.8vw, 8px);
+  width: fit-content;
+  max-width: 100%;
+  padding: clamp(8px, 1.4vw, 11px) clamp(10px, 1.8vw, 14px);
+  border-radius: 999px;
+  background: var(--neutral-800);
+    /* linear-gradient(180deg, rgba(23, 33, 56, 0.98), rgba(16, 25, 46, 0.98)); */
+  box-shadow: 0 12px 24px rgba(14, 22, 40, 0.14);
+  color: white;
+  pointer-events: auto;
+  border: 1px solid var(--ui-border-reg);
+
+}
+
+.bulkBarDismiss,
+.bulkBarAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 0.8vw, 10px);
+  min-height: clamp(32px, 3.2vw, 38px);
+  padding: 0 clamp(8px, 1.2vw, 11px);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor:pointer;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.bulkBarDismiss {
+  width: clamp(32px, 3.2vw, 38px);
+  padding: 0;
+}
+
+.bulkBarDismiss:focus-visible,
+.bulkBarAction:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 2px;
+}
+
+.bulkBarDismissIcon,
+.bulkBarActionIcon {
+  width: clamp(14px, 1.4vw, 16px);
+  height: clamp(14px, 1.4vw, 16px);
+  background: currentColor center / contain no-repeat;
+  flex: 0 0 auto;
+}
+
+.bulkBarDismissIcon {
+  -webkit-mask: url("/icons/lucide/x.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/x.svg") center / contain no-repeat;
+}
+
+.bulkBarSelectAllIcon {
+  -webkit-mask: url("/icons/lucide/check-square.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/check-square.svg") center / contain no-repeat;
+}
+
+.bulkBarDeleteIcon {
+  -webkit-mask: url("/icons/lucide/trash.svg") center / contain no-repeat;
+  mask: url("/icons/lucide/trash.svg") center / contain no-repeat;
+}
+
+.bulkBarCount {
+  font-size: clamp(12px, 1.4vw, 14px);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.bulkBarDivider {
+  width: 1px;
+  height: clamp(20px, 2.6vw, 24px);
+  margin: 0 1px 0 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.bulkBarAction {
+  font-size: clamp(12px, 1.3vw, 13px);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.bulkBarDeleteAction {
+  color: #ff7d7d;
+}
+
+.bulkBarAction:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .viewSummary {
@@ -498,6 +613,11 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .bulkBarDismiss:hover,
+  .bulkBarAction:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
   .card:hover {
     transform: translateY(-2px);
     border-color: var(--ui-border-strong);
@@ -616,6 +736,27 @@
     flex-wrap: wrap;
   }
 
+  .bulkBar {
+    width: 100%;
+    max-width: none;
+    padding: 10px 12px;
+    border-radius: 20px;
+    flex-wrap: nowrap;
+  }
+
+  .bulkBarOverlay {
+    width: calc(100% - 32px);
+    padding: 0;
+  }
+
+  .bulkBarDivider {
+    display: none;
+  }
+
+  .bulkBarCount {
+    min-width: 0;
+  }
+
   .listHeader,
   .listRow {
     grid-template-columns: minmax(0, 1.3fr) minmax(120px, 0.7fr) minmax(90px, 0.5fr) minmax(90px, 0.5fr) 32px;
@@ -626,6 +767,10 @@
 @media (max-width: 640px) {
   .content {
     padding: 28px 16px 40px;
+  }
+
+  .contentWithBulkBar {
+    padding-bottom: calc(116px + env(safe-area-inset-bottom, 0px));
   }
 
   .title {
@@ -648,6 +793,38 @@
 
   .viewRow {
     align-items: flex-start;
+  }
+
+  .bulkBar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 18px;
+  }
+
+  .bulkBarOverlay {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 20px);
+    padding: 0;
+  }
+
+  .bulkBarDismiss,
+  .bulkBarAction {
+    min-height: 32px;
+    padding: 0 8px;
+  }
+
+  .bulkBarAction {
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .bulkBarCount {
+    width: auto;
+    min-width: 0;
+    font-size: 12px;
   }
 
   .grid {

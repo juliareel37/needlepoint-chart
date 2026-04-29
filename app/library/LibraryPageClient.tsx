@@ -98,6 +98,7 @@ export function LibraryPageClient({
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [bulkDeletePending, setBulkDeletePending] = useState(false);
   const [pendingCardAction, setPendingCardAction] = useState<{
     designId: string;
     action: CardMenuAction;
@@ -108,6 +109,9 @@ export function LibraryPageClient({
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
     [],
   );
+  const selectedDesignCount = selectedDesignIds.size;
+  const allLoadedDesignsSelected =
+    designs.length > 0 && selectedDesignCount === designs.length;
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError) {
@@ -231,6 +235,11 @@ export function LibraryPageClient({
 
         await deleteSavedEditorV2Document(design.id);
         setDesigns((existing) => existing.filter((record) => record.id !== design.id));
+        setSelectedDesignIds((current) => {
+          const next = new Set(current);
+          next.delete(design.id);
+          return next;
+        });
       }
     } catch (error) {
       setCardActionError(
@@ -255,6 +264,51 @@ export function LibraryPageClient({
 
       return next;
     });
+  }
+
+  function handleClearSelection() {
+    setSelectedDesignIds(new Set<string>());
+  }
+
+  function handleSelectAllDesigns() {
+    setSelectedDesignIds(new Set(designs.map((design) => design.id)));
+  }
+
+  async function handleDeleteSelectedDesigns() {
+    if (selectedDesignIds.size === 0) {
+      return;
+    }
+
+    const designsToDelete = designs.filter((design) => selectedDesignIds.has(design.id));
+    const idsToDelete = new Set(designsToDelete.map((design) => design.id));
+    const confirmed = window.confirm(
+      `Delete ${designsToDelete.length} selected design${
+        designsToDelete.length === 1 ? "" : "s"
+      } from your saved designs?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setCardActionError(null);
+    setBulkDeletePending(true);
+
+    try {
+      await Promise.all(
+        designsToDelete.map((design) => deleteSavedEditorV2Document(design.id)),
+      );
+      setDesigns((existing) =>
+        existing.filter((design) => !idsToDelete.has(design.id)),
+      );
+      setSelectedDesignIds(new Set<string>());
+    } catch (error) {
+      setCardActionError(
+        error instanceof Error ? error.message : "Couldn't delete selected designs.",
+      );
+    } finally {
+      setBulkDeletePending(false);
+    }
   }
 
   function renderCardMenuItemLabel(
@@ -316,7 +370,14 @@ export function LibraryPageClient({
 
   return (
     <main className={styles.page}>
-      <section className={styles.content}>
+      <section
+        className={[
+          styles.content,
+          selectedDesignCount > 0 ? styles.contentWithBulkBar : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <header className={styles.header}>
           <div className={styles.headerCopy}>
             <h1 className={styles.title}>My Designs</h1>
@@ -604,6 +665,55 @@ export function LibraryPageClient({
             setSelectedStorageId={() => {}}
             setupErrorMessage={setupErrorMessage}
           />
+        </div>
+      ) : null}
+
+      {selectedDesignCount > 0 ? (
+        <div className={styles.bulkBarOverlay}>
+          <div className={styles.bulkBar} role="toolbar" aria-label="Bulk actions">
+            <button
+              type="button"
+              className={styles.bulkBarDismiss}
+              onClick={handleClearSelection}
+              aria-label="Clear selection"
+            >
+              <span className={styles.bulkBarDismissIcon} aria-hidden="true" />
+            </button>
+
+            <div className={styles.bulkBarCount}>
+              {selectedDesignCount} selected
+            </div>
+
+            <div className={styles.bulkBarDivider} aria-hidden="true" />
+
+            <button
+              type="button"
+              className={styles.bulkBarAction}
+              onClick={handleSelectAllDesigns}
+              disabled={allLoadedDesignsSelected}
+            >
+              <span
+                className={`${styles.bulkBarActionIcon} ${styles.bulkBarSelectAllIcon}`}
+                aria-hidden="true"
+              />
+              <span>Select All</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.bulkBarAction} ${styles.bulkBarDeleteAction}`}
+              onClick={() => {
+                void handleDeleteSelectedDesigns();
+              }}
+              disabled={bulkDeletePending}
+            >
+              <span
+                className={`${styles.bulkBarActionIcon} ${styles.bulkBarDeleteIcon}`}
+                aria-hidden="true"
+              />
+              <span>{bulkDeletePending ? "Deleting..." : "Delete"}</span>
+            </button>
+          </div>
         </div>
       ) : null}
     </main>
