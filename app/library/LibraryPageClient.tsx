@@ -1,8 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, ButtonIcon, FieldInput } from "@/components/design-system";
+import {
+  Button,
+  ButtonIcon,
+  FieldInput,
+  SegmentedControl,
+  SingleSelectDropdown,
+} from "@/components/design-system";
+import {
+  EditorV2SetupModal,
+  type EditorV2DesignConfigNew,
+} from "@/components/editor-v2/app/EditorV2SetupModal";
+import {
+  deleteSavedEditorV2Document,
+  loadSavedEditorV2Document,
+  saveEditorV2Document,
+} from "@/components/editor-v2/app/editorV2ServerPersistence";
+import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { LibraryDesignRecord } from "@/lib/library/designs";
 import styles from "./page.module.css";
 
@@ -32,6 +49,15 @@ const basePreviewCells = [
 
 const LOADING_CARD_COUNT = 4;
 const PAGE_SIZE = 12;
+const cardMenuItems = [
+  { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
+  { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
+  { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
+] as const;
+
+type CardMenuItem = (typeof cardMenuItems)[number];
+type CardMenuAction = (typeof cardMenuItems)[number]["id"];
+type LibraryViewMode = "grid" | "list";
 
 function getPreviewCells(offset: number) {
   return basePreviewCells.map((row, rowIndex) =>
@@ -81,11 +107,29 @@ export function LibraryPageClient({
   initialHasMore: boolean;
   initialNextOffset: number | null;
 }) {
+  const router = useRouter();
   const [designs, setDesigns] = useState(initialDesigns);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextOffset, setNextOffset] = useState(initialNextOffset);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
+  const [creatingDesign, setCreatingDesign] = useState(false);
+  const [setupErrorMessage, setSetupErrorMessage] = useState<string | null>(null);
+  const [draftWidth, setDraftWidth] = useState("120");
+  const [draftHeight, setDraftHeight] = useState("120");
+  const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
+    "inches",
+  );
+  const [draftWidthInches, setDraftWidthInches] = useState("8");
+  const [draftHeightInches, setDraftHeightInches] = useState("8");
+  const [draftMeshCount, setDraftMeshCount] = useState("10");
+  const [cardActionError, setCardActionError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<LibraryViewMode>("grid");
+  const [pendingCardAction, setPendingCardAction] = useState<{
+    designId: string;
+    action: CardMenuAction;
+  } | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadingCards = useMemo(
@@ -142,6 +186,142 @@ export function LibraryPageClient({
     return () => observer.disconnect();
   }, [designs.length, hasMore, loadMoreError, loadingMore, nextOffset]);
 
+  async function handleCreateDesign(config: EditorV2DesignConfigNew) {
+    setCreatingDesign(true);
+    setSetupErrorMessage(null);
+
+    try {
+      const document = createNewDesignState(config.width, config.height, {
+        projectId: config.draftId,
+        sizingMode: config.sizingMode,
+        meshCount: config.meshCount,
+        widthInches: config.widthInches,
+        heightInches: config.heightInches,
+      }).document;
+      const savedRecord = await saveEditorV2Document(document);
+      setSetupModalOpen(false);
+      router.push(`/editor/designs/${savedRecord.storageId}`);
+    } catch (error) {
+      setSetupErrorMessage(
+        error instanceof Error ? error.message : "Couldn't create a new design.",
+      );
+    } finally {
+      setCreatingDesign(false);
+    }
+  }
+
+  async function handleCardMenuAction(action: string, design: LibraryDesignRecord) {
+    const menuAction = action as CardMenuAction;
+    setCardActionError(null);
+
+    if (menuAction === "open") {
+      router.push(`/editor/designs/${design.id}`);
+      return;
+    }
+
+    setPendingCardAction({ designId: design.id, action: menuAction });
+
+    try {
+      if (menuAction === "duplicate") {
+        const loaded = await loadSavedEditorV2Document(design.id);
+        const saved = await saveEditorV2Document(loaded.document);
+
+        setDesigns((existing) => [
+          {
+            id: saved.storageId,
+            title: saved.title,
+            gridWidth: saved.gridWidth,
+            gridHeight: saved.gridHeight,
+            updatedAt: saved.updatedAt,
+            updatedLabel: "Edited just now",
+            colorCount: Object.keys(loaded.document.palette.colorsById).length,
+            thumbnailUrl: loaded.document.trace?.thumbnailUrl ?? null,
+          },
+          ...existing,
+        ]);
+        return;
+      }
+
+      if (menuAction === "delete") {
+        const confirmed = window.confirm(
+          `Delete "${design.title}" from your saved designs?`,
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        await deleteSavedEditorV2Document(design.id);
+        setDesigns((existing) => existing.filter((record) => record.id !== design.id));
+      }
+    } catch (error) {
+      setCardActionError(
+        error instanceof Error ? error.message : "Couldn't complete that action.",
+      );
+    } finally {
+      setPendingCardAction((current) =>
+        current?.designId === design.id ? null : current,
+      );
+    }
+  }
+
+  function renderCardMenuItemLabel(
+    design: LibraryDesignRecord,
+    item: CardMenuItem,
+  ) {
+    const isPending =
+      pendingCardAction?.action === item.id &&
+      pendingCardAction.designId === design.id;
+
+    return (
+      <span
+        className={[
+          styles.cardMenuItemLabel,
+          item.id === "delete" ? styles.cardMenuItemLabelDestructive : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {isPending ? (
+          <span className="loading-spinner" aria-hidden="true" />
+        ) : (
+          <ButtonIcon icon={item.icon} className={styles.cardMenuItemIcon} />
+        )}
+        <span>{item.label}</span>
+      </span>
+    );
+  }
+
+  function renderDesignMenu(design: LibraryDesignRecord) {
+    return (
+      <div className={styles.cardMenuAnchor}>
+        <SingleSelectDropdown<CardMenuItem>
+          ariaLabel={`Actions for ${design.title}`}
+          items={[...cardMenuItems]}
+          value=""
+          placeholder="Actions"
+          triggerLabel={<span className={styles.cardMenuDots}>⋮</span>}
+          triggerVariant="ghost"
+          showChevron={false}
+          menuPortalToViewport
+          menuPlacement="bottom-end"
+          menuShowTrailingCheck={false}
+          minWidth="auto"
+          getItemValue={(item) => item.id}
+          getItemLabel={(item) => renderCardMenuItemLabel(design, item)}
+          getItemDisabled={() => pendingCardAction?.designId === design.id}
+          onValueChange={(value) => {
+            void handleCardMenuAction(value, design);
+          }}
+          wrapperClassName={styles.cardMenuWrapper}
+          triggerClassName={styles.cardMenuTrigger}
+          menuClassName={styles.cardMenuSurface}
+          triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <main className={styles.page}>
       <section className={styles.content}>
@@ -167,94 +347,232 @@ export function LibraryPageClient({
               
               New folder
             </Button> */}
-            <Button type="button" variant="primary" size="md">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={() => {
+                setSetupErrorMessage(null);
+                setSetupModalOpen(true);
+              }}
+            >
               <ButtonIcon icon="/icons/lucide/plus.svg" />
               New design
             </Button>
           </div>
         </header>
 
+        <div className={styles.viewRow}>
+          <div className={styles.viewSummary}>
+            <span className={styles.viewSummaryLabel}>All Designs</span>
+            <span className={styles.viewSummaryCount}>({designs.length})</span>
+          </div>
+
+          <SegmentedControl<LibraryViewMode>
+            ariaLabel="Design library view"
+            className={styles.viewToggle}
+            itemClassName={styles.viewToggleItem}
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              {
+                value: "list",
+                label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
+              },
+              {
+                value: "grid",
+                label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
+              },
+            ]}
+          />
+        </div>
+
         {designs.length > 0 ? (
           <>
-            <section className={styles.grid} aria-label="Saved designs">
-              {designs.map((design, index) => (
-                <Link
-                  key={design.id}
-                  href={`/editor/designs/${design.id}`}
-                  className={styles.cardLink}
-                >
-                  <article className={styles.card}>
-                    <div className={styles.thumbnail}>
-                      <div className={styles.thumbnailFrame}>
-                        {design.thumbnailUrl ? (
-                          <img
-                            src={design.thumbnailUrl}
-                            alt=""
-                            className={styles.thumbnailImage}
-                          />
-                        ) : (
-                          <div className={styles.previewGrid} aria-hidden="true">
-                            {getPreviewCells(index).flatMap((row, rowIndex) =>
-                              row.map((cell, columnIndex) => (
-                                <span
-                                  key={`${design.id}-${rowIndex}-${columnIndex}`}
-                                  className={styles.previewCell}
-                                  style={{
-                                    backgroundColor: previewPalette[cell],
-                                  }}
-                                />
-                              )),
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className={styles.cardBody}>
-                      <div className={styles.cardTopRow}>
-                        <h2 className={styles.cardTitle}>{design.title}</h2>
-                        {/* <span className={styles.cardMenuButton} aria-hidden="true">
-                          <span className={styles.cardMenuDots} aria-hidden="true" />
-                        </span> */}
-                      </div>
-                      <p className={styles.cardMeta}>
-                        {design.gridWidth} × {design.gridHeight} cells
-                        {typeof design.colorCount === "number"
-                          ? ` • ${design.colorCount} colors`
-                          : ""}
-                      </p>
-                      <p className={styles.cardTimestamp}>{design.updatedLabel}</p>
-                    </div>
-                  </article>
-                </Link>
-              ))}
-
-              {loadingMore
-                ? loadingCards.map((card) => (
-                    <article
-                      key={`loading-${card}`}
-                      className={`${styles.card} ${styles.loadingCard}`}
-                      aria-hidden="true"
+            {viewMode === "grid" ? (
+              <section className={styles.grid} aria-label="Saved designs">
+                {designs.map((design, index) => (
+                  <article key={design.id} className={styles.card}>
+                    <Link
+                      href={`/editor/designs/${design.id}`}
+                      className={styles.cardLink}
                     >
                       <div className={styles.thumbnail}>
                         <div className={styles.thumbnailFrame}>
-                          <div className={styles.loadingThumbnail}>
-                            <span className="loading-spinner" aria-hidden="true" />
-                          </div>
+                          {design.thumbnailUrl ? (
+                            <img
+                              src={design.thumbnailUrl}
+                              alt=""
+                              className={styles.thumbnailImage}
+                            />
+                          ) : (
+                            <div className={styles.previewGrid} aria-hidden="true">
+                              {getPreviewCells(index).flatMap((row, rowIndex) =>
+                                row.map((cell, columnIndex) => (
+                                  <span
+                                    key={`${design.id}-${rowIndex}-${columnIndex}`}
+                                    className={styles.previewCell}
+                                    style={{
+                                      backgroundColor: previewPalette[cell],
+                                    }}
+                                  />
+                                )),
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className={styles.cardBody}>
-                        <div className={styles.loadingLineShort} />
-                        <div className={styles.loadingLineLong} />
-                        <div className={styles.loadingLineMedium} />
-                      </div>
-                    </article>
-                  ))
-                : null}
-            </section>
+                    </Link>
 
-            {loadMoreError ? (
-              <p className={styles.loadMoreError}>{loadMoreError}</p>
+                    <div className={styles.cardBody}>
+                      <div className={styles.cardTopRow}>
+                        <Link
+                          href={`/editor/designs/${design.id}`}
+                          className={styles.cardTitleLink}
+                        >
+                          <h2 className={styles.cardTitle}>{design.title}</h2>
+                        </Link>
+
+                        {renderDesignMenu(design)}
+                      </div>
+
+                      <Link
+                        href={`/editor/designs/${design.id}`}
+                        className={styles.cardDetailsLink}
+                      >
+                        <p className={styles.cardMeta}>
+                          {design.gridWidth} × {design.gridHeight} cells
+                          {typeof design.colorCount === "number"
+                            ? ` • ${design.colorCount} colors`
+                            : ""}
+                        </p>
+                        <p className={styles.cardTimestamp}>{design.updatedLabel}</p>
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+
+                {loadingMore
+                  ? loadingCards.map((card) => (
+                      <article
+                        key={`loading-${card}`}
+                        className={`${styles.card} ${styles.loadingCard}`}
+                        aria-hidden="true"
+                      >
+                        <div className={styles.thumbnail}>
+                          <div className={styles.thumbnailFrame}>
+                            <div className={styles.loadingThumbnail}>
+                              <span className="loading-spinner" aria-hidden="true" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className={styles.cardBody}>
+                          <div className={styles.loadingLineShort} />
+                          <div className={styles.loadingLineLong} />
+                          <div className={styles.loadingLineMedium} />
+                        </div>
+                      </article>
+                    ))
+                  : null}
+              </section>
+            ) : (
+              <section className={styles.listView} aria-label="Saved designs list">
+                <div className={styles.listHeader}>
+                  <span className={styles.listHeaderName}>Name</span>
+                  <span>Size</span>
+                  <span>Colors</span>
+                  <span>Last Edited</span>
+                  <span className={styles.listHeaderActions} aria-hidden="true" />
+                </div>
+
+                <div className={styles.listBody}>
+                  {designs.map((design, index) => (
+                    <article key={design.id} className={styles.listRow}>
+                      <Link
+                        href={`/editor/designs/${design.id}`}
+                        className={styles.listNameCell}
+                      >
+                        <span className={styles.listThumbnailFrame}>
+                          {design.thumbnailUrl ? (
+                            <img
+                              src={design.thumbnailUrl}
+                              alt=""
+                              className={styles.listThumbnailImage}
+                            />
+                          ) : (
+                            <span className={styles.listPreviewGrid} aria-hidden="true">
+                              {getPreviewCells(index).flatMap((row, rowIndex) =>
+                                row.map((cell, columnIndex) => (
+                                  <span
+                                    key={`${design.id}-list-${rowIndex}-${columnIndex}`}
+                                    className={styles.listPreviewCell}
+                                    style={{
+                                      backgroundColor: previewPalette[cell],
+                                    }}
+                                  />
+                                )),
+                              )}
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.listTitle}>{design.title}</span>
+                      </Link>
+
+                      <Link
+                        href={`/editor/designs/${design.id}`}
+                        className={styles.listMetaCell}
+                      >
+                        {design.gridWidth} × {design.gridHeight} cells
+                      </Link>
+                      <Link
+                        href={`/editor/designs/${design.id}`}
+                        className={styles.listMetaCell}
+                      >
+                        {typeof design.colorCount === "number"
+                          ? `${design.colorCount} colors`
+                          : "—"}
+                      </Link>
+                      <Link
+                        href={`/editor/designs/${design.id}`}
+                        className={styles.listMetaCell}
+                      >
+                        {design.updatedLabel.replace(/^Edited /, "")}
+                      </Link>
+
+                      {renderDesignMenu(design)}
+                    </article>
+                  ))}
+
+                  {loadingMore
+                    ? loadingCards.map((card) => (
+                        <article
+                          key={`list-loading-${card}`}
+                          className={`${styles.listRow} ${styles.loadingCard}`}
+                          aria-hidden="true"
+                        >
+                          <div className={styles.listNameCell}>
+                            <span className={styles.listThumbnailFrame}>
+                              <span className={styles.loadingThumbnail}>
+                                <span className="loading-spinner" aria-hidden="true" />
+                              </span>
+                            </span>
+                            <div className={styles.listLoadingText}>
+                              <div className={styles.loadingLineLong} />
+                            </div>
+                          </div>
+                          <div className={styles.loadingLineMedium} />
+                          <div className={styles.loadingLineShort} />
+                          <div className={styles.loadingLineMedium} />
+                          <div />
+                        </article>
+                      ))
+                    : null}
+                </div>
+              </section>
+            )}
+
+            {loadMoreError || cardActionError ? (
+              <p className={styles.loadMoreError}>{loadMoreError ?? cardActionError}</p>
             ) : null}
 
             <div ref={sentinelRef} className={styles.scrollSentinel} aria-hidden="true" />
@@ -268,6 +586,45 @@ export function LibraryPageClient({
           </section>
         )}
       </section>
+
+      {setupModalOpen ? (
+        <div className={styles.modalOverlay}>
+          <EditorV2SetupModal
+            canClose
+            creatingDesign={creatingDesign}
+            draftHeight={draftHeight}
+            draftHeightInches={draftHeightInches}
+            draftMeshCount={draftMeshCount}
+            draftSizingMode={draftSizingMode}
+            draftWidth={draftWidth}
+            draftWidthInches={draftWidthInches}
+            hasSavedDesignAccess
+            mode="new-only"
+            hasMoreSavedDocuments={false}
+            onDismissSavedDocumentsError={() => {}}
+            onDismissSetupError={() => setSetupErrorMessage(null)}
+            onOpenSavedDocuments={() => {}}
+            onLoadMoreSavedDocuments={() => {}}
+            onSignIn={() => {}}
+            onClose={() => setSetupModalOpen(false)}
+            onCreateDesign={handleCreateDesign}
+            onDraftHeightChange={setDraftHeight}
+            onDraftHeightInchesChange={setDraftHeightInches}
+            onDraftMeshCountChange={setDraftMeshCount}
+            onDraftSizingModeChange={setDraftSizingMode}
+            onDraftWidthChange={setDraftWidth}
+            onDraftWidthInchesChange={setDraftWidthInches}
+            onLoadSavedDesign={() => {}}
+            savedDocuments={[]}
+            savedDocumentsLoading={false}
+            savedDocumentsLoadingMore={false}
+            savedDocumentsErrorMessage={null}
+            selectedStorageId=""
+            setSelectedStorageId={() => {}}
+            setupErrorMessage={setupErrorMessage}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

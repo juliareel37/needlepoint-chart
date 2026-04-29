@@ -1128,6 +1128,10 @@
   white-space: nowrap;
 }
 
+.headerOverflowItemLabelDestructive {
+  color: var(--status-destructive-strong);
+}
+
 .headerHistoryButton {
   min-width: 32px;
   min-height: 28px;

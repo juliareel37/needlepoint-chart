@@ -1241,7 +1241,14 @@ export function EditorV2Shell({
 
     if (item.icon) {
       return (
-        <span className={styles.headerOverflowItemLabel}>
+        <span
+          className={[
+            styles.headerOverflowItemLabel,
+            item.id === "delete" ? styles.headerOverflowItemLabelDestructive : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <ButtonIcon icon={item.icon} className={styles.saveButtonIcon} />
           <span>{item.label}</span>
         </span>

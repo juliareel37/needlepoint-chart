@@ -146,6 +146,8 @@ export default function RootLayout({
               className="app-shell-header"
               style={{
                 height: 52,
+                minHeight: 52,
+                flex: "0 0 52px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
