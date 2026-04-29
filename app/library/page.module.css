@@ -473,6 +473,12 @@
   gap: 16px;
 }
 
+.listNameContent {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .listThumbnailFrame {
   display: inline-flex;
   align-items: center;
@@ -502,6 +508,17 @@
   line-height: 1.2;
   font-weight: 700;
   color: var(--text-secondary);
+}
+
+.listMobileMeta {
+  display: none;
+}
+
+.listMobileMetaItem {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
 }
 
 .listLoadingText {
@@ -1149,11 +1166,25 @@
   }
 
   .listNameCell {
-    /* grid-column: 1 / -1; */
+    align-items: flex-start;
   }
 
   .listMetaCell {
     display: none;
+  }
+
+  .listNameContent {
+    gap: 6px;
+  }
+
+  .listMobileMeta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 12px;
+  }
+
+  .listMobileMetaItem:last-child {
+    grid-column: 1 / -1;
   }
 
   .thumbnail {

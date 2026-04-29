@@ -1131,7 +1131,24 @@ export function LibraryPageClient({
                             className={styles.listThumbnailCanvas}
                           />
                         </span>
-                        <span className={styles.listTitle}>{design.title}</span>
+                        <span className={styles.listNameContent}>
+                          <span className={styles.listTitle}>{design.title}</span>
+                          <span className={styles.listMobileMeta}>
+                            <span className={styles.listMobileMetaItem}>
+                              {design.gridWidth} × {design.gridHeight} cells
+                            </span>
+                            <span className={styles.listMobileMetaItem}>
+                              {typeof design.colorCount === "number"
+                                ? `${design.colorCount} ${
+                                    design.colorCount === 1 ? "color" : "colors"
+                                  }`
+                                : "—"}
+                            </span>
+                            <span className={styles.listMobileMetaItem}>
+                              {design.updatedLabel.replace(/^Edited /, "")}
+                            </span>
+                          </span>
+                        </span>
                       </Link>
 
                       <Link
