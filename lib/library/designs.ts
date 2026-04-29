@@ -72,7 +72,7 @@ export async function loadLibraryDesignPage({
         gridHeight: design.gridHeight,
         updatedAt: design.updatedAt.toISOString(),
         updatedLabel: formatUpdatedLabel(design.updatedAt),
-        colorCount: parsed ? Object.keys(parsed.palette.colorsById).length : null,
+        colorCount: parsed ? countUsedColors(parsed.grid.cells) : null,
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
         stitchSnapshot: parsed
           ? buildLibraryStitchSnapshot({
@@ -88,6 +88,10 @@ export async function loadLibraryDesignPage({
     hasMore,
     nextOffset: hasMore ? normalizedOffset + visibleDesigns.length : null,
   };
+}
+
+function countUsedColors(cells: Array<string | null>) {
+  return new Set(cells.filter((cellId): cellId is string => Boolean(cellId))).size;
 }
 
 function formatUpdatedLabel(updatedAt: Date) {

@@ -58,6 +58,10 @@ type PendingDeletion = {
   previousTotalCount: number;
 };
 
+function countUsedColors(cells: Array<string | null>) {
+  return new Set(cells.filter((cellId): cellId is string => Boolean(cellId))).size;
+}
+
 async function fetchLibraryPage(offset: number) {
   const searchParams = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -300,7 +304,7 @@ export function LibraryPageClient({
             gridHeight: saved.gridHeight,
             updatedAt: saved.updatedAt,
             updatedLabel: "Edited just now",
-            colorCount: Object.keys(loaded.document.palette.colorsById).length,
+            colorCount: countUsedColors(loaded.document.grid.cells),
             thumbnailUrl: loaded.document.trace?.thumbnailUrl ?? null,
             stitchSnapshot: buildLibraryStitchSnapshot({
               gridWidth: loaded.document.grid.width,
@@ -743,7 +747,9 @@ export function LibraryPageClient({
                           <p className={styles.cardMeta}>
                             {design.gridWidth} × {design.gridHeight} cells
                             {typeof design.colorCount === "number"
-                              ? ` • ${design.colorCount} colors`
+                              ? ` • ${design.colorCount} ${
+                                  design.colorCount === 1 ? "color" : "colors"
+                                }`
                               : ""}
                           </p>
                           <p className={styles.cardTimestamp}>{design.updatedLabel}</p>
@@ -816,7 +822,9 @@ export function LibraryPageClient({
                         onClick={(event) => navigateToDesign(event, design.id)}
                       >
                         {typeof design.colorCount === "number"
-                          ? `${design.colorCount} colors`
+                          ? `${design.colorCount} ${
+                              design.colorCount === 1 ? "color" : "colors"
+                            }`
                           : "—"}
                       </Link>
                       <Link
