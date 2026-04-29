@@ -263,9 +263,25 @@
   outline: none;
 }
 
+.thumbnailShell {
+  position: relative;
+}
+
 .thumbnail {
+  position: relative;
   padding: 20px;
   background: var(--canvas-stage-bg);
+  overflow: hidden;
+}
+
+.thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 28, 38, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
 }
 
 .thumbnailFrame {
@@ -281,7 +297,72 @@
   /* border: 1px solid #d8dfec; */
   border-radius: 6px;
   box-shadow: var(--ui-shadow-md);
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 220ms ease;
+}
 
+.cardCheckbox {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.cardCheckboxInput {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cardCheckboxIndicator {
+  width: 18px;
+  height: 18px;
+  /* border: 1px solid rgba(255, 255, 255, 0.92); */
+  border-radius: 5px;
+  /* background: rgba(255, 255, 255, 0.16); */
+    background: white;
+
+  box-shadow: 0 8px 18px rgba(10, 15, 26, 0.24);
+  backdrop-filter: blur(6px);
+  transition: background-color 180ms ease, border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.cardCheckboxInput:focus-visible + .cardCheckboxIndicator {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.cardCheckboxInput:checked + .cardCheckboxIndicator {
+  /* border-color: white; */
+  background: var(--brand-500);
+  box-shadow: 0 10px 22px rgba(10, 15, 26, 0.32);
+  cursor: pointer;
+}
+
+.cardCheckboxInput:checked + .cardCheckboxIndicator::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  width: 4px;
+  height: 8px;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(45deg);
+}
+
+.cardCheckboxIndicator {
+  position: relative;
 }
 
 .cardBody {
@@ -423,6 +504,20 @@
     box-shadow: 0 18px 36px rgba(44, 61, 96, 0.1);
   }
 
+  .card:hover .thumbnail::after {
+    opacity: 1;
+  }
+
+  .card:hover .thumbnailCanvas {
+    transform: scale(1.08);
+  }
+
+  .card:hover .cardCheckbox {
+    opacity: 1;
+    transform: translateY(0);
+    cursor: pointer;
+  }
+
   .cardMenuTrigger:hover {
     /* background: #f2f5fb; */
     background: var(--menu-item-hover-bg);
@@ -434,6 +529,27 @@
     /* background: red; */
     background: var(--button-ghost2-hover);
   }
+}
+
+.card:has(.cardLink:focus-visible) .thumbnailCanvas,
+.card:has(.cardTitleLink:focus-visible) .thumbnailCanvas,
+.card:has(.cardDetailsLink:focus-visible) .thumbnailCanvas {
+  transform: scale(1.08);
+}
+
+.card:has(.cardLink:focus-visible) .thumbnail::after,
+.card:has(.cardTitleLink:focus-visible) .thumbnail::after,
+.card:has(.cardDetailsLink:focus-visible) .thumbnail::after,
+.card:has(.cardCheckboxInput:focus-visible) .thumbnail::after,
+.card:has(.cardCheckboxInput:checked) .thumbnail::after {
+  opacity: 1;
+}
+
+.card:has(.cardCheckboxInput:focus-visible) .cardCheckbox,
+.card:has(.cardCheckboxInput:checked) .cardCheckbox,
+.card:has(.cardLink:focus-visible) .cardCheckbox {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .emptyState {

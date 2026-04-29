@@ -95,6 +95,9 @@ export function LibraryPageClient({
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [cardActionError, setCardActionError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<LibraryViewMode>("grid");
+  const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [pendingCardAction, setPendingCardAction] = useState<{
     designId: string;
     action: CardMenuAction;
@@ -240,6 +243,20 @@ export function LibraryPageClient({
     }
   }
 
+  function handleDesignSelectionChange(designId: string, checked: boolean) {
+    setSelectedDesignIds((current) => {
+      const next = new Set(current);
+
+      if (checked) {
+        next.add(designId);
+      } else {
+        next.delete(designId);
+      }
+
+      return next;
+    });
+  }
+
   function renderCardMenuItemLabel(
     design: LibraryDesignRecord,
     item: CardMenuItem,
@@ -366,49 +383,72 @@ export function LibraryPageClient({
           <>
             {viewMode === "grid" ? (
               <section className={styles.grid} aria-label="Saved designs">
-                {designs.map((design) => (
-                  <article key={design.id} className={styles.card}>
-                    <Link
-                      href={`/editor/designs/${design.id}`}
-                      className={styles.cardLink}
-                    >
-                      <div className={styles.thumbnail}>
-                        {/* <div className={styles.thumbnailFrame}> */}
-                          <StitchThumbnailCanvas
-                            snapshot={design.stitchSnapshot}
-                            className={styles.thumbnailCanvas}
-                          />
-                        {/* </div> */}
-                      </div>
-                    </Link>
+                {designs.map((design) => {
+                  const isSelected = selectedDesignIds.has(design.id);
 
-                    <div className={styles.cardBody}>
-                      <div className={styles.cardTopRow}>
+                  return (
+                    <article key={design.id} className={styles.card}>
+                      <div className={styles.thumbnailShell}>
                         <Link
                           href={`/editor/designs/${design.id}`}
-                          className={styles.cardTitleLink}
+                          className={styles.cardLink}
                         >
-                          <h2 className={styles.cardTitle}>{design.title}</h2>
+                          <div className={styles.thumbnail}>
+                            <StitchThumbnailCanvas
+                              snapshot={design.stitchSnapshot}
+                              className={styles.thumbnailCanvas}
+                            />
+                          </div>
                         </Link>
 
-                        {renderDesignMenu(design)}
+                        <label className={styles.cardCheckbox}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(event) => {
+                              handleDesignSelectionChange(
+                                design.id,
+                                event.currentTarget.checked,
+                              );
+                            }}
+                            className={styles.cardCheckboxInput}
+                            aria-label={`Select ${design.title}`}
+                          />
+                          <span
+                            className={styles.cardCheckboxIndicator}
+                            aria-hidden="true"
+                          />
+                        </label>
                       </div>
 
-                      <Link
-                        href={`/editor/designs/${design.id}`}
-                        className={styles.cardDetailsLink}
-                      >
-                        <p className={styles.cardMeta}>
-                          {design.gridWidth} × {design.gridHeight} cells
-                          {typeof design.colorCount === "number"
-                            ? ` • ${design.colorCount} colors`
-                            : ""}
-                        </p>
-                        <p className={styles.cardTimestamp}>{design.updatedLabel}</p>
-                      </Link>
-                    </div>
-                  </article>
-                ))}
+                      <div className={styles.cardBody}>
+                        <div className={styles.cardTopRow}>
+                          <Link
+                            href={`/editor/designs/${design.id}`}
+                            className={styles.cardTitleLink}
+                          >
+                            <h2 className={styles.cardTitle}>{design.title}</h2>
+                          </Link>
+
+                          {renderDesignMenu(design)}
+                        </div>
+
+                        <Link
+                          href={`/editor/designs/${design.id}`}
+                          className={styles.cardDetailsLink}
+                        >
+                          <p className={styles.cardMeta}>
+                            {design.gridWidth} × {design.gridHeight} cells
+                            {typeof design.colorCount === "number"
+                              ? ` • ${design.colorCount} colors`
+                              : ""}
+                          </p>
+                          <p className={styles.cardTimestamp}>{design.updatedLabel}</p>
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })}
 
                 {loadingMore
                   ? loadingCards.map((card) => (
