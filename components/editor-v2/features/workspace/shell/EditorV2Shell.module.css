@@ -2886,6 +2886,27 @@
     /* grid-template-columns: 1fr; */
   }
 
+  .shellContent[data-version-history-mode="true"] {
+    height: calc(100vh - var(--app-top-offset, 52px));
+    height: calc(100dvh - var(--app-top-offset, 52px));
+    min-height: calc(100vh - var(--app-top-offset, 52px));
+    min-height: calc(100dvh - var(--app-top-offset, 52px));
+  }
+
+  .versionHistoryLayout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
+    padding: 16px;
+  }
+
+  .versionHistoryPanel {
+    min-height: 0;
+  }
+
+  .versionHistoryPanelCard {
+    max-height: 100%;
+  }
+
   .rail {
     /* display: none; */
   }
@@ -3113,22 +3134,6 @@
   }
 }
 
-@media (max-width: 1000px) {
-  .versionHistoryLayout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
-    padding: 16px;
-  }
-
-  .versionHistoryPanel {
-    min-height: 0;
-  }
-/* 
-  .versionHistoryTimelineTitle {
-    font-size: 20px;
-  } */
-}
-
 @media (max-width: 640px) {
   .versionHistoryLayout {
     gap: 12px;
@@ -3145,6 +3150,10 @@
 
   .versionHistoryPanelError {
     padding: 0 20px 20px;
+  }
+
+  .versionHistoryHeaderTitle {
+    display: none;
   }
 
   /* .versionHistoryTimelineTitle {
