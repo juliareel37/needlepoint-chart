@@ -37,10 +37,13 @@ export function StitchThumbnailCanvas({
       if (!context) {
         return;
       }
+      const canvasBackground = getComputedStyle(currentCanvas)
+        .getPropertyValue("--canvas-bg")
+        .trim();
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       context.clearRect(0, 0, width, height);
-      context.fillStyle = "#ffffff";
+      context.fillStyle = canvasBackground || "#ffffff";
       context.fillRect(0, 0, width, height);
 
       if (!snapshot) {

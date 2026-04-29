@@ -229,9 +229,9 @@
   --z-notification: 9999;
 
   /* Color Tokens */
-  --neutral-0: #fafafa;
+  --neutral-0: #ffffff;
   --neutral-50: #fdfdfd;
-  --neutral-100: #fafaf9;
+  --neutral-100: #f7f7f7;
   --neutral-200: #f2f2f2;
   --neutral-300: #e6e6e6;
   --neutral-400: #c5c5c5;
@@ -416,6 +416,7 @@
 
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
+  --text-tertiary: var(--neutral-400);
 
   --ui-border-subtle: var(--neutral-800);
   --ui-border-reg: var(--neutral-700);
