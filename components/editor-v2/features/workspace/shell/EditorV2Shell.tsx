@@ -1723,7 +1723,7 @@ export function EditorV2Shell({
               onClick={onExitVersionHistoryMode}
             >
               <ButtonIcon icon="/icons/lucide/arrow-left.svg" className={styles.saveButtonIcon} />
-              Exit version history
+              Exit
             </Button>,
             headerFileLeftTarget,
           )
@@ -1750,6 +1750,8 @@ export function EditorV2Shell({
                 void handleRestoreSelectedVersion();
               }}
             >
+              <ButtonIcon icon="/icons/lucide/rotate-ccw.svg"/>
+
               {versionHistoryActionPendingId !== null &&
               selectedVersionHistoryId !== "current" &&
               versionHistoryActionPendingId === selectedVersionHistoryId

@@ -246,8 +246,8 @@ export function DocumentPanelPage({
                 Open a dedicated version history view to preview older states and restore one when you're ready.
               </p>
               <Button type="button" variant="secondary" onClick={onEnterVersionHistoryMode}>
-                <ButtonIcon icon="/icons/lucide/rotate-ccw.svg" className={styles.saveButtonIcon} />
-                Open version history
+                <ButtonIcon icon="/icons/lucide/history.svg" className={styles.saveButtonIcon} />
+                Version history
               </Button>
             </div>
           )}

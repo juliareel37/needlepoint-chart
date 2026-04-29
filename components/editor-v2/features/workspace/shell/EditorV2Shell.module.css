@@ -930,14 +930,15 @@
 
 .versionHistoryTimelineItem {
   position: relative;
-  width: 100%;
+  width: calc(100% + 48px);
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: start;
   gap: 14px;
-  padding: 18px 18px 18px 0;
+  margin: 0 -20px 0 -28px;
+  padding: 18px 38px 18px 28px;
   border: 0;
-  border-radius: 18px;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   text-align: left;
@@ -945,9 +946,12 @@
   transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
+.versionHistoryTimelineItem:hover {
+  background: rgba(226, 81, 255, 0.05);
+}
 
 .versionHistoryTimelineItem[data-selected="true"] {
-  background: rgba(168, 130, 255, 0.14);
+  background: rgba(226, 130, 255, 0.14);
 }
 
 .versionHistoryTimelineMarker {
@@ -957,23 +961,23 @@
   height: 18px;
   margin-top: 4px;
   border-radius: 999px;
-  border: 2px solid rgba(58, 42, 102, 0.9);
+  border: 2px solid var(--brand-600);
   background: var(--surface-primary);
 }
 
 .versionHistoryTimelineItem[data-selected="true"] .versionHistoryTimelineMarker {
   border-color: transparent;
-  background: #7c3aed;
-  box-shadow: 0 0 0 5px rgba(168, 130, 255, 0.18);
+  background: var(--brand-500);
+  box-shadow: 0 0 0 5px rgba(220, 130, 255, 0.18);
 }
 
 .versionHistoryTimelineLine {
   position: absolute;
-  left: 8px;
+  left: 36px;
   top: 28px;
   bottom: -10px;
   width: 2px;
-  background: rgba(125, 96, 197, 0.18);
+  background: var(--brand-200);
 }
 
 .versionHistoryTimelineItem[data-last="true"] .versionHistoryTimelineLine {
@@ -1018,6 +1022,9 @@
 .versionHistoryHeaderExitButton,
 .versionHistoryHeaderRestoreButton {
   white-space: nowrap;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+
 }
 
 .versionHistoryEntryCard {
@@ -1284,7 +1291,8 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .headerFileMenuSurface {
@@ -1753,7 +1761,7 @@
 @media (hover: hover) and (pointer: fine) {
 
   .versionHistoryTimelineItem:hover {
-  background: rgba(122, 81, 255, 0.05);
+  background: rgba(220, 81, 255, 0.05);
 }
 
 
