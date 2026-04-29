@@ -1247,15 +1247,9 @@
 }
 
 @media (max-width: 1000px) {
-  .headerHistoryControls {
-    display: inline-flex;
-    gap: 6px;
-  }
 
-  .toolbarHistoryControl,
-  .toolbarHistoryDivider {
-    display: none;
-  }
+
+
 }
 
 .headerExportButton {
@@ -2994,6 +2988,15 @@
 
 
 @media (max-width: 768px) {
+  .headerHistoryControls {
+    display: inline-flex;
+    gap: 6px;
+  }
+    .toolbarHistoryControl,
+  .toolbarHistoryDivider {
+    display: none;
+  }
+
   .floatingToolbar {
   }
 
