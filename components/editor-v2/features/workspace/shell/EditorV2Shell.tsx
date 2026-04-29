@@ -76,16 +76,24 @@ const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
+type HeaderFileMenuItem = {
+  id: string;
+  label: string;
+  icon?: string;
+  kind?: "action" | "divider";
+};
 const HEADER_FILE_MENU_ITEMS = [
-  { id: "library", label: "My designs", icon: "/icons/lucide/list.svg" },
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "library", label: "My designs", icon: "/icons/lucide/list.svg" },
+  { id: "divider-primary", label: "", kind: "divider" },
   { id: "version-history", label: "Version history", icon: "/icons/lucide/history.svg" },
   { id: "save-version", label: "Save snapshot", icon: "/icons/lucide/save.svg" },
+  { id: "divider-secondary", label: "", kind: "divider" },
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
-] as const;
+] satisfies readonly HeaderFileMenuItem[];
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
@@ -335,20 +343,22 @@ export function EditorV2Shell({
   const mobileVisibleTopInset =
     isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
   const mobileHeaderMenuItems = useMemo(
-    () =>
+    (): HeaderFileMenuItem[] =>
       hasSavedDesignAccess
         ? [
             {
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
+              kind: "action",
             },
             ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
-            { id: "sign-in", label: "Sign in" },
+            { id: "sign-in", label: "Sign in", kind: "action" },
             {
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
+              kind: "action",
             },
             ...HEADER_FILE_MENU_ITEMS,
           ],
@@ -1472,7 +1482,7 @@ export function EditorV2Shell({
     }
   }
 
-  function renderHeaderMenuItemLabel(item: { id: string; label: string; icon?: string }) {
+  function renderHeaderMenuItemLabel(item: HeaderFileMenuItem) {
     if (item.id === "preview" || item.id === "exit-preview") {
       return (
         <span className={styles.headerOverflowItemLabel}>
@@ -1610,9 +1620,11 @@ export function EditorV2Shell({
                   menuShowTrailingCheck={false}
                   minWidth="auto"
                   menuWidth={180}
+                  getItemIsDivider={(item) => item.kind === "divider"}
                   getItemValue={(item) => item.id}
                   getItemLabel={renderHeaderMenuItemLabel}
                   getItemDisabled={(item) =>
+                    item.kind === "divider" ||
                     (item.id === "save-version" &&
                       (!hasSavedDesignAccess || saveButtonState === "saving")) ||
                     (item.id === "version-history" && !currentStorageId) ||
@@ -1718,9 +1730,11 @@ export function EditorV2Shell({
               menuPlacement="bottom-end"
               menuShowTrailingCheck={false}
               minWidth="auto"
+              getItemIsDivider={(item) => item.kind === "divider"}
               getItemValue={(item) => item.id}
               getItemLabel={renderHeaderMenuItemLabel}
               getItemDisabled={(item) =>
+                item.kind === "divider" ||
                 (item.id === "download" && exportButtonState === "exporting") ||
                 (item.id === "delete" && deleteButtonState === "deleting") ||
                 (item.id === "preview" && previewModeDisabled)

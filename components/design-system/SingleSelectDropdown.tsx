@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { Field } from "./Field";
 import {
   MenuChevronIcon,
+  MenuDivider,
   MenuItem,
   MenuSurface,
   MenuTrailingCheck,
@@ -30,6 +31,7 @@ export interface SingleSelectDropdownProps<TItem> {
   ariaLabel: string;
   emptyLabel?: ReactNode;
   getItemDisabled?: (item: TItem) => boolean;
+  getItemIsDivider?: (item: TItem) => boolean;
   getItemLabel: (item: TItem) => ReactNode;
   getItemValue: (item: TItem) => string;
   items: TItem[];
@@ -67,6 +69,7 @@ export function SingleSelectDropdown<TItem>({
   ariaLabel,
   emptyLabel = "No options",
   getItemDisabled,
+  getItemIsDivider,
   getItemLabel,
   getItemValue,
   items,
@@ -332,30 +335,35 @@ export function SingleSelectDropdown<TItem>({
       {orderedItems.length ? (
         <>
           {orderedItems.map((item) => {
-          const itemValue = getItemValue(item);
-          const active = itemValue === value;
-          return (
-            <MenuItem
-              key={itemValue}
-              type="button"
-              role="menuitemradio"
-              aria-checked={active}
-              active={active}
-              disabled={getItemDisabled?.(item)}
-              layout={menuShowTrailingCheck ? "trailing" : "leading"}
-              trailing={
-                menuShowTrailingCheck
-                  ? <MenuTrailingCheck active={active} />
-                  : undefined
-              }
-              onClick={() => {
-                onValueChange(itemValue, item);
-                setOpen(false);
-              }}
-            >
-              {getItemLabel(item)}
-            </MenuItem>
-          );
+            const itemValue = getItemValue(item);
+
+            if (getItemIsDivider?.(item)) {
+              return <MenuDivider key={itemValue} />;
+            }
+
+            const active = itemValue === value;
+            return (
+              <MenuItem
+                key={itemValue}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                active={active}
+                disabled={getItemDisabled?.(item)}
+                layout={menuShowTrailingCheck ? "trailing" : "leading"}
+                trailing={
+                  menuShowTrailingCheck
+                    ? <MenuTrailingCheck active={active} />
+                    : undefined
+                }
+                onClick={() => {
+                  onValueChange(itemValue, item);
+                  setOpen(false);
+                }}
+              >
+                {getItemLabel(item)}
+              </MenuItem>
+            );
           })}
           {menuFooter}
         </>

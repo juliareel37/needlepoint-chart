@@ -139,8 +139,8 @@
 .divider {
   height: 1px;
   margin: 0 4px;
-  background: var(--ui-border-subtle);
-  opacity: 0.6;
+  background: var(--ui-border-reg);
+  opacity: 0.9;
 }
 
 .selectionIcon {
