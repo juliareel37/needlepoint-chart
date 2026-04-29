@@ -24,6 +24,7 @@ import type { DocumentPatch } from "@/lib/editor-v2/editor/store";
 const LOCAL_FLUSH_DEBOUNCE_MS = 250;
 const SERVER_FLUSH_DEBOUNCE_MS = 2000;
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const MANUAL_SAVE_BUTTON_SUCCESS_DURATION_MS = 2500;
 
 export interface EditorV2PersistenceUiState {
   saveButtonState: "idle" | "saving" | "saved";
@@ -402,6 +403,18 @@ export function useEditorV2PersistenceController({
     performServerSave,
     saveMode,
   ]);
+
+  useEffect(() => {
+    if (saveMode !== "manual" || saveButtonState !== "saved") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSaveButtonState("idle");
+    }, MANUAL_SAVE_BUTTON_SUCCESS_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [saveButtonState, saveMode]);
 
   useEffect(() => {
     return () => {

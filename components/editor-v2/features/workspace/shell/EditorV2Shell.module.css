@@ -2213,6 +2213,25 @@
   flex: 1 1 auto;
 }
 
+.headerSaveStatusInlineLink {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  /* font-weight: 700; */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.headerSaveStatusInlineLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .headerSaveStatusDismiss {
   display: inline-flex;
   align-items: center;
@@ -2622,6 +2641,10 @@
 
   .headerSaveStatusDismiss:hover {
     background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
+    color: var(--text-primary);
+  }
+
+  .headerSaveStatusInlineLink:hover {
     color: var(--text-primary);
   }
 

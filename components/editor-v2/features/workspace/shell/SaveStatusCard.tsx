@@ -1,7 +1,7 @@
 "use client";
 
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon } from "@/components/design-system";
+import { ButtonIcon } from "@/components/design-system";
 import styles from "./EditorV2Shell.module.css";
 
 const SAVE_SUCCESS_PREFIX = "Saved at ";
@@ -28,7 +28,7 @@ export function SaveStatusCard({
   saveMode: "manual" | "autosave";
   saveMessage: string;
 }) {
-  if (saveMode === "autosave" && !hasSavedDesignAccess) {
+  if (layout !== "banner" && saveMode === "autosave" && !hasSavedDesignAccess) {
     return null;
   }
 
@@ -37,13 +37,15 @@ export function SaveStatusCard({
   }
 
   const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
+  const showInlineSignInLink =
+    layout === "banner" && !hasSavedDesignAccess && !recoveredLocalChanges && !saveMessage;
   const message =
     autoSaveEnabled
       ? "Autosave enabled"
       : recoveredLocalChanges
         ? "Recovered local changes. Sync pending."
         : !hasSavedDesignAccess && !saveMessage
-          ? "Sign in to save changes"
+          ? "Changes not saved. Sign in to save your work."
           : saveMessage || "Changes not saved";
   const icon =
     autoSaveEnabled
@@ -73,13 +75,22 @@ export function SaveStatusCard({
         <ButtonIcon icon={icon} className={styles.headerSaveStatusIcon} />
       </span>
       <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
-        {message}
+        {showInlineSignInLink ? (
+          <>
+            Changes not saved.{" "}
+            <button
+              type="button"
+              className={styles.headerSaveStatusInlineLink}
+              onClick={onSignIn}
+            >
+              Sign in
+            </button>{" "}
+            to save your work.
+          </>
+        ) : (
+          message
+        )}
       </p>
-      {layout === "banner" && !hasSavedDesignAccess ? (
-        <Button type="button" variant="secondary" size="sm" onClick={onSignIn}>
-          Sign in
-        </Button>
-      ) : null}
       {layout === "banner" && onDismiss ? (
         <button
           type="button"

@@ -32,7 +32,7 @@ interface EditorSidebarProps {
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
-  isAutoSavePanelStatusVisible: boolean;
+  isDocumentPanelStatusVisible: boolean;
   isBottomPanelCanvasFocusActive: boolean;
   palette: PaletteColor[];
   renameRequestToken: number;
@@ -88,7 +88,7 @@ export function EditorSidebar({
   documentTitle,
   hasSavedDesignAccess,
   hasUnsavedChanges,
-  isAutoSavePanelStatusVisible,
+  isDocumentPanelStatusVisible,
   isBottomPanelCanvasFocusActive,
   palette,
   renameRequestToken,
@@ -228,7 +228,7 @@ export function EditorSidebar({
               documentTitle={documentTitle}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
-              isAutoSavePanelStatusVisible={isAutoSavePanelStatusVisible}
+              isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
               onLoadSelected={onLoadSelected}
               renameRequestToken={renameRequestToken}
               onSignIn={onSignIn}

@@ -20,7 +20,7 @@ interface DocumentPanelPageProps {
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
-  isAutoSavePanelStatusVisible: boolean;
+  isDocumentPanelStatusVisible: boolean;
   onLoadSelected: () => void;
   renameRequestToken: number;
   onSignIn: () => void;
@@ -44,7 +44,7 @@ export function DocumentPanelPage({
   documentTitle,
   hasSavedDesignAccess,
   hasUnsavedChanges,
-  isAutoSavePanelStatusVisible,
+  isDocumentPanelStatusVisible,
   onLoadSelected,
   renameRequestToken,
   onSignIn,
@@ -98,7 +98,7 @@ export function DocumentPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        {isAutoSavePanelStatusVisible ? (
+        {isDocumentPanelStatusVisible ? (
           <div className={styles.sidebarSubsection}>
             <SaveStatusCard
               autoSaveEnabled={autoSaveEnabled}

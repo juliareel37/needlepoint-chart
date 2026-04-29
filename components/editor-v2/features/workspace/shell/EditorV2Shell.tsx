@@ -290,12 +290,12 @@ export function EditorV2Shell({
             ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
+            { id: "sign-in", label: "Sign in" },
             {
               id: previewMode ? "exit-preview" : "preview",
               label: previewMode ? "Exit preview" : "Preview",
             },
             ...HEADER_FILE_MENU_ITEMS,
-            { id: "sign-in", label: "Sign in" },
           ],
     [hasSavedDesignAccess, previewMode],
   );
@@ -1076,10 +1076,13 @@ export function EditorV2Shell({
     saveMode === "autosave" && !hasCompletedSave && !saveMessage
       ? true
       : Boolean(saveMessage || hasUnsavedChanges);
-  const showAutoSavePanelStatus = isBottomPanelLayout && saveMode === "autosave";
-  const useTopSaveBanner =
-    isBottomPanelLayout && saveMode !== "autosave" && showSaveStatus;
-  const showTopSaveBanner = useTopSaveBanner && !saveBannerDismissed;
+  const showDocumentPanelStatus =
+    isBottomPanelLayout &&
+    ((saveMode === "autosave" && showSaveStatus) ||
+      (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
+  const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
+  const showLoggedOutTopBanner = !hasSavedDesignAccess && !saveBannerDismissed;
+  const showTopSaveBanner = showLoggedOutTopBanner;
   const showSaveConfirmationOverlay =
     saveNotificationVisible &&
     (IS_DEV_APP_MODE || saveMode === "manual" || !hasSavedDesignAccess);
@@ -1213,7 +1216,7 @@ export function EditorV2Shell({
       return (
         <span className={styles.headerOverflowItemLabel}>
           <ButtonIcon
-            icon="/icons/lucide/log-in.svg"
+            icon="/icons/lucide/user.svg"
             className={styles.saveButtonIcon}
           />
           <span>{item.label}</span>
@@ -1262,7 +1265,8 @@ export function EditorV2Shell({
     <main className={styles.shell}>
       {!setupModalOpen &&
       headerFileLeftTarget &&
-      (saveMode === "manual" || !hasSavedDesignAccess)
+      saveMode === "manual" &&
+      hasSavedDesignAccess
         ? createPortal(
             <Button
               type="button"
@@ -1280,20 +1284,22 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && !useTopSaveBanner && !showAutoSavePanelStatus && headerAutosaveTarget
+      {!setupModalOpen && !showDocumentPanelStatus && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
-              <SaveStatusCard
-                autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                hasSavedDesignAccess={hasSavedDesignAccess}
-                hasUnsavedChanges={hasUnsavedChanges}
-                layout="header"
-                onDismiss={null}
-                onSignIn={openSignInForCurrentDesign}
-                recoveredLocalChanges={recoveredLocalChanges}
-                saveMode={saveMode}
-                saveMessage={saveMessage}
-              />
+              showHeaderSaveStatus ? (
+                <SaveStatusCard
+                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                  hasSavedDesignAccess={hasSavedDesignAccess}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  layout="header"
+                  onDismiss={null}
+                  onSignIn={openSignInForCurrentDesign}
+                  recoveredLocalChanges={recoveredLocalChanges}
+                  saveMode={saveMode}
+                  saveMessage={saveMessage}
+                />
+              ) : null
             ) : (
               <div className={styles.headerFileMenuGroup}>
                 <SingleSelectDropdown
@@ -1321,17 +1327,19 @@ export function EditorV2Shell({
                   menuClassName={styles.headerFileMenuSurface}
                   triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
                 />
-                <SaveStatusCard
-                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                  hasSavedDesignAccess={hasSavedDesignAccess}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  layout="header"
-                  onDismiss={null}
-                  onSignIn={openSignInForCurrentDesign}
-                  recoveredLocalChanges={recoveredLocalChanges}
-                  saveMode={saveMode}
-                  saveMessage={saveMessage}
-                />
+                {showHeaderSaveStatus ? (
+                  <SaveStatusCard
+                    autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                    hasSavedDesignAccess={hasSavedDesignAccess}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    layout="header"
+                    onDismiss={null}
+                    onSignIn={openSignInForCurrentDesign}
+                    recoveredLocalChanges={recoveredLocalChanges}
+                    saveMode={saveMode}
+                    saveMessage={saveMessage}
+                  />
+                ) : null}
               </div>
             ),
             headerAutosaveTarget,
@@ -1627,7 +1635,7 @@ export function EditorV2Shell({
                 documentTitle={title}
                 hasSavedDesignAccess={hasSavedDesignAccess}
                 hasUnsavedChanges={hasUnsavedChanges}
-                isAutoSavePanelStatusVisible={showAutoSavePanelStatus}
+                isDocumentPanelStatusVisible={showDocumentPanelStatus}
                 isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
                 palette={palette}
                 renameRequestToken={renameRequestToken}
@@ -1832,7 +1840,7 @@ function SaveButtonLabel({
   ) : (
     <>
       <ButtonIcon icon="/icons/lucide/alert.svg" data-state="alert" className={styles.alertButtonIcon} />
-      Sign in or create an account to save your work.
+      Save
     </>
   );
 }
