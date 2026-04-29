@@ -812,31 +812,33 @@ export function LibraryPageClient({
           </div>
 
           <div className={styles.viewControls}>
-            <SingleSelectDropdown<SortOption>
-              ariaLabel="Sort designs"
-              items={[...sortOptions]}
-              value={sortMode}
-              placeholder="Sort"
-              triggerVariant="ghost"
-              triggerLabel={
-                <span className={styles.sortTriggerLabel}>
-                  <span className={styles.sortTriggerPrefix}>Sort</span>
-                  <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
-                </span>
-              }
-              getItemValue={(item) => item.id}
-              getItemLabel={(item) => item.label}
-              onValueChange={(value) => {
-                setSortMode(value as LibrarySortMode);
-              }}
-              triggerClassName={styles.sortTrigger}
-              wrapperClassName={styles.sortDropdown}
-              menuClassName={styles.sortMenu}
-              minWidth="auto"
-              menuPlacement="bottom-end"
-              menuPortalToViewport
-              openOnHover={!touchPrimaryInput}
-            />
+            <div className={styles.sortControl}>
+              <span className={styles.sortDropdownLabel}>Sort by:</span>
+              <SingleSelectDropdown<SortOption>
+                ariaLabel="Sort designs"
+                items={[...sortOptions]}
+                value={sortMode}
+                placeholder="Sort"
+                triggerVariant="ghost"
+                triggerLabel={
+                  <span className={styles.sortTriggerLabel}>
+                    <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
+                  </span>
+                }
+                getItemValue={(item) => item.id}
+                getItemLabel={(item) => item.label}
+                onValueChange={(value) => {
+                  setSortMode(value as LibrarySortMode);
+                }}
+                triggerClassName={styles.sortTrigger}
+                wrapperClassName={styles.sortDropdown}
+                menuClassName={styles.sortMenu}
+                minWidth="auto"
+                menuPlacement="bottom-end"
+                menuPortalToViewport
+                openOnHover={!touchPrimaryInput}
+              />
+            </div>
 
             <SegmentedControl<LibraryViewMode>
               ariaLabel="Design library view"

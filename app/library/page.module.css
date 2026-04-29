@@ -255,8 +255,25 @@
   gap: 10px;
 }
 
+.sortControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .sortDropdown {
   position: relative;
+  min-width: 0;
+}
+
+.sortDropdownLabel {
+  font-size: 12px;
+  line-height: 1.1;
+  /* font-weight: 700; */
+  letter-spacing: 0.08em;
+  /* text-transform: uppercase; */
+  color: var(--text-tertiary);
 }
 
 .sortTrigger {
@@ -267,17 +284,7 @@
 .sortTriggerLabel {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
   min-width: 0;
-}
-
-.sortTriggerPrefix {
-  font-size: 12px;
-  line-height: 1.1;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 .sortTriggerValue {
@@ -960,6 +967,10 @@
   .viewControls {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .sortControl {
+    min-width: 0;
   }
 
   .sortTrigger {
