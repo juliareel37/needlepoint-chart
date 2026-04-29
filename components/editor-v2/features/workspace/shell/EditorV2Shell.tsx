@@ -69,6 +69,7 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const VERSION_SAVE_SUCCESS_PREFIX = "Version saved at ";
 const VERSION_HISTORY_TRACE_OPACITY = 0.35;
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
@@ -1148,9 +1149,18 @@ export function EditorV2Shell({
   }, []);
 
   useEffect(() => {
-    if (!saveMessage.startsWith(SAVE_SUCCESS_PREFIX)) {
+    const saveSucceeded =
+      saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
+      saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX) ||
+      saveMessage.startsWith(VERSION_SAVE_SUCCESS_PREFIX);
+
+    if (!saveSucceeded) {
       setSaveNotificationVisible(false);
       return;
+    }
+
+    if (currentStorageId) {
+      versionHistoryCache.delete(currentStorageId);
     }
 
     setSaveNotificationVisible(true);
@@ -1160,8 +1170,7 @@ export function EditorV2Shell({
     }, 5000);
 
     return () => window.clearTimeout(timeoutId);
-  }, 
-  [saveMessage]);
+  }, [currentStorageId, saveMessage]);
 
   useEffect(() => {
     setHeaderFileLeftTarget(window.document.getElementById("app-header-file-left"));

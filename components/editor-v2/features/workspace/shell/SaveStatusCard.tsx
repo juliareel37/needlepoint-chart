@@ -6,6 +6,7 @@ import styles from "./EditorV2Shell.module.css";
 
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const VERSION_SAVE_SUCCESS_PREFIX = "Version saved at ";
 
 export function SaveStatusCard({
   autoSaveEnabled,
@@ -123,7 +124,8 @@ function getSaveStatusState(
 
   if (
     saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
-    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX)
+    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(VERSION_SAVE_SUCCESS_PREFIX)
   ) {
     return "saved";
   }
