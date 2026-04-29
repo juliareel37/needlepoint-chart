@@ -69,6 +69,7 @@ const DEFAULT_CELL_SIZE = 28;
 const FIT_ZOOM_PADDING_FACTOR = 0.92;
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const VERSION_HISTORY_TRACE_OPACITY = 0.35;
 const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
@@ -1181,6 +1182,25 @@ export function EditorV2Shell({
     ((saveMode === "autosave" && showSaveStatus) ||
       (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
   const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
+  const versionHistoryDisplayState = useMemo(() => {
+    if (!isVersionHistoryMode || !state.document.trace) {
+      return state;
+    }
+
+    return {
+      ...state,
+      document: {
+        ...state.document,
+        trace: {
+          ...state.document.trace,
+          visible: true,
+          blendMode: "image" as const,
+          opacity: VERSION_HISTORY_TRACE_OPACITY,
+          locked: true,
+        },
+      },
+    };
+  }, [isVersionHistoryMode, state]);
   const headerFileMenuItems = useMemo(
     () =>
       HEADER_FILE_MENU_ITEMS.filter((item) =>
@@ -1940,7 +1960,7 @@ export function EditorV2Shell({
                     showGridlines={false}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
-                    state={state}
+                    state={versionHistoryDisplayState}
                     zoomAnchor={zoomAnchor}
                   />
                 </div>
