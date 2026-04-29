@@ -12,6 +12,13 @@ import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 const EDITOR_TRACE_POSITION_CELL_SIZE = 28;
 const TRACE_ASPECT_MISMATCH_EPSILON = 0.05;
 
+function getThumbnailSurfaceSize(snapshot: LibraryStitchSnapshot) {
+  return {
+    width: snapshot.width * EDITOR_TRACE_POSITION_CELL_SIZE,
+    height: snapshot.height * EDITOR_TRACE_POSITION_CELL_SIZE,
+  };
+}
+
 export function StitchThumbnailCanvas({
   snapshot,
   traceThumbnailUrl,
