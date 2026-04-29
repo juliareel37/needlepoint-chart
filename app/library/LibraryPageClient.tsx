@@ -29,6 +29,7 @@ import styles from "./page.module.css";
 
 const LOADING_CARD_COUNT = 4;
 const PAGE_SIZE = 12;
+const DESIGN_OPEN_TRANSITION_MS = 70;
 const cardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
@@ -133,9 +134,11 @@ export function LibraryPageClient({
     designId: string;
     action: CardMenuAction;
   } | null>(null);
+  const [openingDesignId, setOpeningDesignId] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const pendingDeletionTimeoutRef = useRef<number | null>(null);
   const pendingDeletionRef = useRef<PendingDeletion | null>(null);
+  const designOpenTimeoutRef = useRef<number | null>(null);
 
   const loadingCards = useMemo(
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
@@ -204,9 +207,42 @@ export function LibraryPageClient({
       if (pendingDeletionTimeoutRef.current !== null) {
         window.clearTimeout(pendingDeletionTimeoutRef.current);
       }
+      if (designOpenTimeoutRef.current !== null) {
+        window.clearTimeout(designOpenTimeoutRef.current);
+      }
     },
     [],
   );
+
+  function navigateToDesign(
+    event: Pick<MouseEvent, "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "preventDefault">,
+    designId: string,
+  ) {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (openingDesignId === designId) {
+      return;
+    }
+
+    if (designOpenTimeoutRef.current !== null) {
+      window.clearTimeout(designOpenTimeoutRef.current);
+    }
+
+    setOpeningDesignId(designId);
+    designOpenTimeoutRef.current = window.setTimeout(() => {
+      router.push(`/editor/designs/${designId}`);
+    }, DESIGN_OPEN_TRANSITION_MS);
+  }
 
   async function handleCreateDesign(config: EditorV2DesignConfigNew) {
     setCreatingDesign(true);
@@ -559,7 +595,10 @@ export function LibraryPageClient({
   }
 
   return (
-    <main className={styles.page}>
+    <main
+      className={styles.page}
+      data-navigating-design={openingDesignId ? "true" : "false"}
+    >
       <section
         className={[
           styles.content,
@@ -636,47 +675,53 @@ export function LibraryPageClient({
               <section className={styles.grid} aria-label="Saved designs">
                 {designs.map((design) => {
                   const isSelected = selectedDesignIds.has(design.id);
-
                   return (
                     <article key={design.id} className={styles.card}>
-                      <div className={styles.thumbnailShell}>
-                        <Link
-                          href={`/editor/designs/${design.id}`}
-                          className={styles.cardLink}
-                        >
-                          <div className={styles.thumbnail}>
-                            <StitchThumbnailCanvas
-                              snapshot={design.stitchSnapshot}
-                              className={styles.thumbnailCanvas}
-                            />
-                          </div>
-                        </Link>
+                      <label
+                        className={`${styles.thumbnailShell} ${styles.cardSelectionSurface}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(event) => {
+                            handleDesignSelectionChange(
+                              design.id,
+                              event.currentTarget.checked,
+                            );
+                          }}
+                          className={styles.cardSelectionInput}
+                          aria-label={`Select ${design.title}`}
+                        />
 
-                        <label className={styles.cardCheckbox}>
+                        <div className={styles.thumbnail}>
+                          <StitchThumbnailCanvas
+                            snapshot={design.stitchSnapshot}
+                            className={styles.thumbnailCanvas}
+                          />
+                        </div>
+
+                        <span className={styles.cardCheckbox}>
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={(event) => {
-                              handleDesignSelectionChange(
-                                design.id,
-                                event.currentTarget.checked,
-                              );
-                            }}
                             className={styles.cardCheckboxInput}
-                            aria-label={`Select ${design.title}`}
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden="true"
                           />
                           <span
                             className={styles.cardCheckboxIndicator}
                             aria-hidden="true"
                           />
-                        </label>
-                      </div>
+                        </span>
+                      </label>
 
                       <div className={styles.cardBody}>
                         <div className={styles.cardTopRow}>
                           <Link
                             href={`/editor/designs/${design.id}`}
                             className={styles.cardTitleLink}
+                            onClick={(event) => navigateToDesign(event, design.id)}
                           >
                             <h2 className={styles.cardTitle}>{design.title}</h2>
                           </Link>
@@ -687,6 +732,7 @@ export function LibraryPageClient({
                         <Link
                           href={`/editor/designs/${design.id}`}
                           className={styles.cardDetailsLink}
+                          onClick={(event) => navigateToDesign(event, design.id)}
                         >
                           <p className={styles.cardMeta}>
                             {design.gridWidth} × {design.gridHeight} cells
@@ -740,6 +786,7 @@ export function LibraryPageClient({
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listNameCell}
+                        onClick={(event) => navigateToDesign(event, design.id)}
                       >
                         <span className={styles.listThumbnailFrame}>
                           <StitchThumbnailCanvas
@@ -753,12 +800,14 @@ export function LibraryPageClient({
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
+                        onClick={(event) => navigateToDesign(event, design.id)}
                       >
                         {design.gridWidth} × {design.gridHeight} cells
                       </Link>
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
+                        onClick={(event) => navigateToDesign(event, design.id)}
                       >
                         {typeof design.colorCount === "number"
                           ? `${design.colorCount} colors`
@@ -767,6 +816,7 @@ export function LibraryPageClient({
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listMetaCell}
+                        onClick={(event) => navigateToDesign(event, design.id)}
                       >
                         {design.updatedLabel.replace(/^Edited /, "")}
                       </Link>
@@ -940,10 +990,11 @@ export function LibraryPageClient({
               onClick={handleSelectAllDesigns}
               disabled={allLoadedDesignsSelected}
             >
-              <span
+              {/* <span
                 className={`${styles.bulkBarActionIcon} ${styles.bulkBarSelectAllIcon}`}
                 aria-hidden="true"
-              />
+              /> */}
+                <ButtonIcon icon="/icons/lucide/square-check.svg" />
               <span>Select All</span>
             </button>
 
