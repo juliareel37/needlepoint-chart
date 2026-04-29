@@ -207,38 +207,13 @@
   background: #f9fbff;
 }
 
-.listThumbnailImage {
+.listThumbnailCanvas {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
   border-radius: 4px;
   border: 1px solid #d8dfec;
   background: #ffffff;
-}
-
-.listPreviewGrid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  width: 100%;
-  height: 100%;
-  border: 1px solid #d8dfec;
-  background: #ffffff;
-}
-
-.listPreviewCell {
-  min-width: 0;
-  min-height: 0;
-  border-right: 1px solid #d8dfec;
-  border-bottom: 1px solid #d8dfec;
-}
-
-.listPreviewCell:nth-child(12n) {
-  border-right: none;
-}
-
-.listPreviewCell:nth-last-child(-n + 12) {
-  border-bottom: none;
 }
 
 .listTitle {
@@ -299,37 +274,13 @@
   padding: 10px;
 }
 
-.previewGrid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  aspect-ratio: 1 / 1;
-  border: 1px solid #d8dfec;
-  background: #ffffff;
-}
-
-.thumbnailImage {
+.thumbnailCanvas {
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
-  object-fit: cover;
   border: 1px solid #d8dfec;
   border-radius: 6px;
   background: #ffffff;
-}
-
-.previewCell {
-  min-width: 0;
-  min-height: 0;
-  border-right: 1px solid #d8dfec;
-  border-bottom: 1px solid #d8dfec;
-}
-
-.previewCell:nth-child(12n) {
-  border-right: none;
-}
-
-.previewCell:nth-last-child(-n + 12) {
-  border-bottom: none;
 }
 
 .cardBody {

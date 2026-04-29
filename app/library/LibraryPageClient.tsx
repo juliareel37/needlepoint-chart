@@ -21,31 +21,9 @@ import {
 } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { LibraryDesignRecord } from "@/lib/library/designs";
+import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
+import { StitchThumbnailCanvas } from "./StitchThumbnailCanvas";
 import styles from "./page.module.css";
-
-const previewPalette = [
-  "transparent",
-  "#f1b9da",
-  "#e5439f",
-  "#b4a3ef",
-  "#7d55e6",
-  "#52239a",
-] as const;
-
-const basePreviewCells = [
-  [4, 0, 3, 1, 1, 0, 2, 1, 0, 0, 5, 0],
-  [3, 0, 3, 5, 5, 0, 0, 0, 2, 1, 0, 1],
-  [0, 0, 0, 2, 0, 2, 0, 3, 0, 4, 0, 0],
-  [4, 0, 0, 4, 2, 0, 0, 3, 0, 0, 4, 1],
-  [0, 2, 4, 5, 0, 2, 0, 5, 0, 0, 2, 0],
-  [4, 3, 2, 0, 2, 4, 0, 0, 0, 4, 0, 3],
-  [0, 3, 0, 0, 5, 4, 0, 4, 0, 4, 1, 0],
-  [0, 5, 0, 5, 4, 0, 0, 5, 0, 5, 0, 5],
-  [2, 5, 0, 5, 2, 5, 1, 2, 3, 5, 5, 0],
-  [0, 5, 0, 3, 1, 5, 1, 3, 1, 0, 5, 3],
-  [0, 4, 5, 2, 0, 4, 0, 5, 2, 3, 0, 0],
-  [1, 1, 0, 0, 0, 0, 3, 4, 1, 4, 3, 2],
-] as const;
 
 const LOADING_CARD_COUNT = 4;
 const PAGE_SIZE = 12;
@@ -58,15 +36,6 @@ const cardMenuItems = [
 type CardMenuItem = (typeof cardMenuItems)[number];
 type CardMenuAction = (typeof cardMenuItems)[number]["id"];
 type LibraryViewMode = "grid" | "list";
-
-function getPreviewCells(offset: number) {
-  return basePreviewCells.map((row, rowIndex) =>
-    row.map((_, columnIndex) => {
-      const sourceColumn = (columnIndex + offset + rowIndex) % row.length;
-      return row[sourceColumn];
-    }),
-  );
-}
 
 async function fetchLibraryPage(offset: number) {
   const searchParams = new URLSearchParams({
@@ -236,6 +205,12 @@ export function LibraryPageClient({
             updatedLabel: "Edited just now",
             colorCount: Object.keys(loaded.document.palette.colorsById).length,
             thumbnailUrl: loaded.document.trace?.thumbnailUrl ?? null,
+            stitchSnapshot: buildLibraryStitchSnapshot({
+              gridWidth: loaded.document.grid.width,
+              gridHeight: loaded.document.grid.height,
+              cells: loaded.document.grid.cells,
+              colorsById: loaded.document.palette.colorsById,
+            }),
           },
           ...existing,
         ]);
@@ -271,7 +246,7 @@ export function LibraryPageClient({
   ) {
     const isPending =
       pendingCardAction?.action === item.id &&
-      pendingCardAction.designId === design.id;
+      pendingCardAction?.designId === design.id;
 
     return (
       <span
@@ -391,7 +366,7 @@ export function LibraryPageClient({
           <>
             {viewMode === "grid" ? (
               <section className={styles.grid} aria-label="Saved designs">
-                {designs.map((design, index) => (
+                {designs.map((design) => (
                   <article key={design.id} className={styles.card}>
                     <Link
                       href={`/editor/designs/${design.id}`}
@@ -399,27 +374,10 @@ export function LibraryPageClient({
                     >
                       <div className={styles.thumbnail}>
                         <div className={styles.thumbnailFrame}>
-                          {design.thumbnailUrl ? (
-                            <img
-                              src={design.thumbnailUrl}
-                              alt=""
-                              className={styles.thumbnailImage}
-                            />
-                          ) : (
-                            <div className={styles.previewGrid} aria-hidden="true">
-                              {getPreviewCells(index).flatMap((row, rowIndex) =>
-                                row.map((cell, columnIndex) => (
-                                  <span
-                                    key={`${design.id}-${rowIndex}-${columnIndex}`}
-                                    className={styles.previewCell}
-                                    style={{
-                                      backgroundColor: previewPalette[cell],
-                                    }}
-                                  />
-                                )),
-                              )}
-                            </div>
-                          )}
+                          <StitchThumbnailCanvas
+                            snapshot={design.stitchSnapshot}
+                            className={styles.thumbnailCanvas}
+                          />
                         </div>
                       </div>
                     </Link>
@@ -486,34 +444,17 @@ export function LibraryPageClient({
                 </div>
 
                 <div className={styles.listBody}>
-                  {designs.map((design, index) => (
+                  {designs.map((design) => (
                     <article key={design.id} className={styles.listRow}>
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listNameCell}
                       >
                         <span className={styles.listThumbnailFrame}>
-                          {design.thumbnailUrl ? (
-                            <img
-                              src={design.thumbnailUrl}
-                              alt=""
-                              className={styles.listThumbnailImage}
-                            />
-                          ) : (
-                            <span className={styles.listPreviewGrid} aria-hidden="true">
-                              {getPreviewCells(index).flatMap((row, rowIndex) =>
-                                row.map((cell, columnIndex) => (
-                                  <span
-                                    key={`${design.id}-list-${rowIndex}-${columnIndex}`}
-                                    className={styles.listPreviewCell}
-                                    style={{
-                                      backgroundColor: previewPalette[cell],
-                                    }}
-                                  />
-                                )),
-                              )}
-                            </span>
-                          )}
+                          <StitchThumbnailCanvas
+                            snapshot={design.stitchSnapshot}
+                            className={styles.listThumbnailCanvas}
+                          />
                         </span>
                         <span className={styles.listTitle}>{design.title}</span>
                       </Link>

@@ -47,6 +47,11 @@ describe("editor-v2 design collection routes", () => {
     authMock.mockResolvedValue({ userId: "user_1" });
     const state = createNewDesignState(20, 15);
     state.document.project.title = "Pattern One";
+    const [firstColorId, secondColorId] = Object.keys(state.document.palette.colorsById);
+    const firstColorHex = state.document.palette.colorsById[firstColorId]?.hex;
+    const secondColorHex = state.document.palette.colorsById[secondColorId]?.hex;
+    state.document.grid.cells[0] = firstColorId;
+    state.document.grid.cells[1] = secondColorId;
     findManyMock.mockResolvedValue([
       {
         id: "design_1",
@@ -87,6 +92,11 @@ describe("editor-v2 design collection routes", () => {
           updatedLabel: expect.any(String),
           colorCount: expect.any(Number),
           thumbnailUrl: null,
+          stitchSnapshot: {
+            width: 20,
+            height: 15,
+            cells: expect.arrayContaining([firstColorHex, secondColorHex]),
+          },
         },
       ],
       hasMore: false,

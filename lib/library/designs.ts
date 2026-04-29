@@ -1,5 +1,6 @@
 import { normalizeProjectTitle, parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
 import { prisma } from "@/lib/db";
+import { buildLibraryStitchSnapshot, type LibraryStitchSnapshot } from "./stitchSnapshot";
 
 export const LIBRARY_PAGE_SIZE = 12;
 const MAX_LIBRARY_PAGE_SIZE = 24;
@@ -13,6 +14,7 @@ export interface LibraryDesignRecord {
   updatedLabel: string;
   colorCount: number | null;
   thumbnailUrl: string | null;
+  stitchSnapshot: LibraryStitchSnapshot | null;
 }
 
 export interface LibraryDesignPage {
@@ -66,6 +68,14 @@ export async function loadLibraryDesignPage({
         updatedLabel: formatUpdatedLabel(design.updatedAt),
         colorCount: parsed ? Object.keys(parsed.palette.colorsById).length : null,
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
+        stitchSnapshot: parsed
+          ? buildLibraryStitchSnapshot({
+              gridWidth: parsed.grid.width,
+              gridHeight: parsed.grid.height,
+              cells: parsed.grid.cells,
+              colorsById: parsed.palette.colorsById,
+            })
+          : null,
       };
     }),
     hasMore,
