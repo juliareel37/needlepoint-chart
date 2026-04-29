@@ -2124,6 +2124,7 @@
 .alertButtonIcon { 
   background:var(--status-warning-base);
   border-radius: 999px;
+  color: black;
 }
 
 .headerSaveStatus {
