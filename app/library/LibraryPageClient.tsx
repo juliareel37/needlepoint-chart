@@ -42,9 +42,11 @@ const sortOptions = [
   { id: "size-desc", label: "Size" },
   { id: "colors-desc", label: "Color count" },
 ] as const;
+const mobileSelectionMenuItems = [{ id: "toggle-selection" }] as const;
 
 type CardMenuItem = (typeof cardMenuItems)[number];
 type CardMenuAction = (typeof cardMenuItems)[number]["id"];
+type MobileSelectionMenuItem = (typeof mobileSelectionMenuItems)[number];
 type SortOption = (typeof sortOptions)[number];
 type LibrarySortMode = SortOption["id"];
 type LibraryViewMode = "grid" | "list";
@@ -809,9 +811,71 @@ export function LibraryPageClient({
           <div className={styles.viewSummary}>
             <span className={styles.viewSummaryLabel}>All Designs</span>
             <span className={styles.viewSummaryCount}>({totalCount})</span>
+            {touchPrimaryInput ? (
+              <SingleSelectDropdown<MobileSelectionMenuItem>
+                ariaLabel="Library selection actions"
+                items={[...mobileSelectionMenuItems]}
+                value=""
+                placeholder="Selection actions"
+                triggerLabel={<span className={styles.mobileSelectionDots}>⋮</span>}
+                triggerVariant="ghost"
+                showChevron={false}
+                menuPortalToViewport
+                menuPlacement="bottom-end"
+                menuShowTrailingCheck={false}
+                minWidth="auto"
+                getItemValue={(item) => item.id}
+                getItemLabel={() => (
+                  <span className={styles.mobileSelectionMenuLabel}>
+                    <ButtonIcon
+                      icon={
+                        touchSelectionMode
+                          ? "/icons/lucide/x.svg"
+                          : "/icons/lucide/square-check.svg"
+                      }
+                      className={styles.mobileSelectionMenuIcon}
+                    />
+                    <span>{touchSelectionMode ? "Done" : "Select"}</span>
+                  </span>
+                )}
+                onValueChange={() => {
+                  handleTouchSelectionModeToggle();
+                }}
+                wrapperClassName={`${styles.mobileSelectionMenu} ${styles.mobileSelectionMenuInSummary}`}
+                triggerClassName={styles.mobileSelectionTrigger}
+                menuClassName={styles.mobileSelectionMenuSurface}
+                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+              />
+            ) : null}
           </div>
 
+
           <div className={styles.viewControls}>
+            {touchPrimaryInput ? (
+              <Button
+                type="button"
+                variant="ghostV2"
+                size="sm"
+                active={touchSelectionMode}
+                onClick={handleTouchSelectionModeToggle}
+                className={styles.desktopSelectButton}
+              >
+                <ButtonIcon
+                  icon={
+                    touchSelectionMode
+                      ? "/icons/lucide/x.svg"
+                      : "/icons/lucide/square-check.svg"
+                  }
+                />
+                {touchSelectionMode ? "Done" : "Select"}
+              </Button>
+            ) : null}
+            {touchPrimaryInput ? (
+              <span
+                className={styles.viewControlsDividerNoMobile}
+                aria-hidden="true"
+              />
+            ) : null}
             <div className={styles.sortControl}>
               <span className={styles.sortDropdownLabel}>Sort by:</span>
               <SingleSelectDropdown<SortOption>
@@ -839,7 +903,10 @@ export function LibraryPageClient({
                 openOnHover={!touchPrimaryInput}
               />
             </div>
-
+            <span
+              className={styles.viewControlsDividerKeep}
+              aria-hidden="true"
+            />
             <SegmentedControl<LibraryViewMode>
               ariaLabel="Design library view"
               className={styles.viewToggle}
@@ -857,24 +924,45 @@ export function LibraryPageClient({
                 },
               ]}
             />
-
+            <span
+              className={styles.viewControlsDividerNoDesktop}
+              aria-hidden="true"
+            />
             {touchPrimaryInput ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                active={touchSelectionMode}
-                onClick={handleTouchSelectionModeToggle}
-              >
-                <ButtonIcon
-                  icon={
-                    touchSelectionMode
-                      ? "/icons/lucide/x.svg"
-                      : "/icons/lucide/square-check.svg"
-                  }
-                />
-                {touchSelectionMode ? "Done" : "Select"}
-              </Button>
+              <SingleSelectDropdown<MobileSelectionMenuItem>
+                ariaLabel="Library selection actions"
+                items={[...mobileSelectionMenuItems]}
+                value=""
+                placeholder="Selection actions"
+                triggerLabel={<span className={styles.mobileSelectionDots}>⋮</span>}
+                triggerVariant="ghost"
+                showChevron={false}
+                menuPortalToViewport
+                menuPlacement="bottom-end"
+                menuShowTrailingCheck={false}
+                minWidth="auto"
+                getItemValue={(item) => item.id}
+                getItemLabel={() => (
+                  <span className={styles.mobileSelectionMenuLabel}>
+                    <ButtonIcon
+                      icon={
+                        touchSelectionMode
+                          ? "/icons/lucide/x.svg"
+                          : "/icons/lucide/square-check.svg"
+                      }
+                      className={styles.mobileSelectionMenuIcon}
+                    />
+                    <span>{touchSelectionMode ? "Done" : "Select"}</span>
+                  </span>
+                )}
+                onValueChange={() => {
+                  handleTouchSelectionModeToggle();
+                }}
+                wrapperClassName={`${styles.mobileSelectionMenu} ${styles.mobileSelectionMenuInControls}`}
+                triggerClassName={styles.mobileSelectionTrigger}
+                menuClassName={styles.mobileSelectionMenuSurface}
+                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+              />
             ) : null}
           </div>
         </div>

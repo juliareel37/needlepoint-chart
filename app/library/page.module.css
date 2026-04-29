@@ -231,6 +231,15 @@
   color: var(--text-secondary);
 }
 
+.mobileSelectionMenuInSummary {
+  display: none;
+  margin-left: auto;
+}
+
+.mobileSelectionMenuInControls {
+  display: none;
+}
+
 .viewSummaryLabel,
 .viewSummaryCount {
   font-size: 12px;
@@ -252,13 +261,74 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
+  gap: 14px;
+}
+
+.desktopSelectButton {
+  display: inline-flex;
+}
+
+
+
+.viewControlsDividerKeep {
+  width: 1px;
+  height: 24px;
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  flex: 0 0 auto;
+}
+
+.viewControlsDividerNoMobile {
+  width: 1px;
+  height: 24px;
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  flex: 0 0 auto;
+}
+
+.viewControlsDividerNoDesktop {
+  display: none;
+}
+
+.mobileSelectionMenu {
+  display: none;
+  position: relative;
+}
+
+.mobileSelectionTrigger {
+  min-width: 32px !important;
+  padding-inline: 8px !important;
+}
+
+.mobileSelectionDots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.mobileSelectionMenuSurface {
+  min-width: 148px;
+}
+
+.mobileSelectionMenuLabel {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
+}
+
+.mobileSelectionMenuIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 
 .sortControl {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -271,7 +341,7 @@
   font-size: 12px;
   line-height: 1.1;
   /* font-weight: 700; */
-  letter-spacing: 0.08em;
+  /* letter-spacing: 0.08em; */
   /* text-transform: uppercase; */
   color: var(--text-tertiary);
 }
@@ -291,6 +361,7 @@
   min-width: 0;
   color: var(--text-primary);
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .sortMenu {
@@ -900,10 +971,10 @@
     flex-wrap: wrap;
   }
 
-  .viewControls {
+  /* .viewControls {
     width: 100%;
     justify-content: space-between;
-  }
+  } */
 
   .bulkBar {
     width: 100%;
@@ -960,17 +1031,45 @@
     width: 100%;
   }
 
-  .viewRow {
+  /* .viewRow {
     align-items: flex-start;
-  }
+  } */
 
-  .viewControls {
+  /* .viewControls {
     width: 100%;
     justify-content: space-between;
+  } */
+
+  .desktopSelectButton {
+    display: none;
+  }
+
+  .viewControlsDivider {
+    display: none;
+  }
+
+  .viewControlsDividerNoMobile {
+    display: none;
+  }
+
+  .viewControlsDividerNoDesktop {
+    width: 1px;
+    height: 24px;
+    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    flex: 0 0 auto;
   }
 
   .sortControl {
     min-width: 0;
+  }
+
+  .mobileSelectionMenu {
+    display: inline-flex;
+    margin-left: -2px;
+  }
+
+  .mobileSelectionMenuInControls {
+    display: inline-flex;
   }
 
   .sortTrigger {
@@ -980,6 +1079,10 @@
   .sortTriggerValue {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .mobileSelectionMenuInSummary {
+    display: none;
   }
 
   .bulkBar {
@@ -1072,5 +1175,25 @@
   .cardMeta,
   .cardTimestamp {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .viewSummary {
+    width: 100%;
+    align-items: center;
+  }
+
+  .mobileSelectionMenuInSummary {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .mobileSelectionMenuInControls {
+    display: none;
+  }
+
+  .viewControlsDividerNoDesktop {
+    display: none;
   }
 }
