@@ -180,11 +180,21 @@ export function SingleSelectDropdown<TItem>({
     items.find((item) => getItemValue(item) === value) ?? null;
   const isTopPlacement =
     menuPlacement === "top-start" || menuPlacement === "top-end";
+  const isEndPlacement =
+    menuPlacement === "top-end" || menuPlacement === "bottom-end";
   const orderedItems = isTopPlacement ? [...items].reverse() : items;
 
   const chevronDirection =
     isTopPlacement ? "up" : "down";
   const triggerZIndex = menuOverlapTrigger ? 1 : undefined;
+  const portalReady = !menuPortalToViewport || portalStyle !== null;
+  const hiddenPortalMeasureStyle: CSSProperties = menuPortalToViewport
+    ? {
+        position: "fixed",
+        top: 0,
+        left: 0,
+      }
+    : {};
   const menuPositionStyle: CSSProperties = menuPortalToViewport
     ? {}
     : isTopPlacement
@@ -213,15 +223,13 @@ export function SingleSelectDropdown<TItem>({
     const menuRect = menuRef.current.getBoundingClientRect();
     const measuredMenuWidth = menuRect.width || triggerRect.width;
     const measuredMenuHeight = menuRect.height || 0;
-    const desiredLeft =
-      menuPlacement === "top-end" || menuPlacement === "bottom-end"
-        ? triggerRect.right - measuredMenuWidth
-        : triggerRect.left;
+    const desiredLeft = triggerRect.left;
     const maxLeft = Math.max(
       viewportPadding,
       window.innerWidth - measuredMenuWidth - viewportPadding,
     );
     const left = Math.min(Math.max(desiredLeft, viewportPadding), maxLeft);
+    const right = Math.max(viewportPadding, window.innerWidth - triggerRect.right);
     const top =
       isTopPlacement
         ? Math.max(
@@ -242,7 +250,8 @@ export function SingleSelectDropdown<TItem>({
     setPortalStyle({
       position: "fixed",
       top,
-      left,
+      left: isEndPlacement ? "auto" : left,
+      right: isEndPlacement ? right : "auto",
       zIndex: "var(--z-editor-popover)",
       width: menuMatchTriggerWidth ? triggerRect.width : menuWidth,
       minWidth: Math.max(triggerRect.width, Number(minWidth) || 0),
@@ -256,6 +265,7 @@ export function SingleSelectDropdown<TItem>({
     menuMatchTriggerWidth,
     menuOffset,
     menuOverlapTrigger,
+    isEndPlacement,
     menuPlacement,
     menuPortalToViewport,
     menuWidth,
@@ -268,7 +278,25 @@ export function SingleSelectDropdown<TItem>({
     }
 
     updatePortalStyle();
+
+    const rafId = window.requestAnimationFrame(() => {
+      updatePortalStyle();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
   }, [open, menuPortalToViewport, updatePortalStyle]);
+
+  useEffect(() => {
+    if (!menuPortalToViewport) {
+      return;
+    }
+
+    if (!open) {
+      setPortalStyle(null);
+    }
+  }, [menuPortalToViewport, open]);
 
   useLayoutEffect(() => {
     if (!open || !isTopPlacement || !menuRef.current) {
@@ -306,13 +334,24 @@ export function SingleSelectDropdown<TItem>({
     }
 
     const syncPosition = () => updatePortalStyle();
+    const menuElement = menuRef.current;
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" && menuElement
+        ? new ResizeObserver(() => {
+            syncPosition();
+          })
+        : null;
 
     window.addEventListener("resize", syncPosition);
     window.addEventListener("scroll", syncPosition, true);
+    if (resizeObserver && menuElement) {
+      resizeObserver.observe(menuElement);
+    }
 
     return () => {
       window.removeEventListener("resize", syncPosition);
       window.removeEventListener("scroll", syncPosition, true);
+      resizeObserver?.disconnect();
     };
   }, [open, menuPortalToViewport, updatePortalStyle]);
 
@@ -362,6 +401,9 @@ export function SingleSelectDropdown<TItem>({
         maxWidth: menuMaxWidth,
         maxHeight: menuMaxHeight,
         overflowY: "auto",
+        visibility: portalReady ? "visible" : "hidden",
+        pointerEvents: portalReady ? "auto" : "none",
+        ...hiddenPortalMeasureStyle,
         ...menuPositionStyle,
         ...portalStyle,
         ...menuStyle,
@@ -435,7 +477,13 @@ export function SingleSelectDropdown<TItem>({
         aria-label={ariaLabel}
         onClick={() => {
           clearHoverCloseTimeout();
-          setOpen((currentOpen) => !currentOpen);
+          setOpen((currentOpen) => {
+            if (!currentOpen && menuPortalToViewport) {
+              setPortalStyle(null);
+            }
+
+            return !currentOpen;
+          });
         }}
         className={triggerClassName}
         style={{

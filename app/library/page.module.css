@@ -87,10 +87,11 @@
 }
 
 .viewRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  column-gap: 14px;
+  row-gap: 12px;
   margin-bottom: 18px;
 }
 
@@ -233,16 +234,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
   color: var(--text-secondary);
-}
-
-.mobileSelectionMenuInSummary {
-  display: none;
-  margin-left: auto;
-}
-
-.mobileSelectionMenuInControls {
-  display: none;
 }
 
 .viewSummaryLabel,
@@ -261,20 +254,6 @@
   width: auto;
 }
 
-.viewControls {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-
-.desktopSelectButton {
-  display: inline-flex;
-}
-
-
-
 .viewControlsDividerKeep {
   width: 1px;
   height: 24px;
@@ -282,58 +261,9 @@
   flex: 0 0 auto;
 }
 
-.viewControlsDividerNoMobile {
-  width: 1px;
-  height: 24px;
-  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
-  flex: 0 0 auto;
-}
-
-.viewControlsDividerNoDesktop {
-  display: none;
-}
-
-.mobileSelectionMenu {
-  display: none;
-  position: relative;
-}
-
-.mobileSelectionTrigger {
-  min-width: 32px !important;
-  padding-inline: 8px !important;
-}
-
-.mobileSelectionDots {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 12px;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--text-primary);
-  transform: translateY(-1px);
-}
-
-.mobileSelectionMenuSurface {
-  min-width: 148px;
-}
-
-.mobileSelectionMenuLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mobileSelectionMenuIcon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-
 .sortControl {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   min-width: 0;
 }
 
@@ -342,18 +272,9 @@
   min-width: 0;
 }
 
-.sortDropdownLabel {
-  font-size: 12px;
-  line-height: 1.1;
-  /* font-weight: 700; */
-  /* letter-spacing: 0.08em; */
-  /* text-transform: uppercase; */
-  color: var(--text-tertiary);
-}
-
 .sortTrigger {
-  min-width: 0 !important;
-  padding-inline: 10px !important;
+  min-width: 132px !important;
+  padding-inline: 14px !important;
 }
 
 .sortTriggerLabel {
@@ -374,12 +295,22 @@
 }
 
 .viewToggleItem {
-  min-width: 34px;
-  padding: 4px 10px;
+  min-width: 28px;
+  padding: 3px 8px;
 }
 
 .viewToggleIcon {
+  display: inline-grid;
+  place-items: center;
   color: inherit;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+}
+
+.viewToggleIcon > span {
+  width: 12px;
+  height: 12px;
 }
 
 .searchField {
@@ -697,7 +628,7 @@
   align-items: center;
   justify-content: center;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transform: translateY(-2px);
   transition: opacity 180ms ease, transform 180ms ease;
 }
@@ -705,6 +636,7 @@
 .cardCheckboxInput {
   position: absolute;
   inset: 0;
+  z-index: 1;
   margin: 0;
   opacity: 0;
   cursor: pointer;
@@ -720,6 +652,7 @@
 
   box-shadow: 0 8px 18px rgba(10, 15, 26, 0.24);
   backdrop-filter: blur(6px);
+  pointer-events: none;
   transition: background-color 180ms ease, border-color 180ms ease,
     box-shadow 180ms ease;
 }
@@ -951,6 +884,7 @@
   transform: scale(1.08);
 }
 
+.card[data-selectable="true"] .thumbnail::after,
 .card[data-touch-selection-mode="true"] .thumbnail::after,
 .card:has(.cardSelectionInputCard:focus-visible) .thumbnail::after,
 .card[data-selected="true"] .thumbnail::after,
@@ -962,6 +896,7 @@
   opacity: 1;
 }
 
+.card[data-selectable="true"] .cardCheckbox,
 .card[data-touch-selection-mode="true"] .cardCheckbox,
 .card[data-selected="true"] .cardCheckbox,
 .card:has(.cardSelectionInputCard:focus-visible) .cardCheckbox,
@@ -1046,13 +981,12 @@
   }
 
   .viewRow {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "summary menu"
+      "sort toggle";
+    align-items: center;
   }
-
-  /* .viewControls {
-    width: 100%;
-    justify-content: space-between;
-  } */
 
   .bulkBar {
     width: 100%;
@@ -1079,6 +1013,24 @@
   .listRow {
     grid-template-columns: minmax(0, 1.3fr) minmax(120px, 0.7fr) minmax(90px, 0.5fr) minmax(90px, 0.5fr) 32px;
     column-gap: 12px;
+  }
+
+  .viewSummary {
+    grid-area: summary;
+  }
+
+  .sortControl {
+    grid-area: sort;
+    justify-self: start;
+  }
+
+  .viewToggle {
+    grid-area: toggle;
+    justify-self: end;
+  }
+
+  .viewControlsDividerKeep {
+    display: none;
   }
 }
 
@@ -1109,45 +1061,12 @@
     width: 100%;
   }
 
-  /* .viewRow {
-    align-items: flex-start;
-  } */
-
-  /* .viewControls {
-    width: 100%;
-    justify-content: space-between;
-  } */
-
-  .desktopSelectButton {
-    display: none;
-  }
-
   .viewControlsDivider {
     display: none;
   }
 
-  .viewControlsDividerNoMobile {
-    display: none;
-  }
-
-  .viewControlsDividerNoDesktop {
-    width: 1px;
-    height: 24px;
-    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
-    flex: 0 0 auto;
-  }
-
   .sortControl {
     min-width: 0;
-  }
-
-  .mobileSelectionMenu {
-    display: inline-flex;
-    margin-left: -2px;
-  }
-
-  .mobileSelectionMenuInControls {
-    display: inline-flex;
   }
 
   .sortTrigger {
@@ -1158,11 +1077,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  .mobileSelectionMenuInSummary {
-    display: none;
-  }
-
   .bulkBar {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -1289,16 +1203,11 @@
     align-items: center;
   }
 
-  .mobileSelectionMenuInSummary {
-    display: inline-flex;
-    margin-left: auto;
+  .viewRow {
+    column-gap: 10px;
   }
 
-  .mobileSelectionMenuInControls {
-    display: none;
-  }
-
-  .viewControlsDividerNoDesktop {
-    display: none;
+  .sortTrigger {
+    max-width: min(52vw, 200px);
   }
 }

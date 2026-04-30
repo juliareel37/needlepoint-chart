@@ -30,11 +30,16 @@ import styles from "./page.module.css";
 const PAGE_SIZE = 12;
 const LOADING_CARD_COUNT = PAGE_SIZE;
 const DESIGN_OPEN_TRANSITION_MS = 70;
-const cardMenuItems = [
+const baseCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] as const;
+const touchSelectionCardMenuItem = {
+  id: "toggle-selection",
+  label: "Select items",
+  icon: "/icons/lucide/square-check.svg",
+} as const;
 const sortOptions = [
   { id: "updated-desc", label: "Last edited date" },
   { id: "created-desc", label: "Created date" },
@@ -42,11 +47,9 @@ const sortOptions = [
   { id: "size-desc", label: "Size" },
   { id: "colors-desc", label: "Color count" },
 ] as const;
-const mobileSelectionMenuItems = [{ id: "toggle-selection" }] as const;
 
-type CardMenuItem = (typeof cardMenuItems)[number];
-type CardMenuAction = (typeof cardMenuItems)[number]["id"];
-type MobileSelectionMenuItem = (typeof mobileSelectionMenuItems)[number];
+type CardMenuItem = (typeof baseCardMenuItems)[number] | typeof touchSelectionCardMenuItem;
+type CardMenuAction = CardMenuItem["id"];
 type SortOption = (typeof sortOptions)[number];
 type LibrarySortMode = SortOption["id"];
 type LibraryViewMode = "grid" | "list";
@@ -166,6 +169,7 @@ export function LibraryPageClient({
   const pendingDeletionTimeoutRef = useRef<number | null>(null);
   const pendingDeletionRef = useRef<PendingDeletion | null>(null);
   const designOpenTimeoutRef = useRef<number | null>(null);
+  const touchMenuInteractionBlockUntilRef = useRef(0);
 
   const loadingCards = useMemo(
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
@@ -211,6 +215,8 @@ export function LibraryPageClient({
     });
   }, [designs, sortMode]);
   const selectedDesignCount = selectedDesignIds.size;
+  const desktopSelectionMode = !touchPrimaryInput && selectedDesignCount > 0;
+  const showBulkBar = selectedDesignCount > 0 || (touchPrimaryInput && touchSelectionMode);
   const allLoadedDesignsSelected =
     designs.length > 0 && selectedDesignCount === designs.length;
   const isInitialLoading = initialLoadPending && designs.length === 0;
@@ -408,6 +414,10 @@ export function LibraryPageClient({
       return;
     }
 
+    if (Date.now() < touchMenuInteractionBlockUntilRef.current) {
+      return;
+    }
+
     const target = event.target;
     if (
       target instanceof HTMLElement &&
@@ -419,10 +429,33 @@ export function LibraryPageClient({
     navigateToDesign(event.nativeEvent, designId);
   }
 
+  function handleDesktopCardOpen(
+    event: React.MouseEvent<HTMLElement>,
+    designId: string,
+  ) {
+    if (event.defaultPrevented || touchPrimaryInput || desktopSelectionMode) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("[data-card-menu='true'], a, button, input, label")
+    ) {
+      return;
+    }
+
+    navigateToDesign(event.nativeEvent, designId);
+  }
+
   function handleTouchListRowSelect(
     event: React.MouseEvent<HTMLElement>,
     designId: string,
   ) {
+    if (Date.now() < touchMenuInteractionBlockUntilRef.current) {
+      return;
+    }
+
     if (!touchPrimaryInput || !touchSelectionMode) {
       return;
     }
@@ -466,6 +499,11 @@ export function LibraryPageClient({
   async function handleCardMenuAction(action: string, design: LibraryDesignRecord) {
     const menuAction = action as CardMenuAction;
     setCardActionError(null);
+
+    if (menuAction === "toggle-selection") {
+      handleTouchSelectionModeToggle();
+      return;
+    }
 
     if (menuAction === "open") {
       router.push(`/editor/designs/${design.id}`);
@@ -757,6 +795,22 @@ export function LibraryPageClient({
     design: LibraryDesignRecord,
     item: CardMenuItem,
   ) {
+    if (item.id === "toggle-selection") {
+      return (
+        <span className={styles.cardMenuItemLabel}>
+          <ButtonIcon
+            icon={
+              touchSelectionMode
+                ? "/icons/lucide/x.svg"
+                : "/icons/lucide/square-check.svg"
+            }
+            className={styles.cardMenuItemIcon}
+          />
+          <span>{touchSelectionMode ? "Done selecting" : "Select items"}</span>
+        </span>
+      );
+    }
+
     const isPending =
       pendingCardAction?.action === item.id &&
       pendingCardAction?.designId === design.id;
@@ -781,6 +835,10 @@ export function LibraryPageClient({
   }
 
   function renderDesignMenu(design: LibraryDesignRecord) {
+    const cardMenuItems = touchPrimaryInput
+      ? [touchSelectionCardMenuItem, ...baseCardMenuItems]
+      : [...baseCardMenuItems];
+
     return (
       <div className={styles.cardMenuAnchor} data-card-menu="true">
         <SingleSelectDropdown<CardMenuItem>
@@ -799,6 +857,9 @@ export function LibraryPageClient({
           getItemLabel={(item) => renderCardMenuItemLabel(design, item)}
           getItemDisabled={() => pendingCardAction?.designId === design.id}
           onValueChange={(value) => {
+            if (touchPrimaryInput) {
+              touchMenuInteractionBlockUntilRef.current = Date.now() + 400;
+            }
             void handleCardMenuAction(value, design);
           }}
           wrapperClassName={styles.cardMenuWrapper}
@@ -821,7 +882,7 @@ export function LibraryPageClient({
       <section
         className={[
           styles.content,
-          selectedDesignCount > 0 ? styles.contentWithBulkBar : null,
+          showBulkBar ? styles.contentWithBulkBar : null,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -867,160 +928,54 @@ export function LibraryPageClient({
           <div className={styles.viewSummary}>
             <span className={styles.viewSummaryLabel}>All Designs</span>
             <span className={styles.viewSummaryCount}>({totalCount})</span>
-            {touchPrimaryInput ? (
-              <SingleSelectDropdown<MobileSelectionMenuItem>
-                ariaLabel="Library selection actions"
-                items={[...mobileSelectionMenuItems]}
-                value=""
-                placeholder="Selection actions"
-                triggerLabel={<span className={styles.mobileSelectionDots}>⋮</span>}
-                triggerVariant="ghost"
-                showChevron={false}
-                menuPortalToViewport
-                menuPlacement="bottom-end"
-                menuShowTrailingCheck={false}
-                minWidth="auto"
-                getItemValue={(item) => item.id}
-                getItemLabel={() => (
-                  <span className={styles.mobileSelectionMenuLabel}>
-                    <ButtonIcon
-                      icon={
-                        touchSelectionMode
-                          ? "/icons/lucide/x.svg"
-                          : "/icons/lucide/square-check.svg"
-                      }
-                      className={styles.mobileSelectionMenuIcon}
-                    />
-                    <span>{touchSelectionMode ? "Done" : "Select"}</span>
-                  </span>
-                )}
-                onValueChange={() => {
-                  handleTouchSelectionModeToggle();
-                }}
-                wrapperClassName={`${styles.mobileSelectionMenu} ${styles.mobileSelectionMenuInSummary}`}
-                triggerClassName={styles.mobileSelectionTrigger}
-                menuClassName={styles.mobileSelectionMenuSurface}
-                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
-              />
-            ) : null}
           </div>
-
-
-          <div className={styles.viewControls}>
-            {touchPrimaryInput ? (
-              <Button
-                type="button"
-                variant="ghostV2"
-                size="sm"
-                active={touchSelectionMode}
-                onClick={handleTouchSelectionModeToggle}
-                className={styles.desktopSelectButton}
-              >
-                <ButtonIcon
-                  icon={
-                    touchSelectionMode
-                      ? "/icons/lucide/x.svg"
-                      : "/icons/lucide/square-check.svg"
-                  }
-                />
-                {touchSelectionMode ? "Done" : "Select"}
-              </Button>
-            ) : null}
-            {touchPrimaryInput ? (
-              <span
-                className={styles.viewControlsDividerNoMobile}
-                aria-hidden="true"
-              />
-            ) : null}
-            <div className={styles.sortControl}>
-              <span className={styles.sortDropdownLabel}>Sort by:</span>
-              <SingleSelectDropdown<SortOption>
-                ariaLabel="Sort designs"
-                items={[...sortOptions]}
-                value={sortMode}
-                placeholder="Sort"
-                triggerVariant="ghost"
-                triggerLabel={
-                  <span className={styles.sortTriggerLabel}>
-                    <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
-                  </span>
-                }
-                getItemValue={(item) => item.id}
-                getItemLabel={(item) => item.label}
-                onValueChange={(value) => {
-                  setSortMode(value as LibrarySortMode);
-                }}
-                triggerClassName={styles.sortTrigger}
-                wrapperClassName={styles.sortDropdown}
-                menuClassName={styles.sortMenu}
-                minWidth="auto"
-                menuPlacement="bottom-end"
-                menuPortalToViewport
-                openOnHover={!touchPrimaryInput}
-              />
-            </div>
-            <span
-              className={styles.viewControlsDividerKeep}
-              aria-hidden="true"
+          <div className={styles.sortControl}>
+            <SingleSelectDropdown<SortOption>
+              ariaLabel="Sort designs"
+              items={[...sortOptions]}
+              value={sortMode}
+              placeholder="Sort"
+              triggerVariant="selection"
+              triggerLabel={
+                <span className={styles.sortTriggerLabel}>
+                  <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
+                </span>
+              }
+              getItemValue={(item) => item.id}
+              getItemLabel={(item) => item.label}
+              onValueChange={(value) => {
+                setSortMode(value as LibrarySortMode);
+              }}
+              triggerClassName={styles.sortTrigger}
+              wrapperClassName={styles.sortDropdown}
+              menuClassName={styles.sortMenu}
+              minWidth="auto"
+              menuPlacement="bottom-end"
+              menuPortalToViewport
+              openOnHover={!touchPrimaryInput}
             />
-            <SegmentedControl<LibraryViewMode>
-              ariaLabel="Design library view"
-              className={styles.viewToggle}
-              itemClassName={styles.viewToggleItem}
-              value={viewMode}
-              onChange={setViewMode}
-              options={[
-                {
-                  value: "list",
-                  label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
-                },
-                {
-                  value: "grid",
-                  label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
-                },
-              ]}
-            />
-            <span
-              className={styles.viewControlsDividerNoDesktop}
-              aria-hidden="true"
-            />
-            {touchPrimaryInput ? (
-              <SingleSelectDropdown<MobileSelectionMenuItem>
-                ariaLabel="Library selection actions"
-                items={[...mobileSelectionMenuItems]}
-                value=""
-                placeholder="Selection actions"
-                triggerLabel={<span className={styles.mobileSelectionDots}>⋮</span>}
-                triggerVariant="ghost"
-                showChevron={false}
-                menuPortalToViewport
-                menuPlacement="bottom-end"
-                menuShowTrailingCheck={false}
-                minWidth="auto"
-                getItemValue={(item) => item.id}
-                getItemLabel={() => (
-                  <span className={styles.mobileSelectionMenuLabel}>
-                    <ButtonIcon
-                      icon={
-                        touchSelectionMode
-                          ? "/icons/lucide/x.svg"
-                          : "/icons/lucide/square-check.svg"
-                      }
-                      className={styles.mobileSelectionMenuIcon}
-                    />
-                    <span>{touchSelectionMode ? "Done" : "Select"}</span>
-                  </span>
-                )}
-                onValueChange={() => {
-                  handleTouchSelectionModeToggle();
-                }}
-                wrapperClassName={`${styles.mobileSelectionMenu} ${styles.mobileSelectionMenuInControls}`}
-                triggerClassName={styles.mobileSelectionTrigger}
-                menuClassName={styles.mobileSelectionMenuSurface}
-                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
-              />
-            ) : null}
           </div>
+          <span
+            className={styles.viewControlsDividerKeep}
+            aria-hidden="true"
+          />
+          <SegmentedControl<LibraryViewMode>
+            ariaLabel="Design library view"
+            className={styles.viewToggle}
+            itemClassName={styles.viewToggleItem}
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              {
+                value: "list",
+                label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
+              },
+              {
+                value: "grid",
+                label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
+              },
+            ]}
+          />
         </div>
 
         {designs.length > 0 ? (
@@ -1029,7 +984,10 @@ export function LibraryPageClient({
               <section className={styles.grid} aria-label="Saved designs">
                 {sortedDesigns.map((design) => {
                   const isSelected = selectedDesignIds.has(design.id);
-                  const cardSelectable = !touchPrimaryInput || touchSelectionMode;
+                  const cardSelectable = touchPrimaryInput
+                    ? touchSelectionMode
+                    : desktopSelectionMode;
+                  const showCardCheckbox = !touchPrimaryInput || touchSelectionMode;
                   return (
                     <article
                       key={design.id}
@@ -1040,9 +998,25 @@ export function LibraryPageClient({
                       data-touch-selection-mode={
                         touchPrimaryInput && touchSelectionMode ? "true" : "false"
                       }
-                      onClick={(event) => handleTouchCardOpen(event, design.id)}
+                      onClick={(event) => {
+                        handleTouchCardOpen(event, design.id);
+                        handleDesktopCardOpen(event, design.id);
+                      }}
                     >
                       {touchPrimaryInput && touchSelectionMode ? (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(event) => {
+                            handleDesignSelectionChange(
+                              design.id,
+                              event.currentTarget.checked,
+                            );
+                          }}
+                          className={styles.cardSelectionInputCard}
+                          aria-label={`Select ${design.title}`}
+                        />
+                      ) : desktopSelectionMode ? (
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -1060,21 +1034,6 @@ export function LibraryPageClient({
                       <div
                         className={`${styles.thumbnailShell} ${styles.cardSelectionSurface}`}
                       >
-                        {!touchPrimaryInput ? (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(event) => {
-                              handleDesignSelectionChange(
-                                design.id,
-                                event.currentTarget.checked,
-                              );
-                            }}
-                            className={styles.cardSelectionInput}
-                            aria-label={`Select ${design.title}`}
-                          />
-                        ) : null}
-
                         <div className={styles.thumbnail}>
                           <StitchThumbnailCanvas
                             snapshot={design.stitchSnapshot}
@@ -1085,15 +1044,22 @@ export function LibraryPageClient({
                           />
                         </div>
 
-                        {cardSelectable ? (
+                        {showCardCheckbox ? (
                           <span className={styles.cardCheckbox}>
                             <input
                               type="checkbox"
                               checked={isSelected}
                               className={styles.cardCheckboxInput}
-                              readOnly
-                              tabIndex={-1}
-                              aria-hidden="true"
+                              onChange={(event) => {
+                                handleDesignSelectionChange(
+                                  design.id,
+                                  event.currentTarget.checked,
+                                );
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                              }}
+                              aria-label={`Select ${design.title}`}
                             />
                             <span
                               className={styles.cardCheckboxIndicator}
@@ -1509,7 +1475,7 @@ export function LibraryPageClient({
         </div>
       ) : null}
 
-      {selectedDesignCount > 0 ? (
+      {showBulkBar ? (
         <div className={styles.bulkBarOverlay}>
           <div className={styles.bulkBar} role="toolbar" aria-label="Bulk actions">
             <button
@@ -1531,7 +1497,7 @@ export function LibraryPageClient({
               type="button"
               className={styles.bulkBarAction}
               onClick={handleSelectAllDesigns}
-              disabled={allLoadedDesignsSelected}
+              disabled={designs.length === 0 || allLoadedDesignsSelected}
             >
               {/* <span
                 className={`${styles.bulkBarActionIcon} ${styles.bulkBarSelectAllIcon}`}
@@ -1547,7 +1513,7 @@ export function LibraryPageClient({
               onClick={() => {
                 handleRequestDeleteSelectedDesigns();
               }}
-              disabled={bulkDeletePending}
+              disabled={bulkDeletePending || selectedDesignCount === 0}
             >
               <span
                 className={`${styles.bulkBarActionIcon} ${styles.bulkBarDeleteIcon}`}
