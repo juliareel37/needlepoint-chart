@@ -98,6 +98,8 @@ export function useStagePanInteractions({
     ? "grabbing"
     : activeTool === "paint"
       ? PAINT_CURSOR
+    : activeTool === "lasso"
+      ? "crosshair"
     : activeTool === "fill"
       ? FILL_CURSOR
     : activeTool === "erase"
