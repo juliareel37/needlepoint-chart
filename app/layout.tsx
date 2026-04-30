@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
+import { AuthProvider } from "@/lib/auth/client";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -134,7 +134,7 @@ export default function RootLayout({
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
+    <AuthProvider publishableKey={clerkPublishableKey}>
       <html lang="en" suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
@@ -200,6 +200,6 @@ export default function RootLayout({
           </div>
         </body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

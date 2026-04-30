@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
+import { useAuthStatus } from "@/lib/auth/client";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
@@ -76,7 +76,7 @@ export function EditorV2Page({
   routeMode: "entry" | "saved";
   routeStorageId: string | null;
 }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuthStatus();
   const router = useRouter();
   const openSignIn = useOpenSignIn();
   const [mounted, setMounted] = useState(false);

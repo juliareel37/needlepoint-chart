@@ -1,13 +1,13 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useAuthDialog } from "@/lib/auth/client";
 
 const MOBILE_SIGN_IN_BREAKPOINT_PX = 768;
 
 export function useOpenSignIn(): (options?: { redirectUrl?: string }) => void {
-  const clerk = useClerk();
+  const authDialog = useAuthDialog();
   const router = useRouter();
 
   return useCallback((options?: { redirectUrl?: string }) => {
@@ -29,27 +29,27 @@ export function useOpenSignIn(): (options?: { redirectUrl?: string }) => void {
       return;
     }
 
-    if (!clerk.loaded || clerk.status !== "ready") {
-      console.warn("Sign-in modal unavailable before Clerk finished loading", {
-        clerkLoaded: clerk.loaded,
-        clerkStatus: clerk.status,
+    if (!authDialog.isLoaded || authDialog.status !== "ready") {
+      console.warn("Sign-in modal unavailable before auth client finished loading", {
+        authLoaded: authDialog.isLoaded,
+        authStatus: authDialog.status,
       });
       navigateToSignInPage();
       return;
     }
 
     try {
-      clerk.openSignIn({
+      authDialog.openSignIn({
         fallbackRedirectUrl: currentUrl,
         forceRedirectUrl: currentUrl,
       });
     } catch (error) {
       console.warn("Sign-in modal failed to open, falling back to sign-in page", {
         error,
-        clerkLoaded: clerk.loaded,
-        clerkStatus: clerk.status,
+        authLoaded: authDialog.isLoaded,
+        authStatus: authDialog.status,
       });
       navigateToSignInPage();
     }
-  }, [clerk, router]);
+  }, [authDialog, router]);
 }

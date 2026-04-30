@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button, ButtonIcon } from "@/components/design-system";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { createEditorV2AuthHandoffRedirectUrl } from "@/components/editor-v2/app/editorV2AuthHandoff";
+import { AuthSignedIn, AuthSignedOut, AuthUserButton } from "@/lib/auth/client";
 import { useOpenSignIn } from "./useOpenSignIn";
 
 type EditorV2WindowWithDraftGetter = Window & {
@@ -24,12 +24,12 @@ export default function AuthButtons() {
     return null;
   }
 
-  return (
+    return (
     <>
-      <SignedIn>
-        <UserButton afterSignOutUrl="/editor" />
-      </SignedIn>
-      <SignedOut>
+      <AuthSignedIn>
+        <AuthUserButton afterSignOutUrl="/editor" />
+      </AuthSignedIn>
+      <AuthSignedOut>
         <Button
           type="button"
           variant="ghostV2"
@@ -72,7 +72,7 @@ export default function AuthButtons() {
           <ButtonIcon icon="/icons/lucide/user.svg" />
           Sign in
         </Button>
-      </SignedOut>
+      </AuthSignedOut>
     </>
   );
 }
