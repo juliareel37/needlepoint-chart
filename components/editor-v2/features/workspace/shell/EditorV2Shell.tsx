@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
@@ -77,6 +77,7 @@ const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
+const versionHistoryTimelineScrollCache = new Map<string, number>();
 type HeaderFileMenuItem = {
   id: string;
   label: string;
@@ -256,6 +257,7 @@ export function EditorV2Shell({
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
+  const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
@@ -1373,10 +1375,50 @@ export function EditorV2Shell({
     setSelectedVersionHistoryId(versionPreviewMeta?.versionId ?? "current");
   }, [isVersionHistoryMode, versionPreviewMeta]);
 
+  useLayoutEffect(() => {
+    if (!isVersionHistoryMode || !currentStorageId) {
+      return;
+    }
+
+    const timelineElement = versionHistoryTimelineRef.current;
+    if (!timelineElement) {
+      return;
+    }
+
+    const savedScrollTop = versionHistoryTimelineScrollCache.get(currentStorageId);
+    if (typeof savedScrollTop === "number") {
+      timelineElement.scrollTop = savedScrollTop;
+    }
+
+    const handleTimelineScroll = () => {
+      versionHistoryTimelineScrollCache.set(currentStorageId, timelineElement.scrollTop);
+    };
+
+    handleTimelineScroll();
+    timelineElement.addEventListener("scroll", handleTimelineScroll);
+
+    return () => {
+      versionHistoryTimelineScrollCache.set(currentStorageId, timelineElement.scrollTop);
+      timelineElement.removeEventListener("scroll", handleTimelineScroll);
+    };
+  }, [currentStorageId, isVersionHistoryMode, versionHistory.length, versionHistoryLoading]);
+
   const handleSelectVersionHistoryItem = useCallback(
     async (versionId: "current" | string) => {
       if (!currentStorageId) {
         return;
+      }
+
+      const timelineElement = versionHistoryTimelineRef.current;
+      if (timelineElement) {
+        versionHistoryTimelineScrollCache.set(currentStorageId, timelineElement.scrollTop);
+      }
+
+      if (
+        typeof window !== "undefined" &&
+        window.document.activeElement instanceof HTMLElement
+      ) {
+        window.document.activeElement.blur();
       }
 
       setSelectedVersionHistoryId(versionId);
@@ -2083,11 +2125,19 @@ export function EditorV2Shell({
                   </p> */}
                 </div>
 
-                <div className={styles.versionHistoryTimeline} role="list" aria-label="Version history timeline">
+                <div
+                  ref={versionHistoryTimelineRef}
+                  className={styles.versionHistoryTimeline}
+                  role="list"
+                  aria-label="Version history timeline"
+                >
                   <button
                     type="button"
                     className={styles.versionHistoryTimelineItem}
                     data-selected={selectedVersionHistoryId === "current" ? "true" : "false"}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
                     onClick={() => {
                       void handleSelectVersionHistoryItem("current");
                     }}
@@ -2120,6 +2170,9 @@ export function EditorV2Shell({
                           className={styles.versionHistoryTimelineItem}
                           data-selected={isSelected ? "true" : "false"}
                           data-last={index === versionHistory.length - 1 ? "true" : "false"}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                          }}
                           onClick={() => {
                             void handleSelectVersionHistoryItem(version.id);
                           }}
