@@ -115,12 +115,14 @@ export function LibraryPageClient({
   initialHasMore = false,
   initialNextOffset = null,
   deferInitialLoad = false,
+  initialViewMode = "grid",
 }: {
   initialDesigns?: LibraryDesignRecord[];
   initialTotalCount?: number;
   initialHasMore?: boolean;
   initialNextOffset?: number | null;
   deferInitialLoad?: boolean;
+  initialViewMode?: LibraryViewMode;
 }) {
   const router = useRouter();
   const [designs, setDesigns] = useState(initialDesigns);
@@ -142,7 +144,7 @@ export function LibraryPageClient({
   const [draftHeightInches, setDraftHeightInches] = useState("8");
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [cardActionError, setCardActionError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<LibraryViewMode>("grid");
+  const [viewMode, setViewMode] = useState<LibraryViewMode>(initialViewMode);
   const [sortMode, setSortMode] = useState<LibrarySortMode>("updated-desc");
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
     () => new Set(),
@@ -1218,6 +1220,7 @@ export function LibraryPageClient({
                             traceThumbnailUrl={design.previewUrl}
                             tracePlacement={design.tracePlacement}
                             className={styles.listThumbnailCanvas}
+                            testId={`list-thumbnail-${design.id}`}
                           />
                         </span>
                         <span className={styles.listNameContent}>

@@ -10,6 +10,7 @@ import type { LibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 const EDITOR_TRACE_POSITION_CELL_SIZE = 28;
+const LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD = 2;
 const TRACE_ASPECT_MISMATCH_EPSILON = 0.05;
 
 function getThumbnailSurfaceSize(snapshot: LibraryStitchSnapshot) {
@@ -17,6 +18,13 @@ function getThumbnailSurfaceSize(snapshot: LibraryStitchSnapshot) {
     width: snapshot.width * EDITOR_TRACE_POSITION_CELL_SIZE,
     height: snapshot.height * EDITOR_TRACE_POSITION_CELL_SIZE,
   };
+}
+
+function createScratchCanvas(width: number, height: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  return canvas;
 }
 
 export function StitchThumbnailCanvas({
@@ -106,17 +114,27 @@ export function StitchThumbnailCanvas({
         return;
       }
 
-      const cellSize = Math.max(1, Math.min(width / snapshot.width, height / snapshot.height));
+      const cellSize = Math.min(width / snapshot.width, height / snapshot.height);
       const drawWidth = cellSize * snapshot.width;
       const drawHeight = cellSize * snapshot.height;
       const drawX = (width - drawWidth) / 2;
       const drawY = (height - drawHeight) / 2;
       const oversampleFactor = cellSize >= 18 ? 1 : cellSize >= 12 ? 1.5 : 2;
       const stitchSize = Math.max(1, Math.round(cellSize * oversampleFactor));
+      const shouldUseCompactPreview = cellSize < LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD;
 
       context.imageSmoothingEnabled = oversampleFactor > 1;
       if (oversampleFactor > 1) {
         context.imageSmoothingQuality = "high";
+      }
+
+      let compactPreviewCanvas: HTMLCanvasElement | null = null;
+      let compactPreviewContext: CanvasRenderingContext2D | null = null;
+
+      if (shouldUseCompactPreview) {
+        compactPreviewCanvas = createScratchCanvas(snapshot.width, snapshot.height);
+        compactPreviewContext = compactPreviewCanvas.getContext("2d");
+        compactPreviewContext?.clearRect(0, 0, snapshot.width, snapshot.height);
       }
 
       if (traceThumbnailUrl) {
@@ -186,6 +204,27 @@ export function StitchThumbnailCanvas({
             traceBounds.height,
           );
           context.restore();
+
+          if (compactPreviewContext) {
+            const compactScale = 1 / EDITOR_TRACE_POSITION_CELL_SIZE;
+            compactPreviewContext.save();
+            compactPreviewContext.globalAlpha = 0.35;
+            compactPreviewContext.translate(
+              (traceBounds.left + traceBounds.width / 2) * compactScale,
+              (traceBounds.top + traceBounds.height / 2) * compactScale,
+            );
+            compactPreviewContext.rotate(
+              ((tracePlacement?.rotation ?? 0) * Math.PI) / 180,
+            );
+            compactPreviewContext.drawImage(
+              cachedTraceImage,
+              (-traceBounds.width / 2) * compactScale,
+              (-traceBounds.height / 2) * compactScale,
+              traceBounds.width * compactScale,
+              traceBounds.height * compactScale,
+            );
+            compactPreviewContext.restore();
+          }
         } else if (!traceImageCacheRef.current.has(traceThumbnailUrl)) {
           traceImageCacheRef.current.set(traceThumbnailUrl, null);
           const traceImage = new Image();
@@ -211,6 +250,13 @@ export function StitchThumbnailCanvas({
 
         const x = index % snapshot.width;
         const y = Math.floor(index / snapshot.width);
+
+        if (compactPreviewContext) {
+          compactPreviewContext.fillStyle = color;
+          compactPreviewContext.fillRect(x, y, 1, 1);
+          continue;
+        }
+
         const stitchCanvas = getThreadStitchCanvas(
           color,
           stitchSize,
@@ -225,6 +271,14 @@ export function StitchThumbnailCanvas({
           cellSize,
           cellSize,
         );
+      }
+
+      if (compactPreviewCanvas) {
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(compactPreviewCanvas, drawX, drawY, drawWidth, drawHeight);
+        context.restore();
       }
     };
 

@@ -1,5 +1,6 @@
 import { LibraryPageClient } from "@/app/library/LibraryPageClient";
 import type { LibraryDesignRecord } from "@/lib/library/designs";
+import type { LibraryViewMode } from "@/app/dev/library-thumbnail-preview/viewMode";
 
 const GRID_WIDTH = 104;
 const GRID_HEIGHT = 208;
@@ -9,19 +10,16 @@ function createTallSnapshotCells() {
   const stroke = "#a34b4b";
   const fill = "#f0d270";
 
-  for (let x = 24; x < 80; x += 1) {
-    cells[x] = stroke;
-    cells[(GRID_HEIGHT - 1) * GRID_WIDTH + x] = stroke;
-  }
+  for (let y = 24; y < 184; y += 1) {
+    for (let x = 30; x < 74; x += 1) {
+      const isBorder = x < 36 || x >= 68 || y < 36 || y >= 172;
 
-  for (let y = 0; y < GRID_HEIGHT; y += 1) {
-    cells[y * GRID_WIDTH + 24] = stroke;
-    cells[y * GRID_WIDTH + 79] = stroke;
-  }
+      if (isBorder) {
+        cells[y * GRID_WIDTH + x] = stroke;
+        continue;
+      }
 
-  for (let y = 72; y < 136; y += 1) {
-    for (let x = 36; x < 68; x += 1) {
-      if ((x + y) % 3 === 0) {
+      if ((x + y) % 2 === 0) {
         cells[y * GRID_WIDTH + x] = fill;
       }
     }
@@ -49,7 +47,15 @@ const TEST_DESIGN: LibraryDesignRecord = {
   },
 };
 
-export default function LibraryThumbnailPreviewPage() {
+export default async function LibraryThumbnailPreviewPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ mode?: string }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const mode =
+    resolvedSearchParams?.mode === "list" ? ("list" as LibraryViewMode) : "grid";
+
   return (
     <main style={{ minHeight: "100vh", padding: "32px", background: "#f4f0ea" }}>
       <LibraryPageClient
@@ -58,6 +64,7 @@ export default function LibraryThumbnailPreviewPage() {
         initialHasMore={false}
         initialNextOffset={null}
         deferInitialLoad={false}
+        initialViewMode={mode}
       />
     </main>
   );

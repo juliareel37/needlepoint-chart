@@ -6533,12 +6533,19 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$stitchUtils$2e$ts__$5
 ;
 ;
 const EDITOR_TRACE_POSITION_CELL_SIZE = 28;
+const LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD = 2;
 const TRACE_ASPECT_MISMATCH_EPSILON = 0.05;
 function getThumbnailSurfaceSize(snapshot) {
     return {
         width: snapshot.width * EDITOR_TRACE_POSITION_CELL_SIZE,
         height: snapshot.height * EDITOR_TRACE_POSITION_CELL_SIZE
     };
+}
+function createScratchCanvas(width, height) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    return canvas;
 }
 function StitchThumbnailCanvas({ snapshot, traceThumbnailUrl, tracePlacement, className, testId }) {
     const surfaceRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
@@ -6598,16 +6605,24 @@ function StitchThumbnailCanvas({ snapshot, traceThumbnailUrl, tracePlacement, cl
             if (!snapshot) {
                 return;
             }
-            const cellSize = Math.max(1, Math.min(width / snapshot.width, height / snapshot.height));
+            const cellSize = Math.min(width / snapshot.width, height / snapshot.height);
             const drawWidth = cellSize * snapshot.width;
             const drawHeight = cellSize * snapshot.height;
             const drawX = (width - drawWidth) / 2;
             const drawY = (height - drawHeight) / 2;
             const oversampleFactor = cellSize >= 18 ? 1 : cellSize >= 12 ? 1.5 : 2;
             const stitchSize = Math.max(1, Math.round(cellSize * oversampleFactor));
+            const shouldUseCompactPreview = cellSize < LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD;
             context.imageSmoothingEnabled = oversampleFactor > 1;
             if (oversampleFactor > 1) {
                 context.imageSmoothingQuality = "high";
+            }
+            let compactPreviewCanvas = null;
+            let compactPreviewContext = null;
+            if (shouldUseCompactPreview) {
+                compactPreviewCanvas = createScratchCanvas(snapshot.width, snapshot.height);
+                compactPreviewContext = compactPreviewCanvas.getContext("2d");
+                compactPreviewContext?.clearRect(0, 0, snapshot.width, snapshot.height);
             }
             if (traceThumbnailUrl) {
                 const cachedTraceImage = traceImageCacheRef.current.get(traceThumbnailUrl);
@@ -6634,6 +6649,15 @@ function StitchThumbnailCanvas({ snapshot, traceThumbnailUrl, tracePlacement, cl
                     context.rotate((tracePlacement?.rotation ?? 0) * Math.PI / 180);
                     context.drawImage(cachedTraceImage, -traceBounds.width / 2, -traceBounds.height / 2, traceBounds.width, traceBounds.height);
                     context.restore();
+                    if (compactPreviewContext) {
+                        const compactScale = 1 / EDITOR_TRACE_POSITION_CELL_SIZE;
+                        compactPreviewContext.save();
+                        compactPreviewContext.globalAlpha = 0.35;
+                        compactPreviewContext.translate((traceBounds.left + traceBounds.width / 2) * compactScale, (traceBounds.top + traceBounds.height / 2) * compactScale);
+                        compactPreviewContext.rotate((tracePlacement?.rotation ?? 0) * Math.PI / 180);
+                        compactPreviewContext.drawImage(cachedTraceImage, -traceBounds.width / 2 * compactScale, -traceBounds.height / 2 * compactScale, traceBounds.width * compactScale, traceBounds.height * compactScale);
+                        compactPreviewContext.restore();
+                    }
                 } else if (!traceImageCacheRef.current.has(traceThumbnailUrl)) {
                     traceImageCacheRef.current.set(traceThumbnailUrl, null);
                     const traceImage = new Image();
@@ -6656,8 +6680,20 @@ function StitchThumbnailCanvas({ snapshot, traceThumbnailUrl, tracePlacement, cl
                 }
                 const x = index % snapshot.width;
                 const y = Math.floor(index / snapshot.width);
+                if (compactPreviewContext) {
+                    compactPreviewContext.fillStyle = color;
+                    compactPreviewContext.fillRect(x, y, 1, 1);
+                    continue;
+                }
                 const stitchCanvas = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$stitchUtils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getThreadStitchCanvas"])(color, stitchSize, stitchCanvasCacheRef.current, 1);
                 context.drawImage(stitchCanvas, drawX + x * cellSize, drawY + y * cellSize, cellSize, cellSize);
+            }
+            if (compactPreviewCanvas) {
+                context.save();
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = "high";
+                context.drawImage(compactPreviewCanvas, drawX, drawY, drawWidth, drawHeight);
+                context.restore();
             }
         };
         render();
@@ -6695,17 +6731,17 @@ function StitchThumbnailCanvas({ snapshot, traceThumbnailUrl, tracePlacement, cl
                 }
             }, void 0, false, {
                 fileName: "[project]/app/library/StitchThumbnailCanvas.tsx",
-                lineNumber: 255,
+                lineNumber: 309,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/app/library/StitchThumbnailCanvas.tsx",
-            lineNumber: 249,
+            lineNumber: 303,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/library/StitchThumbnailCanvas.tsx",
-        lineNumber: 239,
+        lineNumber: 293,
         columnNumber: 5
     }, this);
 }
@@ -6929,7 +6965,7 @@ async function fetchLibraryPage(offset) {
         nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null
     };
 }
-function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initialHasMore = false, initialNextOffset = null, deferInitialLoad = false }) {
+function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initialHasMore = false, initialNextOffset = null, deferInitialLoad = false, initialViewMode = "grid" }) {
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRouter"])();
     const [designs, setDesigns] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(initialDesigns);
     const [totalCount, setTotalCount] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(initialTotalCount);
@@ -6948,7 +6984,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
     const [draftHeightInches, setDraftHeightInches] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("8");
     const [draftMeshCount, setDraftMeshCount] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("10");
     const [cardActionError, setCardActionError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [viewMode, setViewMode] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("grid");
+    const [viewMode, setViewMode] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(initialViewMode);
     const [sortMode, setSortMode] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("updated-desc");
     const [selectedDesignIds, setSelectedDesignIds] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(()=>new Set());
     const [bulkDeletePending, setBulkDeletePending] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -7407,27 +7443,27 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                     "aria-hidden": "true"
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 772,
+                    lineNumber: 774,
                     columnNumber: 11
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ButtonIcon"], {
                     icon: item.icon,
                     className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].cardMenuItemIcon
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 774,
+                    lineNumber: 776,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                     children: item.label
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 776,
+                    lineNumber: 778,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/app/library/LibraryPageClient.tsx",
-            lineNumber: 763,
+            lineNumber: 765,
             columnNumber: 7
         }, this);
     }
@@ -7447,7 +7483,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                     children: "⋮"
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 789,
+                    lineNumber: 791,
                     columnNumber: 25
                 }, void 0),
                 triggerVariant: "ghost",
@@ -7471,12 +7507,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                 }
             }, void 0, false, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 784,
+                lineNumber: 786,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/app/library/LibraryPageClient.tsx",
-            lineNumber: 783,
+            lineNumber: 785,
             columnNumber: 7
         }, this);
     }
@@ -7501,12 +7537,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                     children: "My Designs"
                                 }, void 0, false, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 829,
+                                    lineNumber: 831,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 828,
+                                lineNumber: 830,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7524,25 +7560,25 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                             icon: "/icons/lucide/plus.svg"
                                         }, void 0, false, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 858,
+                                            lineNumber: 860,
                                             columnNumber: 15
                                         }, this),
                                         "New design"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 849,
+                                    lineNumber: 851,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 832,
+                                lineNumber: 834,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 827,
+                        lineNumber: 829,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7556,7 +7592,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         children: "All Designs"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 866,
+                                        lineNumber: 868,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7568,7 +7604,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 867,
+                                        lineNumber: 869,
                                         columnNumber: 13
                                     }, this),
                                     touchPrimaryInput ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$SingleSelectDropdown$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SingleSelectDropdown"], {
@@ -7583,7 +7619,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                             children: "⋮"
                                         }, void 0, false, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 874,
+                                            lineNumber: 876,
                                             columnNumber: 31
                                         }, void 0),
                                         triggerVariant: "ghost",
@@ -7601,20 +7637,20 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                         className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].mobileSelectionMenuIcon
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 884,
+                                                        lineNumber: 886,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: touchSelectionMode ? "Done" : "Select"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 892,
+                                                        lineNumber: 894,
                                                         columnNumber: 21
                                                     }, void 0)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 883,
+                                                lineNumber: 885,
                                                 columnNumber: 19
                                             }, void 0),
                                         onValueChange: ()=>{
@@ -7629,13 +7665,13 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 869,
+                                        lineNumber: 871,
                                         columnNumber: 15
                                     }, this) : null
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 865,
+                                lineNumber: 867,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7653,14 +7689,14 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 icon: touchSelectionMode ? "/icons/lucide/x.svg" : "/icons/lucide/square-check.svg"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 917,
+                                                lineNumber: 919,
                                                 columnNumber: 17
                                             }, this),
                                             touchSelectionMode ? "Done" : "Select"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 909,
+                                        lineNumber: 911,
                                         columnNumber: 15
                                     }, this) : null,
                                     touchPrimaryInput ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7668,7 +7704,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         "aria-hidden": "true"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 928,
+                                        lineNumber: 930,
                                         columnNumber: 15
                                     }, this) : null,
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7679,7 +7715,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 children: "Sort by:"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 934,
+                                                lineNumber: 936,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$SingleSelectDropdown$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SingleSelectDropdown"], {
@@ -7697,12 +7733,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                         children: selectedSortOption.label
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 943,
+                                                        lineNumber: 945,
                                                         columnNumber: 21
                                                     }, void 0)
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 942,
+                                                    lineNumber: 944,
                                                     columnNumber: 19
                                                 }, void 0),
                                                 getItemValue: (item)=>item.id,
@@ -7719,13 +7755,13 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 openOnHover: !touchPrimaryInput
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 935,
+                                                lineNumber: 937,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 933,
+                                        lineNumber: 935,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7733,7 +7769,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         "aria-hidden": "true"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 960,
+                                        lineNumber: 962,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$SegmentedControl$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SegmentedControl"], {
@@ -7750,7 +7786,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                     className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].viewToggleIcon
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 973,
+                                                    lineNumber: 975,
                                                     columnNumber: 26
                                                 }, void 0)
                                             },
@@ -7761,14 +7797,14 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                     className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].viewToggleIcon
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 977,
+                                                    lineNumber: 979,
                                                     columnNumber: 26
                                                 }, void 0)
                                             }
                                         ]
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 964,
+                                        lineNumber: 966,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7776,7 +7812,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         "aria-hidden": "true"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 981,
+                                        lineNumber: 983,
                                         columnNumber: 13
                                     }, this),
                                     touchPrimaryInput ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$SingleSelectDropdown$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SingleSelectDropdown"], {
@@ -7791,7 +7827,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                             children: "⋮"
                                         }, void 0, false, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 991,
+                                            lineNumber: 993,
                                             columnNumber: 31
                                         }, void 0),
                                         triggerVariant: "ghost",
@@ -7809,20 +7845,20 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                         className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].mobileSelectionMenuIcon
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 1001,
+                                                        lineNumber: 1003,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: touchSelectionMode ? "Done" : "Select"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 1009,
+                                                        lineNumber: 1011,
                                                         columnNumber: 21
                                                     }, void 0)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1000,
+                                                lineNumber: 1002,
                                                 columnNumber: 19
                                             }, void 0),
                                         onValueChange: ()=>{
@@ -7837,19 +7873,19 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 986,
+                                        lineNumber: 988,
                                         columnNumber: 15
                                     }, this) : null
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 907,
+                                lineNumber: 909,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 864,
+                        lineNumber: 866,
                         columnNumber: 9
                     }, this),
                     designs.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -7879,7 +7915,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                     "aria-label": `Select ${design.title}`
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1044,
+                                                    lineNumber: 1046,
                                                     columnNumber: 25
                                                 }, this) : null,
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7895,7 +7931,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             "aria-label": `Select ${design.title}`
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1062,
+                                                            lineNumber: 1064,
                                                             columnNumber: 27
                                                         }, this) : null,
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7908,12 +7944,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                 testId: `grid-thumbnail-${design.id}`
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                lineNumber: 1077,
+                                                                lineNumber: 1079,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1076,
+                                                            lineNumber: 1078,
                                                             columnNumber: 25
                                                         }, this),
                                                         cardSelectable ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7928,7 +7964,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                     "aria-hidden": "true"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1088,
+                                                                    lineNumber: 1090,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7936,19 +7972,19 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                     "aria-hidden": "true"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1096,
+                                                                    lineNumber: 1098,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1087,
+                                                            lineNumber: 1089,
                                                             columnNumber: 27
                                                         }, this) : null
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1058,
+                                                    lineNumber: 1060,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7966,19 +8002,19 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                         children: design.title
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                        lineNumber: 1111,
+                                                                        lineNumber: 1113,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1106,
+                                                                    lineNumber: 1108,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 renderDesignMenu(design)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1105,
+                                                            lineNumber: 1107,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -7997,7 +8033,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1122,
+                                                                    lineNumber: 1124,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -8005,25 +8041,25 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                     children: design.updatedLabel
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1130,
+                                                                    lineNumber: 1132,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1117,
+                                                            lineNumber: 1119,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1104,
+                                                    lineNumber: 1106,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, design.id, true, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 1032,
+                                            lineNumber: 1034,
                                             columnNumber: 21
                                         }, this);
                                     }),
@@ -8042,22 +8078,22 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                 "aria-hidden": "true"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                lineNumber: 1147,
+                                                                lineNumber: 1149,
                                                                 columnNumber: 31
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1146,
+                                                            lineNumber: 1148,
                                                             columnNumber: 29
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 1145,
+                                                        lineNumber: 1147,
                                                         columnNumber: 27
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1144,
+                                                    lineNumber: 1146,
                                                     columnNumber: 25
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8067,39 +8103,39 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineShort
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1152,
+                                                            lineNumber: 1154,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineLong
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1153,
+                                                            lineNumber: 1155,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1154,
+                                                            lineNumber: 1156,
                                                             columnNumber: 27
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1151,
+                                                    lineNumber: 1153,
                                                     columnNumber: 25
                                                 }, this)
                                             ]
                                         }, `loading-${card}`, true, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 1139,
+                                            lineNumber: 1141,
                                             columnNumber: 23
                                         }, this)) : null
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1027,
+                                lineNumber: 1029,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].listView,
@@ -8114,7 +8150,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 "aria-hidden": "true"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1175,
+                                                lineNumber: 1177,
                                                 columnNumber: 21
                                             }, this) : null,
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8122,28 +8158,28 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 children: "Name"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1177,
+                                                lineNumber: 1179,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Size"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1178,
+                                                lineNumber: 1180,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Colors"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1179,
+                                                lineNumber: 1181,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Last Edited"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1180,
+                                                lineNumber: 1182,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8151,13 +8187,13 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 "aria-hidden": "true"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1181,
+                                                lineNumber: 1183,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1168,
+                                        lineNumber: 1170,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8178,12 +8214,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].listSelectionIndicator
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                lineNumber: 1200,
+                                                                lineNumber: 1202,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1199,
+                                                            lineNumber: 1201,
                                                             columnNumber: 25
                                                         }, this) : null,
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -8203,15 +8239,16 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                         snapshot: design.stitchSnapshot,
                                                                         traceThumbnailUrl: design.previewUrl,
                                                                         tracePlacement: design.tracePlacement,
-                                                                        className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].listThumbnailCanvas
+                                                                        className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].listThumbnailCanvas,
+                                                                        testId: `list-thumbnail-${design.id}`
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                        lineNumber: 1216,
+                                                                        lineNumber: 1218,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1215,
+                                                                    lineNumber: 1217,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8222,7 +8259,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                             children: design.title
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                            lineNumber: 1224,
+                                                                            lineNumber: 1227,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8238,7 +8275,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                                     ]
                                                                                 }, void 0, true, {
                                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                                    lineNumber: 1226,
+                                                                                    lineNumber: 1229,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8246,7 +8283,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                                     children: typeof design.colorCount === "number" ? `${design.colorCount} ${design.colorCount === 1 ? "color" : "colors"}` : "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                                    lineNumber: 1229,
+                                                                                    lineNumber: 1232,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8254,25 +8291,25 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                                     children: design.updatedLabel.replace(/^Edited /, "")
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                                    lineNumber: 1236,
+                                                                                    lineNumber: 1239,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                            lineNumber: 1225,
+                                                                            lineNumber: 1228,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1223,
+                                                                    lineNumber: 1226,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1203,
+                                                            lineNumber: 1205,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -8293,7 +8330,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1243,
+                                                            lineNumber: 1246,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -8309,7 +8346,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             children: typeof design.colorCount === "number" ? `${design.colorCount} ${design.colorCount === 1 ? "color" : "colors"}` : "—"
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1257,
+                                                            lineNumber: 1260,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -8325,14 +8362,14 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             children: design.updatedLabel.replace(/^Edited /, "")
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1275,
+                                                            lineNumber: 1278,
                                                             columnNumber: 23
                                                         }, this),
                                                         renderDesignMenu(design)
                                                     ]
                                                 }, design.id, true, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1189,
+                                                    lineNumber: 1191,
                                                     columnNumber: 21
                                                 }, this);
                                             }),
@@ -8352,17 +8389,17 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                             "aria-hidden": "true"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                            lineNumber: 1304,
+                                                                            lineNumber: 1307,
                                                                             columnNumber: 33
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                        lineNumber: 1303,
+                                                                        lineNumber: 1306,
                                                                         columnNumber: 31
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1302,
+                                                                    lineNumber: 1305,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8371,62 +8408,62 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                         className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineLong
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                        lineNumber: 1308,
+                                                                        lineNumber: 1311,
                                                                         columnNumber: 31
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                    lineNumber: 1307,
+                                                                    lineNumber: 1310,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1301,
+                                                            lineNumber: 1304,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1311,
+                                                            lineNumber: 1314,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineShort
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1312,
+                                                            lineNumber: 1315,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1313,
+                                                            lineNumber: 1316,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1314,
+                                                            lineNumber: 1317,
                                                             columnNumber: 27
                                                         }, this)
                                                     ]
                                                 }, `list-loading-${card}`, true, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1296,
+                                                    lineNumber: 1299,
                                                     columnNumber: 25
                                                 }, this)) : null
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1184,
+                                        lineNumber: 1186,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1161,
+                                lineNumber: 1163,
                                 columnNumber: 15
                             }, this),
                             loadMoreError || cardActionError ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -8434,7 +8471,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 children: loadMoreError ?? cardActionError
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1323,
+                                lineNumber: 1326,
                                 columnNumber: 15
                             }, this) : null,
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8443,7 +8480,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 "aria-hidden": "true"
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1326,
+                                lineNumber: 1329,
                                 columnNumber: 13
                             }, this)
                         ]
@@ -8465,22 +8502,22 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                     "aria-hidden": "true"
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                    lineNumber: 1340,
+                                                    lineNumber: 1343,
                                                     columnNumber: 25
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1339,
+                                                lineNumber: 1342,
                                                 columnNumber: 23
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                            lineNumber: 1338,
+                                            lineNumber: 1341,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1337,
+                                        lineNumber: 1340,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8490,38 +8527,38 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineShort
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1345,
+                                                lineNumber: 1348,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineLong
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1346,
+                                                lineNumber: 1349,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1347,
+                                                lineNumber: 1350,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1344,
+                                        lineNumber: 1347,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, `initial-loading-${card}`, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1332,
+                                lineNumber: 1335,
                                 columnNumber: 17
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 1330,
+                        lineNumber: 1333,
                         columnNumber: 13
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
                         className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].listView,
@@ -8535,28 +8572,28 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         children: "Name"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1355,
+                                        lineNumber: 1358,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Size"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1356,
+                                        lineNumber: 1359,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Colors"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1357,
+                                        lineNumber: 1360,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Last Edited"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1358,
+                                        lineNumber: 1361,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8564,13 +8601,13 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                         "aria-hidden": "true"
                                     }, void 0, false, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1359,
+                                        lineNumber: 1362,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1354,
+                                lineNumber: 1357,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8591,17 +8628,17 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                                 "aria-hidden": "true"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                                lineNumber: 1371,
+                                                                lineNumber: 1374,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1370,
+                                                            lineNumber: 1373,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 1369,
+                                                        lineNumber: 1372,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8610,61 +8647,61 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                                             className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineLong
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                            lineNumber: 1375,
+                                                            lineNumber: 1378,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                        lineNumber: 1374,
+                                                        lineNumber: 1377,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1368,
+                                                lineNumber: 1371,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1378,
+                                                lineNumber: 1381,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineShort
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1379,
+                                                lineNumber: 1382,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].loadingLineMedium
                                             }, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1380,
+                                                lineNumber: 1383,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                                lineNumber: 1381,
+                                                lineNumber: 1384,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, `initial-list-loading-${card}`, true, {
                                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                        lineNumber: 1363,
+                                        lineNumber: 1366,
                                         columnNumber: 19
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1361,
+                                lineNumber: 1364,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 1353,
+                        lineNumber: 1356,
                         columnNumber: 13
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
                         className: __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$library$2f$page$2e$module$2e$css__$5b$app$2d$ssr$5d$__$28$css__module$29$__["default"].emptyState,
@@ -8674,7 +8711,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 children: "No designs yet"
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1389,
+                                lineNumber: 1392,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -8682,7 +8719,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 children: "Your saved needlepoint designs will show up here once you create one."
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1390,
+                                lineNumber: 1393,
                                 columnNumber: 13
                             }, this),
                             loadMoreError ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -8690,7 +8727,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 children: loadMoreError
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1394,
+                                lineNumber: 1397,
                                 columnNumber: 15
                             }, this) : null,
                             loadMoreError ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -8703,19 +8740,19 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 children: "Retry loading designs"
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1397,
+                                lineNumber: 1400,
                                 columnNumber: 15
                             }, this) : null
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 1388,
+                        lineNumber: 1391,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 819,
+                lineNumber: 821,
                 columnNumber: 7
             }, this),
             setupModalOpen ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8755,12 +8792,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                     setupErrorMessage: setupErrorMessage
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 1414,
+                    lineNumber: 1417,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 1413,
+                lineNumber: 1416,
                 columnNumber: 9
             }, this) : null,
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$design$2d$system$2f$Modal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Modal"], {
@@ -8784,7 +8821,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                 dismissDisabled: bulkDeletePending
             }, void 0, false, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 1451,
+                lineNumber: 1454,
                 columnNumber: 7
             }, this),
             successNotification ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8800,17 +8837,17 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                         onAction: handleUndoPendingDeletion
                     }, void 0, false, {
                         fileName: "[project]/app/library/LibraryPageClient.tsx",
-                        lineNumber: 1498,
+                        lineNumber: 1501,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 1497,
+                    lineNumber: 1500,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 1496,
+                lineNumber: 1499,
                 columnNumber: 9
             }, this) : null,
             selectedDesignCount > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8830,12 +8867,12 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                 "aria-hidden": "true"
                             }, void 0, false, {
                                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                lineNumber: 1518,
+                                lineNumber: 1521,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                            lineNumber: 1512,
+                            lineNumber: 1515,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8846,7 +8883,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                            lineNumber: 1521,
+                            lineNumber: 1524,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8854,7 +8891,7 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                             "aria-hidden": "true"
                         }, void 0, false, {
                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                            lineNumber: 1525,
+                            lineNumber: 1528,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -8867,20 +8904,20 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                     icon: "/icons/lucide/square-check.svg"
                                 }, void 0, false, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 1537,
+                                    lineNumber: 1540,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     children: "Select All"
                                 }, void 0, false, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 1538,
+                                    lineNumber: 1541,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                            lineNumber: 1527,
+                            lineNumber: 1530,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -8896,37 +8933,37 @@ function LibraryPageClient({ initialDesigns = [], initialTotalCount = 0, initial
                                     "aria-hidden": "true"
                                 }, void 0, false, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 1549,
+                                    lineNumber: 1552,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     children: bulkDeletePending ? "Deleting..." : "Delete"
                                 }, void 0, false, {
                                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                                    lineNumber: 1553,
+                                    lineNumber: 1556,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/library/LibraryPageClient.tsx",
-                            lineNumber: 1541,
+                            lineNumber: 1544,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/library/LibraryPageClient.tsx",
-                    lineNumber: 1511,
+                    lineNumber: 1514,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/library/LibraryPageClient.tsx",
-                lineNumber: 1510,
+                lineNumber: 1513,
                 columnNumber: 9
             }, this) : null
         ]
     }, void 0, true, {
         fileName: "[project]/app/library/LibraryPageClient.tsx",
-        lineNumber: 815,
+        lineNumber: 817,
         columnNumber: 5
     }, this);
 }

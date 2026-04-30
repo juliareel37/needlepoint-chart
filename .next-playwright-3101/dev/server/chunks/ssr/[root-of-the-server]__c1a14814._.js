@@ -66,17 +66,14 @@ function createTallSnapshotCells() {
     const cells = Array(GRID_WIDTH * GRID_HEIGHT).fill(null);
     const stroke = "#a34b4b";
     const fill = "#f0d270";
-    for(let x = 24; x < 80; x += 1){
-        cells[x] = stroke;
-        cells[(GRID_HEIGHT - 1) * GRID_WIDTH + x] = stroke;
-    }
-    for(let y = 0; y < GRID_HEIGHT; y += 1){
-        cells[y * GRID_WIDTH + 24] = stroke;
-        cells[y * GRID_WIDTH + 79] = stroke;
-    }
-    for(let y = 72; y < 136; y += 1){
-        for(let x = 36; x < 68; x += 1){
-            if ((x + y) % 3 === 0) {
+    for(let y = 24; y < 184; y += 1){
+        for(let x = 30; x < 74; x += 1){
+            const isBorder = x < 36 || x >= 68 || y < 36 || y >= 172;
+            if (isBorder) {
+                cells[y * GRID_WIDTH + x] = stroke;
+                continue;
+            }
+            if ((x + y) % 2 === 0) {
                 cells[y * GRID_WIDTH + x] = fill;
             }
         }
@@ -101,7 +98,9 @@ const TEST_DESIGN = {
         cells: createTallSnapshotCells()
     }
 };
-function LibraryThumbnailPreviewPage() {
+async function LibraryThumbnailPreviewPage({ searchParams }) {
+    const resolvedSearchParams = searchParams ? await searchParams : undefined;
+    const mode = resolvedSearchParams?.mode === "list" ? "list" : "grid";
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$rsc$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
         style: {
             minHeight: "100vh",
@@ -115,15 +114,16 @@ function LibraryThumbnailPreviewPage() {
             initialTotalCount: 1,
             initialHasMore: false,
             initialNextOffset: null,
-            deferInitialLoad: false
+            deferInitialLoad: false,
+            initialViewMode: mode
         }, void 0, false, {
             fileName: "[project]/app/dev/library-thumbnail-preview/page.tsx",
-            lineNumber: 55,
+            lineNumber: 61,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/dev/library-thumbnail-preview/page.tsx",
-        lineNumber: 54,
+        lineNumber: 60,
         columnNumber: 5
     }, this);
 }
