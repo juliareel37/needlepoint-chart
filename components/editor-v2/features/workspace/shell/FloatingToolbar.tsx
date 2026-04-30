@@ -279,6 +279,7 @@ interface FloatingToolbarProps {
   canRedo: boolean;
   canUndo: boolean;
   dispatch: EditorStore["dispatch"];
+  eyedropperReturnTool: ActiveTool | null;
   hasPaintedCells: boolean;
   palette: PaletteColor[];
   featuredColorIds: string[];
@@ -302,6 +303,7 @@ export function FloatingToolbar({
   canRedo,
   canUndo,
   dispatch,
+  eyedropperReturnTool,
   hasPaintedCells,
   palette,
   featuredColorIds,
@@ -1190,7 +1192,13 @@ export function FloatingToolbar({
               closeDrawMenu();
               closeImageMenu();
               if (activeTool === "eyedropper") {
-                dispatch(createSetToolCommand("lasso"));
+                dispatch(
+                  createSetToolCommand(
+                    selectionToolSessionActive
+                      ? "lasso"
+                      : (eyedropperReturnTool ?? "paint"),
+                  ),
+                );
                 return;
               }
               dispatch(createSetToolCommand("eyedropper"));

@@ -2367,6 +2367,7 @@ export function EditorV2Shell({
                         canRedo={canRedo}
                         canUndo={canUndo}
                         dispatch={dispatch}
+                        eyedropperReturnTool={state.session.eyedropperReturnTool}
                         hasPaintedCells={hasPaintedCells}
                         featuredColorIds={featuredColorIds}
                         palette={palette}
