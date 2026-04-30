@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { Field } from "./Field";
 import {
   MenuChevronIcon,
+  MenuDivider,
   MenuItem,
   MenuSurface,
   MenuTrailingCheck,
@@ -30,6 +31,7 @@ export interface SingleSelectDropdownProps<TItem> {
   ariaLabel: string;
   emptyLabel?: ReactNode;
   getItemDisabled?: (item: TItem) => boolean;
+  getItemIsDivider?: (item: TItem) => boolean;
   getItemLabel: (item: TItem) => ReactNode;
   getItemValue: (item: TItem) => string;
   items: TItem[];
@@ -59,12 +61,15 @@ export interface SingleSelectDropdownProps<TItem> {
   wrapperClassName?: string;
   wrapperStyle?: CSSProperties;
   menuFooter?: ReactNode;
+  openOnHover?: boolean;
+  hoverCloseDelayMs?: number;
 }
 
 export function SingleSelectDropdown<TItem>({
   ariaLabel,
   emptyLabel = "No options",
   getItemDisabled,
+  getItemIsDivider,
   getItemLabel,
   getItemValue,
   items,
@@ -85,6 +90,8 @@ export function SingleSelectDropdown<TItem>({
   onOpenChange,
   onValueChange,
   placeholder,
+  openOnHover = false,
+  hoverCloseDelayMs = 120,
   showChevron = true,
   triggerLabel,
   triggerClassName,
@@ -100,6 +107,7 @@ export function SingleSelectDropdown<TItem>({
   const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const hoverCloseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -108,6 +116,15 @@ export function SingleSelectDropdown<TItem>({
   useEffect(() => {
     onOpenChange?.(open);
   }, [onOpenChange, open]);
+
+  useEffect(
+    () => () => {
+      if (hoverCloseTimeoutRef.current !== null) {
+        window.clearTimeout(hoverCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -123,6 +140,36 @@ export function SingleSelectDropdown<TItem>({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
+
+  const clearHoverCloseTimeout = useCallback(() => {
+    if (hoverCloseTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(hoverCloseTimeoutRef.current);
+    hoverCloseTimeoutRef.current = null;
+  }, []);
+
+  const scheduleHoverClose = useCallback(() => {
+    if (!openOnHover) {
+      return;
+    }
+
+    clearHoverCloseTimeout();
+    hoverCloseTimeoutRef.current = window.setTimeout(() => {
+      setOpen(false);
+      hoverCloseTimeoutRef.current = null;
+    }, hoverCloseDelayMs);
+  }, [clearHoverCloseTimeout, hoverCloseDelayMs, openOnHover]);
+
+  const handleHoverEnter = useCallback(() => {
+    if (!openOnHover) {
+      return;
+    }
+
+    clearHoverCloseTimeout();
+    setOpen(true);
+  }, [clearHoverCloseTimeout, openOnHover]);
 
   const selectedItem =
     items.find((item) => getItemValue(item) === value) ?? null;
@@ -282,34 +329,41 @@ export function SingleSelectDropdown<TItem>({
         ...menuStyle,
       }}
       onScroll={maybeLoadMore}
+      onPointerEnter={handleHoverEnter}
+      onPointerLeave={scheduleHoverClose}
     >
       {orderedItems.length ? (
         <>
           {orderedItems.map((item) => {
-          const itemValue = getItemValue(item);
-          const active = itemValue === value;
-          return (
-            <MenuItem
-              key={itemValue}
-              type="button"
-              role="menuitemradio"
-              aria-checked={active}
-              active={active}
-              disabled={getItemDisabled?.(item)}
-              layout={menuShowTrailingCheck ? "trailing" : "leading"}
-              trailing={
-                menuShowTrailingCheck
-                  ? <MenuTrailingCheck active={active} />
-                  : undefined
-              }
-              onClick={() => {
-                onValueChange(itemValue, item);
-                setOpen(false);
-              }}
-            >
-              {getItemLabel(item)}
-            </MenuItem>
-          );
+            const itemValue = getItemValue(item);
+
+            if (getItemIsDivider?.(item)) {
+              return <MenuDivider key={itemValue} />;
+            }
+
+            const active = itemValue === value;
+            return (
+              <MenuItem
+                key={itemValue}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                active={active}
+                disabled={getItemDisabled?.(item)}
+                layout={menuShowTrailingCheck ? "trailing" : "leading"}
+                trailing={
+                  menuShowTrailingCheck
+                    ? <MenuTrailingCheck active={active} />
+                    : undefined
+                }
+                onClick={() => {
+                  onValueChange(itemValue, item);
+                  setOpen(false);
+                }}
+              >
+                {getItemLabel(item)}
+              </MenuItem>
+            );
           })}
           {menuFooter}
         </>
@@ -331,6 +385,8 @@ export function SingleSelectDropdown<TItem>({
         maxWidth: "100%",
         ...wrapperStyle,
       }}
+      onPointerEnter={handleHoverEnter}
+      onPointerLeave={scheduleHoverClose}
     >
       <MenuTrigger
         type="button"
@@ -339,7 +395,10 @@ export function SingleSelectDropdown<TItem>({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={ariaLabel}
-        onClick={() => setOpen((currentOpen) => !currentOpen)}
+        onClick={() => {
+          clearHoverCloseTimeout();
+          setOpen((currentOpen) => !currentOpen);
+        }}
         className={triggerClassName}
         style={{
           position: "relative",

@@ -229,9 +229,9 @@
   --z-notification: 9999;
 
   /* Color Tokens */
-  --neutral-0: #fafafa;
+  --neutral-0: #ffffff;
   --neutral-50: #fdfdfd;
-  --neutral-100: #fafaf9;
+  --neutral-100: #f7f7f7;
   --neutral-200: #f2f2f2;
   --neutral-300: #e6e6e6;
   --neutral-400: #c5c5c5;
@@ -293,7 +293,7 @@
   --surface-app: var(--neutral-0);
   --surface-primary: white;
 
-  --surface-card: var(--neutral-100);
+  --surface-card: var(--neutral-50);
 
   --canvas-stage-bg: var(--neutral-100);
 
@@ -416,6 +416,7 @@
 
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
+  --text-tertiary: var(--neutral-400);
 
   --ui-border-subtle: var(--neutral-800);
   --ui-border-reg: var(--neutral-700);
@@ -1096,7 +1097,7 @@ input[type="number"] {
   #app-shell-root[data-mobile-header-overflow-auth="true"] .app-header-sign-in-button {
     display: none !important;
   }
-  .app-header-title-slot {
+.app-header-title-slot {
     position: static !important;
     left: auto !important;
     transform: none !important;
@@ -1509,4 +1510,14 @@ input[type="number"] {
   .canvas-toolbar .toolbar-button[data-color-swatch="true"][data-active="true"]:hover .toolbar-icon {
     background: transparent !important;
   }
+}
+
+#app-shell-root[data-editor-version-history-mode="true"] .app-header-auth,
+#app-shell-root[data-editor-version-history-mode="true"] .app-shell-header img,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-history,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-autosave,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-file-right,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-history-right,
+#app-shell-root[data-editor-version-history-mode="true"] #app-header-overflow-right {
+  display: none !important;
 }

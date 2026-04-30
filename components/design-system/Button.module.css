@@ -72,12 +72,6 @@
   border: 1px solid var(--button-secondary2-default-border);
 }
 
-.secondary2:hover:not(:disabled) {
-  background: var(--button-secondary2-hover);
-  box-shadow: var(--ui-shadow-sm);
-  /* color: var(--text-primary); */
-}
-
 .secondary2[data-active="true"] {
   color: var(--button-secondary2-active-text);
   background: var(--button-secondary2-active);

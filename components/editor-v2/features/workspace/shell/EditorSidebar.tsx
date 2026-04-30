@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
-  EditorSidebarSection,
   EditorDocumentState,
+  EditorSidebarSection,
   EditorStore,
   IconPlacementSession,
   PaletteColor,
@@ -14,7 +14,9 @@ import type {
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
-import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
+import type {
+  SavedEditorV2DocumentRecord,
+} from "../../../app/editorV2ServerPersistence";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -32,7 +34,7 @@ interface EditorSidebarProps {
   documentTitle: string;
   hasSavedDesignAccess: boolean;
   hasUnsavedChanges: boolean;
-  isAutoSavePanelStatusVisible: boolean;
+  isDocumentPanelStatusVisible: boolean;
   isBottomPanelCanvasFocusActive: boolean;
   palette: PaletteColor[];
   renameRequestToken: number;
@@ -42,6 +44,8 @@ interface EditorSidebarProps {
   savedDocumentsLoadingMore: boolean;
   onOpenSavedDocuments: () => Promise<void> | void;
   onLoadMoreSavedDocuments: () => Promise<void> | void;
+  currentStorageId: string;
+  onEnterVersionHistoryMode: () => void;
   selectionScopeActive: boolean;
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
@@ -88,7 +92,7 @@ export function EditorSidebar({
   documentTitle,
   hasSavedDesignAccess,
   hasUnsavedChanges,
-  isAutoSavePanelStatusVisible,
+  isDocumentPanelStatusVisible,
   isBottomPanelCanvasFocusActive,
   palette,
   renameRequestToken,
@@ -98,6 +102,8 @@ export function EditorSidebar({
   savedDocumentsLoadingMore,
   onOpenSavedDocuments,
   onLoadMoreSavedDocuments,
+  currentStorageId,
+  onEnterVersionHistoryMode,
   selectionScopeActive,
   selectedStorageId,
   setSelectedStorageId,
@@ -228,7 +234,7 @@ export function EditorSidebar({
               documentTitle={documentTitle}
               hasSavedDesignAccess={hasSavedDesignAccess}
               hasUnsavedChanges={hasUnsavedChanges}
-              isAutoSavePanelStatusVisible={isAutoSavePanelStatusVisible}
+              isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
               onLoadSelected={onLoadSelected}
               renameRequestToken={renameRequestToken}
               onSignIn={onSignIn}
@@ -242,6 +248,8 @@ export function EditorSidebar({
               savedDocumentsLoadingMore={savedDocumentsLoadingMore}
               onOpenSavedDocuments={onOpenSavedDocuments}
               onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
+              currentStorageId={currentStorageId}
+              onEnterVersionHistoryMode={onEnterVersionHistoryMode}
               selectedStorageId={selectedStorageId}
               setSelectedStorageId={setSelectedStorageId}
             />

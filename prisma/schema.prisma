@@ -43,15 +43,33 @@ model PatternVersion {
 }
 
 model EditorDesign {
-  id         String   @id @default(cuid())
-  userId     String
-  title      String
-  data       Json
-  gridWidth  Int
-  gridHeight Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String              @id @default(cuid())
+  userId          String
+  title           String
+  data            Json
+  gridWidth       Int
+  gridHeight      Int
+  lastSaveSource  SaveSource?
+  lastVersionAt   DateTime?
+  lastVersionHash String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  versions        EditorDesignVersion[]
 
   @@index([userId])
   @@index([updatedAt])
+}
+
+model EditorDesignVersion {
+  id         String      @id @default(cuid())
+  designId   String
+  data       Json
+  dataHash   String
+  saveSource SaveSource?
+  createdAt  DateTime    @default(now())
+
+  design EditorDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@index([designId])
+  @@index([designId, createdAt])
 }

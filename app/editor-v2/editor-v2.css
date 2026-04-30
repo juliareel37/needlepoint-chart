@@ -1,10 +1,12 @@
 .editor-v2-route-shell {
-  height: calc(100vh - 52px);
-  /* overflow-y: auto; */
-  overscroll-behavior-y: contain;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: #f8fafc;
   -webkit-user-select: none;
   user-select: none;
+  animation: editorV2RouteEnter 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .editor-v2-route-shell :is(
@@ -17,4 +19,24 @@
 ) {
   -webkit-user-select: text;
   user-select: text;
+}
+
+@keyframes editorV2RouteEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-v2-route-shell {
+    animation: none;
+  }
 }

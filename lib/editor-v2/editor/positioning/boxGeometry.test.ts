@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getCenterSnappedPosition,
+  getResizeSnappedBounds,
   type PositioningMoveSnapState,
   type PositioningRect,
 } from "./boxGeometry";
@@ -128,6 +129,181 @@ describe("getCenterSnappedPosition", () => {
     ).toEqual({
       offsetX: 0,
       offsetY: 0,
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+});
+
+describe("getResizeSnappedBounds", () => {
+  it("snaps an east resize to the right canvas edge", () => {
+    const startBounds: PositioningRect = {
+      left: 10,
+      top: 20,
+      width: 40,
+      height: 20,
+    };
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 18,
+      width: 85,
+      height: 42.5,
+    };
+
+    expect(
+      getResizeSnappedBounds(startBounds, resizedBounds, "e", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: {
+        left: 10,
+        top: 7.5,
+        width: 90,
+        height: 45,
+      },
+      snap: {
+        left: null,
+        right: 100,
+        top: null,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("snaps a south resize to the bottom canvas edge", () => {
+    const startBounds: PositioningRect = {
+      left: 30,
+      top: 40,
+      width: 20,
+      height: 10,
+    };
+    const resizedBounds: PositioningRect = {
+      left: -7,
+      top: 40,
+      width: 74,
+      height: 37,
+    };
+
+    expect(
+      getResizeSnappedBounds(startBounds, resizedBounds, "s", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: {
+        left: 0,
+        top: 40,
+        width: 80,
+        height: 40,
+      },
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: 80,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("snaps a resize handle to the canvas midline", () => {
+    const startBounds: PositioningRect = {
+      left: 10,
+      top: 20,
+      width: 20,
+      height: 10,
+    };
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 6,
+      width: 76,
+      height: 38,
+    };
+
+    expect(
+      getResizeSnappedBounds(startBounds, resizedBounds, "e", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: {
+        left: 10,
+        top: 5,
+        width: 80,
+        height: 40,
+      },
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
+        centerX: 50,
+        centerY: null,
+      },
+    });
+  });
+
+  it("keeps a resize snap latched until it moves beyond the unsnap threshold", () => {
+    const startBounds: PositioningRect = {
+      left: 10,
+      top: 20,
+      width: 40,
+      height: 20,
+    };
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 19,
+      width: 78,
+      height: 39,
+    };
+    const snap: PositioningMoveSnapState = {
+      left: null,
+      right: 100,
+      top: null,
+      bottom: null,
+      centerX: null,
+      centerY: null,
+    };
+
+    expect(
+      getResizeSnappedBounds(startBounds, resizedBounds, "e", CONTAINER, snap, 1),
+    ).toEqual({
+      bounds: {
+        left: 10,
+        top: 7.5,
+        width: 90,
+        height: 45,
+      },
+      snap: {
+        left: null,
+        right: 100,
+        top: null,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("does not snap to an edge when resizing away from it", () => {
+    const startBounds: PositioningRect = {
+      left: 10,
+      top: 20,
+      width: 88,
+      height: 44,
+    };
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 24.5,
+      width: 66,
+      height: 33,
+    };
+
+    expect(
+      getResizeSnappedBounds(startBounds, resizedBounds, "e", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: resizedBounds,
       snap: {
         left: null,
         right: null,

@@ -4,6 +4,9 @@ import { useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
 import type {
+  EditorDesignVersionListItem,
+  LoadEditorV2VersionResult,
+  RestoreEditorV2VersionResult,
   SaveEditorV2DocumentResult,
   SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
@@ -32,6 +35,9 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges,
   initialDegradedLocalRecovery,
   initialLocalSnapshot,
+  isVersionHistoryMode,
+  isVersionPreview,
+  versionPreviewMeta,
   saveMode,
   savedDocuments,
   savedDocumentsLoading,
@@ -43,8 +49,18 @@ export function EditorV2Workspace({
   setSelectedStorageId,
   onSaveDocument,
   onLoadDocument,
+  onListVersions,
+  onEnterVersionHistoryMode,
+  onExitVersionHistoryMode,
+  onPreviewVersion,
+  onExitVersionPreview,
+  onSelectCurrentVersionInHistoryMode,
+  onRestoreVersion,
+  onRestoreVersionAsCopy,
   onDeleteCurrentDesign,
   onStartOver,
+  persistentSuccessNotification,
+  onDismissPersistentSuccessNotification,
   setupModal,
   setupModalOpen,
 }: {
@@ -56,6 +72,13 @@ export function EditorV2Workspace({
   initialRecoveredLocalChanges: boolean;
   initialDegradedLocalRecovery: boolean;
   initialLocalSnapshot: EditorV2LocalSnapshotRecord | null;
+  isVersionHistoryMode: boolean;
+  isVersionPreview: boolean;
+  versionPreviewMeta: {
+    versionId: string;
+    createdAt: string;
+    saveSource: LoadEditorV2VersionResult["saveSource"];
+  } | null;
   saveMode: "manual" | "autosave";
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
@@ -69,10 +92,32 @@ export function EditorV2Workspace({
     document: EditorDocumentState,
     storageId?: string,
     baseVersion?: string | null,
+    saveSource?: "manual" | "autosave",
+    forceVersion?: boolean,
   ) => Promise<SaveEditorV2DocumentResult | null>;
   onLoadDocument: (record: SavedEditorV2DocumentRecord) => Promise<void> | void;
+  onListVersions: (storageId: string) => Promise<EditorDesignVersionListItem[]>;
+  onEnterVersionHistoryMode: () => void;
+  onExitVersionHistoryMode: () => void;
+  onPreviewVersion: (
+    storageId: string,
+    versionId: string,
+    currentDocument: EditorDocumentState,
+  ) => Promise<void>;
+  onExitVersionPreview: () => void;
+  onSelectCurrentVersionInHistoryMode: () => void;
+  onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
+  onRestoreVersionAsCopy: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
   onStartOver: () => void;
+  persistentSuccessNotification: EditorV2SuccessNotification | null;
+  onDismissPersistentSuccessNotification: () => void;
   setupModal: ReactNode;
   setupModalOpen: boolean;
 }) {
@@ -84,14 +129,18 @@ export function EditorV2Workspace({
     useState<EditorV2ErrorNotification | null>(null);
   const [successNotification, setSuccessNotification] =
     useState<EditorV2SuccessNotification | null>(null);
+  const displayedSuccessNotification = successNotification ?? persistentSuccessNotification;
 
-  const { controllerState, handleManualSave } = useEditorV2PersistenceController({
+  const { controllerState, handleManualSave, handleManualVersionSnapshot } =
+    useEditorV2PersistenceController({
     currentStorageId,
     currentServerVersion,
     hasSavedDesignAccess,
     initialRecoveredLocalChanges,
     initialDegradedLocalRecovery,
     initialLocalSnapshot,
+    isVersionHistoryMode,
+    isVersionPreview,
     saveMode,
     onSaveDocument,
   });
@@ -126,6 +175,10 @@ export function EditorV2Workspace({
           await handleManualSave();
           setErrorNotification(null);
         }}
+        onSaveVersionSnapshot={async () => {
+          await handleManualVersionSnapshot();
+          setErrorNotification(null);
+        }}
         onLoadDocument={async (record) => {
           try {
             await onLoadDocument(record);
@@ -136,6 +189,51 @@ export function EditorV2Workspace({
               title: "Couldn't load design",
               description: getErrorMessage(error, "Try again in a moment."),
             });
+          }
+        }}
+        onPreviewVersion={async (storageId, versionId, currentDocument) => {
+          try {
+            await onPreviewVersion(storageId, versionId, currentDocument);
+            setErrorNotification(null);
+          } catch (error) {
+            setErrorNotification({
+              title: "Couldn't preview version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
+          }
+        }}
+        onExitVersionPreview={onExitVersionPreview}
+        onListVersions={onListVersions}
+        onEnterVersionHistoryMode={onEnterVersionHistoryMode}
+        onExitVersionHistoryMode={onExitVersionHistoryMode}
+        onSelectCurrentVersionInHistoryMode={onSelectCurrentVersionInHistoryMode}
+        onRestoreVersion={async (storageId, versionId) => {
+          try {
+            const restored = await onRestoreVersion(storageId, versionId);
+            setErrorNotification(null);
+            return restored;
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't restore version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
+          }
+        }}
+        onRestoreVersionAsCopy={async (storageId, versionId) => {
+          try {
+            const restored = await onRestoreVersionAsCopy(storageId, versionId);
+            setErrorNotification(null);
+            return restored;
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't make copy from version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
           }
         }}
         onDeleteCurrentDesign={async (document) => {
@@ -167,6 +265,9 @@ export function EditorV2Workspace({
         recoveredLocalChanges={controllerState.recoveredLocalChanges}
         saveButtonState={controllerState.saveButtonState}
         saveMessage={controllerState.saveMessage}
+        isVersionHistoryMode={isVersionHistoryMode}
+        isVersionPreview={isVersionPreview}
+        versionPreviewMeta={versionPreviewMeta}
         saveMode={saveMode}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
@@ -176,8 +277,15 @@ export function EditorV2Workspace({
         onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        successNotification={successNotification}
-        onDismissSuccessNotification={() => setSuccessNotification(null)}
+        successNotification={displayedSuccessNotification}
+        onDismissSuccessNotification={() => {
+          if (successNotification) {
+            setSuccessNotification(null);
+            return;
+          }
+
+          onDismissPersistentSuccessNotification();
+        }}
         setupModal={setupModal}
         setupModalOpen={setupModalOpen}
       />

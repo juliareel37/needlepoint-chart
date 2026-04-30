@@ -279,6 +279,7 @@ interface FloatingToolbarProps {
   canRedo: boolean;
   canUndo: boolean;
   dispatch: EditorStore["dispatch"];
+  eyedropperReturnTool: ActiveTool | null;
   hasPaintedCells: boolean;
   palette: PaletteColor[];
   featuredColorIds: string[];
@@ -302,6 +303,7 @@ export function FloatingToolbar({
   canRedo,
   canUndo,
   dispatch,
+  eyedropperReturnTool,
   hasPaintedCells,
   palette,
   featuredColorIds,
@@ -339,9 +341,12 @@ export function FloatingToolbar({
   const selectAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectionShapeAnchorRef = useRef<HTMLDivElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const embeddedSelectionSliderAnchorRef = useRef<HTMLDivElement | null>(null);
   const selectionTraceOpacityRestoreRef = useRef<number | null>(null);
   const handledSelectionRequestKeyRef = useRef(selectionRequestKey);
   const drawOpen = drawPopoverTool !== null;
+  const [embeddedSelectionSliderTooltipPosition, setEmbeddedSelectionSliderTooltipPosition] =
+    useState<{ left: number; top: number } | null>(null);
 
   const normalizedBrushSize = Number.isFinite(brushSize)
     ? Math.min(Math.max(Math.round(brushSize), 1), 10)
@@ -361,6 +366,8 @@ export function FloatingToolbar({
   const activeSelectionShape =
     selectionShapeOptions.find((option) => option.shape === selectionShape) ??
     selectionShapeOptions[0];
+  const selectionDrawTool =
+    activeTool === "paint" || activeTool === "erase" ? activeTool : null;
 
   const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
     if (!toolbarTooltipsEnabled) {
@@ -404,6 +411,37 @@ export function FloatingToolbar({
 
     setBrushSizeSliderValue(normalizedBrushSize);
   }, [brushSizeSliderDragging, normalizedBrushSize]);
+
+  useEffect(() => {
+    if (!brushSizeTooltipVisible || !selectionDrawTool) {
+      setEmbeddedSelectionSliderTooltipPosition(null);
+      return;
+    }
+
+    const update = () => {
+      const anchor = embeddedSelectionSliderAnchorRef.current;
+
+      if (!anchor) {
+        setEmbeddedSelectionSliderTooltipPosition(null);
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      setEmbeddedSelectionSliderTooltipPosition({
+        left: rect.left + rect.width * (brushSizeTooltipPercent / 100),
+        top: rect.top - 6,
+      });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [brushSizeTooltipPercent, brushSizeTooltipVisible, selectionDrawTool]);
 
   useEffect(() => {
     if (!activeTooltip) {
@@ -629,6 +667,95 @@ export function FloatingToolbar({
     setSelectOpen(true);
   }
 
+  const brushSizeControl = (
+    tool: "paint" | "erase",
+    options?: { embeddedInSelectionToolbar?: boolean },
+  ) => (
+    <div
+      style={{
+        display: "flex",
+        gap: 15,
+        alignItems: "center",
+        flexWrap: "nowrap",
+        padding: "6px 8px",
+      }}
+    >
+      <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+      <div
+        className={styles.traceSliderTooltipWrap}
+        ref={options?.embeddedInSelectionToolbar ? embeddedSelectionSliderAnchorRef : undefined}
+        style={{ width: 80, flexShrink: 0 }}
+      >
+        {!options?.embeddedInSelectionToolbar ? (
+          <div
+            className={[
+              styles.traceSliderTooltip,
+              brushSizeTooltipVisible
+                ? styles.traceSliderTooltipVisible
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-hidden="true"
+            style={{ left: `${brushSizeTooltipPercent}%` }}
+          >
+            {brushFootprintLabel}
+          </div>
+        ) : null}
+        <Slider
+          min={1}
+          max={10}
+          step={0.05}
+          value={brushSizeSliderValue}
+          aria-label="Brush size"
+          aria-valuetext={`${brushFootprintLabel} paint area`}
+          onPointerDown={() => {
+            setBrushSizeSliderDragging(true);
+            setBrushSizeTooltipVisible(true);
+          }}
+          onBlur={() => {
+            setBrushSizeSliderDragging(false);
+            setBrushSizeTooltipVisible(false);
+          }}
+          onChange={(e) => {
+            const nextSliderValue = Number(e.currentTarget.value);
+            setBrushSizeSliderValue(nextSliderValue);
+            const newSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
+
+            if (newSize === normalizedBrushSize) {
+              return;
+            }
+
+            dispatch(createSetBrushSizeCommand(newSize, tool));
+          }}
+          style={{ width: "100%", maxWidth: "none" }}
+        />
+        {options?.embeddedInSelectionToolbar &&
+        brushSizeTooltipVisible &&
+        embeddedSelectionSliderTooltipPosition &&
+        typeof document !== "undefined"
+          ? createPortal(
+              <div
+                className={[
+                  styles.traceSliderTooltip,
+                  styles.traceSliderTooltipPortal,
+                  styles.traceSliderTooltipVisible,
+                ].join(" ")}
+                aria-hidden="true"
+                style={{
+                  left: embeddedSelectionSliderTooltipPosition.left,
+                  top: embeddedSelectionSliderTooltipPosition.top,
+                }}
+              >
+                {brushFootprintLabel}
+              </div>,
+              document.body,
+            )
+          : null}
+      </div>
+    </div>
+  );
+
   const selectionToolbarControls = (
     <>
       <ToolbarGroup>
@@ -730,6 +857,15 @@ export function FloatingToolbar({
         <ToolbarIcon icon="/icons/lucide/eraser.svg" />
         <ToolbarLabel>Erase all</ToolbarLabel>
       </ToolbarButton>
+
+      {selectionDrawTool ? (
+        <>
+          <ToolbarDivider />
+          <ToolbarSubtoolGroup>
+            {brushSizeControl(selectionDrawTool, { embeddedInSelectionToolbar: true })}
+          </ToolbarSubtoolGroup>
+        </>
+      ) : null}
     </>
   );
 
@@ -954,6 +1090,9 @@ export function FloatingToolbar({
           title="Fill"
           onClick={() => {
             if (activeTool === "fill") {
+              if (selectOpen && selectionCommitted) {
+                dispatch(createSetToolCommand("lasso"));
+              }
               return;
             }
             closeColorLibrary();
@@ -977,6 +1116,16 @@ export function FloatingToolbar({
               closeColorLibrary();
               closeImageMenu();
               if (activeTool === "paint") {
+                if (selectOpen && selectionCommitted) {
+                  closeDrawMenu();
+                  dispatch(createSetToolCommand("lasso"));
+                  return;
+                }
+
+                if (selectionToolSessionActive) {
+                  closeDrawMenu();
+                  return;
+                }
                 setDrawPopoverTool((current) => (current === "paint" ? null : "paint"));
                 return;
               }
@@ -1005,6 +1154,16 @@ export function FloatingToolbar({
               closeColorLibrary();
               closeImageMenu();
               if (activeTool === "erase") {
+                if (selectOpen && selectionCommitted) {
+                  closeDrawMenu();
+                  dispatch(createSetToolCommand("lasso"));
+                  return;
+                }
+
+                if (selectionToolSessionActive) {
+                  closeDrawMenu();
+                  return;
+                }
                 setDrawPopoverTool((current) => (current === "erase" ? null : "erase"));
                 return;
               }
@@ -1032,6 +1191,16 @@ export function FloatingToolbar({
               closeColorLibrary();
               closeDrawMenu();
               closeImageMenu();
+              if (activeTool === "eyedropper") {
+                dispatch(
+                  createSetToolCommand(
+                    selectionToolSessionActive
+                      ? "lasso"
+                      : (eyedropperReturnTool ?? "paint"),
+                  ),
+                );
+                return;
+              }
               dispatch(createSetToolCommand("eyedropper"));
             }}
           >
@@ -1047,69 +1216,7 @@ export function FloatingToolbar({
               aria-label="Draw size"
             >
               <ToolbarSubtoolGroup>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 15,
-                    alignItems: "center",
-                    flexWrap: "nowrap",
-                    padding: "6px 8px",
-                  }}
-                >
-                  <ToolbarIcon icon="/icons/other/stroke-width.svg" />
-                  <div
-                    className={styles.traceSliderTooltipWrap}
-                    style={{ width: 80, flexShrink: 0 }}
-                  >
-                    <div
-                      className={[
-                        styles.traceSliderTooltip,
-                        brushSizeTooltipVisible
-                          ? styles.traceSliderTooltipVisible
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-hidden="true"
-                      style={{ left: `${brushSizeTooltipPercent}%` }}
-                    >
-                      {brushFootprintLabel}
-                    </div>
-                    <Slider
-                      min={1}
-                      max={10}
-                      step={0.05}
-                      value={brushSizeSliderValue}
-                      aria-label="Brush size"
-                      aria-valuetext={`${brushFootprintLabel} paint area`}
-                      onPointerDown={() => {
-                        setBrushSizeSliderDragging(true);
-                        setBrushSizeTooltipVisible(true);
-                      }}
-                      onBlur={() => {
-                        setBrushSizeSliderDragging(false);
-                        setBrushSizeTooltipVisible(false);
-                      }}
-                      onChange={(e) => {
-                        const nextSliderValue = Number(e.currentTarget.value);
-                        setBrushSizeSliderValue(nextSliderValue);
-                        const newSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
-
-                        if (newSize === normalizedBrushSize) {
-                          return;
-                        }
-
-                        dispatch(
-                          createSetBrushSizeCommand(
-                            newSize,
-                            drawPopoverTool ?? "paint",
-                          ),
-                        );
-                      }}
-                      style={{ width: "100%", maxWidth: "none" }}
-                    />
-                  </div>
-                </div>
+                {brushSizeControl(drawPopoverTool ?? "paint")}
               </ToolbarSubtoolGroup>
             </FloatingToolbarPortalPopover>
           ) : null}

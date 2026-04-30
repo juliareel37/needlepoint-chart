@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { Button } from "@/components/design-system";
+import { Button, ButtonIcon } from "@/components/design-system";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { createEditorV2AuthHandoffRedirectUrl } from "@/components/editor-v2/app/editorV2AuthHandoff";
 import { useOpenSignIn } from "./useOpenSignIn";
@@ -32,7 +32,7 @@ export default function AuthButtons() {
       <SignedOut>
         <Button
           type="button"
-          variant="secondary"
+          variant="ghostV2"
           size="md"
           className="app-header-sign-in-button"
           onClick={() => {
@@ -69,6 +69,7 @@ export default function AuthButtons() {
             openSignIn({ redirectUrl: currentUrl });
           }}
         >
+          <ButtonIcon icon="/icons/lucide/user.svg" />
           Sign in
         </Button>
       </SignedOut>

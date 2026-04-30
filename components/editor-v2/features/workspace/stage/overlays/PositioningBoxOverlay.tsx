@@ -11,6 +11,7 @@ import {
   getHandleLeft,
   getHandleTop,
   getPositionedBounds,
+  getResizeSnappedBounds,
   getRotationCss,
   getTransformFromDrag,
   getTransformFromPinch,
@@ -373,6 +374,30 @@ export function PositioningBoxOverlay({
       };
       session.moveSnap = snappedPosition.snap;
       setActiveMoveSnap(snappedPosition.snap);
+    } else if (
+      session.dragged &&
+      session.mode !== "move" &&
+      session.mode !== "rotate" &&
+      latestSnapContainerBoundsRef.current
+    ) {
+      const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      const snappedBounds = getResizeSnappedBounds(
+        session.drag.startBounds,
+        rawBounds,
+        session.mode,
+        latestSnapContainerBoundsRef.current,
+        session.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: snappedBounds.bounds.left - latestBaseRectRef.current.left,
+        offsetY: snappedBounds.bounds.top - latestBaseRectRef.current.top,
+        scale: snappedBounds.bounds.width / latestBaseRectRef.current.width,
+      };
+      session.moveSnap = snappedBounds.snap;
+      setActiveMoveSnap(snappedBounds.snap);
     } else if (session.mode !== "move") {
       session.moveSnap = emptyMoveSnap();
       setActiveMoveSnap(emptyMoveSnap());

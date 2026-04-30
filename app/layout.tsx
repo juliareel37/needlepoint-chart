@@ -43,8 +43,9 @@ const appShellStyle: CSSProperties &
   Record<"--app-header-height" | "--app-top-banner-height" | "--app-top-offset", string> = {
   position: "relative",
   width: "100%",
+  height: "100vh",
+  minHeight: "100dvh",
   padding: 0,
-  minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
   "--app-header-height": "52px",
@@ -145,6 +146,8 @@ export default function RootLayout({
               className="app-shell-header"
               style={{
                 height: 52,
+                minHeight: 52,
+                flex: "0 0 52px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -156,11 +159,11 @@ export default function RootLayout({
               }}
             >
               <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-                <img
+                {/* <img
                   src={assetPath("/wippa_logo.png")}
                   alt="Wippa"
                   style={{ height: 24, width: "auto", display: "block" }}
-                />
+                /> */}
                 {/* <Link
                   href="/editor/design-system"
                   style={headerUtilityLinkStyle}
@@ -191,7 +194,7 @@ export default function RootLayout({
                 <div id="app-header-overflow-right" />
               </div>
             </div>
-            <div style={{ flex: "1 1 auto", minHeight: 0 }}>
+            <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
               {children}
             </div>
           </div>

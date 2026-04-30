@@ -31,8 +31,39 @@ interface UseStagePanInteractionsOptions {
   stageRef: RefObject<HTMLDivElement | null>;
   stageSize: StageSize;
   viewport: ViewportState;
+  viewportInteractionDisabled?: boolean;
   zoomAnchor: { x: number; y: number } | null;
 }
+
+function createToolCursor(svg: string, hotspotX: number, hotspotY: number): string {
+  const borderedSvg = svg.replace(
+    ">",
+    '><defs><filter id="cursor-outline" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="0.9" result="expanded"/><feFlood flood-color="#fff" result="outlineColor"/><feComposite in="outlineColor" in2="expanded" operator="in" result="outline"/><feComposite in="SourceGraphic" in2="outline" operator="over"/></filter></defs><g filter="url(#cursor-outline)">',
+  ).replace("</svg>", "</g></svg>");
+
+  return `url("data:image/svg+xml,${encodeURIComponent(borderedSvg)}") ${hotspotX} ${hotspotY}, crosshair`;
+}
+
+const PAINT_CURSOR = createToolCursor(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="m14.622 17.897-10.68-2.913" fill="none" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z" fill="#000" stroke="#000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15" fill="none" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  3,
+  14,
+);
+const FILL_CURSOR = createToolCursor(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="#000" d="m10.87 1.94-.95.95 8.3 8.3 1.41-1.41a.65.65 0 0 0 0-.92L12.8 2.03a.65.65 0 0 0-.92 0Z"/><path fill="#000" d="M5.18 6.62 1.99 9.8a3.02 3.02 0 0 0 0 4.27l3.89 3.89a3.02 3.02 0 0 0 4.27 0l6.66-6.67-8.3-8.3Z"/><path fill="#000" d="M18.7 15.84c-.2.7-.58 1.33-1.1 1.9-.26.28-.31.7-.12 1.03.2.35.3.74.3 1.18A2.23 2.23 0 0 0 20 22.2a2.23 2.23 0 0 0 2.23-2.25c0-.8-.38-1.5-1.01-2-.57-.46-.94-1.05-1.1-1.75l-.2-.84-.82.48c-.13.08-.26.14-.4.2Z"/><path fill="#fff" d="M2.5 11.25h15.2v1.4H2.5z"/></svg>`,
+  5,
+  15,
+);
+const ERASER_CURSOR = createToolCursor(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="#000" d="M13.01 3.1a2.58 2.58 0 0 1 3.65 0l5.99 6a2.58 2.58 0 0 1 0 3.65L13.8 21.6H8.04c-.8 0-1.56-.31-2.12-.88l-3.99-4a2.58 2.58 0 0 1 0-3.64Z"/><path fill="#fff" d="m4.34 11.08 7.58 7.59-1 1-7.58-7.6z"/><path fill="#fff" d="M12.55 20.2H21v1.4h-9.85z"/></svg>`,
+  5,
+  14,
+);
+const EYEDROPPER_CURSOR = createToolCursor(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="#000" d="m18.42 1.88-3.4 3.4-.14-.14a1.57 1.57 0 0 0-2.22 0l-.7.7a1.57 1.57 0 0 0 0 2.22l.15.15-8.95 8.95A2.58 2.58 0 0 0 2.4 18.83v1.34c0 .35-.14.69-.39.94l-.32.31a.6.6 0 0 0 .43 1.03h1.7c.52 0 1.01-.2 1.37-.56L14.14 13l.15.15a1.57 1.57 0 0 0 2.22 0l.7-.7a1.57 1.57 0 0 0 0-2.22l-.14-.14 3.4-3.4a1.57 1.57 0 0 0 0-2.22l-.83-.83a1.57 1.57 0 0 0-2.22 0Z"/><path fill="#fff" d="m13.18 6.24 4.58 4.58-.99.99-4.58-4.58z"/><path fill="#fff" d="m2.95 21.05.83-.82.99.99-.83.82z"/></svg>`,
+  3,
+  15,
+);
 
 export function useStagePanInteractions({
   activeTool,
@@ -42,6 +73,7 @@ export function useStagePanInteractions({
   stageRef,
   stageSize,
   viewport,
+  viewportInteractionDisabled = false,
   zoomAnchor,
 }: UseStagePanInteractionsOptions) {
   const ZOOM_INTERACTION_SETTLE_DELAY_MS = 120;
@@ -60,11 +92,20 @@ export function useStagePanInteractions({
   const zoomInteractionTimeoutRef = useRef<number | null>(null);
   const viewportRef = useRef(viewport);
   const zoomAnchorRef = useRef(zoomAnchor);
-  const panToolActive = activeTool === "pan" && !dragPanningDisabled;
+  const panToolActive =
+    activeTool === "pan" && !dragPanningDisabled && !viewportInteractionDisabled;
   const cursor = isPanDragging
     ? "grabbing"
-    : activeTool === "eyedropper" || activeTool === "fill"
+    : activeTool === "paint"
+      ? PAINT_CURSOR
+    : activeTool === "lasso"
       ? "crosshair"
+    : activeTool === "fill"
+      ? FILL_CURSOR
+    : activeTool === "erase"
+      ? ERASER_CURSOR
+    : activeTool === "eyedropper"
+      ? EYEDROPPER_CURSOR
     : (spacePressed && !dragPanningDisabled) || panToolActive
       ? "grab"
       : "default";
@@ -169,6 +210,10 @@ export function useStagePanInteractions({
   }, [dragPanningDisabled, stopPanDragging]);
 
   useEffect(() => {
+    if (viewportInteractionDisabled) {
+      return;
+    }
+
     const stageElement = stageRef.current;
 
     if (!stageElement) {
@@ -368,6 +413,7 @@ export function useStagePanInteractions({
     stageSize.width,
     scheduleZoomInteractionEnd,
     startPanDragging,
+    viewportInteractionDisabled,
   ]);
 
   useEffect(() => {
@@ -479,7 +525,10 @@ export function useStagePanInteractions({
   function handleStageMouseDownCapture(event: ReactMouseEvent<HTMLDivElement>) {
     const isMiddleMouseButton = event.button === 1;
     const isSpaceDrag =
-      event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
+      event.button === 0 &&
+      isSpacePressedRef.current &&
+      !dragPanningDisabled &&
+      !viewportInteractionDisabled;
     const isPanToolDrag = event.button === 0 && panToolActive;
 
     if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
@@ -500,7 +549,10 @@ export function useStagePanInteractions({
     if (event.pointerType === "mouse") {
       const isMiddleMouseButton = event.button === 1;
       const isSpaceDrag =
-        event.button === 0 && isSpacePressedRef.current && !dragPanningDisabled;
+        event.button === 0 &&
+        isSpacePressedRef.current &&
+        !dragPanningDisabled &&
+        !viewportInteractionDisabled;
       const isPanToolDrag = event.button === 0 && panToolActive;
 
       if (!isMiddleMouseButton && !isSpaceDrag && !isPanToolDrag) {
@@ -518,7 +570,7 @@ export function useStagePanInteractions({
       return;
     }
 
-    if (dragPanningDisabled || !panToolActive) {
+    if (dragPanningDisabled || viewportInteractionDisabled || !panToolActive) {
       return;
     }
 

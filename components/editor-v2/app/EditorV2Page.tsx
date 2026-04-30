@@ -14,12 +14,20 @@ import {
   type EditorV2DesignConfig,
   type EditorV2DesignConfigNew,
 } from "./EditorV2SetupModal";
-import { EditorV2Workspace } from "./EditorV2Workspace";
+import {
+  EditorV2Workspace,
+  type EditorV2SuccessNotification,
+} from "./EditorV2Workspace";
 import {
   deleteSavedEditorV2Document,
+  listEditorV2DesignVersions,
   listSavedEditorV2Documents,
+  loadEditorV2DesignVersion,
   loadSavedEditorV2Document,
+  restoreEditorV2DesignVersion,
   saveEditorV2Document,
+  type EditorDesignVersionListItem,
+  type LoadEditorV2VersionResult,
   type SaveEditorV2DocumentResult,
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
@@ -51,6 +59,15 @@ const PENDING_SAVED_ROUTE_HANDOFF_STORAGE_KEY = "editor-v2-pending-saved-route";
 const SAVED_DOCUMENTS_PAGE_SIZE = 6;
 const AUTH_HANDOFF_LOCAL_RESTORE_DELAY_MS = 1500;
 const pendingSavedRouteHandoffCache = new Map<string, PendingSavedRouteHandoff>();
+
+interface VersionPreviewSession {
+  liveDocument: EditorDocumentState;
+  liveStorageId: string;
+  liveVersionToken: string | null;
+  previewVersionId: string;
+  previewCreatedAt: string;
+  previewSaveSource: LoadEditorV2VersionResult["saveSource"];
+}
 
 export function EditorV2Page({
   routeMode,
@@ -92,6 +109,11 @@ export function EditorV2Page({
   const [savedDocumentsErrorMessage, setSavedDocumentsErrorMessage] =
     useState<string | null>(null);
   const [setupErrorMessage, setSetupErrorMessage] = useState<string | null>(null);
+  const [isVersionHistoryMode, setIsVersionHistoryMode] = useState(false);
+  const [versionPreviewSession, setVersionPreviewSession] =
+    useState<VersionPreviewSession | null>(null);
+  const [restoreSuccessNotification, setRestoreSuccessNotification] =
+    useState<EditorV2SuccessNotification | null>(null);
   const previousRouteRef = useRef<
     { mode: "entry" | "saved"; storageId: string | null } | undefined
   >(undefined);
@@ -124,6 +146,7 @@ export function EditorV2Page({
     setSelectedStorageId("");
     setSetupErrorMessage(null);
     setCanvasLoadingKey(null);
+    setVersionPreviewSession(null);
   }, []);
 
   const openEntryRoute = useCallback(
@@ -278,6 +301,8 @@ export function EditorV2Page({
       setSelectedStorageId(savedRecord.storageId);
       setCanvasLoadingKey("saved_route_handoff");
       setSetupModalOpen(false);
+      setIsVersionHistoryMode(false);
+      setVersionPreviewSession(null);
 
       if (navigationMode === "push") {
         router.push(nextRoute);
@@ -288,6 +313,117 @@ export function EditorV2Page({
     },
     [resetCurrentDesignState, router, savedDocuments.length],
   );
+
+  const openLoadedDesignState = useCallback(
+    ({
+      document,
+      storageId,
+      versionToken,
+      instanceKey,
+      recoveredLocalChanges = false,
+      degradedLocalRecovery = false,
+      localSnapshot = null,
+    }: {
+      document: EditorDocumentState;
+      storageId: string;
+      versionToken: string | null;
+      instanceKey: string;
+      recoveredLocalChanges?: boolean;
+      degradedLocalRecovery?: boolean;
+      localSnapshot?: EditorV2LocalSnapshotRecord | null;
+    }) => {
+      setCurrentStorageId(storageId);
+      setCurrentServerVersion(versionToken);
+      setSelectedStorageId(storageId);
+      setInitialRecoveredLocalChanges(recoveredLocalChanges);
+      setInitialDegradedLocalRecovery(degradedLocalRecovery);
+      setInitialLocalSnapshot(localSnapshot);
+      setSetupErrorMessage(null);
+      setDesignConfig({
+        kind: "loaded",
+        document,
+        storageId,
+        instanceKey,
+      });
+      setCanvasLoadingKey(instanceKey);
+      setSetupModalOpen(false);
+    },
+    [],
+  );
+
+  const previewVersionInWorkspace = useCallback(
+    async ({
+      storageId,
+      versionId,
+      currentDocument,
+    }: {
+      storageId: string;
+      versionId: string;
+      currentDocument: EditorDocumentState;
+    }) => {
+      const loadedVersion = await loadEditorV2DesignVersion(storageId, versionId);
+      const baseLiveDocument = versionPreviewSession?.liveDocument ?? currentDocument;
+      const baseLiveVersionToken =
+        versionPreviewSession?.liveVersionToken ?? currentServerVersion;
+      setVersionPreviewSession({
+        liveDocument: baseLiveDocument,
+        liveStorageId: storageId,
+        liveVersionToken: baseLiveVersionToken,
+        previewVersionId: loadedVersion.versionId,
+        previewCreatedAt: loadedVersion.createdAt,
+        previewSaveSource: loadedVersion.saveSource,
+      });
+      openLoadedDesignState({
+        document: loadedVersion.document,
+        storageId,
+        versionToken: baseLiveVersionToken ?? null,
+        instanceKey: `preview_${storageId}_${loadedVersion.versionId}_${Date.now()}`,
+      });
+    },
+    [currentServerVersion, openLoadedDesignState, versionPreviewSession],
+  );
+
+  const exitVersionPreview = useCallback(() => {
+    if (!versionPreviewSession) {
+      return;
+    }
+
+    openLoadedDesignState({
+      document: versionPreviewSession.liveDocument,
+      storageId: versionPreviewSession.liveStorageId,
+      versionToken: versionPreviewSession.liveVersionToken ?? null,
+      instanceKey: `preview_exit_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+    });
+    setVersionPreviewSession(null);
+  }, [openLoadedDesignState, versionPreviewSession]);
+
+  const previewCurrentVersionInHistoryMode = useCallback(() => {
+    if (!versionPreviewSession) {
+      return;
+    }
+
+    openLoadedDesignState({
+      document: versionPreviewSession.liveDocument,
+      storageId: versionPreviewSession.liveStorageId,
+      versionToken: versionPreviewSession.liveVersionToken ?? null,
+      instanceKey: `preview_current_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+    });
+    setVersionPreviewSession(null);
+  }, [openLoadedDesignState, versionPreviewSession]);
+
+  const exitVersionHistoryMode = useCallback(() => {
+    if (versionPreviewSession) {
+      openLoadedDesignState({
+        document: versionPreviewSession.liveDocument,
+        storageId: versionPreviewSession.liveStorageId,
+        versionToken: versionPreviewSession.liveVersionToken ?? null,
+        instanceKey: `version_history_exit_${versionPreviewSession.liveStorageId}_${Date.now()}`,
+      });
+      setVersionPreviewSession(null);
+    }
+
+    setIsVersionHistoryMode(false);
+  }, [openLoadedDesignState, versionPreviewSession]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -462,6 +598,7 @@ export function EditorV2Page({
   const loadDesignIntoWorkspace = useCallback(async (storageId: string) => {
     const instanceKey = `loaded_${storageId}_${Date.now()}`;
     setCanvasLoadingKey(instanceKey);
+    setVersionPreviewSession(null);
 
     try {
       const loaded = await loadSavedEditorV2Document(storageId);
@@ -473,25 +610,20 @@ export function EditorV2Page({
       const document = shouldRecover && localSnapshot
         ? localSnapshot.document
         : loaded.document;
-      setCurrentStorageId(loaded.storageId);
-      setCurrentServerVersion(loaded.versionToken);
-      setSelectedStorageId(storageId);
-      setInitialRecoveredLocalChanges(shouldRecover);
-      setInitialDegradedLocalRecovery(localSnapshot?.degradedLocalRecovery ?? false);
-      setInitialLocalSnapshot(shouldRecover ? localSnapshot : null);
-      setSetupErrorMessage(null);
-      setDesignConfig({
-        kind: "loaded",
+      openLoadedDesignState({
         document,
         storageId,
+        versionToken: loaded.versionToken,
         instanceKey,
+        recoveredLocalChanges: shouldRecover,
+        degradedLocalRecovery: localSnapshot?.degradedLocalRecovery ?? false,
+        localSnapshot: shouldRecover ? localSnapshot : null,
       });
-      setSetupModalOpen(false);
     } catch (error) {
       setCanvasLoadingKey(null);
       throw error;
     }
-  }, []);
+  }, [openLoadedDesignState]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -622,6 +754,17 @@ export function EditorV2Page({
         initialRecoveredLocalChanges={initialRecoveredLocalChanges}
         initialDegradedLocalRecovery={initialDegradedLocalRecovery}
         initialLocalSnapshot={initialLocalSnapshot}
+        isVersionHistoryMode={isVersionHistoryMode}
+        isVersionPreview={versionPreviewSession !== null}
+        versionPreviewMeta={
+          versionPreviewSession
+            ? {
+                versionId: versionPreviewSession.previewVersionId,
+                createdAt: versionPreviewSession.previewCreatedAt,
+                saveSource: versionPreviewSession.previewSaveSource,
+              }
+            : null
+        }
         saveMode={EDITOR_V2_SAVE_MODE}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
@@ -631,7 +774,13 @@ export function EditorV2Page({
         onLoadMoreSavedDocuments={loadMoreSavedDocuments}
         selectedStorageId={selectedStorageId}
         setSelectedStorageId={setSelectedStorageId}
-        onSaveDocument={async (document, storageId, baseVersion) => {
+        onSaveDocument={async (
+          document,
+          storageId,
+          baseVersion,
+          saveSource: "manual" | "autosave" = "manual",
+          forceVersion = false,
+        ) => {
           if (!isLoaded || !isSignedIn) {
             openSignIn({
               redirectUrl: createEditorV2AuthHandoffRedirectUrl(
@@ -648,6 +797,8 @@ export function EditorV2Page({
             document,
             storageId,
             baseVersion,
+            saveSource,
+            forceVersion,
           );
           setCurrentStorageId(savedRecord.storageId);
           setCurrentServerVersion(savedRecord.versionToken);
@@ -677,6 +828,88 @@ export function EditorV2Page({
           router.replace(`/editor/designs/${savedRecord.storageId}`);
           return savedRecord;
         }}
+        onListVersions={async (storageId) => listEditorV2DesignVersions(storageId)}
+        onEnterVersionHistoryMode={() => {
+          setIsVersionHistoryMode(true);
+        }}
+        onExitVersionHistoryMode={() => {
+          exitVersionHistoryMode();
+        }}
+        onPreviewVersion={async (storageId, versionId, currentDocument) => {
+          await previewVersionInWorkspace({
+            storageId,
+            versionId,
+            currentDocument,
+          });
+        }}
+        onExitVersionPreview={() => {
+          exitVersionPreview();
+        }}
+        onSelectCurrentVersionInHistoryMode={() => {
+          previewCurrentVersionInHistoryMode();
+        }}
+        onRestoreVersion={async (storageId, versionId) => {
+          const restored = await restoreEditorV2DesignVersion(storageId, versionId);
+          setSavedDocuments((existing) => {
+            const nextRecord: SavedEditorV2DocumentRecord = {
+              storageId: restored.storageId,
+              title: restored.title,
+              gridWidth: restored.gridWidth,
+              gridHeight: restored.gridHeight,
+              updatedAt: restored.updatedAt,
+            };
+
+            return [
+              nextRecord,
+              ...existing.filter((record) => record.storageId !== nextRecord.storageId),
+            ];
+          });
+          nextSavedDocumentsOffsetRef.current = Math.max(
+            nextSavedDocumentsOffsetRef.current,
+            savedDocuments.length + 1,
+          );
+          setIsVersionHistoryMode(false);
+          setVersionPreviewSession(null);
+          openLoadedDesignState({
+            document: restored.document,
+            storageId: restored.storageId,
+            versionToken: restored.versionToken,
+            instanceKey: `restored_${restored.storageId}_${Date.now()}`,
+          });
+          setRestoreSuccessNotification({
+            title: "Version restored",
+            // description: "The selected version is now the current design.",
+          });
+          router.replace(`/editor/designs/${restored.storageId}`);
+          return restored;
+        }}
+        onRestoreVersionAsCopy={async (storageId, versionId) => {
+          const restored = await restoreEditorV2DesignVersion(storageId, versionId, {
+            mode: "copy",
+          });
+          setSavedDocuments((existing) => {
+            const nextRecord: SavedEditorV2DocumentRecord = {
+              storageId: restored.storageId,
+              title: restored.title,
+              gridWidth: restored.gridWidth,
+              gridHeight: restored.gridHeight,
+              updatedAt: restored.updatedAt,
+            };
+
+            return [
+              nextRecord,
+              ...existing.filter((record) => record.storageId !== nextRecord.storageId),
+            ];
+          });
+          nextSavedDocumentsOffsetRef.current = Math.max(
+            nextSavedDocumentsOffsetRef.current,
+            savedDocuments.length + 1,
+          );
+          setRestoreSuccessNotification({
+            title: "Copy created",
+          });
+          return restored;
+        }}
         onLoadDocument={async (record) => {
           setSelectedStorageId(record.storageId);
           router.push(`/editor/designs/${record.storageId}`);
@@ -702,6 +935,8 @@ export function EditorV2Page({
           setSetupModalMode("new-only");
           setSetupModalOpen(true);
         }}
+        persistentSuccessNotification={restoreSuccessNotification}
+        onDismissPersistentSuccessNotification={() => setRestoreSuccessNotification(null)}
         setupModalOpen={setupModalOpen}
         setupModal={
           <EditorV2SetupModal
@@ -748,7 +983,12 @@ export function EditorV2Page({
 
                 try {
                   const persistedDraft = createPersistedDraftDocument(config);
-                  const savedRecord = await saveEditorV2Document(persistedDraft);
+                  const savedRecord = await saveEditorV2Document(
+                    persistedDraft,
+                    undefined,
+                    null,
+                    "manual",
+                  );
                   applySavedRouteState(persistedDraft, savedRecord, "push");
                 } catch (error) {
                   setSetupErrorMessage(

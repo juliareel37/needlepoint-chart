@@ -80,7 +80,7 @@ export function SettingsPanelPage({
           <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Canvas Aids</h3>
           </div>
-          <SegmentedChoiceSetting
+          {/* <SegmentedChoiceSetting
             label="Mode"
             value={previewMode ? "preview" : "edit"}
             ariaLabel="Canvas mode"
@@ -92,7 +92,7 @@ export function SettingsPanelPage({
             onChange={(nextValue) =>
               dispatch(createSetPreviewModeCommand(nextValue === "preview"))
             }
-          />
+          /> */}
           <SegmentedBooleanSetting
             label="Grid lines"
             value={showGridlines}
