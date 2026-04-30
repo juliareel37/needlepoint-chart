@@ -27,8 +27,8 @@ import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { StitchThumbnailCanvas } from "./StitchThumbnailCanvas";
 import styles from "./page.module.css";
 
-const LOADING_CARD_COUNT = 4;
 const PAGE_SIZE = 12;
+const LOADING_CARD_COUNT = PAGE_SIZE;
 const DESIGN_OPEN_TRANSITION_MS = 70;
 const cardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
@@ -110,21 +110,24 @@ async function fetchLibraryPage(offset: number) {
 }
 
 export function LibraryPageClient({
-  initialDesigns,
-  initialTotalCount,
-  initialHasMore,
-  initialNextOffset,
+  initialDesigns = [],
+  initialTotalCount = 0,
+  initialHasMore = false,
+  initialNextOffset = null,
+  deferInitialLoad = false,
 }: {
-  initialDesigns: LibraryDesignRecord[];
-  initialTotalCount: number;
-  initialHasMore: boolean;
-  initialNextOffset: number | null;
+  initialDesigns?: LibraryDesignRecord[];
+  initialTotalCount?: number;
+  initialHasMore?: boolean;
+  initialNextOffset?: number | null;
+  deferInitialLoad?: boolean;
 }) {
   const router = useRouter();
   const [designs, setDesigns] = useState(initialDesigns);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextOffset, setNextOffset] = useState(initialNextOffset);
+  const [initialLoadPending, setInitialLoadPending] = useState(deferInitialLoad);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [setupModalOpen, setSetupModalOpen] = useState(false);
@@ -208,13 +211,41 @@ export function LibraryPageClient({
   const selectedDesignCount = selectedDesignIds.size;
   const allLoadedDesignsSelected =
     designs.length > 0 && selectedDesignCount === designs.length;
+  const isInitialLoading = initialLoadPending && designs.length === 0;
+
+  async function loadInitialPage() {
+    setInitialLoadPending(true);
+    setLoadMoreError(null);
+
+    try {
+      const result = await fetchLibraryPage(0);
+      setDesigns(result.designs);
+      setTotalCount(result.totalCount);
+      setHasMore(result.hasMore);
+      setNextOffset(result.nextOffset);
+    } catch (error) {
+      setLoadMoreError(
+        error instanceof Error ? error.message : "Couldn't load designs.",
+      );
+    } finally {
+      setInitialLoadPending(false);
+    }
+  }
 
   useEffect(() => {
     pendingDeletionRef.current = pendingDeletion;
   }, [pendingDeletion]);
 
   useEffect(() => {
-    if (!hasMore || loadingMore || loadMoreError) {
+    if (!deferInitialLoad) {
+      return;
+    }
+
+    void loadInitialPage();
+  }, [deferInitialLoad]);
+
+  useEffect(() => {
+    if (!hasMore || loadingMore || loadMoreError || initialLoadPending) {
       return;
     }
 
@@ -261,7 +292,7 @@ export function LibraryPageClient({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [designs.length, hasMore, loadMoreError, loadingMore, nextOffset]);
+  }, [designs.length, hasMore, initialLoadPending, loadMoreError, loadingMore, nextOffset]);
 
   useEffect(
     () => () => {
@@ -1293,12 +1324,86 @@ export function LibraryPageClient({
 
             <div ref={sentinelRef} className={styles.scrollSentinel} aria-hidden="true" />
           </>
+        ) : isInitialLoading ? (
+          viewMode === "grid" ? (
+            <section className={styles.grid} aria-label="Loading saved designs">
+              {loadingCards.map((card) => (
+                <article
+                  key={`initial-loading-${card}`}
+                  className={`${styles.card} ${styles.loadingCard}`}
+                  aria-hidden="true"
+                >
+                  <div className={styles.thumbnail}>
+                    <div className={styles.thumbnailFrame}>
+                      <div className={styles.loadingThumbnail}>
+                        <span className="loading-spinner" aria-hidden="true" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.cardBody}>
+                    <div className={styles.loadingLineShort} />
+                    <div className={styles.loadingLineLong} />
+                    <div className={styles.loadingLineMedium} />
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : (
+            <section className={styles.listView} aria-label="Loading saved designs list">
+              <div className={styles.listHeader}>
+                <span className={styles.listHeaderName}>Name</span>
+                <span>Size</span>
+                <span>Colors</span>
+                <span>Last Edited</span>
+                <span className={styles.listHeaderActions} aria-hidden="true" />
+              </div>
+              <div className={styles.listBody}>
+                {loadingCards.map((card) => (
+                  <article
+                    key={`initial-list-loading-${card}`}
+                    className={`${styles.listRow} ${styles.loadingCard}`}
+                    aria-hidden="true"
+                  >
+                    <div className={styles.listNameCell}>
+                      <span className={styles.listThumbnailFrame}>
+                        <span className={styles.loadingThumbnail}>
+                          <span className="loading-spinner" aria-hidden="true" />
+                        </span>
+                      </span>
+                      <div className={styles.listLoadingText}>
+                        <div className={styles.loadingLineLong} />
+                      </div>
+                    </div>
+                    <div className={styles.loadingLineMedium} />
+                    <div className={styles.loadingLineShort} />
+                    <div className={styles.loadingLineMedium} />
+                    <div />
+                  </article>
+                ))}
+              </div>
+            </section>
+          )
         ) : (
           <section className={styles.emptyState}>
             <h2 className={styles.emptyStateTitle}>No designs yet</h2>
             <p className={styles.emptyStateBody}>
               Your saved needlepoint designs will show up here once you create one.
             </p>
+            {loadMoreError ? (
+              <p className={styles.loadMoreError}>{loadMoreError}</p>
+            ) : null}
+            {loadMoreError ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  void loadInitialPage();
+                }}
+              >
+                Retry loading designs
+              </Button>
+            ) : null}
           </section>
         )}
       </section>
