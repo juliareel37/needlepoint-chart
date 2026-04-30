@@ -141,4 +141,37 @@ describe("editorV2ServerPersistence", () => {
     expect(restored.document.metadata.persistedVersionId).toBe("version_7");
     expect(restored.document.grid.width).toBe(4);
   });
+
+  it("can request restoring a version as a new copy", async () => {
+    const document = createNewDesignState(4, 4).document;
+    const data = serializeEditorV2Document(document);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        storageId: "design_copy_123",
+        title: "Untitled Design",
+        gridWidth: 4,
+        gridHeight: 4,
+        updatedAt: "2026-04-16T12:10:00.000Z",
+        versionToken: "2026-04-16T12:10:00.000Z",
+        restoredVersionId: "version_7",
+        data,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await restoreEditorV2DesignVersion("design_123", "version_7", { mode: "copy" });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/editor-v2/designs/design_123/versions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        versionId: "version_7",
+        mode: "copy",
+      }),
+    });
+  });
 });

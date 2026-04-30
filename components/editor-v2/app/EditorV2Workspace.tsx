@@ -56,6 +56,7 @@ export function EditorV2Workspace({
   onExitVersionPreview,
   onSelectCurrentVersionInHistoryMode,
   onRestoreVersion,
+  onRestoreVersionAsCopy,
   onDeleteCurrentDesign,
   onStartOver,
   persistentSuccessNotification,
@@ -106,6 +107,10 @@ export function EditorV2Workspace({
   onExitVersionPreview: () => void;
   onSelectCurrentVersionInHistoryMode: () => void;
   onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
+  onRestoreVersionAsCopy: (
     storageId: string,
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
@@ -212,6 +217,20 @@ export function EditorV2Workspace({
             setSuccessNotification(null);
             setErrorNotification({
               title: "Couldn't restore version",
+              description: getErrorMessage(error, "Try again in a moment."),
+            });
+            throw error;
+          }
+        }}
+        onRestoreVersionAsCopy={async (storageId, versionId) => {
+          try {
+            const restored = await onRestoreVersionAsCopy(storageId, versionId);
+            setErrorNotification(null);
+            return restored;
+          } catch (error) {
+            setSuccessNotification(null);
+            setErrorNotification({
+              title: "Couldn't make copy from version",
               description: getErrorMessage(error, "Try again in a moment."),
             });
             throw error;

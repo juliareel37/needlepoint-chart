@@ -1096,6 +1096,12 @@
   color: var(--text-primary);
 }
 
+.versionHistoryHeaderActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .versionHistoryHeaderExitButton,
 .versionHistoryHeaderRestoreButton {
   white-space: nowrap;

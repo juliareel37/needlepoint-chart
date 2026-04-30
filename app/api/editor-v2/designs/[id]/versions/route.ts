@@ -14,7 +14,7 @@ import {
 export const runtime = "nodejs";
 
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
-type RestoreBody = { versionId?: string };
+type RestoreBody = { versionId?: string; mode?: "replace" | "copy" };
 
 export async function GET(_req: Request, context: RouteContext) {
   const { userId } = await auth();
@@ -102,6 +102,61 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   const now = new Date();
+  const mode = body.mode === "copy" ? "copy" : "replace";
+
+  if (mode === "copy") {
+    const created = await prisma.$transaction(async (tx) => {
+      const createdDesign = await tx.editorDesign.create({
+        data: {
+          userId,
+          title: restoredData.project.title.trim() || existing.title,
+          data: restoredData as unknown as Prisma.InputJsonValue,
+          gridWidth: restoredData.grid.width,
+          gridHeight: restoredData.grid.height,
+          lastSaveSource: SaveSource.RESTORE,
+          lastVersionAt: now,
+          lastVersionHash: version.dataHash,
+        },
+      });
+
+      const prunedVersions = await createEditorDesignVersionSnapshot(tx, {
+        designId: createdDesign.id,
+        data: restoredData,
+        dataHash: version.dataHash,
+        saveSource: SaveSource.RESTORE,
+      });
+      const orphanedBlobUrls = await cleanupPrunedVersionBlobs({
+        client: tx,
+        designId: createdDesign.id,
+        currentDesignData: restoredData,
+        prunedVersions,
+      });
+
+      return {
+        createdDesign,
+        orphanedBlobUrls,
+      };
+    });
+
+    for (const url of created.orphanedBlobUrls) {
+      void deleteBlobIfExists(url);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      id: created.createdDesign.id,
+      storageId: created.createdDesign.id,
+      title: created.createdDesign.title,
+      gridWidth: created.createdDesign.gridWidth,
+      gridHeight: created.createdDesign.gridHeight,
+      createdAt: created.createdDesign.createdAt.toISOString(),
+      updatedAt: created.createdDesign.updatedAt.toISOString(),
+      versionToken: created.createdDesign.updatedAt.toISOString(),
+      restoredVersionId: version.id,
+      data: restoredData,
+    });
+  }
+
   const shouldVersion = shouldCreateEditorDesignVersion({
     saveSource: SaveSource.RESTORE,
     dataHash: version.dataHash,

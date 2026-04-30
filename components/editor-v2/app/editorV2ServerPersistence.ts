@@ -325,6 +325,7 @@ export async function loadEditorV2DesignVersion(
 export async function restoreEditorV2DesignVersion(
   storageId: string,
   versionId: string,
+  options?: { mode?: "replace" | "copy" },
 ): Promise<RestoreEditorV2VersionResult> {
   const response = await fetch(`/api/editor-v2/designs/${storageId}/versions`, {
     method: "POST",
@@ -332,7 +333,10 @@ export async function restoreEditorV2DesignVersion(
       "Content-Type": "application/json",
     },
     credentials: "same-origin",
-    body: JSON.stringify({ versionId }),
+    body: JSON.stringify({
+      versionId,
+      mode: options?.mode === "copy" ? "copy" : "replace",
+    }),
   });
   const body = (await response.json().catch(() => null)) as
     | {

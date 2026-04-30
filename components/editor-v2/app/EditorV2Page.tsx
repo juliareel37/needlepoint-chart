@@ -883,6 +883,33 @@ export function EditorV2Page({
           router.replace(`/editor/designs/${restored.storageId}`);
           return restored;
         }}
+        onRestoreVersionAsCopy={async (storageId, versionId) => {
+          const restored = await restoreEditorV2DesignVersion(storageId, versionId, {
+            mode: "copy",
+          });
+          setSavedDocuments((existing) => {
+            const nextRecord: SavedEditorV2DocumentRecord = {
+              storageId: restored.storageId,
+              title: restored.title,
+              gridWidth: restored.gridWidth,
+              gridHeight: restored.gridHeight,
+              updatedAt: restored.updatedAt,
+            };
+
+            return [
+              nextRecord,
+              ...existing.filter((record) => record.storageId !== nextRecord.storageId),
+            ];
+          });
+          nextSavedDocumentsOffsetRef.current = Math.max(
+            nextSavedDocumentsOffsetRef.current,
+            savedDocuments.length + 1,
+          );
+          setRestoreSuccessNotification({
+            title: "Copy created",
+          });
+          return restored;
+        }}
         onLoadDocument={async (record) => {
           setSelectedStorageId(record.storageId);
           router.push(`/editor/designs/${record.storageId}`);

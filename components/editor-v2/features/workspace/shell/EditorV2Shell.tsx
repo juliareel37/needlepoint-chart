@@ -140,6 +140,7 @@ export function EditorV2Shell({
   onExitVersionPreview,
   onSelectCurrentVersionInHistoryMode,
   onRestoreVersion,
+  onRestoreVersionAsCopy,
   onStartOver,
   recoveredLocalChanges,
   saveButtonState,
@@ -185,6 +186,10 @@ export function EditorV2Shell({
   onExitVersionPreview: () => void;
   onSelectCurrentVersionInHistoryMode: () => void;
   onRestoreVersion: (
+    storageId: string,
+    versionId: string,
+  ) => Promise<RestoreEditorV2VersionResult>;
+  onRestoreVersionAsCopy: (
     storageId: string,
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
@@ -1425,6 +1430,51 @@ export function EditorV2Shell({
     versionHistoryActionPendingId,
   ]);
 
+  const handleRestoreSelectedVersionAsCopy = useCallback(async () => {
+    if (
+      !currentStorageId ||
+      selectedVersionHistoryId === "current" ||
+      versionHistoryActionPendingId !== null ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const openedWindow = window.open("", "_blank");
+    if (openedWindow) {
+      openedWindow.opener = null;
+      openedWindow.document.title = "Opening restored copy...";
+    }
+
+    setVersionHistoryActionPendingId(selectedVersionHistoryId);
+
+    try {
+      const restored = await onRestoreVersionAsCopy(currentStorageId, selectedVersionHistoryId);
+      versionHistoryCache.delete(currentStorageId);
+      setVersionHistoryError(null);
+      const restoredUrl = `/editor/designs/${restored.storageId}`;
+      if (openedWindow && !openedWindow.closed) {
+        openedWindow.location.assign(restoredUrl);
+      } else {
+        window.open(restoredUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      if (openedWindow && !openedWindow.closed) {
+        openedWindow.close();
+      }
+      setVersionHistoryError(
+        error instanceof Error ? error.message : "Couldn't make a copy from this version.",
+      );
+    } finally {
+      setVersionHistoryActionPendingId(null);
+    }
+  }, [
+    currentStorageId,
+    onRestoreVersionAsCopy,
+    selectedVersionHistoryId,
+    versionHistoryActionPendingId,
+  ]);
+
   function handleHeaderMenuAction(value: string): void {
     if (value === "preview") {
       enterPreviewMode();
@@ -1853,21 +1903,38 @@ export function EditorV2Shell({
         : null} */}
       {!setupModalOpen && isVersionHistoryMode && headerActionsTarget
         ? createPortal(
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className={styles.versionHistoryHeaderRestoreButton}
-              disabled={
-                selectedVersionHistoryId === "current" || versionHistoryActionPendingId !== null
-              }
-              onClick={() => {
-                void handleRestoreSelectedVersion();
-              }}
-            >
-              <ButtonIcon icon="/icons/lucide/rotate-ccw.svg"/>
-              Restore this version
-            </Button>,
+            <div className={styles.versionHistoryHeaderActionGroup}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className={styles.versionHistoryHeaderRestoreButton}
+                disabled={
+                  selectedVersionHistoryId === "current" || versionHistoryActionPendingId !== null
+                }
+                onClick={() => {
+                  void handleRestoreSelectedVersionAsCopy();
+                }}
+              >
+                <ButtonIcon icon="/icons/lucide/copy.svg" />
+                Make a copy
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className={styles.versionHistoryHeaderRestoreButton}
+                disabled={
+                  selectedVersionHistoryId === "current" || versionHistoryActionPendingId !== null
+                }
+                onClick={() => {
+                  void handleRestoreSelectedVersion();
+                }}
+              >
+                <ButtonIcon icon="/icons/lucide/rotate-ccw.svg" />
+                Restore this version
+              </Button>
+            </div>,
             headerActionsTarget,
           )
         : null}

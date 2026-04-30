@@ -6,6 +6,7 @@ import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 const {
   authMock,
   designFindFirstMock,
+  designCreateMock,
   designUpdateMock,
   versionFindManyMock,
   versionFindFirstMock,
@@ -16,6 +17,7 @@ const {
 } = vi.hoisted(() => ({
   authMock: vi.fn(),
   designFindFirstMock: vi.fn(),
+  designCreateMock: vi.fn(),
   designUpdateMock: vi.fn(),
   versionFindManyMock: vi.fn(),
   versionFindFirstMock: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock("@/lib/db", () => ({
     $transaction: transactionMock,
     editorDesign: {
       findFirst: designFindFirstMock,
+      create: designCreateMock,
       update: designUpdateMock,
     },
     editorDesignVersion: {
@@ -67,6 +70,7 @@ describe("editor-v2 design version routes", () => {
     transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
       callback({
         editorDesign: {
+          create: designCreateMock,
           update: designUpdateMock,
         },
         editorDesignVersion: {
@@ -201,6 +205,84 @@ describe("editor-v2 design version routes", () => {
       updatedAt: "2026-04-16T12:15:00.000Z",
       versionToken: "2026-04-16T12:15:00.000Z",
       restoredVersionId: "version_2",
+      data,
+    });
+  });
+
+  it("creates a new design copy from a historical version", async () => {
+    const state = createNewDesignState(5, 4);
+    state.document.project.title = "Copied From History";
+    const data = serializeEditorV2Document(state.document);
+
+    authMock.mockResolvedValue({ userId: "user_1" });
+    designFindFirstMock.mockResolvedValue({
+      id: "design_123",
+      title: "Current Design",
+      data: { trace: null },
+      createdAt: new Date("2026-04-16T11:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:00:00.000Z"),
+      lastVersionAt: null,
+      lastVersionHash: null,
+    });
+    versionFindFirstMock.mockResolvedValue({
+      id: "version_3",
+      data,
+      dataHash: "hash_3",
+      createdAt: new Date("2026-04-16T11:40:00.000Z"),
+      saveSource: SaveSource.MANUAL,
+    });
+    designCreateMock.mockResolvedValue({
+      id: "design_copy_1",
+      title: "Copied From History",
+      gridWidth: 5,
+      gridHeight: 4,
+      createdAt: new Date("2026-04-16T12:20:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:20:00.000Z"),
+    });
+    versionFindManyMock.mockResolvedValue([]);
+
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId: "version_3", mode: "copy" }),
+      }),
+      { params: { id: "design_123" } },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(designCreateMock).toHaveBeenCalledWith({
+      data: {
+        userId: "user_1",
+        title: "Copied From History",
+        data,
+        gridWidth: 5,
+        gridHeight: 4,
+        lastSaveSource: SaveSource.RESTORE,
+        lastVersionAt: expect.any(Date),
+        lastVersionHash: "hash_3",
+      },
+    });
+    expect(versionCreateMock).toHaveBeenCalledWith({
+      data: {
+        designId: "design_copy_1",
+        data,
+        dataHash: "hash_3",
+        saveSource: SaveSource.RESTORE,
+      },
+    });
+    expect(body).toEqual({
+      ok: true,
+      id: "design_copy_1",
+      storageId: "design_copy_1",
+      title: "Copied From History",
+      gridWidth: 5,
+      gridHeight: 4,
+      createdAt: "2026-04-16T12:20:00.000Z",
+      updatedAt: "2026-04-16T12:20:00.000Z",
+      versionToken: "2026-04-16T12:20:00.000Z",
+      restoredVersionId: "version_3",
       data,
     });
   });
