@@ -149,6 +149,7 @@ export function EditorV2Shell({
   onRestoreVersion,
   onRestoreVersionAsCopy,
   onStartOver,
+  hasPersistableUnsavedChanges,
   recoveredLocalChanges,
   saveButtonState,
   saveMessage,
@@ -201,6 +202,7 @@ export function EditorV2Shell({
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
   onStartOver: () => void;
+  hasPersistableUnsavedChanges: boolean;
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
@@ -254,7 +256,7 @@ export function EditorV2Shell({
   const previewMode = state.ui.preferences.previewMode;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
-  const hasUnsavedChanges = state.session.persistence.dirty;
+  const hasUnsavedChanges = hasPersistableUnsavedChanges;
   const hasCompletedSave = state.session.persistence.lastSavedAt !== null;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
@@ -1572,6 +1574,9 @@ export function EditorV2Shell({
     }
 
     if (value === "save-version") {
+      if (!hasPersistableUnsavedChanges) {
+        return;
+      }
       void onSaveVersionSnapshot();
       return;
     }
@@ -1735,7 +1740,8 @@ export function EditorV2Shell({
                   getItemDisabled={(item) =>
                     item.kind === "divider" ||
                     (item.id === "save-version" &&
-                      saveButtonState === "saving") ||
+                      (saveButtonState === "saving" ||
+                        !hasPersistableUnsavedChanges)) ||
                     (item.id === "version-history" &&
                       hasSavedDesignAccess &&
                       !currentStorageId) ||

@@ -262,6 +262,7 @@ export function EditorV2Workspace({
         errorNotification={errorNotification}
         onDismissErrorNotification={() => setErrorNotification(null)}
         exportButtonState={exportButtonState}
+        hasPersistableUnsavedChanges={controllerState.hasPersistableUnsavedChanges}
         recoveredLocalChanges={controllerState.recoveredLocalChanges}
         saveButtonState={controllerState.saveButtonState}
         saveMessage={controllerState.saveMessage}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditorStore, useEditorStoreDispatch } from "./editorStoreContext";
+import { getPersistableEditorDocument } from "./getPersistableEditorDocument";
 import type {
   EditorV2PersistenceError,
   SaveEditorV2DocumentResult,
@@ -33,6 +34,7 @@ export interface EditorV2PersistenceUiState {
   recoveredLocalChanges: boolean;
   degradedLocalRecovery: boolean;
   syncStatus: AutosaveSyncStatus;
+  hasPersistableUnsavedChanges: boolean;
 }
 
 interface UseEditorV2PersistenceControllerArgs {
@@ -104,6 +106,13 @@ export function useEditorV2PersistenceController({
   const saveInFlightRef = useRef(false);
   const pendingServerFlushRef = useRef(false);
   const pendingLocalFlushRef = useRef(false);
+  const [hasPersistableUnsavedChanges, setHasPersistableUnsavedChanges] = useState(
+    () => {
+      const document = getPersistableEditorDocument(store.getState());
+      const { hash } = computeSerializedDocumentHash(document);
+      return hash !== lastSerializedHashRef.current;
+    },
+  );
 
   useEffect(() => {
     storageIdRef.current = currentStorageId;
@@ -138,7 +147,19 @@ export function useEditorV2PersistenceController({
     if (initialLocalSnapshot?.baseServerVersion) {
       serverVersionRef.current = initialLocalSnapshot.baseServerVersion;
     }
+
+    const document = getPersistableEditorDocument(store.getState());
+    const { hash } = computeSerializedDocumentHash(document);
+    setHasPersistableUnsavedChanges(hash !== lastSerializedHashRef.current);
   }, [initialLocalSnapshot]);
+
+  useEffect(() => {
+    return store.subscribe((nextState) => {
+      const document = getPersistableEditorDocument(nextState);
+      const { hash } = computeSerializedDocumentHash(document);
+      setHasPersistableUnsavedChanges(hash !== lastSerializedHashRef.current);
+    });
+  }, [store]);
 
   useEffect(() => {
     void pruneLocalSnapshots({
@@ -179,7 +200,7 @@ export function useEditorV2PersistenceController({
 
   const flushLocalSnapshot = useCallback(async () => {
     pendingLocalFlushRef.current = false;
-    const document = store.getState().document;
+    const document = getPersistableEditorDocument(store.getState());
     await persistSnapshot(document);
   }, [persistSnapshot, store]);
 
@@ -205,7 +226,7 @@ export function useEditorV2PersistenceController({
       forceVersion: boolean,
     ) => {
       const previousKey = localKeyRef.current;
-      const currentDocument = store.getState().document;
+      const currentDocument = getPersistableEditorDocument(store.getState());
 
       storageIdRef.current = result.storageId;
       serverVersionRef.current = result.versionToken;
@@ -238,6 +259,7 @@ export function useEditorV2PersistenceController({
         setSyncStatus("saved");
         dirtyChunksRef.current.clear();
         lastSerializedHashRef.current = hash;
+        setHasPersistableUnsavedChanges(false);
       } else {
         setSyncStatus("saved");
       }
@@ -258,7 +280,7 @@ export function useEditorV2PersistenceController({
     ) => {
       const forceSave = options?.forceSave ?? false;
       const forceVersion = options?.forceVersion ?? false;
-      const document = store.getState().document;
+      const document = getPersistableEditorDocument(store.getState());
       const { hash } = computeSerializedDocumentHash(document);
       const sequenceId = latestLocalSequenceIdRef.current;
 
@@ -361,8 +383,12 @@ export function useEditorV2PersistenceController({
         return;
       }
 
-      const nextHash = computeSerializedDocumentHash(nextState.document).hash;
-      const prevHash = computeSerializedDocumentHash(prevState.document).hash;
+      const nextHash = computeSerializedDocumentHash(
+        getPersistableEditorDocument(nextState),
+      ).hash;
+      const prevHash = computeSerializedDocumentHash(
+        getPersistableEditorDocument(prevState),
+      ).hash;
 
       if (nextHash === prevHash) {
         return;
@@ -501,9 +527,11 @@ export function useEditorV2PersistenceController({
       recoveredLocalChanges,
       degradedLocalRecovery,
       syncStatus,
+      hasPersistableUnsavedChanges,
     }),
     [
       degradedLocalRecovery,
+      hasPersistableUnsavedChanges,
       recoveredLocalChanges,
       saveButtonState,
       saveMessage,
