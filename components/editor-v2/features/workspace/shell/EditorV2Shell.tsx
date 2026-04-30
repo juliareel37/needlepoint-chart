@@ -281,6 +281,10 @@ export function EditorV2Shell({
   const usedColorsSelectionPromptStartedRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
+  const visibleSidebarSection =
+    !isBottomPanelLayout && activeSidebarSection === "document"
+      ? "color"
+      : activeSidebarSection;
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
     useState(false);
   const [isCompactHistoryLayout, setIsCompactHistoryLayout] = useState(false);
@@ -2228,7 +2232,8 @@ export function EditorV2Shell({
         ) : (
           <>
             <EditorRail
-              activeSection={activeSidebarSection}
+              activeSection={visibleSidebarSection}
+              hideDocumentItem={!isBottomPanelLayout}
               panelCollapsed={sidebarCollapsed}
               onSelectSection={(section) => {
                 if (!sidebarCollapsed && activeSidebarSection === section) {
@@ -2258,7 +2263,7 @@ export function EditorV2Shell({
                   data-mobile-canvas-focus={isBottomPanelCanvasFocusActive ? "true" : "false"}
                 >
                   <EditorSidebar
-                    activeSection={activeSidebarSection}
+                    activeSection={visibleSidebarSection}
                     autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
                     activeColor={activeColor}
                     activeColorId={activeColorId}
