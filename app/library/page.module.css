@@ -361,7 +361,7 @@
 }
 
 .listHeader {
-  padding: 0 16px 14px;
+  padding: 16px 14px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.2;
@@ -1007,7 +1007,7 @@
 
 @media (max-width: 920px) {
   .header {
-    flex-direction: column;
+    /* flex-direction: column; */
     align-items: stretch;
   }
 
@@ -1021,6 +1021,7 @@
       "summary menu"
       "sort toggle";
     align-items: center;
+    row-gap: 24px;
   }
 
   .bulkBar {
@@ -1084,7 +1085,11 @@
 
   .actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+
+    /* ADJUST THIS WHEN WE BRING BACK THE NEW FOLDER BUTTON */
+    /* grid-template-columns: 1fr 1fr; */
+    grid-template-columns: 1fr;
+
   }
 
   .searchField {
