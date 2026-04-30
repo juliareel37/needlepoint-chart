@@ -159,11 +159,11 @@ export default function RootLayout({
               }}
             >
               <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-                <img
+                {/* <img
                   src={assetPath("/wippa_logo.png")}
                   alt="Wippa"
                   style={{ height: 24, width: "auto", display: "block" }}
-                />
+                /> */}
                 {/* <Link
                   href="/editor/design-system"
                   style={headerUtilityLinkStyle}

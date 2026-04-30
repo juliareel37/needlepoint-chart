@@ -58,6 +58,11 @@ export interface PositioningMoveSnapResult {
   snap: PositioningMoveSnapState;
 }
 
+export interface PositioningResizeSnapResult {
+  bounds: PositioningRect;
+  snap: PositioningMoveSnapState;
+}
+
 export const ROTATION_SNAP_DEGREES = 3;
 export const ROTATION_UNSNAP_DEGREES = 5;
 export const MOVE_CENTER_SNAP_PX = 8;
@@ -318,6 +323,72 @@ export function getCenterSnappedPosition(
   };
 }
 
+export function getResizeSnappedBounds(
+  startBounds: PositioningRect,
+  resizedBounds: PositioningRect,
+  handle: PositioningHandleId,
+  containerBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  zoom: number,
+): PositioningResizeSnapResult {
+  const safeZoom = Math.max(zoom, 0.0001);
+  const snapTolerance = MOVE_CENTER_SNAP_PX / safeZoom;
+  const unsnapTolerance = MOVE_CENTER_UNSNAP_PX / safeZoom;
+  const rawScale = clampPositioningScale(resizedBounds.width / Math.max(startBounds.width, 0.0001));
+  const horizontalCandidates = getResizeAxisCandidates(
+    startBounds,
+    resizedBounds,
+    handle,
+    containerBounds,
+    "x",
+    currentSnap,
+  );
+  const verticalCandidates = getResizeAxisCandidates(
+    startBounds,
+    resizedBounds,
+    handle,
+    containerBounds,
+    "y",
+    currentSnap,
+  );
+  const snappedX = getResizeSnapTarget(
+    horizontalCandidates,
+    snapTolerance,
+    unsnapTolerance,
+  );
+  const snappedY = getResizeSnapTarget(
+    verticalCandidates,
+    snapTolerance,
+    unsnapTolerance,
+  );
+
+  const nextScale = chooseResizeSnapScale(rawScale, snappedX, snappedY);
+  if (nextScale === null) {
+    return {
+      bounds: resizedBounds,
+      snap: emptySnapState(),
+    };
+  }
+
+  const bounds = getBoundsForHandleScale(startBounds, handle, nextScale);
+  const horizontalSnap =
+    snappedX && Math.abs(snappedX.scale - nextScale) <= 0.0001 ? snappedX : null;
+  const verticalSnap =
+    snappedY && Math.abs(snappedY.scale - nextScale) <= 0.0001 ? snappedY : null;
+
+  return {
+    bounds,
+    snap: {
+      left: horizontalSnap?.key === "left" ? horizontalSnap.target : null,
+      right: horizontalSnap?.key === "right" ? horizontalSnap.target : null,
+      centerX: horizontalSnap?.key === "centerX" ? horizontalSnap.target : null,
+      top: verticalSnap?.key === "top" ? verticalSnap.target : null,
+      bottom: verticalSnap?.key === "bottom" ? verticalSnap.target : null,
+      centerY: verticalSnap?.key === "centerY" ? verticalSnap.target : null,
+    },
+  };
+}
+
 export function getRotatedBounds(
   bounds: PositioningRect,
   rotation: number,
@@ -566,4 +637,521 @@ function getAxisSnapTarget(
     key: snappedCandidate.key,
     offset: snappedCandidate.delta,
   };
+}
+
+function getBoundsForHandleScale(
+  startBounds: PositioningRect,
+  handle: PositioningHandleId,
+  scale: number,
+): PositioningRect {
+  const width = startBounds.width * scale;
+  const height = startBounds.height * scale;
+  const left = startBounds.left;
+  const right = startBounds.left + startBounds.width;
+  const top = startBounds.top;
+  const bottom = startBounds.top + startBounds.height;
+  const centerX = left + startBounds.width / 2;
+  const centerY = top + startBounds.height / 2;
+
+  switch (handle) {
+    case "e":
+      return { left, top: centerY - height / 2, width, height };
+    case "w":
+      return { left: right - width, top: centerY - height / 2, width, height };
+    case "s":
+      return { left: centerX - width / 2, top, width, height };
+    case "n":
+      return { left: centerX - width / 2, top: bottom - height, width, height };
+    case "se":
+      return { left, top, width, height };
+    case "sw":
+      return { left: right - width, top, width, height };
+    case "ne":
+      return { left, top: bottom - height, width, height };
+    case "nw":
+    default:
+      return { left: right - width, top: bottom - height, width, height };
+  }
+}
+
+function getResizeAxisCandidates(
+  startBounds: PositioningRect,
+  currentBounds: PositioningRect,
+  handle: PositioningHandleId,
+  containerBounds: PositioningRect,
+  axis: "x" | "y",
+  currentSnap: PositioningMoveSnapState,
+): Array<ResizeSnapCandidate> {
+  const containerStart = axis === "x" ? containerBounds.left : containerBounds.top;
+  const containerSize = axis === "x" ? containerBounds.width : containerBounds.height;
+  const containerCenter = containerStart + containerSize / 2;
+  const containerEnd = containerStart + containerSize;
+  const size = axis === "x" ? startBounds.width : startBounds.height;
+  const candidateSpecs =
+    axis === "x"
+      ? getResizeHorizontalCandidateSpecs(
+          startBounds,
+          handle,
+          currentBounds,
+          currentSnap,
+          containerStart,
+          containerCenter,
+          containerEnd,
+        )
+      : getResizeVerticalCandidateSpecs(
+          startBounds,
+          handle,
+          currentBounds,
+          currentSnap,
+          containerStart,
+          containerCenter,
+          containerEnd,
+        );
+  const candidates = candidateSpecs.map((candidate) =>
+    createResizeSnapCandidate(
+      handle,
+      candidate.key,
+      candidate.currentValue,
+      candidate.rawValue,
+      candidate.target,
+      size,
+      candidate.constraint,
+    ),
+  );
+
+  return candidates.filter((candidate): candidate is ResizeSnapCandidate => candidate !== null);
+}
+
+function getResizeConstraintForKey(
+  startBounds: PositioningRect,
+  handle: PositioningHandleId,
+  key: ResizeSnapCandidate["key"],
+): ResizeSnapConstraint {
+  const left = startBounds.left;
+  const right = startBounds.left + startBounds.width;
+  const top = startBounds.top;
+  const bottom = startBounds.top + startBounds.height;
+  const centerX = left + startBounds.width / 2;
+  const centerY = top + startBounds.height / 2;
+
+  switch (handle) {
+    case "e":
+      switch (key) {
+        case "left":
+          return { kind: "fixed", value: left };
+        case "centerX":
+          return { kind: "fromStart", start: left, factor: 0.5 };
+        case "right":
+          return { kind: "fromStart", start: left, factor: 1 };
+        case "top":
+          return { kind: "fromCenter", center: centerY, factor: 0.5, sign: -1 };
+        case "centerY":
+          return { kind: "fixed", value: centerY };
+        case "bottom":
+          return { kind: "fromCenter", center: centerY, factor: 0.5, sign: 1 };
+      }
+    case "w":
+      switch (key) {
+        case "left":
+          return { kind: "fromEnd", end: right, factor: 1 };
+        case "centerX":
+          return { kind: "fromEnd", end: right, factor: 0.5 };
+        case "right":
+          return { kind: "fixed", value: right };
+        case "top":
+          return { kind: "fromCenter", center: centerY, factor: 0.5, sign: -1 };
+        case "centerY":
+          return { kind: "fixed", value: centerY };
+        case "bottom":
+          return { kind: "fromCenter", center: centerY, factor: 0.5, sign: 1 };
+      }
+    case "s":
+      switch (key) {
+        case "left":
+          return { kind: "fromCenter", center: centerX, factor: 0.5, sign: -1 };
+        case "centerX":
+          return { kind: "fixed", value: centerX };
+        case "right":
+          return { kind: "fromCenter", center: centerX, factor: 0.5, sign: 1 };
+        case "top":
+          return { kind: "fixed", value: top };
+        case "centerY":
+          return { kind: "fromStart", start: top, factor: 0.5 };
+        case "bottom":
+          return { kind: "fromStart", start: top, factor: 1 };
+      }
+    case "n":
+      switch (key) {
+        case "left":
+          return { kind: "fromCenter", center: centerX, factor: 0.5, sign: -1 };
+        case "centerX":
+          return { kind: "fixed", value: centerX };
+        case "right":
+          return { kind: "fromCenter", center: centerX, factor: 0.5, sign: 1 };
+        case "top":
+          return { kind: "fromEnd", end: bottom, factor: 1 };
+        case "centerY":
+          return { kind: "fromEnd", end: bottom, factor: 0.5 };
+        case "bottom":
+          return { kind: "fixed", value: bottom };
+      }
+    case "se":
+      switch (key) {
+        case "left":
+          return { kind: "fixed", value: left };
+        case "centerX":
+          return { kind: "fromStart", start: left, factor: 0.5 };
+        case "right":
+          return { kind: "fromStart", start: left, factor: 1 };
+        case "top":
+          return { kind: "fixed", value: top };
+        case "centerY":
+          return { kind: "fromStart", start: top, factor: 0.5 };
+        case "bottom":
+          return { kind: "fromStart", start: top, factor: 1 };
+      }
+    case "sw":
+      switch (key) {
+        case "left":
+          return { kind: "fromEnd", end: right, factor: 1 };
+        case "centerX":
+          return { kind: "fromEnd", end: right, factor: 0.5 };
+        case "right":
+          return { kind: "fixed", value: right };
+        case "top":
+          return { kind: "fixed", value: top };
+        case "centerY":
+          return { kind: "fromStart", start: top, factor: 0.5 };
+        case "bottom":
+          return { kind: "fromStart", start: top, factor: 1 };
+      }
+    case "ne":
+      switch (key) {
+        case "left":
+          return { kind: "fixed", value: left };
+        case "centerX":
+          return { kind: "fromStart", start: left, factor: 0.5 };
+        case "right":
+          return { kind: "fromStart", start: left, factor: 1 };
+        case "top":
+          return { kind: "fromEnd", end: bottom, factor: 1 };
+        case "centerY":
+          return { kind: "fromEnd", end: bottom, factor: 0.5 };
+        case "bottom":
+          return { kind: "fixed", value: bottom };
+      }
+    case "nw":
+    default:
+      switch (key) {
+        case "left":
+          return { kind: "fromEnd", end: right, factor: 1 };
+        case "centerX":
+          return { kind: "fromEnd", end: right, factor: 0.5 };
+        case "right":
+          return { kind: "fixed", value: right };
+        case "top":
+          return { kind: "fromEnd", end: bottom, factor: 1 };
+        case "centerY":
+          return { kind: "fromEnd", end: bottom, factor: 0.5 };
+        case "bottom":
+          return { kind: "fixed", value: bottom };
+      }
+  }
+}
+
+type ResizeSnapConstraint =
+  | { kind: "fixed"; value: number }
+  | { kind: "fromStart"; start: number; factor: number }
+  | { kind: "fromEnd"; end: number; factor: number }
+  | { kind: "fromCenter"; center: number; factor: number; sign: -1 | 1 };
+
+interface ResizeSnapCandidate {
+  key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+  currentValue: number | null;
+  startValue: number;
+  value: number;
+  target: number;
+  scale: number | null;
+  priority: number;
+}
+
+interface ResizeSnapCandidateSpec {
+  key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+  currentValue: number | null;
+  rawValue: number;
+  target: number;
+  constraint: ResizeSnapConstraint;
+}
+
+function createResizeSnapCandidate(
+  handle: PositioningHandleId,
+  key: ResizeSnapCandidate["key"],
+  currentValue: number | null,
+  rawValue: number,
+  target: number,
+  size: number,
+  constraint: ResizeSnapConstraint,
+): ResizeSnapCandidate | null {
+  const scale = getResizeConstraintScale(handle, key, target, size, constraint);
+  const value = getResizeConstraintValue(constraint, scale, size);
+  const startValue = getResizeConstraintValue(constraint, 1, size);
+
+  if (scale === null || value === null || startValue === null) {
+    return null;
+  }
+
+  return {
+    key,
+    currentValue,
+    startValue,
+    value: rawValue,
+    target,
+    scale,
+    priority: getResizeSnapPriority(handle, key),
+  };
+}
+
+function getResizeConstraintScale(
+  handle: PositioningHandleId,
+  key: ResizeSnapCandidate["key"],
+  target: number,
+  size: number,
+  constraint: ResizeSnapConstraint,
+): number | null {
+  void handle;
+  void key;
+
+  if (constraint.kind === "fixed") {
+    return null;
+  }
+
+  if (constraint.kind === "fromStart") {
+    return clampPositioningScale((target - constraint.start) / (size * constraint.factor));
+  }
+
+  if (constraint.kind === "fromCenter") {
+    return clampPositioningScale(
+      ((target - constraint.center) * constraint.sign) / (size * constraint.factor),
+    );
+  }
+
+  return clampPositioningScale((constraint.end - target) / (size * constraint.factor));
+}
+
+function getResizeConstraintValue(
+  constraint: ResizeSnapConstraint,
+  scale: number | null,
+  size: number,
+): number | null {
+  if (constraint.kind === "fixed") {
+    return constraint.value;
+  }
+
+  if (scale === null) {
+    return null;
+  }
+
+  if (constraint.kind === "fromStart") {
+    return constraint.start + size * constraint.factor * scale;
+  }
+
+  if (constraint.kind === "fromCenter") {
+    return constraint.center + size * constraint.factor * scale * constraint.sign;
+  }
+
+  return constraint.end - size * constraint.factor * scale;
+}
+
+function getResizeSnapTarget(
+  candidates: ResizeSnapCandidate[],
+  snapTolerance: number,
+  unsnapTolerance: number,
+): (ResizeSnapCandidate & { scale: number }) | null {
+  const scaledCandidates = candidates.filter(
+    (candidate): candidate is ResizeSnapCandidate & { scale: number } => candidate.scale !== null,
+  );
+  const latchedCandidate = scaledCandidates.find((candidate) => candidate.currentValue !== null);
+  if (
+    latchedCandidate &&
+    Math.abs(latchedCandidate.value - latchedCandidate.target) <= unsnapTolerance
+  ) {
+    return latchedCandidate;
+  }
+
+  return (
+    scaledCandidates
+      .map((candidate) => ({
+        ...candidate,
+        distance: Math.abs(candidate.target - candidate.value),
+        startDistance: Math.abs(candidate.target - candidate.startValue),
+      }))
+      .filter(
+        (candidate) =>
+          candidate.distance <= snapTolerance && candidate.distance < candidate.startDistance,
+      )
+      .sort((a, b) => a.priority - b.priority || a.distance - b.distance)[0] ?? null
+  );
+}
+
+function chooseResizeSnapScale(
+  rawScale: number,
+  snappedX: (ResizeSnapCandidate & { scale: number }) | null,
+  snappedY: (ResizeSnapCandidate & { scale: number }) | null,
+): number | null {
+  if (!snappedX && !snappedY) {
+    return null;
+  }
+
+  if (snappedX && snappedY) {
+    const xLatched = snappedX.currentValue !== null;
+    const yLatched = snappedY.currentValue !== null;
+
+    if (xLatched && !yLatched) {
+      return snappedX.scale;
+    }
+
+    if (yLatched && !xLatched) {
+      return snappedY.scale;
+    }
+
+    return Math.abs(snappedX.scale - rawScale) <= Math.abs(snappedY.scale - rawScale)
+      ? snappedX.scale
+      : snappedY.scale;
+  }
+
+  return snappedX?.scale ?? snappedY?.scale ?? null;
+}
+
+function emptySnapState(): PositioningMoveSnapState {
+  return {
+    left: null,
+    right: null,
+    top: null,
+    bottom: null,
+    centerX: null,
+    centerY: null,
+  };
+}
+
+function getResizeSnapPriority(
+  handle: PositioningHandleId,
+  key: ResizeSnapCandidate["key"],
+): number {
+  switch (handle) {
+    case "e":
+      return key === "right" ? 0 : key === "centerX" ? 1 : 2;
+    case "w":
+      return key === "left" ? 0 : key === "centerX" ? 1 : 2;
+    case "s":
+      return key === "bottom" ? 0 : key === "centerY" ? 1 : 2;
+    case "n":
+      return key === "top" ? 0 : key === "centerY" ? 1 : 2;
+    case "se":
+      return key === "right" || key === "bottom" ? 0 : 1;
+    case "sw":
+      return key === "left" || key === "bottom" ? 0 : 1;
+    case "ne":
+      return key === "right" || key === "top" ? 0 : 1;
+    case "nw":
+    default:
+      return key === "left" || key === "top" ? 0 : 1;
+  }
+}
+
+function getResizeHorizontalCandidateSpecs(
+  startBounds: PositioningRect,
+  handle: PositioningHandleId,
+  currentBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  containerLeft: number,
+  containerCenterX: number,
+  containerRight: number,
+): ResizeSnapCandidateSpec[] {
+  const specs: ResizeSnapCandidateSpec[] = [];
+
+  switch (handle) {
+    case "w":
+    case "sw":
+    case "nw":
+      specs.push({
+        key: "left" as const,
+        currentValue: currentSnap.left,
+        rawValue: currentBounds.left,
+        target: containerLeft,
+        constraint: getResizeConstraintForKey(startBounds, handle, "left"),
+      });
+      break;
+    case "e":
+    case "se":
+    case "ne":
+      specs.push({
+        key: "right" as const,
+        currentValue: currentSnap.right,
+        rawValue: currentBounds.left + currentBounds.width,
+        target: containerRight,
+        constraint: getResizeConstraintForKey(startBounds, handle, "right"),
+      });
+      break;
+    default:
+      break;
+  }
+
+  specs.push({
+    key: "centerX" as const,
+    currentValue: currentSnap.centerX,
+    rawValue: currentBounds.left + currentBounds.width / 2,
+    target: containerCenterX,
+    constraint: getResizeConstraintForKey(startBounds, handle, "centerX"),
+  });
+
+  return specs;
+}
+
+function getResizeVerticalCandidateSpecs(
+  startBounds: PositioningRect,
+  handle: PositioningHandleId,
+  currentBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  containerTop: number,
+  containerCenterY: number,
+  containerBottom: number,
+): ResizeSnapCandidateSpec[] {
+  const specs: ResizeSnapCandidateSpec[] = [];
+
+  switch (handle) {
+    case "n":
+    case "ne":
+    case "nw":
+      specs.push({
+        key: "top" as const,
+        currentValue: currentSnap.top,
+        rawValue: currentBounds.top,
+        target: containerTop,
+        constraint: getResizeConstraintForKey(startBounds, handle, "top"),
+      });
+      break;
+    case "s":
+    case "se":
+    case "sw":
+      specs.push({
+        key: "bottom" as const,
+        currentValue: currentSnap.bottom,
+        rawValue: currentBounds.top + currentBounds.height,
+        target: containerBottom,
+        constraint: getResizeConstraintForKey(startBounds, handle, "bottom"),
+      });
+      break;
+    default:
+      break;
+  }
+
+  specs.push({
+    key: "centerY" as const,
+    currentValue: currentSnap.centerY,
+    rawValue: currentBounds.top + currentBounds.height / 2,
+    target: containerCenterY,
+    constraint: getResizeConstraintForKey(startBounds, handle, "centerY"),
+  });
+
+  return specs;
 }
