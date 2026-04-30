@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { Prisma, SaveSource } from "@prisma/client";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import {
   normalizeProjectTitle,
@@ -26,7 +26,7 @@ function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
 }
 
 export async function GET(req: Request) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

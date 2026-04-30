@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "crypto";
-import { auth } from "@clerk/nextjs/server";
 import { SaveSource } from "@prisma/client";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import { deleteBlobIfExists, extractBlobUrl } from "@/lib/blob";
 import { isWipVersioningEnabled } from "@/lib/wipVersioning";
@@ -51,7 +51,7 @@ function isUnknownPrismaArgumentError(error: unknown, argumentName: string) {
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -79,7 +79,7 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 export async function PUT(req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -198,7 +198,7 @@ export async function PUT(req: Request, context: RouteContext) {
 }
 
 export async function DELETE(_req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

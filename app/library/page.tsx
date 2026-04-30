@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { LibraryPageClient } from "./LibraryPageClient";
 
 export default async function LibraryPage() {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
 
   if (!userId) {
     redirect("/sign-in");

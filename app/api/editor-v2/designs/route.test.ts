@@ -4,7 +4,7 @@ import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesi
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
 const {
-  authMock,
+  getCurrentUserIdMock,
   countMock,
   findManyMock,
   createMock,
@@ -14,7 +14,7 @@ const {
   transactionMock,
   deleteBlobIfExistsMock,
 } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+  getCurrentUserIdMock: vi.fn(),
   countMock: vi.fn(),
   findManyMock: vi.fn(),
   createMock: vi.fn(),
@@ -25,8 +25,8 @@ const {
   deleteBlobIfExistsMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUserId: getCurrentUserIdMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -80,7 +80,7 @@ describe("editor-v2 design collection routes", () => {
   });
 
   it("rejects unauthenticated create requests", async () => {
-    authMock.mockResolvedValue({ userId: null });
+    getCurrentUserIdMock.mockResolvedValue(null);
 
     const response = await POST(
       new Request("http://localhost/api/editor-v2/designs", {
@@ -95,7 +95,7 @@ describe("editor-v2 design collection routes", () => {
   });
 
   it("lists signed-in user designs", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     countMock.mockResolvedValue(1);
     const state = createNewDesignState(20, 15);
     state.document.project.title = "Pattern One";
@@ -166,7 +166,7 @@ describe("editor-v2 design collection routes", () => {
   });
 
   it("pages signed-in user designs", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     countMock.mockResolvedValue(13);
     findManyMock.mockResolvedValue(
       Array.from({ length: 7 }, (_, index) => {
@@ -217,7 +217,7 @@ describe("editor-v2 design collection routes", () => {
     state.document.project.title = "My New Design";
     const data = serializeEditorV2Document(state.document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     createMock.mockResolvedValue({
       id: "design_123",
       title: "My New Design",
@@ -273,7 +273,7 @@ describe("editor-v2 design collection routes", () => {
     const state = createNewDesignState(3, 3);
     const data = serializeEditorV2Document(state.document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     createMock.mockResolvedValue({
       id: "design_234",
       title: "Untitled Design",

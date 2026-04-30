@@ -3,14 +3,14 @@ import { SaveSource } from "@prisma/client";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
-const { authMock, designFindFirstMock, versionFindFirstMock } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+const { getCurrentUserIdMock, designFindFirstMock, versionFindFirstMock } = vi.hoisted(() => ({
+  getCurrentUserIdMock: vi.fn(),
   designFindFirstMock: vi.fn(),
   versionFindFirstMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUserId: getCurrentUserIdMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -32,7 +32,7 @@ describe("editor-v2 individual version routes", () => {
   });
 
   it("rejects cross-user version access", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost"), {
@@ -45,7 +45,7 @@ describe("editor-v2 individual version routes", () => {
   it("loads a specific saved version", async () => {
     const data = serializeEditorV2Document(createNewDesignState(2, 2).document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue({
       id: "design_123",
       createdAt: new Date("2026-04-16T10:00:00.000Z"),

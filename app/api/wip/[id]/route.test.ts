@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, findFirstMock, deleteManyMock, deleteBlobIfExistsMock } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+const { getCurrentUserIdMock, findFirstMock, deleteManyMock, deleteBlobIfExistsMock } = vi.hoisted(() => ({
+  getCurrentUserIdMock: vi.fn(),
   findFirstMock: vi.fn(),
   deleteManyMock: vi.fn(),
   deleteBlobIfExistsMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUserId: getCurrentUserIdMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,7 +37,7 @@ describe("DELETE /api/wip/[id]", () => {
   });
 
   it("rejects unauthenticated requests", async () => {
-    authMock.mockResolvedValue({ userId: null });
+    getCurrentUserIdMock.mockResolvedValue(null);
 
     const res = await DELETE(new Request("http://localhost"), { params: { id: "draft_1" } });
     expect(res.status).toBe(401);
@@ -46,7 +46,7 @@ describe("DELETE /api/wip/[id]", () => {
   });
 
   it("returns 404 when draft does not exist", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue(null);
 
     const res = await DELETE(new Request("http://localhost"), { params: { id: "draft_1" } });
@@ -59,7 +59,7 @@ describe("DELETE /api/wip/[id]", () => {
     const blobA = "https://store.blob.vercel-storage.com/a.png";
     const blobB = "https://store.blob.vercel-storage.com/b.png";
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       data: { trace: { imageDataUrl: blobA } },
       versions: [

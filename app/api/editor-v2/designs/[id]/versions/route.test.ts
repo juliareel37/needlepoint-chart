@@ -4,7 +4,7 @@ import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesi
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
 const {
-  authMock,
+  getCurrentUserIdMock,
   designFindFirstMock,
   designCreateMock,
   designUpdateMock,
@@ -15,7 +15,7 @@ const {
   transactionMock,
   deleteBlobIfExistsMock,
 } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+  getCurrentUserIdMock: vi.fn(),
   designFindFirstMock: vi.fn(),
   designCreateMock: vi.fn(),
   designUpdateMock: vi.fn(),
@@ -27,8 +27,8 @@ const {
   deleteBlobIfExistsMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUserId: getCurrentUserIdMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -89,7 +89,7 @@ describe("editor-v2 design version routes", () => {
   });
 
   it("lists versions for the owning user in newest-first order", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue({ id: "design_123" });
     versionFindManyMock.mockResolvedValue([
       {
@@ -127,7 +127,7 @@ describe("editor-v2 design version routes", () => {
   });
 
   it("rejects cross-user version list access", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost"), {
@@ -142,7 +142,7 @@ describe("editor-v2 design version routes", () => {
     state.document.project.title = "Restored Design";
     const data = serializeEditorV2Document(state.document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue({
       id: "design_123",
       title: "Current Design",
@@ -220,14 +220,14 @@ describe("editor-v2 design version routes", () => {
     state.document.project.title = "Copied From History";
     const data = serializeEditorV2Document(state.document);
     const snapshotDate = new Date("2026-04-16T11:40:00.000Z");
-    const expectedTitle = `Copied From History (restored ${new Intl.DateTimeFormat("en-US", {
+    const expectedTitle = `Copied From History (Restored Version - ${new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
     }).format(snapshotDate)})`;
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     designFindFirstMock.mockResolvedValue({
       id: "design_123",
       title: "Current Design",

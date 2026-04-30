@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ type RouteContext =
   | { params: Promise<{ id: string; versionId: string }> };
 
 export async function GET(_req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

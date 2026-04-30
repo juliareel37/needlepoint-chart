@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { Prisma, SaveSource } from "@prisma/client";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { deleteBlobIfExists, extractEditorV2TraceBlobUrls } from "@/lib/blob";
 import { prisma } from "@/lib/db";
 import {
@@ -32,7 +32,7 @@ function formatRestoredCopyTitle(title: string, timestamp: Date): string {
 }
 
 export async function GET(_req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -65,7 +65,7 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 export async function POST(req: Request, context: RouteContext) {
-  const { userId } = await auth();
+  const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
