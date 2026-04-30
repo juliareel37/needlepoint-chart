@@ -472,6 +472,31 @@ export function LibraryPageClient({
     handleDesignSelectionChange(designId, !selectedDesignIds.has(designId));
   }
 
+  function handleDesktopListRowClick(
+    event: React.MouseEvent<HTMLElement>,
+    designId: string,
+  ) {
+    if (touchPrimaryInput) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("[data-card-menu='true'], input, button, label")
+    ) {
+      return;
+    }
+
+    if (desktopSelectionMode) {
+      event.preventDefault();
+      handleDesignSelectionChange(designId, !selectedDesignIds.has(designId));
+      return;
+    }
+
+    navigateToDesign(event.nativeEvent, designId);
+  }
+
   async function handleCreateDesign(config: EditorV2DesignConfigNew) {
     setCreatingDesign(true);
     setSetupErrorMessage(null);
@@ -1139,9 +1164,6 @@ export function LibraryPageClient({
                     touchPrimaryInput && touchSelectionMode ? "true" : "false"
                   }
                 >
-                  {touchPrimaryInput && touchSelectionMode ? (
-                    <span aria-hidden="true" />
-                  ) : null}
                   <span className={styles.listHeaderName}>Name</span>
                   <span>Size</span>
                   <span>Colors</span>
@@ -1152,6 +1174,8 @@ export function LibraryPageClient({
                 <div className={styles.listBody}>
                   {sortedDesigns.map((design) => {
                     const isSelected = selectedDesignIds.has(design.id);
+                    const showListSelectionControl =
+                      !touchPrimaryInput || touchSelectionMode || isSelected;
 
                     return (
                     <article
@@ -1160,19 +1184,23 @@ export function LibraryPageClient({
                       data-touch-selection-mode={
                         touchPrimaryInput && touchSelectionMode ? "true" : "false"
                       }
+                      data-selectable={desktopSelectionMode ? "true" : "false"}
                       data-selected={isSelected ? "true" : "false"}
-                      onClick={(event) => handleTouchListRowSelect(event, design.id)}
+                      onClick={(event) => {
+                        handleTouchListRowSelect(event, design.id);
+                        handleDesktopListRowClick(event, design.id);
+                      }}
                     >
-                      {touchPrimaryInput && touchSelectionMode ? (
-                        <span className={styles.listSelectionCell} aria-hidden="true">
-                          <span className={styles.listSelectionIndicator} />
-                        </span>
-                      ) : null}
                       <Link
                         href={`/editor/designs/${design.id}`}
                         className={styles.listNameCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          if (desktopSelectionMode) {
                             event.preventDefault();
                             return;
                           }
@@ -1218,6 +1246,11 @@ export function LibraryPageClient({
                             return;
                           }
 
+                          if (desktopSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
                           navigateToDesign(event, design.id);
                         }}
                       >
@@ -1228,6 +1261,11 @@ export function LibraryPageClient({
                         className={styles.listMetaCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          if (desktopSelectionMode) {
                             event.preventDefault();
                             return;
                           }
@@ -1250,13 +1288,43 @@ export function LibraryPageClient({
                             return;
                           }
 
+                          if (desktopSelectionMode) {
+                            event.preventDefault();
+                            return;
+                          }
+
                           navigateToDesign(event, design.id);
                         }}
                       >
                         {design.updatedLabel.replace(/^Edited /, "")}
                       </Link>
 
-                      {renderDesignMenu(design)}
+                      <div className={styles.listActionsCell}>
+                        {showListSelectionControl ? (
+                          <span className={styles.listSelectionCell}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(event) => {
+                                handleDesignSelectionChange(
+                                  design.id,
+                                  event.currentTarget.checked,
+                                );
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                              }}
+                              className={styles.listSelectionInput}
+                              aria-label={`Select ${design.title}`}
+                            />
+                            <span
+                              className={styles.listSelectionIndicator}
+                              aria-hidden="true"
+                            />
+                          </span>
+                        ) : null}
+                        {renderDesignMenu(design)}
+                      </div>
                     </article>
                   )})}
 

@@ -355,14 +355,9 @@
 .listHeader,
 .listRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(140px, 0.65fr) minmax(110px, 0.45fr) minmax(110px, 0.45fr) 36px;
+  grid-template-columns: minmax(0, 1.8fr) minmax(140px, 0.65fr) minmax(110px, 0.45fr) minmax(110px, 0.45fr) 72px;
   align-items: center;
   column-gap: 16px;
-}
-
-.listHeader[data-touch-selection-mode="true"],
-.listRow[data-touch-selection-mode="true"] {
-  grid-template-columns: 24px minmax(0, 1.8fr) minmax(140px, 0.65fr) minmax(110px, 0.45fr) minmax(110px, 0.45fr) 36px;
 }
 
 .listHeader {
@@ -378,7 +373,7 @@
 }
 
 .listHeaderActions {
-  width: 36px;
+  width: 72px;
 }
 
 .listBody {
@@ -404,12 +399,16 @@
 
 }
 
-.listRow:first-child {
-  border-top: none;
+.listRow[data-touch-selection-mode="true"] {
+  background: var(--button-ghost2-hover);
 }
 
-.listSelectionCell {
-  display: none;
+.listRow[data-touch-selection-mode="true"][data-selected="true"] {
+  background: var(--button-ghost2-hover);
+}
+
+.listRow:first-child {
+  border-top: none;
 }
 
 .listSelectionIndicator {
@@ -438,13 +437,6 @@
   border-right: 2px solid white;
   border-bottom: 2px solid white;
   transform: rotate(45deg);
-}
-
-.listRow[data-touch-selection-mode="true"] .listSelectionCell {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
 }
 
 .listNameCell,
@@ -514,6 +506,40 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-tertiary);
+}
+
+.listActionsCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.listSelectionCell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  transform: translateY(-1px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.listSelectionInput {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.listRow[data-touch-selection-mode="true"] .listSelectionCell {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .card:has(.cardSelectionInputCard:focus-visible),
@@ -833,28 +859,28 @@
     background: rgba(255, 255, 255, 0.08);
   }
 
-  .card:hover {
+  .card:not([data-selected="true"]):hover {
     transform: translateY(-2px);
     border-color: var(--ui-border-strong);
     box-shadow: 0 18px 36px rgba(44, 61, 96, 0.1);
   }
 
-  .card:has(.cardSelectionSurface:hover) .thumbnail::after {
+  .card:not([data-selected="true"]):has(.cardSelectionSurface:hover) .thumbnail::after {
     opacity: 1;
   }
 
-  .card:has(.cardSelectionSurface:hover) .thumbnailCanvas {
+  .card:not([data-selected="true"]):has(.cardSelectionSurface:hover) .thumbnailCanvas {
     transform: scale(1.08);
   }
 
-  .card:has(.cardTitleLink:hover) .cardTitle,
-  .card:has(.cardDetailsLink:hover) .cardTitle,
+  .card:not([data-selected="true"]):has(.cardTitleLink:hover) .cardTitle,
+  .card:not([data-selected="true"]):has(.cardDetailsLink:hover) .cardTitle,
   .card:has(.cardTitleLink:focus-visible) .cardTitle,
   .card:has(.cardDetailsLink:focus-visible) .cardTitle {
     color: var(--brand-500);
   }
 
-  .card:has(.cardSelectionSurface:hover) .cardCheckbox {
+  .card:not([data-selected="true"]):has(.cardSelectionSurface:hover) .cardCheckbox {
     opacity: 1;
     transform: translateY(0);
     cursor: pointer;
@@ -866,10 +892,19 @@
     /* color: var(--button-secondary-hover); */
   }
 
-  .listRow:hover {
+  .listRow:not([data-selected="true"]):hover {
     /* background: var(--menu-item-hover-bg); */
     /* background: red; */
     background: var(--button-ghost2-hover);
+  }
+
+  .listRow:hover .listSelectionCell,
+  .listRow[data-selected="true"] .listSelectionCell,
+  .listRow[data-selectable="true"] .listSelectionCell,
+  .listRow:has(.listSelectionInput:focus-visible) .listSelectionCell,
+  .listRow:has(.listSelectionInput:checked) .listSelectionCell {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1144,11 +1179,6 @@
     background: var(--menu-item-hover-bg);
   }
 
-  .listRow[data-touch-selection-mode="true"] {
-    grid-template-columns: 24px minmax(0, 1fr) auto;
-    column-gap: 14px;
-  }
-
   .listNameCell {
     align-items: flex-start;
   }
@@ -1171,8 +1201,15 @@
     grid-column: 1 / -1;
   }
 
-  .listRow[data-touch-selection-mode="true"] .listSelectionCell {
+  .listActionsCell {
     align-self: stretch;
+  }
+
+  .listRow[data-touch-selection-mode="true"] .listSelectionCell,
+  .listRow[data-selected="true"] .listSelectionCell,
+  .listRow[data-selectable="true"] .listSelectionCell {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .thumbnail {
