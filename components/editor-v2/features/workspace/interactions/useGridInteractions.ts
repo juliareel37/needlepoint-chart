@@ -160,11 +160,7 @@ export function useGridInteractions({
       return;
     }
 
-    if (getCell(state, point.x, point.y)) {
-      return;
-    }
-
-    const fillCells = getFillRegion(state, point);
+    const fillCells = getFillRegion(state, point, activeColorId);
 
     if (fillCells.length > 0) {
       dispatch(createPaintCellsCommand(activeColorId, fillCells));
@@ -201,7 +197,11 @@ function getSelectedRegionCells(
   return cells;
 }
 
-function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
+export function getFillRegion(
+  state: EditorStoreState,
+  start: GridPoint,
+  activeColorId: string,
+): GridPoint[] {
   const { width, height } = state.document.grid;
   const hasCommittedSelection = Boolean(
     getSelectionBounds(state) && !state.session.selection.preview,
@@ -215,7 +215,9 @@ function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
     return [];
   }
 
-  if (getCell(state, start.x, start.y)) {
+  const targetValue = getCell(state, start.x, start.y);
+
+  if (targetValue === activeColorId) {
     return [];
   }
 
@@ -244,7 +246,7 @@ function getFillRegion(state: EditorStoreState, start: GridPoint): GridPoint[] {
       continue;
     }
 
-    if (getCell(state, point.x, point.y)) {
+    if (getCell(state, point.x, point.y) !== targetValue) {
       continue;
     }
 
