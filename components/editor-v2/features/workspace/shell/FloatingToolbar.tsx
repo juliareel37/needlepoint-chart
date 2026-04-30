@@ -954,6 +954,9 @@ export function FloatingToolbar({
           title="Fill"
           onClick={() => {
             if (activeTool === "fill") {
+              if (selectOpen && selectionCommitted) {
+                dispatch(createSetToolCommand("lasso"));
+              }
               return;
             }
             closeColorLibrary();
