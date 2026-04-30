@@ -2828,6 +2828,14 @@
   opacity: 1;
 }
 
+.traceSliderTooltipPortal {
+  position: fixed;
+  inset: auto auto auto 0;
+  bottom: auto;
+  transform: translate(-50%, -100%);
+  z-index: var(--z-editor-popover);
+}
+
 .traceSliderFullWidth {
   max-width: none;
 }
