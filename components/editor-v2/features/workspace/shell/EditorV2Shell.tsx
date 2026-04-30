@@ -96,6 +96,12 @@ const HEADER_FILE_MENU_ITEMS = [
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
 ] satisfies readonly HeaderFileMenuItem[];
+const AUTH_REQUIRED_FILE_MENU_ACTION_IDS = new Set([
+  "duplicate",
+  "version-history",
+  "save-version",
+  "delete",
+]);
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
@@ -1538,6 +1544,14 @@ export function EditorV2Shell({
       return;
     }
 
+    if (
+      !hasSavedDesignAccess &&
+      AUTH_REQUIRED_FILE_MENU_ACTION_IDS.has(value)
+    ) {
+      openSignInForCurrentDesign();
+      return;
+    }
+
     if (value === "duplicate") {
       duplicateDesignToNewTab(document);
       return;
@@ -1721,8 +1735,10 @@ export function EditorV2Shell({
                   getItemDisabled={(item) =>
                     item.kind === "divider" ||
                     (item.id === "save-version" &&
-                      (!hasSavedDesignAccess || saveButtonState === "saving")) ||
-                    (item.id === "version-history" && !currentStorageId) ||
+                      saveButtonState === "saving") ||
+                    (item.id === "version-history" &&
+                      hasSavedDesignAccess &&
+                      !currentStorageId) ||
                     (item.id === "download" && exportButtonState === "exporting") ||
                     (item.id === "delete" && deleteButtonState === "deleting")
                   }
