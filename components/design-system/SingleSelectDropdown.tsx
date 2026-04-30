@@ -108,6 +108,11 @@ export function SingleSelectDropdown<TItem>({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const hoverCloseTimeoutRef = useRef<number | null>(null);
+  const preserveScrollAnchorRef = useRef<{
+    itemCount: number;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -273,6 +278,28 @@ export function SingleSelectDropdown<TItem>({
     menuRef.current.scrollTop = menuRef.current.scrollHeight;
   }, [isTopPlacement, open]);
 
+  useLayoutEffect(() => {
+    if (!open || !isTopPlacement) {
+      preserveScrollAnchorRef.current = null;
+      return;
+    }
+
+    const anchor = preserveScrollAnchorRef.current;
+    const menuElement = menuRef.current;
+
+    if (
+      !anchor ||
+      !menuElement ||
+      items.length <= anchor.itemCount
+    ) {
+      return;
+    }
+
+    const scrollHeightDelta = menuElement.scrollHeight - anchor.scrollHeight;
+    menuElement.scrollTop = anchor.scrollTop + scrollHeightDelta;
+    preserveScrollAnchorRef.current = null;
+  }, [isTopPlacement, items.length, open]);
+
   useEffect(() => {
     if (!open || !menuPortalToViewport) {
       return;
@@ -296,13 +323,24 @@ export function SingleSelectDropdown<TItem>({
       return;
     }
 
+    const hasOverflow = menuElement.scrollHeight > menuElement.clientHeight;
     const remainingScrollDistance =
       menuElement.scrollHeight - menuElement.scrollTop - menuElement.clientHeight;
+    const reachedLoadThreshold = isTopPlacement
+      ? !hasOverflow || menuElement.scrollTop <= 48
+      : remainingScrollDistance <= 48;
 
-    if (remainingScrollDistance <= 48) {
+    if (reachedLoadThreshold) {
+      if (isTopPlacement) {
+        preserveScrollAnchorRef.current = {
+          itemCount: items.length,
+          scrollHeight: menuElement.scrollHeight,
+          scrollTop: menuElement.scrollTop,
+        };
+      }
       onReachEnd();
     }
-  }, [onReachEnd]);
+  }, [isTopPlacement, items.length, onReachEnd]);
 
   useEffect(() => {
     if (!open) {
