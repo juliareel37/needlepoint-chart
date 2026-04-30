@@ -1189,7 +1189,7 @@ export function FloatingToolbar({
               closeColorLibrary();
               closeDrawMenu();
               closeImageMenu();
-              if (activeTool === "eyedropper" && selectOpen && selectionCommitted) {
+              if (activeTool === "eyedropper") {
                 dispatch(createSetToolCommand("lasso"));
                 return;
               }

@@ -118,14 +118,6 @@ export function useGridInteractions({
   }
 
   function handleEyedropperPointerDown(point: GridPoint): void {
-    const hasCommittedSelection = Boolean(
-      getSelectionBounds(state) && !state.session.selection.preview,
-    );
-
-    if (hasCommittedSelection && !isCellInSelection(state, point)) {
-      return;
-    }
-
     const returnTool = state.session.eyedropperReturnTool ?? "paint";
     // const returnTool = "draw";
 
