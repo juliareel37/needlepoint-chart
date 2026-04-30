@@ -24,37 +24,62 @@ export function StitchThumbnailCanvas({
   traceThumbnailUrl,
   tracePlacement,
   className,
+  testId,
 }: {
   snapshot: LibraryStitchSnapshot | null;
   traceThumbnailUrl?: string | null;
   tracePlacement?: LibraryTracePlacement | null;
   className?: string;
+  testId?: string;
 }) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const traceImageCacheRef = useRef<Map<string, HTMLImageElement | null>>(new Map());
 
   useEffect(() => {
+    const surface = surfaceRef.current;
     const frame = frameRef.current;
     const canvas = canvasRef.current;
-    if (!frame || !canvas) {
+    if (!surface || !frame || !canvas) {
       return;
     }
 
     const render = () => {
+      const currentSurface = surfaceRef.current;
       const currentFrame = frameRef.current;
       const currentCanvas = canvasRef.current;
-      if (!currentFrame || !currentCanvas) {
+      if (!currentSurface || !currentFrame || !currentCanvas) {
         return;
       }
 
-      const bounds = currentFrame.getBoundingClientRect();
-      const width = Math.max(1, Math.round(bounds.width));
-      const height = Math.max(1, Math.round(bounds.height));
+      const surfaceBounds = currentSurface.getBoundingClientRect();
+      const surfaceWidth = Math.max(1, Math.round(surfaceBounds.width));
+      const surfaceHeight = Math.max(1, Math.round(surfaceBounds.height));
+      const thumbnailSurface = snapshot
+        ? getContainedRect(
+            snapshot.width,
+            snapshot.height,
+            surfaceWidth,
+            surfaceHeight,
+          )
+        : { width: surfaceWidth, height: surfaceHeight };
+      const width = Math.max(1, Math.round(thumbnailSurface.width));
+      const height = Math.max(1, Math.round(thumbnailSurface.height));
       const dpr = window.devicePixelRatio || 1;
       const targetWidth = Math.max(1, Math.round(width * dpr));
       const targetHeight = Math.max(1, Math.round(height * dpr));
+      const nextFrameWidth = `${width}px`;
+      const nextFrameHeight = `${height}px`;
+
+      if (currentFrame.style.width !== nextFrameWidth) {
+        currentFrame.style.width = nextFrameWidth;
+      }
+
+      if (currentFrame.style.height !== nextFrameHeight) {
+        currentFrame.style.height = nextFrameHeight;
+      }
 
       if (currentCanvas.width !== targetWidth) {
         currentCanvas.width = targetWidth;
@@ -205,22 +230,33 @@ export function StitchThumbnailCanvas({
 
     render();
     const observer = new ResizeObserver(() => render());
-    observer.observe(frame);
+    observer.observe(surface);
 
     return () => observer.disconnect();
   }, [snapshot, tracePlacement, traceThumbnailUrl]);
 
   return (
     <div
-      ref={frameRef}
-      className={className}
-      style={{ width: "100%", height: "100%" }}
+      ref={surfaceRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "grid",
+        placeItems: "center",
+      }}
       aria-hidden="true"
     >
-      <canvas
-        ref={canvasRef}
-        style={{ display: "block", width: "100%", height: "100%" }}
-      />
+      <div
+        ref={frameRef}
+        className={className}
+        data-testid={testId}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={{ display: "block", width: "100%", height: "100%" }}
+        />
+      </div>
     </div>
   );
 }

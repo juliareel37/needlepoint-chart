@@ -1,0 +1,100 @@
+/* [project]/components/design-system/Modal.module.css [app-client] (css) */
+.Modal-module__Ql2Ema__overlay {
+  z-index: var(--z-modal);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  background: radial-gradient(circle at top, #ffffff29, #0000 34%), #0a0f1a38;
+  place-items: center;
+  padding: 16px;
+  display: grid;
+  position: fixed;
+  inset: 0;
+}
+
+.Modal-module__Ql2Ema__card {
+  box-sizing: border-box;
+  border: 1px solid var(--ui-border-subtle);
+  background: var(--surface-card);
+  width: min(100%, 360px);
+  box-shadow: var(--ui-shadow-lg);
+  border-radius: 16px;
+  gap: 20px;
+  padding: 28px;
+  display: grid;
+  position: relative;
+}
+
+.Modal-module__Ql2Ema__body {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  display: grid;
+}
+
+.Modal-module__Ql2Ema__content {
+  gap: 12px;
+  display: grid;
+}
+
+.Modal-module__Ql2Ema__header {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  display: flex;
+}
+
+.Modal-module__Ql2Ema__badge {
+  border-radius: 999px;
+  flex: 0 0 40px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+}
+
+.Modal-module__Ql2Ema__badgeIcon {
+  background: currentColor center / contain no-repeat;
+  width: 20px;
+  height: 20px;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.Modal-module__Ql2Ema__titleWrap, .Modal-module__Ql2Ema__title, .Modal-module__Ql2Ema__description {
+  margin: 0;
+}
+
+.Modal-module__Ql2Ema__closeButton {
+  flex: none;
+}
+
+.Modal-module__Ql2Ema__description {
+  color: var(--text-secondary);
+}
+
+.Modal-module__Ql2Ema__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  display: grid;
+}
+
+.Modal-module__Ql2Ema__actions > * {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .Modal-module__Ql2Ema__card {
+    padding: 24px;
+  }
+
+  .Modal-module__Ql2Ema__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/*# sourceMappingURL=components_design-system_Modal_module_css_bad6b30c._.single.css.map*/

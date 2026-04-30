@@ -1079,6 +1079,7 @@ export function LibraryPageClient({
                             traceThumbnailUrl={design.previewUrl}
                             tracePlacement={design.tracePlacement}
                             className={styles.thumbnailCanvas}
+                            testId={`grid-thumbnail-${design.id}`}
                           />
                         </div>
 
