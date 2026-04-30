@@ -27,6 +27,7 @@ interface UseStagePanInteractionsOptions {
   activeTool: ActiveTool;
   dispatch: EditorStore["dispatch"];
   dragPanningDisabled?: boolean;
+  positioningCursorActive?: boolean;
   metrics: GridWorldMetrics;
   stageRef: RefObject<HTMLDivElement | null>;
   stageSize: StageSize;
@@ -69,6 +70,7 @@ export function useStagePanInteractions({
   activeTool,
   dispatch,
   dragPanningDisabled = false,
+  positioningCursorActive = false,
   metrics,
   stageRef,
   stageSize,
@@ -96,6 +98,8 @@ export function useStagePanInteractions({
     activeTool === "pan" && !dragPanningDisabled && !viewportInteractionDisabled;
   const cursor = isPanDragging
     ? "grabbing"
+    : positioningCursorActive
+      ? "grab"
     : activeTool === "paint"
       ? PAINT_CURSOR
     : activeTool === "lasso"
