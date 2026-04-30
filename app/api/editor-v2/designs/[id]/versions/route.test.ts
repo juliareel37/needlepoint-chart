@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SaveSource } from "@prisma/client";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
@@ -67,6 +67,8 @@ import { GET, POST } from "./route";
 describe("editor-v2 design version routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-29T19:34:00.000Z"));
     transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
       callback({
         editorDesign: {
@@ -80,6 +82,10 @@ describe("editor-v2 design version routes", () => {
         },
       }),
     );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("lists versions for the owning user in newest-first order", async () => {
@@ -213,6 +219,13 @@ describe("editor-v2 design version routes", () => {
     const state = createNewDesignState(5, 4);
     state.document.project.title = "Copied From History";
     const data = serializeEditorV2Document(state.document);
+    const snapshotDate = new Date("2026-04-16T11:40:00.000Z");
+    const expectedTitle = `Copied From History (restored ${new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(snapshotDate)})`;
 
     authMock.mockResolvedValue({ userId: "user_1" });
     designFindFirstMock.mockResolvedValue({
@@ -228,12 +241,12 @@ describe("editor-v2 design version routes", () => {
       id: "version_3",
       data,
       dataHash: "hash_3",
-      createdAt: new Date("2026-04-16T11:40:00.000Z"),
+      createdAt: snapshotDate,
       saveSource: SaveSource.MANUAL,
     });
     designCreateMock.mockResolvedValue({
       id: "design_copy_1",
-      title: "Copied From History",
+      title: expectedTitle,
       gridWidth: 5,
       gridHeight: 4,
       createdAt: new Date("2026-04-16T12:20:00.000Z"),
@@ -255,19 +268,31 @@ describe("editor-v2 design version routes", () => {
     expect(designCreateMock).toHaveBeenCalledWith({
       data: {
         userId: "user_1",
-        title: "Copied From History",
-        data,
+        title: expectedTitle,
+        data: {
+          ...data,
+          project: {
+            ...data.project,
+            title: expectedTitle,
+          },
+        },
         gridWidth: 5,
         gridHeight: 4,
         lastSaveSource: SaveSource.RESTORE,
-        lastVersionAt: expect.any(Date),
+        lastVersionAt: new Date("2026-04-29T19:34:00.000Z"),
         lastVersionHash: "hash_3",
       },
     });
     expect(versionCreateMock).toHaveBeenCalledWith({
       data: {
         designId: "design_copy_1",
-        data,
+        data: {
+          ...data,
+          project: {
+            ...data.project,
+            title: expectedTitle,
+          },
+        },
         dataHash: "hash_3",
         saveSource: SaveSource.RESTORE,
       },
@@ -276,14 +301,20 @@ describe("editor-v2 design version routes", () => {
       ok: true,
       id: "design_copy_1",
       storageId: "design_copy_1",
-      title: "Copied From History",
+      title: expectedTitle,
       gridWidth: 5,
       gridHeight: 4,
       createdAt: "2026-04-16T12:20:00.000Z",
       updatedAt: "2026-04-16T12:20:00.000Z",
       versionToken: "2026-04-16T12:20:00.000Z",
       restoredVersionId: "version_3",
-      data,
+      data: {
+        ...data,
+        project: {
+          ...data.project,
+          title: expectedTitle,
+        },
+      },
     });
   });
 });

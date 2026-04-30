@@ -3,7 +3,10 @@ import { auth } from "@clerk/nextjs/server";
 import { Prisma, SaveSource } from "@prisma/client";
 import { deleteBlobIfExists, extractEditorV2TraceBlobUrls } from "@/lib/blob";
 import { prisma } from "@/lib/db";
-import { parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
+import {
+  normalizeProjectTitle,
+  parsePersistedEditorV2Design,
+} from "@/lib/editor-v2/persistence/designs";
 import {
   cleanupPrunedVersionBlobs,
   createEditorDesignVersionSnapshot,
@@ -15,6 +18,18 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
 type RestoreBody = { versionId?: string; mode?: "replace" | "copy" };
+
+function formatRestoredCopyTitle(title: string, timestamp: Date): string {
+  const baseTitle = normalizeProjectTitle(title);
+  const formattedTimestamp = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(timestamp);
+
+  return `${baseTitle} (Restored Version - ${formattedTimestamp})`;
+}
 
 export async function GET(_req: Request, context: RouteContext) {
   const { userId } = await auth();
@@ -105,14 +120,26 @@ export async function POST(req: Request, context: RouteContext) {
   const mode = body.mode === "copy" ? "copy" : "replace";
 
   if (mode === "copy") {
+    const restoredCopyTitle = formatRestoredCopyTitle(
+      restoredData.project.title || existing.title,
+      version.createdAt,
+    );
+    const restoredCopyData = {
+      ...restoredData,
+      project: {
+        ...restoredData.project,
+        title: restoredCopyTitle,
+      },
+    };
+
     const created = await prisma.$transaction(async (tx) => {
       const createdDesign = await tx.editorDesign.create({
         data: {
           userId,
-          title: restoredData.project.title.trim() || existing.title,
-          data: restoredData as unknown as Prisma.InputJsonValue,
-          gridWidth: restoredData.grid.width,
-          gridHeight: restoredData.grid.height,
+          title: restoredCopyTitle,
+          data: restoredCopyData as unknown as Prisma.InputJsonValue,
+          gridWidth: restoredCopyData.grid.width,
+          gridHeight: restoredCopyData.grid.height,
           lastSaveSource: SaveSource.RESTORE,
           lastVersionAt: now,
           lastVersionHash: version.dataHash,
@@ -121,14 +148,14 @@ export async function POST(req: Request, context: RouteContext) {
 
       const prunedVersions = await createEditorDesignVersionSnapshot(tx, {
         designId: createdDesign.id,
-        data: restoredData,
+        data: restoredCopyData,
         dataHash: version.dataHash,
         saveSource: SaveSource.RESTORE,
       });
       const orphanedBlobUrls = await cleanupPrunedVersionBlobs({
         client: tx,
         designId: createdDesign.id,
-        currentDesignData: restoredData,
+        currentDesignData: restoredCopyData,
         prunedVersions,
       });
 
@@ -153,7 +180,7 @@ export async function POST(req: Request, context: RouteContext) {
       updatedAt: created.createdDesign.updatedAt.toISOString(),
       versionToken: created.createdDesign.updatedAt.toISOString(),
       restoredVersionId: version.id,
-      data: restoredData,
+      data: restoredCopyData,
     });
   }
 
