@@ -1,3 +1,5 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export const authMiddleware = clerkMiddleware(() => {});
+export function authMiddleware() {
+  return NextResponse.next();
+}

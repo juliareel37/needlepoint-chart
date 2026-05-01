@@ -27,7 +27,7 @@ export default function AuthButtons() {
     return (
     <>
       <AuthSignedIn>
-        <AuthUserButton afterSignOutUrl="/editor" />
+        <AuthUserButton />
       </AuthSignedIn>
       <AuthSignedOut>
         <Button

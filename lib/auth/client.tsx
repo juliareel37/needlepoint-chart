@@ -1,46 +1,59 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createAuthClient } from "@neondatabase/auth/next";
 import {
-  ClerkDegraded,
-  ClerkFailed,
-  ClerkLoaded,
-  ClerkLoading,
-  ClerkProvider,
-  SignIn,
+  AccountView,
+  AuthView,
+  NeonAuthUIProvider,
   SignedIn,
   SignedOut,
   UserButton,
-  useAuth,
-  useClerk,
-} from "@clerk/nextjs";
+} from "@neondatabase/auth/react/ui";
+
+const authClient = createAuthClient();
 
 export function AuthProvider({
   children,
-  publishableKey,
 }: {
   children: ReactNode;
-  publishableKey: string;
 }) {
-  return <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider>;
+  return (
+    <NeonAuthUIProvider
+      authClient={authClient}
+      credentials={{
+        forgotPassword: true,
+        rememberMe: true,
+      }}
+      social={{
+        providers: ["google"],
+      }}
+      signUp={{
+        fields: ["name"],
+      }}
+      viewPaths={{
+        SIGN_IN: "sign-in",
+        SIGN_UP: "sign-up",
+        FORGOT_PASSWORD: "forgot-password",
+        RESET_PASSWORD: "reset-password",
+        CALLBACK: "callback",
+      }}
+      account={{
+        fields: ["image", "name"],
+        basePath: "/account",
+      }}
+    >
+      {children}
+    </NeonAuthUIProvider>
+  );
 }
 
 export function useAuthStatus() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const session = authClient.useSession();
 
   return {
-    isLoaded,
-    isSignedIn: Boolean(isSignedIn),
-  };
-}
-
-export function useAuthDialog() {
-  const clerk = useClerk();
-
-  return {
-    isLoaded: clerk.loaded,
-    status: clerk.status,
-    openSignIn: clerk.openSignIn,
+    isLoaded: !session.isPending,
+    isSignedIn: Boolean(session.data?.user),
   };
 }
 
@@ -52,57 +65,18 @@ export function AuthSignedOut({ children }: { children: ReactNode }) {
   return <SignedOut>{children}</SignedOut>;
 }
 
-export function AuthUserButton({ afterSignOutUrl }: { afterSignOutUrl: string }) {
-  return <UserButton afterSignOutUrl={afterSignOutUrl} />;
+export function AuthUserButton() {
+  return <UserButton />;
 }
 
 export function AuthSignInPage({
   redirectUrl,
-  renderStatusCard,
 }: {
   redirectUrl: string;
-  renderStatusCard: (props: {
-    title: string;
-    description: string;
-    detail?: string;
-  }) => ReactNode;
 }) {
-  return (
-    <>
-      <ClerkLoading>
-        {renderStatusCard({
-          title: "Loading sign in",
-          description: "The authentication UI is still loading.",
-        })}
-      </ClerkLoading>
+  return <AuthView pathname="sign-in" redirectTo={redirectUrl} />;
+}
 
-      <ClerkLoaded>
-        <div style={{ display: "grid", gap: 16, justifyItems: "center" }}>
-          <ClerkDegraded>
-            {renderStatusCard({
-              title: "Authentication is degraded",
-              description:
-                "The authentication client loaded in a degraded state. Sign in may be temporarily unavailable.",
-            })}
-          </ClerkDegraded>
-
-          <SignIn
-            path="/sign-in"
-            routing="path"
-            fallbackRedirectUrl={redirectUrl}
-            forceRedirectUrl={redirectUrl}
-          />
-        </div>
-      </ClerkLoaded>
-
-      <ClerkFailed>
-        {renderStatusCard({
-          title: "Authentication failed to load",
-          description:
-            "The authentication client did not initialize on this page. This usually means the production auth script or domain is failing before the sign-in UI can mount.",
-          detail: `redirect_url=${redirectUrl}`,
-        })}
-      </ClerkFailed>
-    </>
-  );
+export function AuthAccountPage() {
+  return <AccountView pathname="settings" />;
 }
