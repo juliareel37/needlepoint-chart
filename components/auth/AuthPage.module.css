@@ -308,6 +308,11 @@
   min-height: 0;
 }
 
+.googleIcon {
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 920px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);

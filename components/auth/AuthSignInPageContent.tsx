@@ -34,7 +34,7 @@ function getTitles(pathname: string) {
     case "sign-up":
       return {
         title: "Create your account",
-        description: "Set up a Wippa account with email/password or jump in with Google.",
+        description: "Welcome! Please fill in some details to get started.",
       };
     case "forgot-password":
       return {
@@ -59,7 +59,7 @@ function getTitles(pathname: string) {
     default:
       return {
         title: "Sign in to Wippa",
-        description: "Pick up where you left off across the editor, library, and saved designs.",
+        description: "Welcome back! Please sign in to continue.",
       };
   }
 }
@@ -396,6 +396,24 @@ export function AuthSignInPageContent({
 
     return (
       <form className={styles.form} onSubmit={isSignUp ? handleEmailSignUp : handleEmailSignIn}>
+
+
+        <Button
+          type="button"
+          variant="secondary"
+          className={styles.fullWidthButton}
+          onClick={() => void handleGoogleSignIn()}
+          disabled={isSubmitting}
+        >
+          <img src="/google_logo.png" alt="Google" className={styles.googleIcon} />
+          Continue with Google
+        </Button>
+
+        
+        <div className={styles.divider} style={typographyStyles.s}>
+          <span>or</span>
+        </div>
+
         {isSignUp ? (
           <Field label="Name">
             <FieldInput
@@ -452,19 +470,7 @@ export function AuthSignInPageContent({
           {isSubmitting ? (isSignUp ? "Creating account..." : "Signing in...") : isSignUp ? "Create account" : "Sign in"}
         </Button>
 
-        <div className={styles.divider} style={typographyStyles.s}>
-          <span>or</span>
-        </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          className={styles.fullWidthButton}
-          onClick={() => void handleGoogleSignIn()}
-          disabled={isSubmitting}
-        >
-          Continue with Google
-        </Button>
 
         <div className={styles.linkRow}>
           {isSignUp ? (
@@ -542,17 +548,6 @@ export function AuthSignInPageContent({
               {titles.description}
             </p>
           </div>
-          {!IS_DEV_APP_MODE && (pathname === "sign-in" || pathname === "sign-up") ? (
-            <div className={styles.linkRow}>
-              <Link
-                href={`/sign-in${pathname === "sign-up" ? "" : "/sign-up"}?redirect_url=${encodeURIComponent(redirectUrl)}`}
-                className={[styles.link, styles.linkStrong].join(" ")}
-                style={typographyStyles.p2}
-              >
-                {pathname === "sign-up" ? "Already have an account? Sign in" : "Need an account? Create one"}
-              </Link>
-            </div>
-          ) : null}
           {renderStatus()}
           {renderForm()}
         </Panel>
