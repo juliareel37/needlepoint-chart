@@ -8,6 +8,12 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface-card) 86%, transparent) 0%, var(--surface-app) 100%);
 }
 
+:global(:root[data-theme="dark"]) .page {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.14) 0%, transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-card) 78%, transparent) 0%, var(--surface-app) 100%);
+}
+
 .shell {
   width: min(1080px, 100%);
   display: grid;
