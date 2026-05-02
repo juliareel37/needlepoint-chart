@@ -12,6 +12,7 @@ import {
   MenuTrigger,
 } from "@/components/design-system";
 import { useAuthActions, useAuthSession } from "@/lib/auth/client";
+import { AuthAccountSettingsModal } from "./AuthAccountSettingsModal";
 import styles from "./AuthUserMenu.module.css";
 
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -28,6 +29,7 @@ export function AuthUserMenu() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
@@ -177,9 +179,9 @@ export function AuthUserMenu() {
               style={portalStyle ?? { visibility: "hidden" }}
             >
               <div className={styles.summary}>
-                <span className={styles.summaryLabel} style={typographyStyles.s}>
+                {/* <span className={styles.summaryLabel} style={typographyStyles.s}>
                   Signed in as
-                </span>
+                </span> */}
                 <span className={styles.summaryName} style={typographyStyles.p2}>
                   {user.name || "Account"}
                 </span>
@@ -192,19 +194,10 @@ export function AuthUserMenu() {
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  router.push("/account/settings");
+                  setSettingsOpen(true);
                 }}
               >
                 Account settings
-              </MenuItem>
-              <MenuItem
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  router.push("/account/security");
-                }}
-              >
-                Security
               </MenuItem>
               <MenuDivider />
               <MenuItem
@@ -221,6 +214,10 @@ export function AuthUserMenu() {
             document.body,
           )
         : null}
+      <AuthAccountSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   );
 }

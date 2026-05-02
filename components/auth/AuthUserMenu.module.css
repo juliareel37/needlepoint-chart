@@ -83,10 +83,10 @@
   color: var(--text-secondary);
   word-break: break-word;
 }
-
+/* 
 .signOutItem {
   color: var(--status-destructive-strong);
-}
+} */
 
 @media (hover: hover) and (pointer: fine) {
   .trigger:hover {
