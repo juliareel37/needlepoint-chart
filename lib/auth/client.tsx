@@ -21,6 +21,7 @@ export function AuthProvider({
   return (
     <NeonAuthUIProvider
       authClient={authClient}
+      basePath="/sign-in"
       credentials={{
         forgotPassword: true,
         rememberMe: true,
@@ -70,13 +71,15 @@ export function AuthUserButton() {
 }
 
 export function AuthSignInPage({
+  pathname,
   redirectUrl,
 }: {
+  pathname: string;
   redirectUrl: string;
 }) {
-  return <AuthView pathname="sign-in" redirectTo={redirectUrl} />;
+  return <AuthView pathname={pathname} redirectTo={redirectUrl} />;
 }
 
-export function AuthAccountPage() {
-  return <AccountView pathname="settings" />;
+export function AuthAccountPage({ pathname }: { pathname: string }) {
+  return <AccountView pathname={pathname} />;
 }

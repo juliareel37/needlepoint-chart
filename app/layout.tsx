@@ -140,12 +140,12 @@ export default function RootLayout({
   }
 
   return (
-    <AuthProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-        </head>
-        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
+      <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>
             <div id="app-top-banner" className="app-top-banner-slot" />
             <div
@@ -204,8 +204,8 @@ export default function RootLayout({
               {children}
             </div>
           </div>
-        </body>
-      </html>
-    </AuthProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }
