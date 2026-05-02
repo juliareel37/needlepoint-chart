@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { createEditorV2AuthHandoffRedirectUrl } from "@/components/editor-v2/app/editorV2AuthHandoff";
-import { AuthSignedIn, AuthSignedOut, AuthUserButton } from "@/lib/auth/client";
+import { AuthSignedIn, AuthSignedOut } from "@/lib/auth/client";
+import { AuthUserMenu } from "./AuthUserMenu";
 import { useOpenSignIn } from "./useOpenSignIn";
 
 type EditorV2WindowWithDraftGetter = Window & {
@@ -27,7 +28,7 @@ export default function AuthButtons() {
     return (
     <>
       <AuthSignedIn>
-        <AuthUserButton />
+        <AuthUserMenu />
       </AuthSignedIn>
       <AuthSignedOut>
         <Button

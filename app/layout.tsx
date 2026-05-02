@@ -3,7 +3,6 @@ import { Manrope, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
-import "@neondatabase/auth/ui/css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
 import { AuthProvider } from "@/lib/auth/client";

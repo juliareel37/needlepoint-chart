@@ -1,0 +1,259 @@
+.page {
+  min-height: calc(100dvh - var(--app-top-offset, 52px));
+  padding: 40px 20px 56px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-100) 64%, transparent) 0%, transparent 46%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-card) 86%, transparent) 0%, var(--surface-app) 100%);
+}
+
+.shell {
+  width: min(1080px, 100%);
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 520px);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.aside {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.heroPanel {
+  min-height: 100%;
+  justify-content: space-between;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-100) 78%, var(--surface-card));
+  color: var(--brand-600);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.heroCopy {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.featureList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+}
+
+.featureDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--brand-400);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-200) 56%, transparent);
+  flex: 0 0 auto;
+}
+
+.supportPanel {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-card) 86%, transparent), color-mix(in srgb, var(--brand-50) 82%, transparent));
+}
+
+.mainPanel {
+  padding: 22px;
+  gap: 18px;
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.status {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.statusError {
+  background: var(--status-destructive-soft);
+  border-color: color-mix(in srgb, var(--status-destructive-base) 28%, transparent);
+  color: var(--status-destructive-deep);
+}
+
+.statusSuccess {
+  background: var(--status-success-soft);
+  border-color: color-mix(in srgb, var(--status-success-base) 28%, transparent);
+  color: var(--status-success-strong);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fullWidthButton {
+  width: 100%;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rememberRow {
+  color: var(--text-secondary);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.link {
+  color: var(--brand-600);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  background: var(--ui-border-reg);
+}
+
+.accountGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.accountDetailList {
+  display: grid;
+  gap: 12px;
+}
+
+.accountDetail {
+  display: grid;
+  gap: 4px;
+}
+
+.accountDetailLabel {
+  color: var(--text-secondary);
+}
+
+.accountDetailValue {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--brand-300), var(--brand-500));
+  color: var(--neutral-0);
+  box-shadow: var(--ui-shadow-md);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.accountMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.accountName {
+  color: var(--text-primary);
+}
+
+.accountEmail {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+@media (max-width: 920px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 24px 16px 40px;
+  }
+
+  .mainPanel {
+    padding: 18px;
+  }
+}

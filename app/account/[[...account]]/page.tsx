@@ -1,4 +1,4 @@
-import { AuthAccountPage } from "@/lib/auth/client";
+import { AuthAccountPageContent } from "@/components/auth/AuthAccountPageContent";
 
 const DEFAULT_ACCOUNT_PATHNAME = "settings";
 const VALID_ACCOUNT_PATHNAMES = new Set([
@@ -24,5 +24,5 @@ export default async function AccountPage({
   const routeParams = await params;
   const pathname = normalizeAccountPathname(routeParams.account);
 
-  return <AuthAccountPage pathname={pathname} />;
+  return <AuthAccountPageContent pathname={pathname} />;
 }
