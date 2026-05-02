@@ -245,6 +245,16 @@
   min-width: 0;
 }
 
+.authMethodBadge {
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
+  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  letter-spacing: 0.02em;
+}
+
 .accountName {
   color: var(--text-primary);
 }
@@ -353,6 +363,11 @@
 :global(:root[data-theme="dark"]) .featureDot {
   background: color-mix(in srgb, var(--brand-300) 88%, white);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-600) 44%, transparent);
+}
+
+:global(:root[data-theme="dark"]) .authMethodBadge {
+  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }
 
 :global(:root[data-theme="dark"]) .supportPanel {

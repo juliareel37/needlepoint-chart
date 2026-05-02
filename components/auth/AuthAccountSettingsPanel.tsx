@@ -12,6 +12,7 @@ import {
   panelMutedTextStyle,
 } from "@/components/design-system";
 import { useAuthActions, useAuthSession } from "@/lib/auth/client";
+import type { AccountSettingsContext } from "@/lib/auth/account-settings";
 import styles from "./AuthPage.module.css";
 
 type StatusState =
@@ -60,6 +61,10 @@ export function AuthAccountSettingsPanel({
   const { isLoaded, isSignedIn, refetch, user } = useAuthSession();
   const [nameValue, setNameValue] = useState("");
   const [emailValue, setEmailValue] = useState("");
+  const [accountSettingsContext, setAccountSettingsContext] =
+    useState<AccountSettingsContext | null>(null);
+  const [isAccountSettingsContextLoading, setIsAccountSettingsContextLoading] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<StatusState>(null);
 
@@ -67,13 +72,61 @@ export function AuthAccountSettingsPanel({
   const currentEmail = user?.email ?? "";
   const nextName = nameValue.trim();
   const nextEmail = emailValue.trim();
-  const hasChanges = nextName !== currentName || nextEmail !== currentEmail;
+  const isGoogleOAuthUser = accountSettingsContext?.authMethod === "google_oauth";
+  const hasChanges = isGoogleOAuthUser
+    ? nextName !== currentName
+    : nextName !== currentName || nextEmail !== currentEmail;
 
   useEffect(() => {
     setNameValue(currentName);
     setEmailValue(currentEmail);
     setStatus(null);
   }, [currentEmail, currentName, user?.id]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !user) {
+      setAccountSettingsContext(null);
+      setIsAccountSettingsContextLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function loadAccountSettingsContext() {
+      try {
+        setIsAccountSettingsContextLoading(true);
+        const response = await fetch("/api/auth/account-settings-context", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to load account settings context.");
+        }
+
+        const data = (await response.json()) as {
+          context: AccountSettingsContext | null;
+        };
+
+        if (!isCancelled) {
+          setAccountSettingsContext(data.context);
+        }
+      } catch {
+        if (!isCancelled) {
+          setAccountSettingsContext(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsAccountSettingsContextLoading(false);
+        }
+      }
+    }
+
+    void loadAccountSettingsContext();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]);
 
   async function handleSignOut() {
     try {
@@ -111,7 +164,7 @@ export function AuthAccountSettingsPanel({
       return;
     }
 
-    if (!nextEmail) {
+    if (!isGoogleOAuthUser && !nextEmail) {
       setStatus({
         tone: "error",
         message: "Please enter a valid email address.",
@@ -148,7 +201,7 @@ export function AuthAccountSettingsPanel({
       }
     }
 
-    if (nextEmail !== currentEmail) {
+    if (!isGoogleOAuthUser && nextEmail !== currentEmail) {
       try {
         const result = await changeEmail({
           newEmail: nextEmail,
@@ -199,7 +252,9 @@ export function AuthAccountSettingsPanel({
 
     setStatus({
       tone: "success",
-      message: "Your account settings were updated.",
+      message: isGoogleOAuthUser
+        ? "Your profile details were updated."
+        : "Your account settings were updated.",
     });
   }
 
@@ -264,19 +319,27 @@ export function AuthAccountSettingsPanel({
                 <span className={styles.accountEmail} style={typographyStyles.p2}>
                   {user.email}
                 </span>
+                {/* <span className={styles.authMethodBadge} style={typographyStyles.s}>
+                  {accountSettingsContext?.authMethodLabel ??
+                    (isAccountSettingsContextLoading ? "Checking sign-in method..." : "Account")}
+                </span> */}
               </div>
             </div>
           </Panel>
 
           <Panel
             className={styles.mainPanel}
-            title="Account settings"
-            // description="Update your profile name here. Email changes send a confirmation link before the new address becomes active."
+            title={isGoogleOAuthUser ? "Google account profile" : "Account settings"}
+            // description={
+            //   accountSettingsContext?.authMethodHint ??
+            //   "Update the account details used to identify you in the app."
+            // }
           >
             <form className={styles.form} onSubmit={handleAccountUpdate}>
               {renderStatus()}
-              <Field label="Name" 
-              // hint="This is what the app shows in your account menu and settings."
+              <Field
+                label="Name"
+                // hint="This is what the app shows in your account menu and settings."
               >
                 <FieldInput
                   type="text"
@@ -289,7 +352,11 @@ export function AuthAccountSettingsPanel({
               </Field>
               <Field
                 label="Email"
-                // hint="Changing this sends a confirmation email to the new address before your sign-in email actually switches."
+                // hint={
+                //   isGoogleOAuthUser
+                //     ? "This app reads your sign-in email from Google, so it stays read-only here."
+                //     : "Changing this sends a confirmation email before the new address becomes active."
+                // }
               >
                 <FieldInput
                   type="email"
@@ -297,33 +364,22 @@ export function AuthAccountSettingsPanel({
                   value={emailValue}
                   onChange={(event) => setEmailValue(event.currentTarget.value)}
                   placeholder="you@example.com"
+                  readOnly={isGoogleOAuthUser}
+                  disabled={isGoogleOAuthUser}
                   required
                 />
               </Field>
-              {/* <div className={styles.accountDetailList}>
-                <div className={styles.accountDetail}>
-                  <span className={styles.accountDetailLabel} style={typographyStyles.s}>
-                    Email verification
-                  </span>
-                  <span className={styles.accountDetailValue} style={typographyStyles.p2}>
-                    {user.emailVerified ? "Verified" : "Pending verification"}
-                  </span>
-                </div>
-                <div className={styles.accountDetail}>
-                  <span className={styles.accountDetailLabel} style={typographyStyles.s}>
-                    User ID
-                  </span>
-                  <span className={styles.accountDetailValue} style={typographyStyles.p2}>
-                    {user.id}
-                  </span>
-                </div>
-              </div> */}
               <div className={styles.buttonRow}>
-                {/* {hasChanges ? (
-                  <Button type="button" variant="secondary" onClick={handleResetForm} disabled={isSubmitting}>
+                {hasChanges ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleResetForm}
+                    disabled={isSubmitting}
+                  >
                     Reset
                   </Button>
-                ) : null} */}
+                ) : null}
                 <Button type="submit" variant="primary" disabled={isSubmitting || !hasChanges}>
                   {isSubmitting ? "Saving..." : "Save changes"}
                 </Button>
@@ -333,16 +389,38 @@ export function AuthAccountSettingsPanel({
 
           <Panel
             className={styles.mainPanel}
-            title="Password & recovery"
-            description="Email/password users can use the reset flow at any time. Google sign-in is managed through your Google account."
+            title={isGoogleOAuthUser ? "Google sign-in" : "Password & recovery"}
+            description={
+              isGoogleOAuthUser
+                ? "Password changes and sign-in security are managed through your Google account."
+                : "Reset your password or recover access without leaving the app."
+            }
           >
             <p style={panelMutedTextStyle}>
-              If you need to rotate your password, the reset flow is the safest path for now.
+              {isGoogleOAuthUser
+                ? "Need to change how you sign in? Update it from Google, then come back here for app-specific profile edits."
+                : "If you need to rotate your password, the reset flow is the safest path for now."}
             </p>
             <div className={styles.buttonRow}>
-              <Link href="/sign-in/forgot-password" className={styles.link} style={typographyStyles.p2}>
-                Reset my password
-              </Link>
+              {isGoogleOAuthUser ? (
+                <a
+                  href="https://myaccount.google.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.link}
+                  style={typographyStyles.p2}
+                >
+                  Open Google account
+                </a>
+              ) : (
+                <Link
+                  href="/sign-in/forgot-password"
+                  className={styles.link}
+                  style={typographyStyles.p2}
+                >
+                  Reset my password
+                </Link>
+              )}
               {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </Button> */}

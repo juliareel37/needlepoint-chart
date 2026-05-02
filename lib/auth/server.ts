@@ -1,4 +1,5 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { getAccountSettingsContextFromProviderIds, type AccountSettingsContext } from "./account-settings";
 
 const neonAuthBaseUrl = process.env.NEON_AUTH_BASE_URL;
 const neonAuthCookieSecret = process.env.NEON_AUTH_COOKIE_SECRET;
@@ -29,4 +30,15 @@ export async function getAuthSession(): Promise<AuthSession> {
 
 export async function getCurrentUserId(): Promise<string | null> {
   return (await getAuthSession()).userId;
+}
+
+export async function getAccountSettingsContext(): Promise<AccountSettingsContext | null> {
+  const { data: session } = await auth.getSession();
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const { data: accounts } = await auth.listAccounts();
+  const providerIds = accounts?.map((account) => account.providerId) ?? [];
+  return getAccountSettingsContextFromProviderIds(providerIds);
 }
