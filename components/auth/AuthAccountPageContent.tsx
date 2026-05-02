@@ -8,7 +8,7 @@ import styles from "./AuthPage.module.css";
 
 export function AuthAccountPageContent({ pathname }: { pathname: string }) {
   const title = "Account settings";
-  const description = "Review the account details Neon Auth is currently providing to the app.";
+  const description = "Review and update the account details Neon Auth is currently providing to the app.";
 
   return (
     <div className={styles.page}>

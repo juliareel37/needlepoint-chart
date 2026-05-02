@@ -34,12 +34,16 @@ export function useAuthStatus() {
 
 export function useAuthActions() {
   return {
+    changeEmail: authClient.changeEmail,
+    changePassword: authClient.changePassword,
     requestPasswordReset: authClient.requestPasswordReset,
+    sendVerificationEmail: authClient.sendVerificationEmail,
     resetPassword: authClient.resetPassword,
     signInWithEmail: authClient.signIn.email,
     signInWithGoogle: authClient.signIn.social,
     signOut: authClient.signOut,
     signUpWithEmail: authClient.signUp.email,
+    updateUser: authClient.updateUser,
   };
 }
 
