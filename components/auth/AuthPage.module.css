@@ -249,20 +249,25 @@
 
 .modalOverlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: var(--z-modal);
   display: grid;
   place-items: center;
-  padding: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
-    rgba(10, 15, 26, 0.22);
-  backdrop-filter: blur(3px);
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.24), transparent 38%),
+    rgba(10, 15, 26, 0.42);
 }
 
 .modalShell {
-  width: min(560px, calc(100vw - 32px));
-  max-height: calc(100dvh - var(--app-header-height, 52px) - 32px);
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100dvh - var(--app-header-height, 52px) - 40px);
   min-height: 0;
 }
 

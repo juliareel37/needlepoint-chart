@@ -61,7 +61,9 @@ export function EditorV2Workspace({
   onStartOver,
   persistentSuccessNotification,
   onDismissPersistentSuccessNotification,
+  onCloseSetupModal,
   setupModal,
+  setupModalMode,
   setupModalOpen,
 }: {
   canvasLoading: boolean;
@@ -118,7 +120,9 @@ export function EditorV2Workspace({
   onStartOver: () => void;
   persistentSuccessNotification: EditorV2SuccessNotification | null;
   onDismissPersistentSuccessNotification: () => void;
+  onCloseSetupModal: () => void;
   setupModal: ReactNode;
+  setupModalMode: "full" | "new-only";
   setupModalOpen: boolean;
 }) {
   const [exportButtonState, setExportButtonState] =
@@ -287,7 +291,9 @@ export function EditorV2Workspace({
 
           onDismissPersistentSuccessNotification();
         }}
+        onCloseSetupModal={onCloseSetupModal}
         setupModal={setupModal}
+        setupModalMode={setupModalMode}
         setupModalOpen={setupModalOpen}
       />
     </div>

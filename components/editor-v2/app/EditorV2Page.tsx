@@ -937,7 +937,9 @@ export function EditorV2Page({
         }}
         persistentSuccessNotification={restoreSuccessNotification}
         onDismissPersistentSuccessNotification={() => setRestoreSuccessNotification(null)}
+        onCloseSetupModal={() => setSetupModalOpen(false)}
         setupModalOpen={setupModalOpen}
+        setupModalMode={setupModalMode}
         setupModal={
           <EditorV2SetupModal
             canClose={!isInitialSession}

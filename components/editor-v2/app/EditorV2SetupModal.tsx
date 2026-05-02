@@ -171,6 +171,7 @@ export function EditorV2SetupModal({
       className={[styles.modal, compactMode ? styles.modalCompact : null]
         .filter(Boolean)
         .join(" ")}
+      onClick={(event) => event.stopPropagation()}
       role="dialog"
       aria-modal="true"
       aria-labelledby="editor-v2-setup-title"

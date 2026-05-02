@@ -149,6 +149,7 @@ export function EditorV2Shell({
   onRestoreVersion,
   onRestoreVersionAsCopy,
   onStartOver,
+  onCloseSetupModal,
   hasPersistableUnsavedChanges,
   recoveredLocalChanges,
   saveButtonState,
@@ -166,6 +167,7 @@ export function EditorV2Shell({
   selectedStorageId,
   setSelectedStorageId,
   setupModal,
+  setupModalMode,
   setupModalOpen,
   successNotification,
 }: {
@@ -202,6 +204,7 @@ export function EditorV2Shell({
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
   onStartOver: () => void;
+  onCloseSetupModal: () => void;
   hasPersistableUnsavedChanges: boolean;
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
@@ -223,6 +226,7 @@ export function EditorV2Shell({
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   setupModal: ReactNode;
+  setupModalMode: "full" | "new-only";
   setupModalOpen: boolean;
   successNotification: EditorV2SuccessNotification | null;
 }) {
@@ -247,6 +251,7 @@ export function EditorV2Shell({
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const canUndo = getCanUndo(state);
   const canRedo = getCanRedo(state);
+  const suppressHeaderForSetupModal = setupModalOpen && setupModalMode === "full";
   const hasPaintedCells = state.document.grid.cells.some((cell) => cell !== null);
   const trace = getTraceDocument(state);
   const viewport = getViewport(state);
@@ -1684,7 +1689,7 @@ export function EditorV2Shell({
 
   return (
     <main className={styles.shell}>
-      {!setupModalOpen &&
+      {!suppressHeaderForSetupModal &&
       !isVersionHistoryMode &&
       headerFileLeftTarget &&
       saveMode === "manual" &&
@@ -1707,7 +1712,7 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
               showHeaderSaveStatus ? (
@@ -1776,7 +1781,7 @@ export function EditorV2Shell({
             headerAutosaveTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && showTopSaveBanner && topBannerTarget
+      {!isVersionHistoryMode && showTopSaveBanner && topBannerTarget
         ? createPortal(
             <SaveStatusCard
               autoSaveEnabled={false}
@@ -1792,7 +1797,7 @@ export function EditorV2Shell({
             topBannerTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && headerHistoryTarget && isBottomPanelLayout
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerHistoryTarget && isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerHistoryControls}>
               {previewMode ? (
@@ -1837,7 +1842,7 @@ export function EditorV2Shell({
             headerHistoryTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && headerOverflowTarget && isBottomPanelLayout
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerOverflowTarget && isBottomPanelLayout
         ? createPortal(
             <SingleSelectDropdown
               ariaLabel="More actions"
@@ -1869,7 +1874,7 @@ export function EditorV2Shell({
             headerOverflowTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && headerActionsTarget && !isBottomPanelLayout
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerActionsTarget && !isBottomPanelLayout
         ? createPortal(
             <div className={styles.headerActionGroup}>
               {isCompactHistoryLayout ? (
@@ -1934,7 +1939,7 @@ export function EditorV2Shell({
             headerActionsTarget,
           )
         : null}
-      {!setupModalOpen && !isVersionHistoryMode && headerTitleTarget
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerTitleTarget
         ? createPortal(
             <EditableDesignTitle
               className={styles.headerDesignTitle}
@@ -1946,7 +1951,7 @@ export function EditorV2Shell({
             headerTitleTarget,
           )
         : null}
-      {!setupModalOpen && isVersionHistoryMode && headerFileLeftTarget
+      {!suppressHeaderForSetupModal && isVersionHistoryMode && headerFileLeftTarget
         ? createPortal(
             <Button
               type="button"
@@ -1969,7 +1974,7 @@ export function EditorV2Shell({
             headerTitleTarget,
           )
         : null} */}
-      {!setupModalOpen && isVersionHistoryMode && headerActionsTarget
+      {!suppressHeaderForSetupModal && isVersionHistoryMode && headerActionsTarget
         ? createPortal(
             <div className={styles.versionHistoryHeaderActionGroup}>
               <Button
@@ -2438,7 +2443,15 @@ export function EditorV2Shell({
 
       {mounted && setupModalOpen
         ? createPortal(
-            <div className={styles.modalOverlay}>
+            <div
+              className={styles.modalOverlay}
+              data-blur-mode={setupModalMode}
+              onClick={() => {
+                if (setupModalMode === "new-only") {
+                  onCloseSetupModal();
+                }
+              }}
+            >
               {setupModal}
             </div>,
             window.document.body,
