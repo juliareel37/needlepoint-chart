@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { typographyStyles } from "@/app/design-system/typography";
+import { IS_DEV_APP_MODE } from "@/lib/editor-v2/config";
 import {
   Button,
   CheckboxField,
@@ -482,53 +483,55 @@ export function AuthSignInPageContent({
 
   return (
     <div className={styles.page}>
-      <div className={styles.shell}>
-        <aside className={styles.aside}>
-          <Panel className={styles.heroPanel}>
-            <div className={styles.header}>
-              <span className={styles.eyebrow} style={typographyStyles.s}>
-                Authentication
-              </span>
-              <h1 className={styles.heroTitle} style={typographyStyles.h2}>
-                {titles.title}
-              </h1>
-              <p className={styles.heroCopy} style={typographyStyles.p1}>
-                {titles.description}
-              </p>
-            </div>
-            <ul className={styles.featureList}>
-              <li className={styles.featureItem} style={typographyStyles.p2}>
-                <span className={styles.featureDot} aria-hidden="true" />
-                Your auth entry points now inherit the same tokens and dark mode rules as the rest of the app.
-              </li>
-              <li className={styles.featureItem} style={typographyStyles.p2}>
-                <span className={styles.featureDot} aria-hidden="true" />
-                Saved designs and editor ownership still map to your existing app user IDs.
-              </li>
-              <li className={styles.featureItem} style={typographyStyles.p2}>
-                <span className={styles.featureDot} aria-hidden="true" />
-                Google OAuth and email/password are both powered by Neon, just without the global Neon theme layer.
-              </li>
-            </ul>
-          </Panel>
-          <Panel
-            className={styles.supportPanel}
-            title="Need a specific route?"
-            description="You can still move directly between sign in, sign up, and password recovery without leaving this flow."
-          >
-            <div className={styles.linkRow}>
-              <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-                Sign in
-              </Link>
-              <Link href={`/sign-in/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-                Sign up
-              </Link>
-              <Link href={`/sign-in/forgot-password?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-                Forgot password
-              </Link>
-            </div>
-          </Panel>
-        </aside>
+      <div className={[styles.shell, !IS_DEV_APP_MODE ? styles.shellCompact : null].filter(Boolean).join(" ")}>
+        {IS_DEV_APP_MODE ? (
+          <aside className={styles.aside}>
+            <Panel className={styles.heroPanel}>
+              <div className={styles.header}>
+                <span className={styles.eyebrow} style={typographyStyles.s}>
+                  Authentication
+                </span>
+                <h1 className={styles.heroTitle} style={typographyStyles.h2}>
+                  {titles.title}
+                </h1>
+                <p className={styles.heroCopy} style={typographyStyles.p1}>
+                  {titles.description}
+                </p>
+              </div>
+              <ul className={styles.featureList}>
+                <li className={styles.featureItem} style={typographyStyles.p2}>
+                  <span className={styles.featureDot} aria-hidden="true" />
+                  Your auth entry points now inherit the same tokens and dark mode rules as the rest of the app.
+                </li>
+                <li className={styles.featureItem} style={typographyStyles.p2}>
+                  <span className={styles.featureDot} aria-hidden="true" />
+                  Saved designs and editor ownership still map to your existing app user IDs.
+                </li>
+                <li className={styles.featureItem} style={typographyStyles.p2}>
+                  <span className={styles.featureDot} aria-hidden="true" />
+                  Google OAuth and email/password are both powered by Neon, just without the global Neon theme layer.
+                </li>
+              </ul>
+            </Panel>
+            <Panel
+              className={styles.supportPanel}
+              title="Need a specific route?"
+              description="You can still move directly between sign in, sign up, and password recovery without leaving this flow."
+            >
+              <div className={styles.linkRow}>
+                <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
+                  Sign in
+                </Link>
+                <Link href={`/sign-in/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
+                  Sign up
+                </Link>
+                <Link href={`/sign-in/forgot-password?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
+                  Forgot password
+                </Link>
+              </div>
+            </Panel>
+          </aside>
+        ) : null}
 
         <Panel className={styles.mainPanel}>
           <div className={styles.header}>
@@ -539,6 +542,17 @@ export function AuthSignInPageContent({
               {titles.description}
             </p>
           </div>
+          {!IS_DEV_APP_MODE && (pathname === "sign-in" || pathname === "sign-up") ? (
+            <div className={styles.linkRow}>
+              <Link
+                href={`/sign-in${pathname === "sign-up" ? "" : "/sign-up"}?redirect_url=${encodeURIComponent(redirectUrl)}`}
+                className={[styles.link, styles.linkStrong].join(" ")}
+                style={typographyStyles.p2}
+              >
+                {pathname === "sign-up" ? "Already have an account? Sign in" : "Need an account? Create one"}
+              </Link>
+            </div>
+          ) : null}
           {renderStatus()}
           {renderForm()}
         </Panel>

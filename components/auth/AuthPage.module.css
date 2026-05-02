@@ -16,6 +16,11 @@
   align-items: stretch;
 }
 
+.shellCompact {
+  width: min(520px, 100%);
+  grid-template-columns: minmax(0, 520px);
+}
+
 .aside {
   display: grid;
   gap: 16px;
@@ -151,12 +156,16 @@
 }
 
 .link {
-  color: var(--brand-600);
+  color: color-mix(in srgb, var(--brand-500) 58%, var(--text-primary));
   text-decoration: none;
 }
 
 .link:hover {
   text-decoration: underline;
+}
+
+.linkStrong {
+  color: var(--text-primary);
 }
 
 .divider {
@@ -256,4 +265,27 @@
   .mainPanel {
     padding: 18px;
   }
+}
+
+:global(:root[data-theme="dark"]) .eyebrow {
+  background: color-mix(in srgb, var(--brand-600) 42%, var(--surface-card));
+  color: color-mix(in srgb, var(--brand-100) 64%, var(--text-primary));
+}
+
+:global(:root[data-theme="dark"]) .featureDot {
+  background: color-mix(in srgb, var(--brand-300) 88%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-600) 44%, transparent);
+}
+
+:global(:root[data-theme="dark"]) .supportPanel {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-card) 92%, transparent), color-mix(in srgb, var(--brand-600) 18%, transparent));
+}
+
+:global(:root[data-theme="dark"]) .link {
+  color: color-mix(in srgb, var(--brand-100) 44%, var(--text-primary));
+}
+
+:global(:root[data-theme="dark"]) .linkStrong {
+  color: var(--text-primary);
 }
