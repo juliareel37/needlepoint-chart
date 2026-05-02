@@ -19,6 +19,28 @@ type StatusState =
   | { tone: "success"; message: string }
   | null;
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
   const source = name?.trim() || email?.trim() || "U";
   const words = source.split(/\s+/).filter(Boolean);
@@ -54,14 +76,18 @@ export function AuthAccountSettingsPanel({
   }, [currentEmail, currentName, user?.id]);
 
   async function handleSignOut() {
-    const result = await signOut();
-    if (result.error) {
+    try {
+      const result = await signOut();
+      if (result.error) {
+        return;
+      }
+
+      onAfterSignOut?.();
+      router.push("/");
+      router.refresh();
+    } catch {
       return;
     }
-
-    onAfterSignOut?.();
-    router.push("/");
-    router.refresh();
   }
 
   function handleResetForm() {
@@ -110,23 +136,31 @@ export function AuthAccountSettingsPanel({
     let emailError: string | null = null;
 
     if (nextName !== currentName) {
-      const result = await updateUser({ name: nextName });
-      if (result.error) {
-        nameError = result.error.message ?? "We couldn't update your display name.";
-      } else {
-        nameUpdated = true;
+      try {
+        const result = await updateUser({ name: nextName });
+        if (result.error) {
+          nameError = result.error.message ?? "We couldn't update your display name.";
+        } else {
+          nameUpdated = true;
+        }
+      } catch (error) {
+        nameError = getErrorMessage(error, "We couldn't update your display name.");
       }
     }
 
     if (nextEmail !== currentEmail) {
-      const result = await changeEmail({
-        newEmail: nextEmail,
-        callbackURL: typeof window === "undefined" ? undefined : window.location.href,
-      });
-      if (result.error) {
-        emailError = result.error.message ?? "We couldn't start the email change flow.";
-      } else {
-        emailChangeStarted = true;
+      try {
+        const result = await changeEmail({
+          newEmail: nextEmail,
+          callbackURL: typeof window === "undefined" ? undefined : window.location.href,
+        });
+        if (result.error) {
+          emailError = result.error.message ?? "We couldn't start the email change flow.";
+        } else {
+          emailChangeStarted = true;
+        }
+      } catch (error) {
+        emailError = getErrorMessage(error, "We couldn't start the email change flow.");
       }
     }
 

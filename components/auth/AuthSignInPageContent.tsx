@@ -29,6 +29,28 @@ type StatusState =
   | { tone: "success"; message: string }
   | null;
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 function getTitles(pathname: string) {
   switch (pathname as ViewName) {
     case "sign-up":
@@ -142,25 +164,32 @@ export function AuthSignInPageContent({
     setIsSubmitting(true);
     setStatus(null);
 
-    const result = await signInWithEmail({
-      email,
-      password,
-      callbackURL: redirectUrl,
-      rememberMe,
-    });
+    try {
+      const result = await signInWithEmail({
+        email,
+        password,
+        callbackURL: redirectUrl,
+        rememberMe,
+      });
 
-    setIsSubmitting(false);
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "We couldn't sign you in with that email and password.",
+        });
+        return;
+      }
 
-    if (result.error) {
+      router.replace(result.data.url ?? redirectUrl);
+      router.refresh();
+    } catch (error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "We couldn't sign you in with that email and password.",
+        message: getErrorMessage(error, "We couldn't sign you in with that email and password."),
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.replace(result.data.url ?? redirectUrl);
-    router.refresh();
   }
 
   async function handleEmailSignUp(event: FormEvent<HTMLFormElement>) {
@@ -168,29 +197,36 @@ export function AuthSignInPageContent({
     setIsSubmitting(true);
     setStatus(null);
 
-    const result = await signUpWithEmail({
-      name,
-      email,
-      password,
-      callbackURL: redirectUrl,
-    });
+    try {
+      const result = await signUpWithEmail({
+        name,
+        email,
+        password,
+        callbackURL: redirectUrl,
+      });
 
-    setIsSubmitting(false);
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "We couldn't create your account just yet.",
+        });
+        return;
+      }
 
-    if (result.error) {
+      setStatus({
+        tone: "success",
+        message: "Your account is ready. Redirecting you into Wippa now.",
+      });
+      router.replace(redirectUrl);
+      router.refresh();
+    } catch (error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "We couldn't create your account just yet.",
+        message: getErrorMessage(error, "We couldn't create your account just yet."),
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setStatus({
-      tone: "success",
-      message: "Your account is ready. Redirecting you into Wippa now.",
-    });
-    router.replace(redirectUrl);
-    router.refresh();
   }
 
   async function handleGoogleSignIn() {
@@ -206,30 +242,37 @@ export function AuthSignInPageContent({
         ? `${window.location.origin}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`
         : `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
 
-    const result = await signInWithGoogle({
-      provider: "google",
-      callbackURL,
-      newUserCallbackURL: callbackURL,
-      errorCallbackURL,
-    });
+    try {
+      const result = await signInWithGoogle({
+        provider: "google",
+        callbackURL,
+        newUserCallbackURL: callbackURL,
+        errorCallbackURL,
+      });
 
-    setIsSubmitting(false);
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "Google sign-in could not start. Please try again.",
+        });
+        return;
+      }
 
-    if (result.error) {
+      if (result.data.url) {
+        window.location.assign(result.data.url);
+        return;
+      }
+
+      router.replace(redirectUrl);
+      router.refresh();
+    } catch (error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "Google sign-in could not start. Please try again.",
+        message: getErrorMessage(error, "Google sign-in could not start. Please try again."),
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (result.data.url) {
-      window.location.assign(result.data.url);
-      return;
-    }
-
-    router.replace(redirectUrl);
-    router.refresh();
   }
 
   async function handleForgotPassword(event: FormEvent<HTMLFormElement>) {
@@ -242,25 +285,32 @@ export function AuthSignInPageContent({
         ? `${window.location.origin}/sign-in/reset-password`
         : "/sign-in/reset-password";
 
-    const result = await requestPasswordReset({
-      email,
-      redirectTo,
-    });
+    try {
+      const result = await requestPasswordReset({
+        email,
+        redirectTo,
+      });
 
-    setIsSubmitting(false);
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "We couldn't send that reset email.",
+        });
+        return;
+      }
 
-    if (result.error) {
+      setStatus({
+        tone: "success",
+        message: "Password reset email sent. Check your inbox for the recovery link.",
+      });
+    } catch (error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "We couldn't send that reset email.",
+        message: getErrorMessage(error, "We couldn't send that reset email."),
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setStatus({
-      tone: "success",
-      message: "Password reset email sent. Check your inbox for the recovery link.",
-    });
   }
 
   async function handleResetPassword(event: FormEvent<HTMLFormElement>) {
@@ -268,27 +318,34 @@ export function AuthSignInPageContent({
     setIsSubmitting(true);
     setStatus(null);
 
-    const result = await resetPassword({
-      newPassword: resetPasswordValue,
-      token,
-    });
+    try {
+      const result = await resetPassword({
+        newPassword: resetPasswordValue,
+        token,
+      });
 
-    setIsSubmitting(false);
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "That reset link is invalid or expired.",
+        });
+        return;
+      }
 
-    if (result.error) {
+      setStatus({
+        tone: "success",
+        message: "Password updated. You can sign in with your new password now.",
+      });
+      router.replace(`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`);
+      router.refresh();
+    } catch (error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "That reset link is invalid or expired.",
+        message: getErrorMessage(error, "That reset link is invalid or expired."),
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setStatus({
-      tone: "success",
-      message: "Password updated. You can sign in with your new password now.",
-    });
-    router.replace(`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`);
-    router.refresh();
   }
 
   function renderStatus() {
