@@ -341,11 +341,11 @@ export function AuthAccountSettingsPanel({
             </p>
             <div className={styles.buttonRow}>
               <Link href="/sign-in/forgot-password" className={styles.link} style={typographyStyles.p2}>
-                Open password reset
+                Reset my password
               </Link>
-              <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
+              {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
-              </Button>
+              </Button> */}
             </div>
           </Panel>
         </>
