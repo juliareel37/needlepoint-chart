@@ -237,11 +237,13 @@ export function AuthAccountSettingsPanel({
           <Panel
             className={styles.mainPanel}
             title="Account settings"
-            description="Update your profile name here. Email changes send a confirmation link before the new address becomes active."
+            // description="Update your profile name here. Email changes send a confirmation link before the new address becomes active."
           >
             <form className={styles.form} onSubmit={handleAccountUpdate}>
               {renderStatus()}
-              <Field label="Name" hint="This is what the app shows in your account menu and settings.">
+              <Field label="Name" 
+              // hint="This is what the app shows in your account menu and settings."
+              >
                 <FieldInput
                   type="text"
                   autoComplete="name"
@@ -253,7 +255,7 @@ export function AuthAccountSettingsPanel({
               </Field>
               <Field
                 label="Email"
-                hint="Changing this sends a confirmation email to the new address before your sign-in email actually switches."
+                // hint="Changing this sends a confirmation email to the new address before your sign-in email actually switches."
               >
                 <FieldInput
                   type="email"
@@ -264,7 +266,7 @@ export function AuthAccountSettingsPanel({
                   required
                 />
               </Field>
-              <div className={styles.accountDetailList}>
+              {/* <div className={styles.accountDetailList}>
                 <div className={styles.accountDetail}>
                   <span className={styles.accountDetailLabel} style={typographyStyles.s}>
                     Email verification
@@ -281,13 +283,13 @@ export function AuthAccountSettingsPanel({
                     {user.id}
                   </span>
                 </div>
-              </div>
+              </div> */}
               <div className={styles.buttonRow}>
-                {hasChanges ? (
+                {/* {hasChanges ? (
                   <Button type="button" variant="secondary" onClick={handleResetForm} disabled={isSubmitting}>
                     Reset
                   </Button>
-                ) : null}
+                ) : null} */}
                 <Button type="submit" variant="primary" disabled={isSubmitting || !hasChanges}>
                   {isSubmitting ? "Saving..." : "Save changes"}
                 </Button>

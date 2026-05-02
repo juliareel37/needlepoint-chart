@@ -66,9 +66,9 @@ export function AuthAccountSettingsModal({
         <div className={styles.modalCard}>
           <div className={styles.modalHeader}>
             <div className={styles.modalTitleBlock}>
-              <span className={styles.eyebrow} style={typographyStyles.s}>
+              {/* <span className={styles.eyebrow} style={typographyStyles.s}>
                 Account
-              </span>
+              </span> */}
               <h2 id={titleId} className={styles.title} style={typographyStyles.h3}>
                 Account settings
               </h2>
