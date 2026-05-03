@@ -19,16 +19,13 @@
 }
 
 .shellContent[data-modal-open="true"] {
-  /* filter: blur(18px) saturate(0.82); */
-  opacity: 0.34;
-  transform: scale(0.992);
   pointer-events: none;
   user-select: none;
 }
 
 .modalOverlay {
   position: fixed;
-  top: var(--app-top-offset, 52px);
+  top: 0;
   right: 0;
   bottom: 0;
   left: 0;
@@ -42,6 +39,9 @@
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.24), transparent 38%),
     rgba(10, 15, 26, 0.42);
+}
+
+.modalOverlay[data-blur-mode="full"] {
   backdrop-filter: blur(6px);
 }
 

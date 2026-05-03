@@ -4,7 +4,7 @@ import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesi
 import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 
 const {
-  authMock,
+  getCurrentUserIdMock,
   findFirstMock,
   updateMock,
   deleteMock,
@@ -14,7 +14,7 @@ const {
   transactionMock,
   deleteBlobIfExistsMock,
 } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+  getCurrentUserIdMock: vi.fn(),
   findFirstMock: vi.fn(),
   updateMock: vi.fn(),
   deleteMock: vi.fn(),
@@ -25,8 +25,8 @@ const {
   deleteBlobIfExistsMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUserId: getCurrentUserIdMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -80,7 +80,7 @@ describe("editor-v2 individual design routes", () => {
   });
 
   it("returns 404 for cross-user GET access", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost"), {
@@ -91,7 +91,7 @@ describe("editor-v2 individual design routes", () => {
   });
 
   it("returns 404 for cross-user PUT access", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue(null);
 
     const response = await PUT(
@@ -110,7 +110,7 @@ describe("editor-v2 individual design routes", () => {
   it("updates a saved design for the owning user", async () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: { trace: null },
@@ -173,7 +173,7 @@ describe("editor-v2 individual design routes", () => {
   it("creates a version snapshot when forceVersion is requested in autosave mode", async () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: { trace: null },
@@ -229,7 +229,7 @@ describe("editor-v2 individual design routes", () => {
   it("rejects stale baseVersion updates", async () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: { trace: null },
@@ -281,7 +281,7 @@ describe("editor-v2 individual design routes", () => {
     };
     const data = serializeEditorV2Document(state.document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: {
@@ -334,7 +334,7 @@ describe("editor-v2 individual design routes", () => {
     const document = createNewDesignState(2, 2).document;
     const data = serializeEditorV2Document(document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: { trace: null },
@@ -387,7 +387,7 @@ describe("editor-v2 individual design routes", () => {
   it("prunes the oldest retained version when the cap is exceeded", async () => {
     const data = serializeEditorV2Document(createNewDesignState(5, 6).document);
 
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: { trace: null },
@@ -433,7 +433,7 @@ describe("editor-v2 individual design routes", () => {
   });
 
   it("collects live and version blobs when deleting a design", async () => {
-    authMock.mockResolvedValue({ userId: "user_1" });
+    getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
       data: {

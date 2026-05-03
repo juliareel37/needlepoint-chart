@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "auth:link-neon-rehearsal": "node scripts/link-neon-auth-rehearsal.mjs",
+    "auth:migrate-clerk-users": "node scripts/migrate-clerk-users-to-neon.mjs",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
@@ -16,7 +18,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.25.1",
+    "@neondatabase/auth": "^0.3.0-beta",
     "@prisma/client": "^6.1.0",
+    "@stackframe/stack": "^2.8.85",
     "@vercel/blob": "^1.1.1",
     "jspdf": "^4.0.0",
     "next": "16.1.2",

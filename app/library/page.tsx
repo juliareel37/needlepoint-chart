@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { LibraryPageClient } from "./LibraryPageClient";
 
-export default async function LibraryPage() {
-  const { userId } = await auth();
+export const dynamic = "force-dynamic";
 
-  if (!userId) {
+export default async function LibraryPage() {
+  const appUserId = await getCurrentUserId();
+
+  if (!appUserId) {
     redirect("/sign-in");
   }
 
