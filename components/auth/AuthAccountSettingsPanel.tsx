@@ -198,6 +198,51 @@ export function AuthAccountSettingsPanel({
     }
   }
 
+  async function handleRequestPasswordReset() {
+    if (!user?.email) {
+      setStatus({
+        tone: "error",
+        message: "We couldn't find an email address for this account.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatus(null);
+
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/sign-in/reset-password`
+        : "/sign-in/reset-password";
+
+    try {
+      const result = await requestPasswordReset({
+        email: user.email,
+        redirectTo,
+      });
+
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "We couldn't send your password reset email.",
+        });
+        return;
+      }
+
+      setStatus({
+        tone: "success",
+        message: `We sent a password reset link to ${user.email}. Check your inbox to choose a new password.`,
+      });
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't send your password reset email."),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleAccountUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -421,7 +466,7 @@ export function AuthAccountSettingsPanel({
                 />
               </Field>
               <div className={styles.buttonRow}>
-                {hasChanges ? (
+                {/* {hasChanges ? (
                   <Button
                     type="button"
                     variant="secondary"
@@ -430,7 +475,7 @@ export function AuthAccountSettingsPanel({
                   >
                     Reset
                   </Button>
-                ) : null}
+                ) : null} */}
                 <Button type="submit" variant="primary" disabled={isSubmitting || !hasChanges}>
                   {isSubmitting ? "Saving..." : "Save changes"}
                 </Button>
@@ -440,21 +485,21 @@ export function AuthAccountSettingsPanel({
 
           <Panel
             className={styles.mainPanel}
-            title={canSetPassword ? "Set password" : showPasswordRecovery ? "Password & recovery" : "Google sign-in"}
-            description={
-              canSetPassword
-                ? "Add email and password as another way to sign in to this same account."
-                : showPasswordRecovery
-                  ? "Reset your password or recover access without leaving the app."
-                  : "Password changes and sign-in security are managed through your Google account."
-            }
+            title={canSetPassword ? "Set password" : showPasswordRecovery ? "Reset password" : "Set password"}
+            // description={
+            //   canSetPassword
+            //     ? "Add email and password as another way to sign in to this same account."
+            //     : showPasswordRecovery
+            //       ? "Reset your password or recover access without leaving the app."
+            //       : "Password changes and sign-in security are managed through your Google account."
+            // }
           >
             <p style={panelMutedTextStyle}>
               {canSetPassword
-                ? "We'll email you a secure link to create a password without interrupting your current Google sign-in."
+                ? "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account."
                 : showPasswordRecovery
-                  ? "If you need to rotate your password, the reset flow is the safest path for now."
-                  : "Need to change how you sign in? Update it from Google, then come back here for app-specific profile edits."}
+                  ? "Need to reset your password? We'll send you an email with a secure link to set a new one."
+                  : "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account."}
             </p>
             <div className={styles.buttonRow}>
               {canSetPassword ? (
@@ -477,13 +522,22 @@ export function AuthAccountSettingsPanel({
                   Open Google account
                 </a>
               ) : (
-                <Link
-                  href="/sign-in/forgot-password"
-                  className={styles.link}
-                  style={typographyStyles.p2}
+                // <Button
+                //   type="button"
+                //   variant="primary"
+                //   onClick={() => void handleRequestPasswordReset()}
+                //   disabled={isSubmitting || isAccountSettingsContextLoading}
+                // >
+                //   Send password reset email
+                // </Button>
+                 <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => void handleSetPassword()}
+                  disabled={isSubmitting || isAccountSettingsContextLoading}
                 >
-                  Reset my password
-                </Link>
+                  {isSubmitting ? "Sending..." : "Add password"}
+                </Button>
               )}
               {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
