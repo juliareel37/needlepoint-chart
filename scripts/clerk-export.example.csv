@@ -1,0 +1,2 @@
+id,first_name,last_name,username,primary_email_address,primary_phone_number,verified_email_addresses,unverified_email_addresses,verified_phone_numbers,unverified_phone_numbers,totp_secret,password_digest,password_hasher,created_at
+user_example,Test,User,testuser,test@example.com,,["test@example.com"],[],[],[],, "$2b$10$exampleexampleexampleexampleexampleexampleexampleexample",bcrypt,2026-01-01T00:00:00.000Z

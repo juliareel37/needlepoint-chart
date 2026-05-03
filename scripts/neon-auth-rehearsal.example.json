@@ -1,0 +1,12 @@
+[
+  {
+    "label": "Heavy legacy owner",
+    "legacyUserId": "user_39AQDIl4W7Nu99TMjuW3ZUWxwYU",
+    "neonEmail": "dev-heavy@example.com"
+  },
+  {
+    "label": "Secondary legacy owner",
+    "legacyUserId": "0f19f35e-444f-44bf-b550-b276c0908123",
+    "neonEmail": "dev-secondary@example.com"
+  }
+]
