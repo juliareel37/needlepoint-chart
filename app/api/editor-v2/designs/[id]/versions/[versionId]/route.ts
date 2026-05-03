@@ -10,8 +10,8 @@ type RouteContext =
   | { params: Promise<{ id: string; versionId: string }> };
 
 export async function GET(_req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   const design = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       createdAt: true,

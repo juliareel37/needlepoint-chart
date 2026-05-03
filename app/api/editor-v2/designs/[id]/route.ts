@@ -25,8 +25,8 @@ function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
 }
 
 export async function GET(_req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -37,7 +37,7 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   const design = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       data: true,
@@ -65,8 +65,8 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 export async function PUT(req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -94,7 +94,7 @@ export async function PUT(req: Request, context: RouteContext) {
   const now = new Date();
 
   const existing = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       data: true,
@@ -205,8 +205,8 @@ export async function PUT(req: Request, context: RouteContext) {
 }
 
 export async function DELETE(_req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -217,7 +217,7 @@ export async function DELETE(_req: Request, context: RouteContext) {
   }
 
   const existing = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       data: true,

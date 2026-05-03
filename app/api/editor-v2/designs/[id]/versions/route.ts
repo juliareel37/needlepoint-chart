@@ -32,8 +32,8 @@ function formatRestoredCopyTitle(title: string, timestamp: Date): string {
 }
 
 export async function GET(_req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -44,7 +44,7 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   const design = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: { id: true },
   });
   if (!design) {
@@ -65,8 +65,8 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 export async function POST(req: Request, context: RouteContext) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -82,7 +82,7 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   const existing = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       title: true,
@@ -135,7 +135,8 @@ export async function POST(req: Request, context: RouteContext) {
     const created = await prisma.$transaction(async (tx) => {
       const createdDesign = await tx.editorDesign.create({
         data: {
-          userId,
+          appUserId,
+          userId: appUserId,
           title: restoredCopyTitle,
           data: restoredCopyData as unknown as Prisma.InputJsonValue,
           gridWidth: restoredCopyData.grid.width,

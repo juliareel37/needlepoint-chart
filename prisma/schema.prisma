@@ -14,6 +14,31 @@ enum SaveSource {
   RESTORE
 }
 
+model AppUser {
+  id           String         @id @default(cuid())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  identities   AuthIdentity[]
+  editorDesigns EditorDesign[]
+}
+
+model AuthIdentity {
+  id             String   @id @default(cuid())
+  appUserId      String
+  provider       String
+  providerUserId String
+  email          String?
+  displayName    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appUser AppUser @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([appUserId])
+  @@index([email])
+}
+
 model PatternDraft {
   id              String           @id @default(cuid())
   userId          String
@@ -44,6 +69,7 @@ model PatternVersion {
 
 model EditorDesign {
   id              String              @id @default(cuid())
+  appUserId       String
   userId          String
   title           String
   data            Json
@@ -55,7 +81,9 @@ model EditorDesign {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   versions        EditorDesignVersion[]
+  appUser         AppUser             @relation(fields: [appUserId], references: [id], onDelete: Cascade)
 
+  @@index([appUserId])
   @@index([userId])
   @@index([updatedAt])
 }

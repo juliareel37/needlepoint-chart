@@ -121,10 +121,10 @@ describe("editor-v2 design collection routes", () => {
 
     expect(response.status).toBe(200);
     expect(countMock).toHaveBeenCalledWith({
-      where: { userId: "user_1" },
+      where: { appUserId: "user_1" },
     });
     expect(findManyMock).toHaveBeenCalledWith({
-      where: { userId: "user_1" },
+      where: { appUserId: "user_1" },
       orderBy: { updatedAt: "desc" },
       skip: 0,
       take: 7,
@@ -192,7 +192,7 @@ describe("editor-v2 design collection routes", () => {
 
     expect(response.status).toBe(200);
     expect(findManyMock).toHaveBeenCalledWith({
-      where: { userId: "user_1" },
+      where: { appUserId: "user_1" },
       orderBy: { updatedAt: "desc" },
       skip: 6,
       take: 7,
@@ -239,6 +239,7 @@ describe("editor-v2 design collection routes", () => {
     expect(response.status).toBe(200);
     expect(createMock).toHaveBeenCalledWith({
       data: {
+        appUserId: "user_1",
         userId: "user_1",
         title: "My New Design",
         data,

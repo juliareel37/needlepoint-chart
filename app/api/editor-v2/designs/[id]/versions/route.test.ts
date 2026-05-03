@@ -267,6 +267,7 @@ describe("editor-v2 design version routes", () => {
     expect(response.status).toBe(200);
     expect(designCreateMock).toHaveBeenCalledWith({
       data: {
+        appUserId: "user_1",
         userId: "user_1",
         title: expectedTitle,
         data: {
