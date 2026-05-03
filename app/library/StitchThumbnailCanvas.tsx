@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getContainedRect,
   getPositionedBounds,
@@ -45,6 +45,55 @@ export function StitchThumbnailCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchCanvasCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const traceImageCacheRef = useRef<Map<string, HTMLImageElement | null>>(new Map());
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    let frameId: number | null = null;
+
+    const syncBackgroundColor = () => {
+      const nextColor = getComputedStyle(root)
+        .getPropertyValue("--canvas-bg")
+        .trim();
+      setBackgroundColor(nextColor || "#ffffff");
+    };
+
+    const syncBackgroundColorDuringThemeTransition = () => {
+      syncBackgroundColor();
+
+      if (!root.hasAttribute("data-theme-transitioning")) {
+        frameId = null;
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(syncBackgroundColorDuringThemeTransition);
+    };
+
+    syncBackgroundColor();
+
+    const observer = new MutationObserver(() => {
+      syncBackgroundColor();
+
+      if (root.hasAttribute("data-theme-transitioning") && frameId === null) {
+        frameId = window.requestAnimationFrame(syncBackgroundColorDuringThemeTransition);
+      }
+    });
+    observer.observe(root, {
+      attributeFilter: ["data-theme", "data-theme-transitioning"],
+      attributes: true,
+    });
+
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const surface = surfaceRef.current;
@@ -101,13 +150,9 @@ export function StitchThumbnailCanvas({
       if (!context) {
         return;
       }
-      const canvasBackground = getComputedStyle(currentCanvas)
-        .getPropertyValue("--canvas-bg")
-        .trim();
-
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       context.clearRect(0, 0, width, height);
-      context.fillStyle = canvasBackground || "#ffffff";
+      context.fillStyle = backgroundColor || "#ffffff";
       context.fillRect(0, 0, width, height);
 
       if (!snapshot) {
@@ -287,7 +332,7 @@ export function StitchThumbnailCanvas({
     observer.observe(surface);
 
     return () => observer.disconnect();
-  }, [snapshot, tracePlacement, traceThumbnailUrl]);
+  }, [backgroundColor, snapshot, tracePlacement, traceThumbnailUrl]);
 
   return (
     <div

@@ -5,6 +5,7 @@ import { typographyStyles } from "@/app/design-system/typography";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
+import type { IconColorSlot } from "@/lib/editor-v2/editor/icons/iconColorSlots";
 import {
   buildPrimitiveIconDataUrl,
   getPrimitiveDefaultSpacingScale,
@@ -59,14 +60,14 @@ export function IconsPanelPage({
   viewportWidth,
   viewportHeight,
 }: IconsPanelPageProps) {
-  const { themeMode } = useThemeMode();
+  const { resolvedThemeMode } = useThemeMode();
   const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const primitivePreviewStrokeColor = useMemo(
-    () => resolvePrimitivePreviewStrokeColor(),
-    [themeMode],
+    () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
+    [resolvedThemeMode],
   );
 
   useEffect(() => {
@@ -183,12 +184,21 @@ export function IconsPanelPage({
   const iconPreviewSrcById = useMemo(
     () =>
       icons.reduce<Record<string, string>>((accumulator, icon) => {
+        const themedPrimitiveColorSlots = icon.primitiveKind
+          ? getThemedPrimitiveColorSlots(icon.colorSlots, resolvedThemeMode)
+          : icon.colorSlots;
+        const themedPrimitiveColors = icon.primitiveKind
+          ? resolvePrimitivePreviewColors(themedPrimitiveColorSlots)
+          : null;
+
         accumulator[icon.id] = icon.primitiveKind
           ? buildPrimitiveIconDataUrl({
               kind: icon.primitiveKind,
               width: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
-              strokeColor: primitivePreviewStrokeColor,
+              strokeColor: themedPrimitiveColors?.stroke ?? primitivePreviewStrokeColor,
+              secondaryStrokeColor: themedPrimitiveColors?.shadow,
+              fillColor: themedPrimitiveColors?.fill,
               strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
               spacingScale: getPrimitiveDefaultSpacingScale(icon.primitiveKind),
@@ -196,7 +206,7 @@ export function IconsPanelPage({
           : icon.src;
         return accumulator;
       }, {}),
-    [icons, primitivePreviewStrokeColor],
+    [icons, primitivePreviewStrokeColor, resolvedThemeMode],
   );
 
   function renderIconButton(item: ShapeIconLibraryItem) {
@@ -240,6 +250,9 @@ export function IconsPanelPage({
                   ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
               )
             : null;
+          const themedPrimitiveColorSlots = item.primitiveKind
+            ? getThemedPrimitiveColorSlots(item.colorSlots, resolvedThemeMode)
+            : item.colorSlots;
           dispatch(
             createBeginIconPlacementCommand({
               iconId: item.id,
@@ -247,7 +260,7 @@ export function IconsPanelPage({
               src: item.src,
               intrinsicWidth: item.intrinsicWidth,
               intrinsicHeight: item.intrinsicHeight,
-              colorSlots: item.colorSlots,
+              colorSlots: themedPrimitiveColorSlots,
               primitiveKind: item.primitiveKind,
               lockAspectRatio: item.lockAspectRatio,
               primitiveStrokeReferenceSize: initialReferenceSize,
@@ -437,67 +450,46 @@ function clampInitialFrameScale(value: number): number {
   return Math.min(ICON_INITIAL_MAX_SCALE, Math.max(ICON_INITIAL_MIN_SCALE, Number(value.toFixed(4))));
 }
 
-function resolvePrimitivePreviewStrokeColor(): string {
-  if (typeof document === "undefined") {
-    return "#121923";
-  }
+function resolvePrimitivePreviewStrokeColor(resolvedThemeMode: "light" | "dark"): string {
+  return resolvedThemeMode === "dark" ? "#ffffff" : "#000000";
+}
 
-  const styles = window.getComputedStyle(document.documentElement);
-  const textPrimary = styles
-    .getPropertyValue("--text-primary")
-    .trim();
-  const textSecondary = styles
-    .getPropertyValue("--text-secondary")
-    .trim();
+function getThemedPrimitiveColorSlots(
+  slots: IconColorSlot[],
+  resolvedThemeMode: "light" | "dark",
+): IconColorSlot[] {
+  const strokeColor = resolvePrimitivePreviewStrokeColor(resolvedThemeMode);
+  const shadowColor = resolvedThemeMode === "dark" ? "#d4d4d8" : "#6b7280";
 
-  if (textPrimary && textSecondary) {
-    const mixed = mixCssColors(textPrimary, textSecondary, 0.72);
-    if (mixed) {
-      return mixed;
+  return slots.map((slot) => {
+    if (slot.id === "stroke") {
+      return {
+        ...slot,
+        sourceHex: strokeColor,
+        paletteColorId: null,
+      };
     }
-  }
 
-  return textPrimary || "#121923";
+    if (slot.id === "shadow") {
+      return {
+        ...slot,
+        sourceHex: shadowColor,
+        paletteColorId: null,
+      };
+    }
+
+    return slot;
+  });
 }
 
-function mixCssColors(primary: string, secondary: string, primaryWeight: number): string | null {
-  const left = parseCssColor(primary);
-  const right = parseCssColor(secondary);
-
-  if (!left || !right) {
-    return null;
-  }
-
-  const clampedWeight = Math.min(Math.max(primaryWeight, 0), 1);
-  const mix = (leftChannel: number, rightChannel: number) =>
-    Math.round(leftChannel * clampedWeight + rightChannel * (1 - clampedWeight));
-
-  return `rgb(${mix(left.r, right.r)} ${mix(left.g, right.g)} ${mix(left.b, right.b)})`;
-}
-
-function parseCssColor(value: string): { r: number; g: number; b: number } | null {
-  const normalized = value.trim();
-
-  const hexMatch = normalized.match(/^#([0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1];
-    return {
-      r: Number.parseInt(hex.slice(0, 2), 16),
-      g: Number.parseInt(hex.slice(2, 4), 16),
-      b: Number.parseInt(hex.slice(4, 6), 16),
-    };
-  }
-
-  const rgbMatch = normalized.match(
-    /^rgba?\(\s*(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*[,/]\s*[\d.]+)?\s*\)$/i,
-  );
-  if (rgbMatch) {
-    return {
-      r: Number.parseInt(rgbMatch[1] ?? "0", 10),
-      g: Number.parseInt(rgbMatch[2] ?? "0", 10),
-      b: Number.parseInt(rgbMatch[3] ?? "0", 10),
-    };
-  }
-
-  return null;
+function resolvePrimitivePreviewColors(slots: IconColorSlot[]): {
+  fill: string | null;
+  shadow: string | null;
+  stroke: string | null;
+} {
+  return {
+    stroke: slots.find((slot) => slot.id === "stroke")?.sourceHex ?? null,
+    shadow: slots.find((slot) => slot.id === "shadow")?.sourceHex ?? null,
+    fill: slots.find((slot) => slot.id === "fill")?.sourceHex ?? null,
+  };
 }

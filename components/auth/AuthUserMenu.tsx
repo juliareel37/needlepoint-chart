@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
+  ButtonIcon,
   MenuDivider,
   MenuItem,
   MenuSurface,
   MenuTrigger,
+  SegmentedControl,
 } from "@/components/design-system";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { useAuthActions, useAuthSession } from "@/lib/auth/client";
 import { AuthAccountSettingsModal } from "./AuthAccountSettingsModal";
 import styles from "./AuthUserMenu.module.css";
@@ -34,6 +37,7 @@ export function AuthUserMenu() {
   const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
   const { user } = useAuthSession();
   const { signOut } = useAuthActions();
+  const { themeMode, setThemeMode } = useThemeMode();
 
   useEffect(() => {
     setMounted(true);
@@ -169,15 +173,54 @@ export function AuthUserMenu() {
               style={portalStyle ?? { visibility: "hidden" }}
             >
               <div className={styles.summary}>
-                {/* <span className={styles.summaryLabel} style={typographyStyles.s}>
-                  Signed in as
-                </span> */}
                 <span className={styles.summaryName} style={typographyStyles.p2}>
                   {user.name || "Account"}
                 </span>
                 <span className={styles.summaryEmail} style={typographyStyles.s}>
                   {user.email}
                 </span>
+              </div>
+              <MenuDivider />
+              <div className={styles.themeRow}>
+                <span className={styles.themeLabel} style={typographyStyles.p2}>
+                  Theme
+                </span>
+                <SegmentedControl
+                  ariaLabel="Application theme"
+                  className={styles.themeControl}
+                  itemClassName={styles.themeControlItem}
+                  options={[
+                    {
+                      label: (
+                        <>
+                          <ButtonIcon icon="/icons/lucide/sun.svg" />
+                          <span className={styles.screenReaderOnly}>Light</span>
+                        </>
+                      ),
+                      value: "light",
+                    },
+                    {
+                      label: (
+                        <>
+                          <ButtonIcon icon="/icons/lucide/monitor.svg" />
+                          <span className={styles.screenReaderOnly}>System</span>
+                        </>
+                      ),
+                      value: "system",
+                    },
+                    {
+                      label: (
+                        <>
+                          <ButtonIcon icon="/icons/lucide/moon.svg" />
+                          <span className={styles.screenReaderOnly}>Dark</span>
+                        </>
+                      ),
+                      value: "dark",
+                    },
+                  ]}
+                  value={themeMode}
+                  onChange={setThemeMode}
+                />
               </div>
               <MenuDivider />
               <MenuItem

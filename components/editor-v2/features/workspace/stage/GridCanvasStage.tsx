@@ -118,6 +118,8 @@ export function GridCanvasStage({
     }
 
     const root = document.documentElement;
+    let frameId: number | null = null;
+
     const syncBackgroundColor = () => {
       const nextColor = getComputedStyle(root)
         .getPropertyValue("--canvas-bg")
@@ -125,15 +127,37 @@ export function GridCanvasStage({
       setBackgroundColor(nextColor || "#ffffff");
     };
 
+    const syncBackgroundColorDuringThemeTransition = () => {
+      syncBackgroundColor();
+
+      if (!root.hasAttribute("data-theme-transitioning")) {
+        frameId = null;
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(syncBackgroundColorDuringThemeTransition);
+    };
+
     syncBackgroundColor();
 
-    const observer = new MutationObserver(syncBackgroundColor);
+    const observer = new MutationObserver(() => {
+      syncBackgroundColor();
+
+      if (root.hasAttribute("data-theme-transitioning") && frameId === null) {
+        frameId = window.requestAnimationFrame(syncBackgroundColorDuringThemeTransition);
+      }
+    });
     observer.observe(root, {
-      attributeFilter: ["data-theme"],
+      attributeFilter: ["data-theme", "data-theme-transitioning"],
       attributes: true,
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
   }, []);
 
   useEffect(() => {
