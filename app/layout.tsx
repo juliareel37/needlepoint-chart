@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
+import { AuthProvider } from "@/lib/auth/client";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -90,9 +90,10 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const neonAuthBaseUrl = process.env.NEON_AUTH_BASE_URL;
+  const neonAuthCookieSecret = process.env.NEON_AUTH_COOKIE_SECRET;
 
-  if (!clerkPublishableKey) {
+  if (!neonAuthBaseUrl || !neonAuthCookieSecret) {
     return (
       <html lang="en">
         <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
@@ -120,9 +121,13 @@ export default function RootLayout({
                 Auth Configuration Missing
               </h1>
               <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.6 }}>
-                This deployment is missing the Clerk publishable key. Add
+                This deployment is missing the Neon Auth configuration. Add
                 <code style={{ marginLeft: 4, marginRight: 4 }}>
-                  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+                  NEON_AUTH_BASE_URL
+                </code>
+                and
+                <code style={{ marginLeft: 4, marginRight: 4 }}>
+                  NEON_AUTH_COOKIE_SECRET
                 </code>
                 to the production environment for this app and redeploy.
               </p>
@@ -134,12 +139,12 @@ export default function RootLayout({
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-        </head>
-        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
+      <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>
             <div id="app-top-banner" className="app-top-banner-slot" />
             <div
@@ -198,8 +203,8 @@ export default function RootLayout({
               {children}
             </div>
           </div>
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

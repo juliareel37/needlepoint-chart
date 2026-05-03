@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 58, "column": 0}, "map": {"version":3,"sources":["file:///Users/juliareel/Code/needlepoint-chart/proxy.ts"],"sourcesContent":["import { clerkMiddleware } from \"@clerk/nextjs/server\";\n\nexport default clerkMiddleware(() => {});\n\nexport const config = {\n  matcher: [\n    \"/((?!_next|dev|[^?]*\\\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)\",\n    \"/(api|trpc)(.*)\",\n  ],\n};\n"],"names":[],"mappings":";;;;;;AAAA;;uCAEe,IAAA,gMAAe,EAAC,KAAO;AAE/B,MAAM,SAAS;IACpB,SAAS;QACP;QACA;KACD;AACH"}}]
+}

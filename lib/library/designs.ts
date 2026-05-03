@@ -37,11 +37,11 @@ export interface LibraryDesignPage {
 }
 
 export async function loadLibraryDesignPage({
-  userId,
+  appUserId,
   limit = LIBRARY_PAGE_SIZE,
   offset = 0,
 }: {
-  userId: string;
+  appUserId: string;
   limit?: number;
   offset?: number;
 }): Promise<LibraryDesignPage> {
@@ -50,10 +50,10 @@ export async function loadLibraryDesignPage({
 
   const [totalCount, designs] = await Promise.all([
     prisma.editorDesign.count({
-      where: { userId },
+      where: { appUserId },
     }),
     prisma.editorDesign.findMany({
-      where: { userId },
+      where: { appUserId },
       orderBy: { updatedAt: "desc" },
       skip: normalizedOffset,
       take: normalizedLimit + 1,

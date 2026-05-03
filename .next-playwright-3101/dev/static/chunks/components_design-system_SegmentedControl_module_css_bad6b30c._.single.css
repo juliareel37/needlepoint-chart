@@ -1,0 +1,63 @@
+/* [project]/components/design-system/SegmentedControl.module.css [app-client] (css) */
+.SegmentedControl-module__TnKl4a__root {
+  box-sizing: border-box;
+  background: var(--surface-card);
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 10px;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  display: inline-grid;
+}
+
+.SegmentedControl-module__TnKl4a__item {
+  width: 100%;
+  min-height: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 16px;
+  transition: background-color .14s, color .14s, box-shadow .14s;
+  display: inline-flex;
+}
+
+.SegmentedControl-module__TnKl4a__item[data-active="true"] {
+  background: var(--button-ghost-active);
+  color: var(--text-primary);
+  cursor: default;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.SegmentedControl-module__TnKl4a__item:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
+}
+
+.SegmentedControl-module__TnKl4a__item:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .SegmentedControl-module__TnKl4a__item:hover:not(:disabled) {
+    background: var(--button-ghost-hover);
+    color: var(--text-primary);
+  }
+
+  .SegmentedControl-module__TnKl4a__item[data-active="true"]:hover:not(:disabled) {
+    background: var(--button-ghost-active);
+    color: var(--text-primary);
+  }
+}
+
+/*# sourceMappingURL=components_design-system_SegmentedControl_module_css_bad6b30c._.single.css.map*/

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { Prisma, SaveSource } from "@prisma/client";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import {
   normalizeProjectTitle,
@@ -26,8 +26,8 @@ function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
 }
 
 export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -45,12 +45,12 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  return NextResponse.json(await loadLibraryDesignPage({ userId, limit, offset }));
+  return NextResponse.json(await loadLibraryDesignPage({ appUserId, limit, offset }));
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -71,7 +71,8 @@ export async function POST(req: Request) {
   const created = await prisma.$transaction(async (tx) => {
     const createdDesign = await tx.editorDesign.create({
       data: {
-        userId,
+        appUserId,
+        userId: appUserId,
         title,
         data: data as unknown as Prisma.InputJsonValue,
         gridWidth: data.grid.width,

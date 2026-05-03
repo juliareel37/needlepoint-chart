@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import { parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
 
@@ -10,8 +10,8 @@ type RouteContext =
   | { params: Promise<{ id: string; versionId: string }> };
 
 export async function GET(_req: Request, context: RouteContext) {
-  const { userId } = await auth();
-  if (!userId) {
+  const appUserId = await getCurrentUserId();
+  if (!appUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   const design = await prisma.editorDesign.findFirst({
-    where: { id, userId },
+    where: { id, appUserId },
     select: {
       id: true,
       createdAt: true,

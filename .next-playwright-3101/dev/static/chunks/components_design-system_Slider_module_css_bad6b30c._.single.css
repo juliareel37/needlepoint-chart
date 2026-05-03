@@ -1,0 +1,68 @@
+/* [project]/components/design-system/Slider.module.css [app-client] (css) */
+.Slider-module__WbE2Fa__wrap {
+  --slider-thumb-size: 12px;
+  --slider-hit-area-size: 12px;
+  width: 100%;
+  max-width: 220px;
+  height: 12px;
+  position: relative;
+}
+
+.Slider-module__WbE2Fa__slider {
+  align-items: center;
+  width: 100%;
+  height: 12px;
+  display: grid;
+}
+
+.Slider-module__WbE2Fa__track {
+  background: var(--neutral-300);
+  border-radius: 999px;
+  width: 100%;
+  height: 3px;
+  position: relative;
+}
+
+.Slider-module__WbE2Fa__fill {
+  background: var(--brand-primary);
+  border-radius: 999px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.Slider-module__WbE2Fa__thumb {
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  background: var(--brand-primary);
+  border-radius: 999px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.Slider-module__WbE2Fa__input {
+  width: 100%;
+  height: var(--slider-hit-area-size);
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.Slider-module__WbE2Fa__input:focus-visible {
+  outline: none;
+}
+
+@media (pointer: coarse) {
+  .Slider-module__WbE2Fa__wrap {
+    --slider-thumb-size: 16px;
+    --slider-hit-area-size: 28px;
+  }
+}
+
+/*# sourceMappingURL=components_design-system_Slider_module_css_bad6b30c._.single.css.map*/

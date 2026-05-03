@@ -1,0 +1,95 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  min-height: 38px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-card) 82%, transparent);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.trigger[data-open="true"] {
+  border-color: var(--brand-primary);
+  box-shadow: var(--ui-shadow-sm), 0 0 0 2px color-mix(in srgb, var(--brand-200) 74%, transparent);
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-300), var(--brand-500));
+  color: var(--neutral-0);
+  flex: 0 0 auto;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.meta {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  text-align: left;
+}
+
+.name {
+  max-width: 140px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email {
+  max-width: 140px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.surface {
+  min-width: 220px;
+  transform-origin: top right;
+}
+
+.summary {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px 12px;
+}
+
+.summaryLabel {
+  color: var(--text-secondary);
+}
+
+.summaryName {
+  color: var(--text-primary);
+}
+
+.summaryEmail {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+/* 
+.signOutItem {
+  color: var(--status-destructive-strong);
+} */
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover {
+    background: color-mix(in srgb, var(--button-ghost2-hover) 78%, var(--surface-card));
+  }
+}

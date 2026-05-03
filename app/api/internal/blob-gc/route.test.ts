@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { listMock, delMock, findManyMock, editorDesignFindManyMock } = vi.hoisted(() => ({
+const { listMock, delMock, editorDesignFindManyMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   delMock: vi.fn(),
-  findManyMock: vi.fn(),
   editorDesignFindManyMock: vi.fn(),
 }));
 
@@ -14,9 +13,6 @@ vi.mock("@vercel/blob", () => ({
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    patternDraft: {
-      findMany: findManyMock,
-    },
     editorDesign: {
       findMany: editorDesignFindManyMock,
     },
@@ -37,30 +33,23 @@ describe("GET /api/internal/blob-gc", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(401);
-    expect(findManyMock).not.toHaveBeenCalled();
+    expect(editorDesignFindManyMock).not.toHaveBeenCalled();
   });
 
   it("deletes only old unreferenced blobs", async () => {
     const dayMs = 24 * 60 * 60 * 1000;
     const referencedA = "https://store.blob.vercel-storage.com/a.png";
     const referencedB = "https://store.blob.vercel-storage.com/b.png";
-    const referencedC = "https://store.blob.vercel-storage.com/c.png";
     const orphanOld = "https://store.blob.vercel-storage.com/orphan-old.png";
     const orphanNew = "https://store.blob.vercel-storage.com/orphan-new.png";
 
-    findManyMock.mockResolvedValue([
-      {
-        data: { trace: { imageDataUrl: referencedA } },
-        versions: [{ data: { trace: { imageDataUrl: referencedB } } }],
-      },
-    ]);
     editorDesignFindManyMock.mockResolvedValue([
       {
         data: {
           trace: {
-            previewUrl: referencedC,
-            thumbnailUrl: referencedC,
-            originalUrl: referencedC,
+            previewUrl: referencedA,
+            thumbnailUrl: referencedB,
+            originalUrl: referencedB,
           },
         },
       },
@@ -68,7 +57,7 @@ describe("GET /api/internal/blob-gc", () => {
     listMock.mockResolvedValue({
       blobs: [
         { url: referencedA, uploadedAt: new Date(Date.now() - 2 * dayMs) },
-        { url: referencedC, uploadedAt: new Date(Date.now() - 2 * dayMs) },
+        { url: referencedB, uploadedAt: new Date(Date.now() - 2 * dayMs) },
         { url: orphanOld, uploadedAt: new Date(Date.now() - 2 * dayMs) },
         { url: orphanNew, uploadedAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
       ],
@@ -90,7 +79,7 @@ describe("GET /api/internal/blob-gc", () => {
       dryRun: false,
       deleted: 1,
       candidates: 1,
-      referenced: 3,
+      referenced: 2,
       minAgeHours: 24,
     });
   });
@@ -99,7 +88,6 @@ describe("GET /api/internal/blob-gc", () => {
     const dayMs = 24 * 60 * 60 * 1000;
     const orphanOld = "https://store.blob.vercel-storage.com/orphan-old.png";
 
-    findManyMock.mockResolvedValue([]);
     listMock.mockResolvedValue({
       blobs: [{ url: orphanOld, uploadedAt: new Date(Date.now() - 2 * dayMs) }],
       hasMore: false,

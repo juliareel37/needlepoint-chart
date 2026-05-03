@@ -1,0 +1,15 @@
+[00:00:00.847] Server  LOG     
+[00:00:00.847] Server  LOG       We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+[00:00:00.847] Server  LOG       The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+[00:00:00.847] Server  LOG       	- include was updated to add '.next-playwright/types/**/*.ts'
+[00:00:00.847] Server  LOG       	- include was updated to add '.next-playwright/dev/types/**/*.ts'
+[00:00:00.847] Server  LOG     
+[00:00:00.919] Server  LOG     ✓ Ready in 581ms
+[00:00:00.990] Server  ERROR   (node:88881) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[00:00:31.000] Server  ERROR   Failed to proxy http://localhost:3100/dev/library-thumbnail-preview Error: socket hang up
+[00:00:31.003] Server  ERROR   Error: socket hang up
+[00:00:58.070] Server  ERROR   Failed to proxy http://localhost:3100/dev/library-thumbnail-preview AggregateError
+[00:00:58.071] Server  ERROR   AggregateError
+[00:01:29.886] Server  ERROR   Failed to proxy http://localhost:3100/dev/library-thumbnail-preview Error: socket hang up
+[00:01:29.887] Server  ERROR   Error: socket hang up

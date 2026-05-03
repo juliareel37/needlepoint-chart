@@ -1,0 +1,265 @@
+/* [project]/components/design-system/Toolbar.module.css [app-client] (css) */
+.Toolbar-module__vy3_-G__toolbar {
+  border: 1px solid var(--toolbar-border);
+  background: var(--surface-primary);
+  width: max-content;
+  max-width: 100%;
+  box-shadow: var(--ui-shadow-md);
+  border-radius: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  display: flex;
+}
+
+.Toolbar-module__vy3_-G__group {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  display: flex;
+}
+
+.Toolbar-module__vy3_-G__groupActions {
+  gap: 12px;
+}
+
+.Toolbar-module__vy3_-G__meta {
+  color: var(--text-secondary);
+  align-items: center;
+  gap: 8px;
+  display: inline-flex;
+}
+
+.Toolbar-module__vy3_-G__anchor {
+  position: relative;
+}
+
+.Toolbar-module__vy3_-G__divider {
+  background: var(--ui-border-strong);
+  flex: none;
+  width: 1px;
+  height: 24px;
+}
+
+.Toolbar-module__vy3_-G__button {
+  min-width: 36px;
+  min-height: 32px;
+  color: var(--text-primary);
+  font-size: inherit;
+  line-height: inherit;
+  text-align: center;
+  cursor: pointer;
+  filter: none;
+  background: none;
+  border: 1px solid #0000;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  transition: background-color .14s, color .14s, box-shadow .14s;
+  display: inline-flex;
+}
+
+.Toolbar-module__vy3_-G__buttonIconOnly {
+  min-width: 32px;
+  padding-inline: 6px;
+}
+
+.Toolbar-module__vy3_-G__buttonLabelled {
+  gap: 8px;
+  min-width: 0;
+  padding-inline: 12px;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantToolbar, .Toolbar-module__vy3_-G__buttonVariantGhost, .Toolbar-module__vy3_-G__buttonVariantGhostNeutral {
+  color: var(--text-primary);
+  background: none;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantSecondary {
+  background: var(--button-secondary-default);
+  color: var(--text-primary);
+}
+
+.Toolbar-module__vy3_-G__buttonVariantPrimary {
+  background: var(--button-primary-default);
+  color: var(--button-primary-text);
+  box-shadow: 0 1px 2px #00000014;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantDestructive {
+  background: var(--status-destructive-base);
+  color: var(--neutral-0);
+}
+
+.Toolbar-module__vy3_-G__buttonWide {
+  padding-inline: 16px;
+}
+
+.Toolbar-module__vy3_-G__buttonSwatch {
+  border: none;
+  border-radius: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  background: none !important;
+}
+
+.Toolbar-module__vy3_-G__buttonSwatch[data-active="true"] {
+  color: inherit;
+  background: none !important;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantToolbar[data-active="true"], .Toolbar-module__vy3_-G__buttonVariantGhost[data-active="true"], .Toolbar-module__vy3_-G__buttonVariantGhostNeutral[data-active="true"] {
+  background: var(--toolbar-button-active-bg);
+  color: var(--toolbar-button-active-text);
+  filter: none;
+  box-shadow: 0 4px 12px #00000014;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantSecondary[data-active="true"] {
+  background: var(--button-secondary-active);
+  color: var(--button-secondary-active-text);
+  box-shadow: 0 1px 2px #0000000a;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantPrimary[data-active="true"] {
+  background: var(--button-primary-active);
+  color: var(--button-primary-text);
+  box-shadow: 0 1px 2px #00000014;
+}
+
+.Toolbar-module__vy3_-G__buttonVariantDestructive[data-active="true"] {
+  background: var(--status-destructive-deep);
+  color: var(--neutral-0);
+}
+
+.Toolbar-module__vy3_-G__button:disabled {
+  cursor: not-allowed;
+}
+
+.Toolbar-module__vy3_-G__button:focus-visible {
+  outline: 2px solid var(--brand-primary-strong);
+  outline-offset: 1px;
+}
+
+.Toolbar-module__vy3_-G__button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.Toolbar-module__vy3_-G__icon {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+  border-radius: 4px;
+  flex: 0 0 16px;
+  place-items: center;
+  display: grid;
+}
+
+.Toolbar-module__vy3_-G__glyph {
+  background: currentColor center / contain no-repeat;
+  width: 16px;
+  height: 16px;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.Toolbar-module__vy3_-G__swatch {
+  width: 20px;
+  height: 20px;
+  box-shadow: inset 0 0 0 1px var(--swatch-border-inset);
+  border-radius: 4px;
+  display: block;
+}
+
+.Toolbar-module__vy3_-G__label {
+  white-space: nowrap;
+}
+
+.Toolbar-module__vy3_-G__popover {
+  z-index: 2;
+  background: var(--surface-primary);
+  border: 1px solid var(--toolbar-border);
+  box-shadow: var(--ui-shadow-md);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  border-radius: 16px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  display: grid;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.Toolbar-module__vy3_-G__popover .Toolbar-module__vy3_-G__divider {
+  margin-inline: 4px;
+}
+
+.Toolbar-module__vy3_-G__popoverSubtoolbar {
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-inline: 10px;
+  display: inline-flex;
+}
+
+.Toolbar-module__vy3_-G__subtoolGroup {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  display: inline-flex;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .Toolbar-module__vy3_-G__buttonVariantToolbar:hover:not(:disabled):not([data-active="true"]), .Toolbar-module__vy3_-G__buttonVariantGhost:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--toolbar-button-hover-bg);
+    filter: none;
+  }
+
+  .Toolbar-module__vy3_-G__buttonVariantGhostNeutral:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--button-ghost2-hover);
+    filter: none;
+  }
+
+  .Toolbar-module__vy3_-G__buttonSwatch:hover:not(:disabled) {
+    color: inherit;
+    background: none !important;
+  }
+
+  .Toolbar-module__vy3_-G__buttonVariantSecondary:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--button-secondary-hover);
+    color: var(--text-primary);
+    box-shadow: 0 2px 4px #0000000f;
+  }
+
+  .Toolbar-module__vy3_-G__buttonVariantPrimary:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--button-primary-hover);
+    color: var(--button-primary-text);
+    box-shadow: 0 4px 10px #0000001f;
+  }
+
+  .Toolbar-module__vy3_-G__buttonVariantDestructive:hover:not(:disabled):not([data-active="true"]) {
+    background: var(--status-destructive-strong);
+    color: var(--neutral-0);
+  }
+}
+
+@media (max-width: 1080px) {
+  .Toolbar-module__vy3_-G__group {
+    gap: 4px;
+  }
+}
+
+/*# sourceMappingURL=components_design-system_Toolbar_module_css_bad6b30c._.single.css.map*/

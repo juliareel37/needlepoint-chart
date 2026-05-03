@@ -8,7 +8,7 @@
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
     rgba(10, 15, 26, 0.22);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(1px);
 }
 
 .card {

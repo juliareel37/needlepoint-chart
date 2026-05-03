@@ -1,38 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Local Development
 
-## Getting Started
+Before running `node`, `npm`, or `tsc` commands in this repo, load Homebrew's shell env:
 
-First, run the development server:
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+```
+
+Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prisma Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This app uses Prisma with PostgreSQL and expects:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+DATABASE_URL="pooled connection string"
+DIRECT_URL="direct connection string"
+```
 
-## Learn More
+For Neon:
 
-To learn more about Next.js, take a look at the following resources:
+- `DATABASE_URL` should usually be the pooled connection string used by the app at runtime.
+- `DIRECT_URL` should be the non-pooled direct connection string used by Prisma Migrate.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.example` to `.env.local` and fill in real values for local development.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production Checklist
 
-## Deploy on Vercel
+1. Create a production PostgreSQL database.
+2. Add `DATABASE_URL` and `DIRECT_URL` as production environment variables in your host.
+3. Run Prisma migrations in production with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run db:migrate:deploy
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Build the app:
 
-test edit 4
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run build
+```
+
+5. Verify Prisma is up to date:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run db:migrate:status
+```
+
+## Important Baseline Note
+
+This repo includes a baseline migration at `prisma/migrations/20260416_baseline_existing_schema`.
+
+If your production database already contains the older `PatternDraft` / `PatternVersion` tables and was not originally created by Prisma Migrate, mark that baseline as already applied once before running deploy migrations:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npx prisma migrate resolve --applied 20260416_baseline_existing_schema
+```
+
+After that, normal production deploys should use:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run db:migrate:deploy
+```
+
+## App User / Neon Auth Rollout
+
+The production runbook for the `AppUser` + `AuthIdentity` migration lives at:
+
+- [docs/prod-app-user-neon-rollout.md](/Users/juliareel/Code/needlepoint-chart/docs/prod-app-user-neon-rollout.md:1)
+
+Useful commands:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run auth:audit-app-users
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run auth:migrate-clerk-users -- --csv ./path/to/clerk-export.csv
+```

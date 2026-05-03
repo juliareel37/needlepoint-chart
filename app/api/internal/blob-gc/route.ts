@@ -1,7 +1,7 @@
 import { del, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { extractBlobUrl, extractEditorV2TraceBlobUrls } from "@/lib/blob";
+import { extractEditorV2TraceBlobUrls } from "@/lib/blob";
 
 export const runtime = "nodejs";
 
@@ -11,24 +11,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [drafts, editorDesigns] = await Promise.all([
-    prisma.patternDraft.findMany({
-      select: { data: true, versions: { select: { data: true } } },
-    }),
-    prisma.editorDesign.findMany({
-      select: { data: true },
-    }),
-  ]);
+  const editorDesigns = await prisma.editorDesign.findMany({
+    select: { data: true },
+  });
 
   const referenced = new Set<string>();
-  for (const draft of drafts) {
-    const draftBlob = extractBlobUrl(draft.data);
-    if (draftBlob) referenced.add(draftBlob);
-    for (const version of draft.versions) {
-      const versionBlob = extractBlobUrl(version.data);
-      if (versionBlob) referenced.add(versionBlob);
-    }
-  }
   for (const design of editorDesigns) {
     for (const url of extractEditorV2TraceBlobUrls(design.data)) {
       referenced.add(url);
