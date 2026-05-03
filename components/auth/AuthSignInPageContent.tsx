@@ -113,8 +113,19 @@ export function AuthSignInPageContent({
   const [resetPasswordValue, setResetPasswordValue] = useState("");
 
   const token = searchParams.get("token") ?? undefined;
+  const resetMode = searchParams.get("mode");
+  const isSetPasswordFlow = pathname === "reset-password" && resetMode === "set-password";
   const oauthError = searchParams.get("error") ?? searchParams.get("error_description");
-  const titles = useMemo(() => getTitles(pathname), [pathname]);
+  const titles = useMemo(() => {
+    if (isSetPasswordFlow) {
+      return {
+        title: "Create your password",
+        description: "Add email and password as another way to sign in to this account.",
+      };
+    }
+
+    return getTitles(pathname);
+  }, [isSetPasswordFlow, pathname]);
 
   useEffect(() => {
     if (oauthError) {
@@ -334,7 +345,9 @@ export function AuthSignInPageContent({
 
       setStatus({
         tone: "success",
-        message: "Password updated. You can sign in with your new password now.",
+        message: isSetPasswordFlow
+          ? "Password set. You can now sign in with either Google or email and password."
+          : "Password updated. You can sign in with your new password now.",
       });
       router.replace(`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`);
       router.refresh();
@@ -401,7 +414,7 @@ export function AuthSignInPageContent({
       return (
         <form className={styles.form} onSubmit={handleResetPassword}>
           <Field
-            label="New password"
+            label={isSetPasswordFlow ? "Password" : "New password"}
             hint={!token ? "This reset link looks incomplete. Try requesting a fresh one." : undefined}
           >
             <FieldInput
@@ -409,7 +422,7 @@ export function AuthSignInPageContent({
               autoComplete="new-password"
               value={resetPasswordValue}
               onChange={(event) => setResetPasswordValue(event.currentTarget.value)}
-              placeholder="Choose a new password"
+              placeholder={isSetPasswordFlow ? "Create a password" : "Choose a new password"}
               required
             />
           </Field>
@@ -419,7 +432,13 @@ export function AuthSignInPageContent({
             className={styles.fullWidthButton}
             disabled={isSubmitting || !token}
           >
-            {isSubmitting ? "Updating..." : "Update password"}
+            {isSubmitting
+              ? isSetPasswordFlow
+                ? "Saving..."
+                : "Updating..."
+              : isSetPasswordFlow
+                ? "Set password"
+                : "Update password"}
           </Button>
           <div className={styles.linkRow}>
             <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>

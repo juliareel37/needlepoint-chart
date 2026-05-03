@@ -2,8 +2,9 @@ export type AccountSettingsAuthMethod = "google_oauth" | "email_password";
 
 export interface AccountSettingsContext {
   authMethod: AccountSettingsAuthMethod;
-  // authMethodHint: string;
   authMethodLabel: string;
+  hasGoogleOAuth: boolean;
+  hasEmailPassword: boolean;
   providerIds: string[];
 }
 
@@ -17,24 +18,38 @@ export function getAccountSettingsContextFromProviderIds(
         .filter(Boolean),
     ),
   );
+  const hasGoogleOAuth = normalizedProviderIds.includes("google");
+  const hasEmailPassword = normalizedProviderIds.includes("credential");
 
-  const authMethod: AccountSettingsAuthMethod = normalizedProviderIds.includes("google")
+  const authMethod: AccountSettingsAuthMethod = hasGoogleOAuth
     ? "google_oauth"
     : "email_password";
+
+  if (hasGoogleOAuth && hasEmailPassword) {
+    return {
+      authMethod,
+      authMethodLabel: "Google OAuth + email/password",
+      hasGoogleOAuth,
+      hasEmailPassword,
+      providerIds: normalizedProviderIds,
+    };
+  }
 
   if (authMethod === "google_oauth") {
     return {
       authMethod,
-      // authMethodHint: "You're signed in with Google, so sign-in credentials are managed there.",
       authMethodLabel: "Google OAuth",
+      hasGoogleOAuth,
+      hasEmailPassword,
       providerIds: normalizedProviderIds,
     };
   }
 
   return {
     authMethod,
-    // authMethodHint: "You're using email and password managed directly by this app.",
     authMethodLabel: "Email + password",
+    hasGoogleOAuth,
+    hasEmailPassword,
     providerIds: normalizedProviderIds,
   };
 }
