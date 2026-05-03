@@ -70,3 +70,21 @@ After that, normal production deploys should use:
 eval "$(/opt/homebrew/bin/brew shellenv zsh)"
 npm run db:migrate:deploy
 ```
+
+## App User / Neon Auth Rollout
+
+The production runbook for the `AppUser` + `AuthIdentity` migration lives at:
+
+- [docs/prod-app-user-neon-rollout.md](/Users/juliareel/Code/needlepoint-chart/docs/prod-app-user-neon-rollout.md:1)
+
+Useful commands:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run auth:audit-app-users
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+npm run auth:migrate-clerk-users -- --csv ./path/to/clerk-export.csv
+```

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "auth:audit-app-users": "node scripts/audit-app-user-migration.mjs",
     "auth:link-neon-rehearsal": "node scripts/link-neon-auth-rehearsal.mjs",
     "auth:migrate-clerk-users": "node scripts/migrate-clerk-users-to-neon.mjs",
     "db:generate": "prisma generate",

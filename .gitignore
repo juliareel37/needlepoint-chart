@@ -7,3 +7,6 @@ node_modules/
 /.clerk/
 .vscode/extensions.json
 .DS_Store
+
+clerk_export_prod.csv
+scripts/clerk_exoprt_prod.csv
