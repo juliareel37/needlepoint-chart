@@ -75,8 +75,12 @@ export function AuthAccountSettingsPanel({
   const hasGoogleOAuth = accountSettingsContext?.hasGoogleOAuth ?? false;
   const hasEmailPassword = accountSettingsContext?.hasEmailPassword ?? false;
   const isGoogleOAuthUser = hasGoogleOAuth;
-  const canSetPassword = hasGoogleOAuth && !hasEmailPassword;
-  const showPasswordRecovery = hasEmailPassword;
+  const hasLoadedPasswordState = Boolean(accountSettingsContext);
+  const passwordCardTitle = hasEmailPassword ? "Reset password" : "Set password";
+  const passwordCardDescription = hasEmailPassword
+    ? "Need to reset your password? We'll send you an email with a secure link to set a new one."
+    : "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account.";
+  const passwordActionLabel = hasEmailPassword ? "Send reset link" : "Add password";
   const hasChanges = isGoogleOAuthUser
     ? nextName !== currentName
     : nextName !== currentName || nextEmail !== currentEmail;
@@ -485,60 +489,24 @@ export function AuthAccountSettingsPanel({
 
           <Panel
             className={styles.mainPanel}
-            title={canSetPassword ? "Set password" : showPasswordRecovery ? "Reset password" : "Set password"}
-            // description={
-            //   canSetPassword
-            //     ? "Add email and password as another way to sign in to this same account."
-            //     : showPasswordRecovery
-            //       ? "Reset your password or recover access without leaving the app."
-            //       : "Password changes and sign-in security are managed through your Google account."
-            // }
+            title={passwordCardTitle}
           >
             <p style={panelMutedTextStyle}>
-              {canSetPassword
-                ? "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account."
-                : showPasswordRecovery
-                  ? "Need to reset your password? We'll send you an email with a secure link to set a new one."
-                  : "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account."}
+              {hasLoadedPasswordState
+                ? passwordCardDescription
+                : "Checking how this account signs in so we can show the right password option."}
             </p>
             <div className={styles.buttonRow}>
-              {canSetPassword ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => void handleSetPassword()}
-                  disabled={isSubmitting || isAccountSettingsContextLoading}
-                >
-                  {isSubmitting ? "Sending..." : "Add password"}
-                </Button>
-              ) : isGoogleOAuthUser ? (
-                <a
-                  href="https://myaccount.google.com/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={styles.link}
-                  style={typographyStyles.p2}
-                >
-                  Open Google account
-                </a>
-              ) : (
-                // <Button
-                //   type="button"
-                //   variant="primary"
-                //   onClick={() => void handleRequestPasswordReset()}
-                //   disabled={isSubmitting || isAccountSettingsContextLoading}
-                // >
-                //   Send password reset email
-                // </Button>
-                 <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => void handleSetPassword()}
-                  disabled={isSubmitting || isAccountSettingsContextLoading}
-                >
-                  {isSubmitting ? "Sending..." : "Add password"}
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() =>
+                  void (hasEmailPassword ? handleRequestPasswordReset() : handleSetPassword())
+                }
+                disabled={isSubmitting || isAccountSettingsContextLoading || !hasLoadedPasswordState}
+              >
+                {isSubmitting ? "Sending..." : passwordActionLabel}
+              </Button>
               {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </Button> */}

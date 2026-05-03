@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
-  MenuChevronIcon,
   MenuDivider,
   MenuItem,
   MenuSurface,
@@ -159,15 +158,6 @@ export function AuthUserMenu() {
             <span style={typographyStyles.p2}>{initials}</span>
           )}
         </span>
-        <span className={styles.meta}>
-          <span className={styles.name} style={typographyStyles.p2}>
-            {user.name || "Account"}
-          </span>
-          {/* <span className={styles.email} style={typographyStyles.s}>
-            {user.email}
-          </span> */}
-        </span>
-        <MenuChevronIcon open={open} />
       </MenuTrigger>
       {open && mounted
         ? createPortal(
