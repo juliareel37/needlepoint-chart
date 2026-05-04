@@ -9,6 +9,7 @@ const THEME_STORAGE_KEY = "wippa:theme";
 const THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 const THEME_TRANSITION_ATTRIBUTE = "data-theme-transitioning";
 const THEME_TRANSITION_DURATION_MS = 260;
+const THEME_CHANGE_EVENT = "wippa:theme-change";
 
 let themeTransitionTimeoutId: number | null = null;
 
@@ -43,6 +44,18 @@ function beginThemeTransition() {
     document.documentElement.removeAttribute(THEME_TRANSITION_ATTRIBUTE);
     themeTransitionTimeoutId = null;
   }, THEME_TRANSITION_DURATION_MS);
+}
+
+function emitThemeChange(nextTheme: ThemeMode) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<{ themeMode: ThemeMode }>(THEME_CHANGE_EVENT, {
+      detail: { themeMode: nextTheme },
+    }),
+  );
 }
 
 function applyThemeMode(nextTheme: ThemeMode, options?: { animate?: boolean }): ResolvedThemeMode {
@@ -122,6 +135,45 @@ export function useThemeMode() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [themeMode]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncFromStorage = (nextTheme: ThemeMode) => {
+      const nextResolvedTheme = applyThemeMode(nextTheme);
+      setThemeMode(nextTheme);
+      setResolvedThemeMode(nextResolvedTheme);
+    };
+
+    const handleThemeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ themeMode?: ThemeMode }>;
+      const nextTheme = customEvent.detail?.themeMode;
+      if (!nextTheme) {
+        return;
+      }
+
+      syncFromStorage(nextTheme);
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY) {
+        return;
+      }
+
+      const nextTheme = parseStoredThemeMode(event.newValue) ?? getThemeModeFromDocument();
+      syncFromStorage(nextTheme);
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange as EventListener);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange as EventListener);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   const setAndPersistThemeMode = (nextTheme: ThemeMode) => {
     const nextResolvedTheme = applyThemeMode(nextTheme, { animate: true });
     setThemeMode(nextTheme);
@@ -130,6 +182,8 @@ export function useThemeMode() {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     } catch {}
+
+    emitThemeChange(nextTheme);
   };
 
   return {
