@@ -268,6 +268,10 @@ export function EditorV2Shell({
   const mirrorSession = state.session.mirrorInteraction.session;
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
+  const repositionModeActive =
+    traceRepositionActive || textPlacement !== null || iconPlacement !== null;
+  const canUndoFromToolbar = canUndo && !repositionModeActive;
+  const canRedoFromToolbar = canRedo && !repositionModeActive;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
@@ -1818,7 +1822,7 @@ export function EditorV2Shell({
                 <>
                   <ToolbarButton
                     type="button"
-                    disabled={!canUndo}
+                    disabled={!canUndoFromToolbar}
                     aria-label="Undo"
                     title="Undo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1828,7 +1832,7 @@ export function EditorV2Shell({
                   </ToolbarButton>
                   <ToolbarButton
                     type="button"
-                    disabled={!canRedo}
+                    disabled={!canRedoFromToolbar}
                     aria-label="Redo"
                     title="Redo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1881,7 +1885,7 @@ export function EditorV2Shell({
                 <div className={styles.headerHistoryControls}>
                   <ToolbarButton
                     type="button"
-                    disabled={!canUndo}
+                    disabled={!canUndoFromToolbar}
                     aria-label="Undo"
                     title="Undo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1891,7 +1895,7 @@ export function EditorV2Shell({
                   </ToolbarButton>
                   <ToolbarButton
                     type="button"
-                    disabled={!canRedo}
+                    disabled={!canRedoFromToolbar}
                     aria-label="Redo"
                     title="Redo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -2380,8 +2384,8 @@ export function EditorV2Shell({
                         activeColorId={activeColorId}
                         activeTool={activeTool}
                         brushSize={brushSize}
-                        canRedo={canRedo}
-                        canUndo={canUndo}
+                        canRedo={canRedoFromToolbar}
+                        canUndo={canUndoFromToolbar}
                         dispatch={dispatch}
                         eyedropperReturnTool={state.session.eyedropperReturnTool}
                         hasPaintedCells={hasPaintedCells}
