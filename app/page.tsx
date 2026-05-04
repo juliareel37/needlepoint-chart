@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { typographyStyles } from "@/app/design-system/typography";
+import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
 import { Button, ButtonIcon } from "@/components/design-system";
 import styles from "./page.module.css";
 
@@ -46,32 +46,6 @@ const featureCards = [
   },
 ] as const;
 
-const heroTitleStyle = {
-  fontSize: "clamp(3rem, 6.8vw, 5.5rem)",
-  lineHeight: 0.92,
-  fontWeight: 700,
-  letterSpacing: "-0.08em",
-  fontFamily: "Playfair Display, serif",
-} as const;
-
-const sectionHeroTitleStyle = {
-  fontSize: "clamp(2.1rem, 4.1vw, 3.35rem)",
-  lineHeight: 0.96,
-  fontWeight: 700,
-  letterSpacing: "-0.06em",
-  fontFamily: "Playfair Display, serif",
-
-} as const;
-
-const footerTitleStyle = {
-  fontSize: "clamp(2rem, 4.5vw, 3.6rem)",
-  lineHeight: 0.92,
-  fontWeight: 700,
-  letterSpacing: "-0.08em",
-  fontFamily: "Playfair Display, serif",
-} as const;
-
-
 export default function Page() {
   const router = useRouter();
 
@@ -80,15 +54,15 @@ export default function Page() {
       <div className={styles.shell}>
         <section className={styles.hero} id="canvas">
           <div className={styles.heroCopy}>
-            <div className={styles.eyebrow} style={typographyStyles.s}>
+            <div className={styles.eyebrow} style={marketingTypographyStyles.eyebrow}>
               <span className={styles.eyebrowDot} />
               W.I.P. • Version 2.4
             </div>
-            <h1 className={styles.heroTitle} style={heroTitleStyle}>
+            <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place.
             </h1>
-            <p className={styles.heroBody} style={typographyStyles.p1}>
+            <p className={styles.heroBody} style={marketingTypographyStyles.body}>
               A systematic canvas for modern needlepoint and cross-stitch designers.
               Map your vision on a high-fidelity drafting grid built for thread-accurate
               palettes and effortless charting.
@@ -105,16 +79,16 @@ export default function Page() {
                 <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
               </Button>
               <Link href="/library" className={styles.resumeCard}>
-                <span className={styles.resumeLabel} style={typographyStyles.s}>Resume wip</span>
-                <span className={styles.resumeTitle} style={typographyStyles.h4}>Meadow_Study_IV.wip</span>
+                <span className={styles.resumeLabel} style={marketingTypographyStyles.eyebrow}>Resume wip</span>
+                <span className={styles.resumeTitle} style={typographyStyles.p2}>Meadow_Study_IV.wip</span>
               </Link>
             </div>
             <div className={styles.heroFeatureGrid}>
               {heroHighlights.map((item) => (
                 <div key={item.title} className={styles.heroFeature}>
-                  <p className={styles.heroFeatureKicker} style={typographyStyles.s}>{item.kicker}</p>
-                  <h2 className={styles.heroFeatureTitle} style={typographyStyles.h3}>{item.title}</h2>
-                  <p className={styles.heroFeatureBody} style={typographyStyles.p2}>{item.body}</p>
+                  <p className={styles.heroFeatureKicker} style={marketingTypographyStyles.eyebrow}>{item.kicker}</p>
+                  <h2 className={styles.heroFeatureTitle} style={marketingTypographyStyles.title}>{item.title}</h2>
+                  <p className={styles.heroFeatureBody} style={marketingTypographyStyles.bodySm}>{item.body}</p>
                 </div>
               ))}
             </div>
@@ -123,7 +97,7 @@ export default function Page() {
           <div className={styles.demoFrame} aria-label="Editor demo placeholder">
             <div className={styles.demoMedia}>
               <Image
-                src="/wippa_logo.png"
+                src="/editor_ss2.png"
                 alt="Placeholder image for the future editor demo video"
                 fill
                 priority
@@ -131,7 +105,7 @@ export default function Page() {
                 className={styles.demoImage}
               />
             </div>
-            <p className={styles.demoCaption} style={typographyStyles.s}>
+            <p className={styles.demoCaption} style={marketingTypographyStyles.eyebrow}>
               Looped editor demo coming soon
             </p>
           </div>
@@ -142,13 +116,13 @@ export default function Page() {
         <section className={styles.features} id="features">
             <div className={styles.featuresIntro}>
             <div>
-              <p className={styles.sectionKicker} style={typographyStyles.s}>The Canvas</p>
-              <h2 className={styles.sectionTitle} style={sectionHeroTitleStyle}>
+              <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>The Canvas</p>
+              <h2 className={styles.sectionTitle} style={marketingTypographyStyles.sectionTitle}>
                 Built for the way <span className={styles.sectionTitleEmphasis}>designers</span>{" "}
                 actually draft.
               </h2>
             </div>
-            <p className={styles.sectionBody} style={typographyStyles.p1}>
+            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
               Wippa treats every needlepoint chart like a technical drawing:
               measured, ordered, and revisable. No drifting layers, no surprise
               pixel sizes.
@@ -159,13 +133,13 @@ export default function Page() {
             {featureCards.map((item) => (
               <article key={item.index} className={styles.featureCard}>
                 <div className={styles.featureHeader}>
-                  <span className={[styles.featureIndex, styles.featureIndexAccent].join(" ")} style={typographyStyles.s}>
+                  <span className={[styles.featureIndex, styles.featureIndexAccent].join(" ")} style={marketingTypographyStyles.eyebrow}>
                     {item.index}
                   </span>
-                  <span className={styles.featureIndex} style={typographyStyles.s}>{item.label}</span>
+                  <span className={styles.featureIndex} style={marketingTypographyStyles.eyebrow}>{item.label}</span>
                 </div>
-                <h3 className={styles.featureTitle} style={typographyStyles.h1}>{item.title}</h3>
-                <p className={styles.featureBody} style={typographyStyles.p1}>{item.body}</p>
+                <h3 className={styles.featureTitle} style={marketingTypographyStyles.featureTitle}>{item.title}</h3>
+                <p className={styles.featureBody} style={marketingTypographyStyles.body}>{item.body}</p>
               </article>
             ))}
           </div>
@@ -175,13 +149,13 @@ export default function Page() {
           <div className={styles.footerInner}>
             <div className={styles.footerContent}>
               <div className={styles.footerCopy}>
-                <p className={styles.footerMeta} style={typographyStyles.s}>Begin</p>
-                <h2 className={styles.footerTitle}  style={footerTitleStyle} >
+                <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Begin</p>
+                <h2 className={styles.footerTitle}  style={marketingTypographyStyles.footerTitle} >
                   Your next pattern is one <span className={styles.footerTitleEmphasis}>grid square</span> away.
                 </h2>
               </div>
               <div className={styles.footerCopy}>
-                <p className={styles.footerBody} style={typographyStyles.p1}>
+                <p className={styles.footerBody} style={marketingTypographyStyles.body}>
                   Open the editor, choose a fabric count, and start placing stitches.
                   No account required to draft your first pattern.
                 </p>
@@ -210,8 +184,8 @@ export default function Page() {
             </div>
           </div>
           <div className={styles.footerBar}>
-            <p className={styles.footerMeta} style={typographyStyles.s}>Wippa Studio • Est. MMXXVI</p>
-            <p className={styles.footerMeta} style={typographyStyles.s}>V2.4 • Drafting on a precision canvas</p>
+            <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. MMXXVI</p>
+            <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>V2.4 • Drafting on a precision canvas</p>
           </div>
         </section>
       </div>
