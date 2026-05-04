@@ -570,7 +570,7 @@ export function EditorV2SetupModal({
           {showSavedDesignSection ? (
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle} style={typographyStyles.h5}>
+                <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
                   Open saved design
                 </h2>
               </div>
