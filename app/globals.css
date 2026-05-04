@@ -244,9 +244,7 @@
   --neutral-800: #2b2b2b;
   --neutral-900: #1c1c1c;
 
-  --brand-base: rgb(51, 186, 213);
-
-  /* Lightest → closest to white */
+  /* --brand-base: rgb(65, 183, 207);
   --brand-50: color-mix(in oklch, white 90%, var(--brand-base));
   --brand-100: color-mix(in oklch, white 68%, var(--brand-base));
   --brand-200: color-mix(in oklch, white 44%, var(--brand-base));
@@ -254,9 +252,18 @@
   --brand-400: var(--brand-base);
   --brand-500: color-mix(in oklch, black 22%, var(--brand-base));
   --brand-600: color-mix(in oklch, black 44%, var(--brand-base));
-  --brand-700: color-mix(in oklch, black 60%, var(--brand-base));
+  --brand-700: color-mix(in oklch, black 60%, var(--brand-base)); */
 
-  
+  --brand-50: #eefaff;
+  --brand-100: #DBF1FB;
+  --brand-200: #c8e8f6;
+  --brand-300: #97D4ed;
+  --brand-400: #4bb4db;
+  --brand-500: #1F87AD;
+  --brand-600: #01678c;
+  --brand-700: #104356;
+
+
   --secondary-base: rgb(236, 119, 189);
 
   /* Lightest → closest to white */
@@ -395,12 +402,12 @@
   
   --zoom-menu-bg: var(--surface-card);
 
-  --toolbar-button-hover-bg: var(--brand-100);
+  --toolbar-button-hover-bg: var(--brand-50);
   --toolbar-button-active-bg: var(--brand-400);
   --toolbar-button-active-text: var(--neutral-0);
   
-  --sidebar-button-hover-bg: var(--brand-100);
-  --sidebar-button-active-bg: var(--brand-100);
+  --sidebar-button-hover-bg: var(--brand-50);
+  --sidebar-button-active-bg: var(--brand-50);
   --sidebar-button-active-text: var(--brand-600);
 
   --sidebar-segmented-control-bg: white;

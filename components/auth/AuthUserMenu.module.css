@@ -32,19 +32,20 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--brand-300), var(--brand-500));
-  color: var(--neutral-0);
+  background: var(--neutral-200);
+  color: var(--text-primary);
+  border: 1px solid var(--ui-border-reg);
   flex: 0 0 auto;
   box-shadow: var(--ui-shadow-sm);
   transition: box-shadow 140ms ease, filter 140ms ease, transform 140ms ease;
 }
 
 .trigger:focus-visible .avatar {
-  box-shadow: var(--ui-shadow-sm), 0 0 0 2px color-mix(in srgb, var(--brand-200) 74%, transparent);
+  box-shadow: var(--ui-shadow-sm), 0 0 0 2px color-mix(in srgb, var(--ui-border-reg) 74%, transparent);
 }
 
 .trigger[data-open="true"] .avatar {
-  box-shadow: var(--ui-shadow-sm), 0 0 0 2px color-mix(in srgb, var(--brand-200) 74%, transparent);
+  box-shadow: var(--ui-shadow-sm), 0 0 0 2px color-mix(in srgb, var(--ui-border-reg) 74%, transparent);
 }
 
 .avatarImage {

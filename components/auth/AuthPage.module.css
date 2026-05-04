@@ -243,8 +243,9 @@
   border-radius: 16px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, var(--brand-300), var(--brand-500));
-  color: var(--neutral-0);
+  background: var(--neutral-200);
+  color: var(--text-primary);
+  border: 1px solid var(--ui-border-reg);
   box-shadow: var(--ui-shadow-md);
   overflow: hidden;
   flex: 0 0 auto;

@@ -2460,8 +2460,8 @@
 }
 
 .headerSaveStatus[data-state="ready"] {
-  --header-save-status-badge-bg: var(--brand-200);
-  --header-save-status-icon-color: var(--brand-600);
+  --header-save-status-badge-bg: var(--neutral-200);
+  --header-save-status-icon-color: var(--neutral-700);
 }
 
 .headerSaveStatus[data-state="info"] {
@@ -2475,8 +2475,8 @@
 }
 
 .headerSaveStatus[data-state="saved"] {
-  --header-save-status-badge-bg: var(--brand-200);
-  --header-save-status-icon-color: var(--brand-600);
+  --header-save-status-badge-bg: var(--neutral-200);
+  --header-save-status-icon-color: var(--neutral-700);
 }
 
 .headerSaveStatus[data-state="error"] {
