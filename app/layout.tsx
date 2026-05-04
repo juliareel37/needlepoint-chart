@@ -6,6 +6,7 @@ import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
 import { AuthProvider } from "@/lib/auth/client";
+import AppHeaderNav from "@/components/app/AppHeaderNav";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -51,22 +52,6 @@ const appShellStyle: CSSProperties &
   "--app-header-height": "52px",
   "--app-top-banner-height": "0px",
   "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
-};
-
-const headerUtilityLinkStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: 28,
-  padding: "6px 10px",
-  borderRadius: 12,
-  color: "var(--text-secondary)",
-  textDecoration: "none",
-  fontSize: 10,
-  lineHeight: "14px",
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  transition: "background-color 140ms ease, color 140ms ease",
 };
 
 const themeBootstrapScript = `
@@ -150,31 +135,21 @@ export default function RootLayout({
             <div
               className="app-shell-header"
               style={{
-                height: 52,
-                minHeight: 52,
-                flex: "0 0 52px",
+                height: 64,
+                minHeight: 64,
+                flex: "0 0 64px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "0 28px 0 16px",
+                padding: "0 28px 0 24px",
                 background: "var(--surface-primary)",
                 borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
                 zIndex: "var(--z-app-header)",
               }}
             >
-              <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-                {/* <img
-                  src={assetPath("/wippa_logo.png")}
-                  alt="Wippa"
-                  style={{ height: 24, width: "auto", display: "block" }}
-                /> */}
-                {/* <Link
-                  href="/editor/design-system"
-                  style={headerUtilityLinkStyle}
-                >
-                  V2 DS
-                </Link> */}
+              <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1, minWidth: 0, flex: "1 1 auto" }}>
+                <AppHeaderNav />
                 <div id="app-header-history" />
                 <div id="app-header-autosave" />
                 <div id="app-header-file-left" />
