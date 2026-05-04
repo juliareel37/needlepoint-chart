@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { assetPath } from "@/lib/assetPath";
-import { Button, ButtonIcon } from "./Button";
+import { Button, ButtonIcon, type ButtonVariant } from "./Button";
 import styles from "./Notification.module.css";
 
 export type NotificationTone = "info" | "success" | "warning" | "destructive";
@@ -49,6 +49,7 @@ export interface NotificationProps {
   description?: ReactNode;
   layout?: NotificationLayout;
   actionLabel?: ReactNode;
+  actionVariant?: ButtonVariant;
   onAction?: () => void;
   onDismiss?: () => void;
   dismissLabel?: string;
@@ -61,6 +62,7 @@ export function Notification({
   description,
   layout = "default",
   actionLabel,
+  actionVariant = "secondary",
   onAction,
   onDismiss,
   dismissLabel,
@@ -106,7 +108,7 @@ export function Notification({
 
       {hasAction ? (
         <div className={styles.controls}>
-          <Button type="button" variant="secondary" size="md" onClick={onAction}>
+          <Button type="button" variant={actionVariant} size="md" onClick={onAction}>
             {actionLabel}
           </Button>
           {onDismiss ? (

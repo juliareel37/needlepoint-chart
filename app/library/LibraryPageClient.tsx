@@ -707,6 +707,12 @@ export function LibraryPageClient({
     setSuccessNotification(null);
   }
 
+  function handleDismissPendingDeletionNotification() {
+    clearPendingDeletionTimeout();
+    setPendingDeletion(null);
+    setSuccessNotification(null);
+  }
+
   function extendPendingDeletion(nextDesignIds: string[]) {
     const currentPendingDeletion = pendingDeletionRef.current;
 
@@ -1537,7 +1543,9 @@ export function LibraryPageClient({
               title={successNotification.title}
               description={successNotification.description}
               actionLabel="Undo"
+              actionVariant="secondary2"
               onAction={handleUndoPendingDeletion}
+              onDismiss={handleDismissPendingDeletionNotification}
             />
           </div>
         </div>
