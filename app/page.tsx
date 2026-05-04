@@ -62,7 +62,7 @@ export default function Page() {
               every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place.
             </h1>
-            <p className={styles.heroBody} style={marketingTypographyStyles.body}>
+            <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
               A systematic canvas for modern needlepoint and cross-stitch designers.
               Map your vision on a high-fidelity drafting grid built for thread-accurate
               palettes and effortless charting.

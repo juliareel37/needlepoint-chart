@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 export type DesignTypeToken = "h1" | "h2" | "h3" | "h4" | "h5" | "p1" | "p2" | "s";
 export type MarketingTypeToken =
   | "eyebrow"
+  | "bodyLg"
   | "body"
   | "bodySm"
   | "titleSm"
@@ -137,6 +138,7 @@ export const uiTypographyStyles = createTypographyStyles(uiTypographySpecs, {
 
 export const marketingTypographyOrder: MarketingTypeToken[] = [
   "eyebrow",
+  "bodyLg",
   "body",
   "bodySm",
   "titleSm",
@@ -160,18 +162,26 @@ export const marketingTypographySpecs: Record<
     sample: "Work in progress",
     letterSpacing: "0.14em",
   },
-  body: {
-    label: "body",
-    size: "clamp(1rem, 1.1vw, 1.125rem)",
+  bodyLg: {
+    label: "bodyLg",
+    size: "clamp(1.0625rem, 1vw, 1.125rem)",
     lineHeight: 1.65,
     weight: fontWeights.medium,
-    usage: "primary landing-page body copy",
+    usage: "hero body copy on marketing pages",
     sample: "A systematic canvas for modern needlepoint and cross-stitch designers.",
+  },
+  body: {
+    label: "body",
+    size: "clamp(0.95rem, 0.9vw, 1rem)",
+    lineHeight: 1.6,
+    weight: fontWeights.medium,
+    usage: "standard landing-page body copy",
+    sample: "Wippa treats every needlepoint chart like a technical drawing.",
   },
   bodySm: {
     label: "bodySm",
-    size: "clamp(0.95rem, 0.95vw, 1rem)",
-    lineHeight: 1.6,
+    size: "clamp(0.84rem, 0.82vw, 0.875rem)",
+    lineHeight: 1.55,
     weight: fontWeights.medium,
     usage: "secondary landing-page copy",
     sample: "Thread-accurate color mapped to real materials.",
