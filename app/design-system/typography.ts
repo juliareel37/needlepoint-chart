@@ -32,7 +32,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   h2: {
     label: "h2",
-    size: 22,
+    size: 24,
     lineHeight: 30,
     weight: fontWeights.bold,
     usage: "section titles, major dialogs",
@@ -40,7 +40,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   h3: {
     label: "h3",
-    size: 18,
+    size: 20,
     lineHeight: 24,
     weight: fontWeights.bold,
     usage: "subsection titles",
@@ -48,7 +48,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   h4: {
     label: "h4",
-    size: 15,
+    size: 16,
     lineHeight: 20,
     weight: fontWeights.bold,
     usage: "minor headings, card titles",
@@ -56,7 +56,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   h5: {
     label: "h5",
-    size: 13,
+    size: 14,
     lineHeight: 18,
     weight: fontWeights.bold,
     usage: "compact emphasis headings, alert titles",
@@ -64,7 +64,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   p1: {
     label: "p1",
-    size: 14,
+    size: 13,
     lineHeight: 20,
     weight: fontWeights.medium,
     usage: "primary body copy",
@@ -80,7 +80,7 @@ export const typographySpecs: Record<DesignTypeToken, TypographySpec> = {
   },
   s: {
     label: "s",
-    size: 12,
+    size: 11,
     lineHeight: 14,
     weight: fontWeights.regular,
     usage: "supporting labels, dense UI",

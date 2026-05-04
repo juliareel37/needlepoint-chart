@@ -1,3 +1,9 @@
+:global(.editor-v2-route-shell) {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
 .page {
   min-height: 100%;
   padding: 20px;

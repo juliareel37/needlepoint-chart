@@ -51,6 +51,7 @@ const heroTitleStyle = {
   lineHeight: 0.92,
   fontWeight: 700,
   letterSpacing: "-0.08em",
+  fontFamily: "Playfair Display, serif",
 } as const;
 
 const sectionHeroTitleStyle = {
@@ -58,7 +59,18 @@ const sectionHeroTitleStyle = {
   lineHeight: 0.96,
   fontWeight: 700,
   letterSpacing: "-0.06em",
+  fontFamily: "Playfair Display, serif",
+
 } as const;
+
+const footerTitleStyle = {
+  fontSize: "clamp(2rem, 4.5vw, 3.6rem)",
+  lineHeight: 0.92,
+  fontWeight: 700,
+  letterSpacing: "-0.08em",
+  fontFamily: "Playfair Display, serif",
+} as const;
+
 
 export default function Page() {
   const router = useRouter();
@@ -93,7 +105,7 @@ export default function Page() {
                 <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
               </Button>
               <Link href="/library" className={styles.resumeCard}>
-                <span className={styles.resumeLabel} style={typographyStyles.s}>Resume W.I.P.</span>
+                <span className={styles.resumeLabel} style={typographyStyles.s}>Resume wip</span>
                 <span className={styles.resumeTitle} style={typographyStyles.h4}>Meadow_Study_IV.wip</span>
               </Link>
             </div>
@@ -152,7 +164,7 @@ export default function Page() {
                   </span>
                   <span className={styles.featureIndex} style={typographyStyles.s}>{item.label}</span>
                 </div>
-                <h3 className={styles.featureTitle} style={typographyStyles.h2}>{item.title}</h3>
+                <h3 className={styles.featureTitle} style={typographyStyles.h1}>{item.title}</h3>
                 <p className={styles.featureBody} style={typographyStyles.p1}>{item.body}</p>
               </article>
             ))}
@@ -164,7 +176,7 @@ export default function Page() {
             <div className={styles.footerContent}>
               <div className={styles.footerCopy}>
                 <p className={styles.footerMeta} style={typographyStyles.s}>Begin</p>
-                <h2 className={styles.footerTitle} style={typographyStyles.h1}>
+                <h2 className={styles.footerTitle}  style={footerTitleStyle} >
                   Your next pattern is one <span className={styles.footerTitleEmphasis}>grid square</span> away.
                 </h2>
               </div>

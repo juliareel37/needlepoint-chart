@@ -14,7 +14,7 @@
 .shell {
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 24px 24px 32px;
+  padding: 48px 120px 32px;
   display: grid;
   gap: 72px;
 }
@@ -162,7 +162,6 @@
 .footerBody {
   color: var(--text-secondary);
 }
-
 .demoFrame {
   display: grid;
   gap: 14px;
@@ -210,7 +209,7 @@
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   gap: 56px;
-  align-items: start;
+  align-items: end;
 }
 
 .sectionTitle {
@@ -246,8 +245,9 @@
 }
 
 .featureTitle {
-  max-width: 10ch;
+  max-width: 15ch;
   color: var(--text-primary);
+  font-family: 'Playfair Display';
 }
 
 .footerSection {
@@ -263,7 +263,7 @@
 .footerInner {
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 48px 24px 0;
+  padding: 48px 120px;
   display: grid;
   gap: 40px;
 }
@@ -281,7 +281,7 @@
 }
 
 .footerTitle {
-  max-width: 11ch;
+  max-width: 14ch;
 }
 
 .footerTitleEmphasis {
@@ -300,11 +300,11 @@
 }
 
 .footerPrimary {
-  min-width: 260px;
+  min-width: 200px;
 }
 
 .footerSecondary {
-  min-width: 280px;
+  min-width: 200px;
   color: var(--text-primary);
 }
 
