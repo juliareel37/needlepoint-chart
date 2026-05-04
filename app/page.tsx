@@ -165,6 +165,8 @@ export default function Page() {
           </div>
         </section>
 
+        <div className={styles.sectionDivider} aria-hidden="true" />
+
         <section className={styles.features} id="features">
             <div className={styles.featuresIntro}>
             <div>

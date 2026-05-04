@@ -21,6 +21,13 @@
   gap: 72px;
 }
 
+.sectionDivider {
+  height: 1px;
+  background: var(--ui-border-reg);
+  margin-top: -28px;
+  margin-bottom: -36px;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
@@ -298,7 +305,7 @@
 
 .features {
   display: grid;
-  gap: 32px;
+  gap: 20px;
 }
 
 .featuresIntro {
@@ -324,9 +331,9 @@
 
 .featureCard {
   display: grid;
-  gap: 24px;
-  min-height: 380px;
-  padding: 42px 46px 46px;
+  gap: 16px;
+  min-height: 0;
+  padding: 28px 40px 32px;
   border-right: 1px solid var(--ui-border-reg);
 }
 
@@ -397,6 +404,7 @@
 
 .footerSecondary {
   min-width: 280px;
+  color: var(--text-primary);
 }
 
 .footerBar {
@@ -437,7 +445,7 @@
   }
 
   .featureCard {
-    padding: 36px 28px 34px;
+    padding: 24px 24px 28px;
   }
 }
 
