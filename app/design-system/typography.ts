@@ -164,7 +164,7 @@ export const marketingTypographySpecs: Record<
   },
   bodyLg: {
     label: "bodyLg",
-    size: "clamp(1.0625rem, 1vw, 1.125rem)",
+    size: "clamp(1rem, .8vw, 1.1rem)",
     lineHeight: 1.65,
     weight: fontWeights.medium,
     usage: "hero body copy on marketing pages",
@@ -216,7 +216,7 @@ export const marketingTypographySpecs: Record<
   },
   display: {
     label: "display",
-    size: "clamp(3rem, 6.8vw, 5.5rem)",
+    size: "clamp(3rem, 6.5vw, 4.5rem)",
     lineHeight: 0.92,
     weight: fontWeights.bold,
     usage: "hero display title",

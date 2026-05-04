@@ -244,14 +244,29 @@
   --neutral-800: #2b2b2b;
   --neutral-900: #1c1c1c;
 
-  --brand-50: #fcf7ff;
+  --brand-base: rgb(72, 130, 78);
+
+  /* Lightest → closest to white */
+  --brand-50: color-mix(in oklch, white 90%, var(--brand-base));
+  --brand-100: color-mix(in oklch, white 72%, var(--brand-base));
+  --brand-200: color-mix(in oklch, white 54%, var(--brand-base));
+  --brand-300: color-mix(in oklch, white 36%, var(--brand-base));
+  --brand-300: color-mix(in oklch, white 18%, var(--brand-base));
+  --brand-400: var(--brand-base);
+  --brand-500: color-mix(in oklch, black 18%, var(--brand-base));
+  --brand-600: color-mix(in oklch, black 36%, var(--brand-base));
+  --brand-700: color-mix(in oklch, black 54%, var(--brand-base));
+
+  
+
+  /* --brand-50: #fcf7ff;
   --brand-100: #f9eefd;
   --brand-200: #f1dffb;
   --brand-300: #d08de3;
   --brand-400: #c57bda;
   --brand-500: #ae60c3;
   --brand-600: #850d9d;
-  --brand-700: #471d56;
+  --brand-700: #471d56; */
 
   /* --brand-50: #fcf7ff;
   --brand-100: #d3f0fa;

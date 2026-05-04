@@ -44,6 +44,7 @@ const brandStyle = {
   fontWeight: 700,
   letterSpacing: "-0.04em",
   flex: "0 0 auto",
+  fontFamily: "Playfair Display",
 } as const;
 
 const navLinkStyle = {
@@ -83,7 +84,7 @@ export default function AppHeaderNav() {
         <Link href="/" style={brandStyle}>
           wippa.
         </Link>
-        <nav aria-label="Primary" style={landingHeaderLinksStyle}>
+        {/* <nav aria-label="Primary" style={landingHeaderLinksStyle}>
           <Link href="/#canvas" style={navLinkStyle}>
             The Canvas
           </Link>
@@ -93,7 +94,7 @@ export default function AppHeaderNav() {
           <Link href="/#begin" style={navLinkStyle}>
             Community
           </Link>
-        </nav>
+        </nav> */}
       </div>
       <div style={landingHeaderRightStyle}>
         <Link href="/library" style={utilityLinkStyle}>

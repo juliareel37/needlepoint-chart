@@ -25,24 +25,24 @@ const heroHighlights = [
 const featureCards = [
   {
     index: "01",
-    label: "Tools",
-    title: "design with real elements",
+    label: "Pre-built Library",
+    title: "Design with real elements",
     body:
-      "go beyond circles and basic text with a large library of fonts, icons, and frames, so your work in progress already looks like something worth stitching.",
+      "Go beyond circles and basic text with a large library of fonts, icons, and frames, so your work in progress already looks like something worth stitching.",
   },
   {
     index: "02",
-    label: "Palette",
-    title: "a workflow that actually makes sense",
+    label: "Tools",
+    title: "A workflow that actually makes sense",
     body:
-      "move from idea, to pattern, to refinement without clunky steps or needing to restart: your design evolves naturally as you go.",
+      "Move from idea, to pattern, to refinement without clunky steps or needing to restart: your design evolves naturally as you go.",
   },
   {
     index: "03",
     label: "Export",
-    title: "clean, stitch-ready results",
+    title: "Clean, stitch-ready results",
     body:
-      "export print-ready charts with symbol overlays, color keys, and skein counts calibrated to your design.",
+      "Export print-ready charts with symbol overlays, color keys, and skein shopping list to bring your design to life.",
   },
 ] as const;
 
@@ -54,18 +54,18 @@ export default function Page() {
       <div className={styles.shell}>
         <section className={styles.hero} id="canvas">
           <div className={styles.heroCopy}>
-            <div className={styles.eyebrow} style={marketingTypographyStyles.eyebrow}>
+            {/* <div className={styles.eyebrow} style={marketingTypographyStyles.eyebrow}>
               <span className={styles.eyebrowDot} />
               W.I.P. • Version 2.4
-            </div>
+            </div> */}
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              design modern needlepoint patterns, 
+              Design modern needlepoint patterns, 
               <span className={styles.accentWord}>without the friction</span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
-            a better way to create, refine, and finish your designs,
+            A better way to create, refine, and finish your designs,
             so every pattern starts as a work in progress and ends exactly how you want it.
             </p>
             <div className={styles.heroActions}>
@@ -76,7 +76,7 @@ export default function Page() {
                 className={styles.primaryCta}
                 onClick={() => router.push("/editor")}
               >
-                <span className={styles.ctaLabel}>start designing</span>
+                <span className={styles.ctaLabel}>Start designing</span>
                 <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
               </Button>
               <Link href="/library" className={styles.resumeCard}>
@@ -84,18 +84,18 @@ export default function Page() {
                 <span className={styles.resumeTitle} style={typographyStyles.p2}>Meadow_Study_IV.wip</span>
               </Link>
             </div>
-            <div className={styles.heroFeatureGrid}>
+            {/* <div className={styles.heroFeatureGrid}>
               {heroHighlights.map((item) => (
                 <div key={item.title} className={styles.heroFeature}>
-                  {/* <p className={styles.heroFeatureKicker} style={marketingTypographyStyles.eyebrow}>{item.kicker}</p> */}
+                  <p className={styles.heroFeatureKicker} style={marketingTypographyStyles.eyebrow}>{item.kicker}</p>
                   <h2 className={styles.heroFeatureTitle} style={marketingTypographyStyles.titleSm}>{item.title}</h2>
                   <p className={styles.heroFeatureBody} style={marketingTypographyStyles.bodySm}>{item.body}</p>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
 
-          <div className={styles.demoFrame} aria-label="Editor demo placeholder">
+          {/* <div className={styles.demoFrame} aria-label="Editor demo placeholder">
             <div className={styles.demoMedia}>
               <Image
                 src="/editor_ss3.png"
@@ -106,10 +106,10 @@ export default function Page() {
                 className={styles.demoImage}
               />
             </div>
-            {/* <p className={styles.demoCaption} style={marketingTypographyStyles.eyebrow}>
+            <p className={styles.demoCaption} style={marketingTypographyStyles.eyebrow}>
               Looped editor demo coming soon
-            </p> */}
-          </div>
+            </p>
+          </div> */}
         </section>
 
         <div className={styles.sectionDivider} aria-hidden="true" />
@@ -119,12 +119,12 @@ export default function Page() {
             <div>
               <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>The Canvas</p>
               <h2 className={styles.sectionTitle} style={marketingTypographyStyles.sectionTitle}>
-                built for <span className={styles.sectionTitleEmphasis}>better</span>{" "}
+                Built for <span className={styles.sectionTitleEmphasis}>better</span>{" "}
                 pattern design.
               </h2>
             </div>
             <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
-              more creative control, a smoother workflow, and 
+              More creative control, a smoother workflow, and 
               cleaner results: everything working together the way it should.
             </p>
           </div>
@@ -151,12 +151,12 @@ export default function Page() {
               <div className={styles.footerCopy}>
                 <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Begin</p>
                 <h2 className={styles.footerTitle}  style={marketingTypographyStyles.footerTitle} >
-                  your next pattern is one <span className={styles.footerTitleEmphasis}>grid square</span> away.
+                  Your next pattern is one <span className={styles.footerTitleEmphasis}>grid square</span> away.
                 </h2>
               </div>
               <div className={styles.footerCopy}>
                 <p className={styles.footerBody} style={marketingTypographyStyles.body}>
-                  open the editor, choose a fabric count, and start placing stitches.
+                  Open the editor, choose a fabric count, and start placing stitches.
                   no account required to draft your first pattern.
                 </p>
                 <div className={styles.footerActions}>
