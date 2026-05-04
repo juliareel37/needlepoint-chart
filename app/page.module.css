@@ -1,11 +1,15 @@
 .page {
   --landing-accent-soft: var(--brand-50);
   --landing-accent-strong: var(--brand-400);
+  --landing-secondary-soft: color-mix(in oklch, white 76%, var(--secondary-base));
+  --landing-secondary-surface: color-mix(in oklch, var(--surface-primary) 80%, var(--secondary-50));
+  --landing-secondary-border: color-mix(in oklch, var(--ui-border-reg) 60%, var(--secondary-100));
   --landing-surface-elevated: var(--surface-card);
   --landing-dark-surface: var(--neutral-900);
   min-height: calc(100dvh - var(--app-top-offset, 52px));
   overflow-x: clip;
   background:
+    radial-gradient(circle at 85% 10%, var(--landing-secondary-soft) 0%, transparent 34%),
     radial-gradient(circle at top left, var(--landing-accent-soft) 0%, transparent 30%),
     linear-gradient(180deg, var(--surface-primary) 0%, var(--surface-app) 100%);
   color: var(--text-primary);
@@ -110,8 +114,10 @@
   gap: 4px;
   padding: 10px 18px;
   border-radius: 8px;
-  border: 1px solid var(--ui-border-reg);
-  background: var(--surface-primary);
+  border: 1px solid var(--landing-secondary-border);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, white 52%, transparent), transparent),
+    var(--landing-secondary-surface);
   box-shadow: var(--ui-shadow-sm);
   color: var(--text-primary);
   text-decoration: none;
@@ -261,7 +267,10 @@
   position: relative;
   left: 50%;
   width: 100dvw;
-  background: var(--landing-dark-surface);
+  background:
+    radial-gradient(circle at 18% 18%, color-mix(in oklch, transparent 58%, var(--secondary-400)) 0%, transparent 34%),
+    radial-gradient(circle at 82% 0%, color-mix(in oklch, transparent 82%, var(--brand-300)) 0%, transparent 26%),
+    var(--landing-dark-surface);
   color: var(--neutral-0);
   margin-left: -50dvw;
   margin-bottom: -32px;
@@ -330,7 +339,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .resumeCard:hover {
-    border-color: var(--brand-200);
+    border-color: color-mix(in oklch, var(--brand-200) 42%, var(--secondary-300));
     box-shadow: var(--ui-shadow-md);
   }
 }

@@ -62,7 +62,7 @@ export default function Page() {
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
               Design modern needlepoint patterns, 
-              <span className={styles.accentWord}>without the friction</span>
+              <span className={styles.accentWord}>without the friction.</span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
             A better way to create, refine, and finish your designs,
