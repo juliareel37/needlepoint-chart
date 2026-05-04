@@ -69,13 +69,24 @@ const paletteGroups = [
   {
     title: "Brand",
     tokens: [
-      { name: "brand-fill-50", cssVar: "--brand-lightest", sourceType: "literal" },
-      { name: "brand-fill-100", cssVar: "--brand-100", sourceType: "literal" },
-      { name: "brand-fill-300", cssVar: "--brand-200", sourceType: "literal" },
-      { name: "brand-500", cssVar: "--brand-primary", sourceType: "literal" },
-      { name: "brand-600", cssVar: "--brand-400", sourceType: "literal" },
-      { name: "brand-700", cssVar: "--brand-500", sourceType: "literal" },
-      { name: "brand-900", cssVar: "--brand-600", sourceType: "literal" },
+      { name: "brand-50", cssVar: "--brand-50", sourceType: "literal" },
+      { name: "brand-100", cssVar: "--brand-100", sourceType: "literal" },
+      { name: "brand-200", cssVar: "--brand-200", sourceType: "literal" },
+      { name: "brand-300", cssVar: "--brand-300", sourceType: "literal" },
+      { name: "brand-400", cssVar: "--brand-400", sourceType: "literal" },
+      { name: "brand-500", cssVar: "--brand-500", sourceType: "literal" },
+      { name: "brand-600", cssVar: "--brand-600", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--brand-700", sourceType: "literal" },
+    ],
+  },
+  {
+    title: "Secondary",
+    tokens: [
+      { name: "brand-50", cssVar: "--secondary-50", sourceType: "literal" },
+      { name: "brand-100", cssVar: "--secondary-100", sourceType: "literal" },
+      { name: "brand-300", cssVar: "--secondary-300", sourceType: "literal" },
+      { name: "brand-400", cssVar: "--secondary-400", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--secondary-700", sourceType: "literal" },
     ],
   },
   {
