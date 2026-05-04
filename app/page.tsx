@@ -87,7 +87,7 @@ export default function Page() {
               {heroHighlights.map((item) => (
                 <div key={item.title} className={styles.heroFeature}>
                   <p className={styles.heroFeatureKicker} style={marketingTypographyStyles.eyebrow}>{item.kicker}</p>
-                  <h2 className={styles.heroFeatureTitle} style={marketingTypographyStyles.title}>{item.title}</h2>
+                  <h2 className={styles.heroFeatureTitle} style={marketingTypographyStyles.titleSm}>{item.title}</h2>
                   <p className={styles.heroFeatureBody} style={marketingTypographyStyles.bodySm}>{item.body}</p>
                 </div>
               ))}
@@ -97,7 +97,7 @@ export default function Page() {
           <div className={styles.demoFrame} aria-label="Editor demo placeholder">
             <div className={styles.demoMedia}>
               <Image
-                src="/editor_ss2.png"
+                src="/editor_ss3.png"
                 alt="Placeholder image for the future editor demo video"
                 fill
                 priority
@@ -105,9 +105,9 @@ export default function Page() {
                 className={styles.demoImage}
               />
             </div>
-            <p className={styles.demoCaption} style={marketingTypographyStyles.eyebrow}>
+            {/* <p className={styles.demoCaption} style={marketingTypographyStyles.eyebrow}>
               Looped editor demo coming soon
-            </p>
+            </p> */}
           </div>
         </section>
 

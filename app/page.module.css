@@ -171,7 +171,7 @@
 
 .demoMedia {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 13 / 16;
   border: 1px solid var(--ui-border-reg);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-lg);
@@ -202,7 +202,7 @@
 
 .features {
   display: grid;
-  gap: 20px;
+  gap: 72px;
 }
 
 .featuresIntro {
@@ -263,7 +263,7 @@
 .footerInner {
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 48px 120px;
+  padding: 120px 80px;
   display: grid;
   gap: 40px;
 }
@@ -272,7 +272,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
   gap: 48px;
-  align-items: start;
+  align-items: end;
 }
 
 .footerCopy {
