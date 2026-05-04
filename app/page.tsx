@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { typographyStyles } from "@/app/design-system/typography";
@@ -43,13 +44,6 @@ const featureCards = [
     body:
       "Export print-ready charts with symbol overlays, color keys, and skein counts calibrated to your fabric count.",
   },
-] as const;
-
-const previewStitches = [
-  { color: "moss", cells: [[8, 2], [7, 3], [8, 3], [9, 3], [6, 4], [7, 4], [8, 4], [9, 4], [10, 4], [7, 5], [8, 5], [9, 5], [8, 6]] },
-  { color: "lavender", cells: [[8, 5], [8, 6], [9, 6], [7, 7], [8, 7], [9, 7], [10, 7], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [7, 9], [8, 9], [9, 9], [8, 10]] },
-  { color: "moss", cells: [[4, 10], [3, 11], [4, 11], [5, 11], [4, 12]] },
-  { color: "midnight", cells: [[14, 8], [13, 9], [14, 9], [15, 9], [12, 10], [13, 10], [14, 10], [15, 10], [16, 10], [13, 11], [14, 11], [15, 11], [14, 12]] },
 ] as const;
 
 const heroTitleStyle = {
@@ -114,54 +108,20 @@ export default function Page() {
             </div>
           </div>
 
-          <div className={styles.canvasFrame} aria-label="Needlepoint canvas preview">
-            <div className={styles.canvasHeader}>
-              <div className={styles.windowDots} aria-hidden="true">
-                <span className={styles.dotLavender} />
-                <span className={styles.dotMoss} />
-                <span className={styles.dotMidnight} />
-              </div>
-              <p className={styles.canvasMeta} style={typographyStyles.s}>X: 142.00 // Y: 084.22 // Scale: 400%</p>
+          <div className={styles.demoFrame} aria-label="Editor demo placeholder">
+            <div className={styles.demoMedia}>
+              <Image
+                src="/wippa_logo.png"
+                alt="Placeholder image for the future editor demo video"
+                fill
+                priority
+                sizes="(max-width: 960px) 100vw, 50vw"
+                className={styles.demoImage}
+              />
             </div>
-            <div className={styles.canvasDivider} />
-            <div className={styles.canvasGrid}>
-              {previewStitches.flatMap((group) =>
-                group.cells.map(([column, row], index) => (
-                  <span
-                    key={`${group.color}-${column}-${row}-${index}`}
-                    className={[
-                      styles.stitch,
-                      group.color === "lavender"
-                        ? styles.stitchLavender
-                        : group.color === "moss"
-                          ? styles.stitchMoss
-                          : styles.stitchMidnight,
-                    ].join(" ")}
-                    style={{
-                      gridColumn: `${column} / span 1`,
-                      gridRow: `${row} / span 1`,
-                    }}
-                  />
-                )),
-              )}
-            </div>
-            <div className={styles.canvasFooter}>
-              <div className={styles.paletteRow}>
-                <span className={styles.swatch}>
-                  <span className={[styles.swatchChip, styles.dotLavender].join(" ")} />
-                  #553 Lavender
-                </span>
-                <span className={styles.swatch}>
-                  <span className={[styles.swatchChip, styles.dotMoss].join(" ")} />
-                  #844 Moss
-                </span>
-                <span className={styles.swatch}>
-                  <span className={[styles.swatchChip, styles.dotMidnight].join(" ")} />
-                  #939 Midnight
-                </span>
-              </div>
-              <span className={styles.autosave}>Autosaved</span>
-            </div>
+            <p className={styles.demoCaption} style={typographyStyles.s}>
+              Looped editor demo coming soon
+            </p>
           </div>
         </section>
 
