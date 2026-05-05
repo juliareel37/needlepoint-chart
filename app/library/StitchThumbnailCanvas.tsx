@@ -5,14 +5,16 @@ import {
   getContainedRect,
   getPositionedBounds,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  getTraceAssetCropRect,
+  getTraceDisplaySize,
+} from "@/lib/editor-v2/editor/trace/crop";
 import type { LibraryTracePlacement } from "@/lib/library/designs";
 import type { LibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 const EDITOR_TRACE_POSITION_CELL_SIZE = 28;
 const LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD = 2;
-const TRACE_ASPECT_MISMATCH_EPSILON = 0.05;
-
 function getThumbnailSurfaceSize(snapshot: LibraryStitchSnapshot) {
   return {
     width: snapshot.width * EDITOR_TRACE_POSITION_CELL_SIZE,
@@ -205,36 +207,19 @@ export function StitchThumbnailCanvas({
             cachedTraceImage.naturalWidth || cachedTraceImage.width || 0;
           const loadedTraceHeight =
             cachedTraceImage.naturalHeight || cachedTraceImage.height || 0;
-          const persistedTraceWidth =
-            tracePlacement?.imageWidth && tracePlacement.imageWidth > 0
-              ? tracePlacement.imageWidth
-              : 0;
-          const persistedTraceHeight =
-            tracePlacement?.imageHeight && tracePlacement.imageHeight > 0
-              ? tracePlacement.imageHeight
-              : 0;
-          const loadedAspect =
-            loadedTraceWidth > 0 && loadedTraceHeight > 0
-              ? loadedTraceWidth / loadedTraceHeight
-              : null;
-          const persistedAspect =
-            persistedTraceWidth > 0 && persistedTraceHeight > 0
-              ? persistedTraceWidth / persistedTraceHeight
-              : null;
-          const shouldPreferPersistedAspect =
-            loadedAspect !== null &&
-            persistedAspect !== null &&
-            Math.abs(loadedAspect - persistedAspect) / persistedAspect >
-              TRACE_ASPECT_MISMATCH_EPSILON;
-          const traceSourceWidth = shouldPreferPersistedAspect
-            ? persistedTraceWidth
-            : loadedTraceWidth || persistedTraceWidth;
-          const traceSourceHeight = shouldPreferPersistedAspect
-            ? persistedTraceHeight
-            : loadedTraceHeight || persistedTraceHeight;
+          const displaySize = getTraceDisplaySize(
+            tracePlacement ?? {},
+            loadedTraceWidth,
+            loadedTraceHeight,
+          );
+          const cropRect = getTraceAssetCropRect(
+            tracePlacement ?? {},
+            loadedTraceWidth,
+            loadedTraceHeight,
+          );
           const traceBaseRect = getContainedRect(
-            traceSourceWidth,
-            traceSourceHeight,
+            displaySize.width,
+            displaySize.height,
             drawWidth,
             drawHeight,
           );
@@ -258,6 +243,10 @@ export function StitchThumbnailCanvas({
           context.rotate(((tracePlacement?.rotation ?? 0) * Math.PI) / 180);
           context.drawImage(
             cachedTraceImage,
+            cropRect.cropX,
+            cropRect.cropY,
+            cropRect.cropWidth,
+            cropRect.cropHeight,
             -traceBounds.width / 2,
             -traceBounds.height / 2,
             traceBounds.width,
@@ -278,6 +267,10 @@ export function StitchThumbnailCanvas({
             );
             compactPreviewContext.drawImage(
               cachedTraceImage,
+              cropRect.cropX,
+              cropRect.cropY,
+              cropRect.cropWidth,
+              cropRect.cropHeight,
               (-traceBounds.width / 2) * compactScale,
               (-traceBounds.height / 2) * compactScale,
               traceBounds.width * compactScale,

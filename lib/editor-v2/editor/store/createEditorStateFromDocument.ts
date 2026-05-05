@@ -5,6 +5,7 @@ import {
 } from "./state";
 import { ensureSymbolAssignmentsForCells } from "@/lib/symbols";
 import { addDmcColorLibraryToPalette } from "../color-library";
+import { getNormalizedTraceCrop } from "../trace/crop";
 
 export function createEditorStateFromDocument(
   document: EditorDocumentState,
@@ -25,19 +26,24 @@ export function createEditorStateFromDocument(
       };
     })(),
     trace: document.trace
-      ? {
-          ...document.trace,
-          previewUrl: document.trace.previewUrl,
-          thumbnailUrl: document.trace.thumbnailUrl ?? document.trace.previewUrl,
-          originalUrl: document.trace.originalUrl ?? document.trace.previewUrl,
-          fileName: document.trace.fileName ?? null,
-          byteSize: document.trace.byteSize ?? null,
-          mimeType: document.trace.mimeType ?? null,
-          imageWidth: document.trace.imageWidth ?? null,
-          imageHeight: document.trace.imageHeight ?? null,
-          blendMode: document.trace.blendMode ?? "image",
-          locked: true,
-        }
+      ? (() => {
+          const normalizedCrop = getNormalizedTraceCrop(document.trace);
+
+          return {
+            ...document.trace,
+            ...normalizedCrop,
+            previewUrl: document.trace.previewUrl,
+            thumbnailUrl: document.trace.thumbnailUrl ?? document.trace.previewUrl,
+            originalUrl: document.trace.originalUrl ?? document.trace.previewUrl,
+            fileName: document.trace.fileName ?? null,
+            byteSize: document.trace.byteSize ?? null,
+            mimeType: document.trace.mimeType ?? null,
+            imageWidth: document.trace.imageWidth ?? null,
+            imageHeight: document.trace.imageHeight ?? null,
+            blendMode: document.trace.blendMode ?? "image",
+            locked: true,
+          };
+        })()
       : null,
   };
   const defaultColorId =

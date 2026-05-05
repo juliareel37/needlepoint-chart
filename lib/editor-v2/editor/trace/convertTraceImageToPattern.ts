@@ -1,6 +1,7 @@
 "use client";
 
 import { getContainedRect, getLocalPointWithinRotatedBounds, getPositionedBounds } from "../positioning";
+import { getTraceAssetCropRect, getTraceDisplaySize } from "./crop";
 import type { PaletteColor, TraceDocument } from "../store/state";
 import type { GridCellValue } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
@@ -53,6 +54,8 @@ export function convertTraceImageToPattern(
   } = args;
   const imageWidth = traceImage.naturalWidth || traceImage.width;
   const imageHeight = traceImage.naturalHeight || traceImage.height;
+  const displaySize = getTraceDisplaySize(trace, imageWidth, imageHeight);
+  const cropRect = getTraceAssetCropRect(trace, imageWidth, imageHeight);
 
   if (imageWidth <= 0 || imageHeight <= 0) {
     return null;
@@ -151,8 +154,8 @@ export function convertTraceImageToPattern(
   const mask = new Uint8Array(cellCount);
 
   const baseRect = getContainedRect(
-    imageWidth,
-    imageHeight,
+    displaySize.width,
+    displaySize.height,
     metrics.surfaceWidth,
     metrics.surfaceHeight,
   );
@@ -188,12 +191,12 @@ export function convertTraceImageToPattern(
       }
 
       const pixelX = clampInt(
-        Math.floor((localPoint.x / bounds.width) * imageWidth),
+        Math.floor(cropRect.cropX + (localPoint.x / bounds.width) * cropRect.cropWidth),
         0,
         imageWidth - 1,
       );
       const pixelY = clampInt(
-        Math.floor((localPoint.y / bounds.height) * imageHeight),
+        Math.floor(cropRect.cropY + (localPoint.y / bounds.height) * cropRect.cropHeight),
         0,
         imageHeight - 1,
       );

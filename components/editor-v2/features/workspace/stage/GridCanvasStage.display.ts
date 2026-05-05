@@ -8,6 +8,10 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import {
+  getTraceAssetCropRect,
+  getTraceDisplaySize,
+} from "@/lib/editor-v2/editor/trace/crop";
 import type {
   CanvasSizing,
   LoadedTraceAsset,
@@ -135,11 +139,21 @@ export function renderDisplayCanvas(options: {
     displayTraceAsset.width > 0 &&
     displayTraceAsset.height > 0
   ) {
-    const baseRect = getContainedRect(
+    const displaySize = getTraceDisplaySize(
+      displayTrace,
       displayTraceAsset.width,
       displayTraceAsset.height,
+    );
+    const baseRect = getContainedRect(
+      displaySize.width,
+      displaySize.height,
       metrics.surfaceWidth,
       metrics.surfaceHeight,
+    );
+    const cropRect = getTraceAssetCropRect(
+      displayTrace,
+      displayTraceAsset.width,
+      displayTraceAsset.height,
     );
     const bounds = getPositionedBounds(baseRect, {
       offsetX: displayTrace.offsetX,
@@ -163,6 +177,10 @@ export function renderDisplayCanvas(options: {
     context.rotate((displayTrace.rotation * Math.PI) / 180);
     context.drawImage(
       displayTraceAsset.image,
+      cropRect.cropX,
+      cropRect.cropY,
+      cropRect.cropWidth,
+      cropRect.cropHeight,
       -traceRect.width / 2,
       -traceRect.height / 2,
       traceRect.width,

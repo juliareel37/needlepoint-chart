@@ -711,6 +711,10 @@ export function LibraryPageClient({
               ? {
                   imageWidth: loaded.document.trace.imageWidth,
                   imageHeight: loaded.document.trace.imageHeight,
+                  cropX: loaded.document.trace.cropX,
+                  cropY: loaded.document.trace.cropY,
+                  cropWidth: loaded.document.trace.cropWidth,
+                  cropHeight: loaded.document.trace.cropHeight,
                   offsetX: loaded.document.trace.offsetX,
                   offsetY: loaded.document.trace.offsetY,
                   scale: loaded.document.trace.scale,

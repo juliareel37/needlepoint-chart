@@ -22,6 +22,10 @@ import {
   getPositionedBounds,
   getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  getTraceAssetCropRect,
+  getTraceDisplaySize,
+} from "@/lib/editor-v2/editor/trace/crop";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
@@ -96,29 +100,16 @@ export function TraceImageLayer({
     typeof traceTransform | null
   >(null);
   const traceSourceSize = useMemo(() => {
-    if (traceAsset?.width && traceAsset?.height) {
-      return {
-        width: traceAsset.width,
-        height: traceAsset.height,
-      };
-    }
+    const fallbackWidth = traceAsset?.width ?? mobilePreviewSize?.width ?? null;
+    const fallbackHeight = traceAsset?.height ?? mobilePreviewSize?.height ?? null;
+    const displaySize = getTraceDisplaySize(trace, fallbackWidth, fallbackHeight);
 
-    if (mobilePreviewSize?.width && mobilePreviewSize?.height) {
-      return mobilePreviewSize;
-    }
-
-    if (trace.imageWidth && trace.imageHeight) {
-      return {
-        width: trace.imageWidth,
-        height: trace.imageHeight,
-      };
-    }
-
-    return null;
+    return displaySize.width > 0 && displaySize.height > 0
+      ? displaySize
+      : null;
   }, [
     mobilePreviewSize,
-    trace.imageHeight,
-    trace.imageWidth,
+    trace,
     traceAsset?.height,
     traceAsset?.width,
   ]);
@@ -270,11 +261,12 @@ export function TraceImageLayer({
       }
     } else if (desktopCanvas) {
       drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
+        trace,
         width: traceAsset.width,
         height: traceAsset.height,
       });
     }
-  }, [traceAsset, coarsePointer]);
+  }, [coarsePointer, trace, traceAsset]);
 
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
     const clampedTrace = traceBaseRect
@@ -401,7 +393,12 @@ export function TraceImageLayer({
                   height: "100%",
                   display: "block",
                   imageRendering: "auto",
-                  objectFit: "fill",
+                  objectFit: "cover",
+                  objectPosition: getObjectPositionPercent(
+                    trace,
+                    mobilePreviewSize?.width ?? trace.imageWidth ?? 1,
+                    mobilePreviewSize?.height ?? trace.imageHeight ?? 1,
+                  ),
                   pointerEvents: "none",
                   userSelect: "none",
                   WebkitUserSelect: "none",
@@ -588,18 +585,64 @@ function setDesktopProxyActive(
 function drawTraceSourceToCanvas(
   canvas: HTMLCanvasElement,
   imageSource: CanvasImageSource,
-  size: { width: number; height: number },
+  size: { trace: TraceDocument; width: number; height: number },
 ): void {
-  canvas.width = size.width;
-  canvas.height = size.height;
+  const cropRect = getTraceAssetCropRect(size.trace, size.width, size.height);
+
+  canvas.width = Math.max(1, Math.round(cropRect.cropWidth));
+  canvas.height = Math.max(1, Math.round(cropRect.cropHeight));
 
   const context = canvas.getContext("2d");
   if (!context) {
     return;
   }
 
-  context.clearRect(0, 0, size.width, size.height);
-  context.drawImage(imageSource, 0, 0, size.width, size.height);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(
+    imageSource,
+    cropRect.cropX,
+    cropRect.cropY,
+    cropRect.cropWidth,
+    cropRect.cropHeight,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+}
+
+function getObjectPositionPercent(
+  trace: TraceDocument,
+  assetWidth: number,
+  assetHeight: number,
+): string {
+  const cropRect = getTraceAssetCropRect(trace, assetWidth, assetHeight);
+  const x = getAxisObjectPositionPercent(
+    cropRect.cropX,
+    cropRect.cropWidth,
+    assetWidth,
+  );
+  const y = getAxisObjectPositionPercent(
+    cropRect.cropY,
+    cropRect.cropHeight,
+    assetHeight,
+  );
+
+  return `${x}% ${y}%`;
+}
+
+function getAxisObjectPositionPercent(
+  cropStart: number,
+  cropSize: number,
+  assetSize: number,
+): number {
+  const availableOffset = assetSize - cropSize;
+
+  if (availableOffset <= 0) {
+    return 50;
+  }
+
+  return clamp((cropStart / availableOffset) * 100, 0, 100);
 }
 
 function clampTraceTransformToSurface(

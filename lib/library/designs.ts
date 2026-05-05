@@ -31,6 +31,10 @@ export interface LibraryDesignRecord {
 export interface LibraryTracePlacement {
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   offsetX: number;
   offsetY: number;
   scale: number;
@@ -130,11 +134,15 @@ export async function loadLibraryDesignPage({
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
         tracePlacement: parsed?.trace
           ? {
-              imageWidth: parsed.trace.imageWidth,
-              imageHeight: parsed.trace.imageHeight,
-              offsetX: parsed.trace.offsetX,
-              offsetY: parsed.trace.offsetY,
-              scale: parsed.trace.scale,
+            imageWidth: parsed.trace.imageWidth,
+            imageHeight: parsed.trace.imageHeight,
+            cropX: parsed.trace.cropX,
+            cropY: parsed.trace.cropY,
+            cropWidth: parsed.trace.cropWidth,
+            cropHeight: parsed.trace.cropHeight,
+            offsetX: parsed.trace.offsetX,
+            offsetY: parsed.trace.offsetY,
+            scale: parsed.trace.scale,
               rotation: parsed.trace.rotation,
             }
           : null,

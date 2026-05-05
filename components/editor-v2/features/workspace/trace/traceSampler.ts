@@ -5,6 +5,10 @@ import {
   getLocalPointWithinRotatedBounds,
   getPositionedBounds,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  getTraceAssetCropRect,
+  getTraceDisplaySize,
+} from "@/lib/editor-v2/editor/trace/crop";
 import type { Rgb } from "@/lib/editor-v2/editor/color-utils";
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
 
@@ -53,9 +57,11 @@ export function sampleTraceRgbAtWorldPoint(
     return null;
   }
 
+  const displaySize = getTraceDisplaySize(trace, sampler.width, sampler.height);
+  const cropRect = getTraceAssetCropRect(trace, sampler.width, sampler.height);
   const baseRect = getContainedRect(
-    sampler.width,
-    sampler.height,
+    displaySize.width,
+    displaySize.height,
     metrics.surfaceWidth,
     metrics.surfaceHeight,
   );
@@ -77,8 +83,16 @@ export function sampleTraceRgbAtWorldPoint(
 
   const u = localPoint.x / bounds.width;
   const v = localPoint.y / bounds.height;
-  const pixelX = clampInt(Math.round(u * sampler.width), 0, sampler.width - 1);
-  const pixelY = clampInt(Math.round(v * sampler.height), 0, sampler.height - 1);
+  const pixelX = clampInt(
+    Math.round(cropRect.cropX + u * cropRect.cropWidth),
+    0,
+    sampler.width - 1,
+  );
+  const pixelY = clampInt(
+    Math.round(cropRect.cropY + v * cropRect.cropHeight),
+    0,
+    sampler.height - 1,
+  );
 
   const data = sampler.context.getImageData(pixelX, pixelY, 1, 1).data;
   if (data[3] < 10) {

@@ -68,6 +68,10 @@ export interface TraceDocument {
   mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   blendMode: TraceBlendMode;
   opacity: number;
   offsetX: number;

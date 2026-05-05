@@ -4,6 +4,7 @@ import type {
   PaletteDocument,
   TextDocument,
 } from "@/lib/editor-v2/editor/store";
+import { getNormalizedTraceCrop } from "@/lib/editor-v2/editor/trace/crop";
 
 export const PERSISTED_EDITOR_V2_SCHEMA_VERSION = 1;
 
@@ -33,6 +34,10 @@ export interface PersistedEditorV2Trace {
   mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   offsetX: number;
   offsetY: number;
   scale: number;
@@ -89,20 +94,28 @@ export function serializeEditorV2Document(
       symbolAssignments: document.palette.symbolAssignments,
     },
     trace: document.trace
-      ? {
-          previewUrl: document.trace.previewUrl,
-          thumbnailUrl: document.trace.thumbnailUrl,
-          originalUrl: document.trace.originalUrl,
-          fileName: document.trace.fileName,
-          byteSize: document.trace.byteSize,
-          mimeType: document.trace.mimeType,
-          imageWidth: document.trace.imageWidth,
-          imageHeight: document.trace.imageHeight,
-          offsetX: document.trace.offsetX,
-          offsetY: document.trace.offsetY,
-          scale: document.trace.scale,
-          rotation: document.trace.rotation,
-        }
+      ? (() => {
+          const normalizedCrop = getNormalizedTraceCrop(document.trace);
+
+          return {
+            previewUrl: document.trace.previewUrl,
+            thumbnailUrl: document.trace.thumbnailUrl,
+            originalUrl: document.trace.originalUrl,
+            fileName: document.trace.fileName,
+            byteSize: document.trace.byteSize,
+            mimeType: document.trace.mimeType,
+            imageWidth: document.trace.imageWidth,
+            imageHeight: document.trace.imageHeight,
+            cropX: normalizedCrop.cropX,
+            cropY: normalizedCrop.cropY,
+            cropWidth: normalizedCrop.cropWidth,
+            cropHeight: normalizedCrop.cropHeight,
+            offsetX: document.trace.offsetX,
+            offsetY: document.trace.offsetY,
+            scale: document.trace.scale,
+            rotation: document.trace.rotation,
+          };
+        })()
       : null,
     text: document.text,
   };
@@ -147,6 +160,10 @@ export function hydrateEditorV2Document(
             mimeType: normalizedTrace.mimeType,
             imageWidth: normalizedTrace.imageWidth,
             imageHeight: normalizedTrace.imageHeight,
+            cropX: normalizedTrace.cropX,
+            cropY: normalizedTrace.cropY,
+            cropWidth: normalizedTrace.cropWidth,
+            cropHeight: normalizedTrace.cropHeight,
             offsetX: normalizedTrace.offsetX,
             offsetY: normalizedTrace.offsetY,
             scale: normalizedTrace.scale,
@@ -238,6 +255,8 @@ function isPersistedTrace(value: unknown): value is PersistedEditorV2Trace {
 function normalizePersistedTrace(
   trace: PersistedEditorV2Trace | (Partial<PersistedEditorV2Trace> & { assetUrl?: unknown }),
 ): PersistedEditorV2Trace {
+  const normalizedCrop = getNormalizedTraceCrop(trace);
+
   return {
     ...trace,
     previewUrl: getLegacyCompatibleTraceUrl(trace, "previewUrl"),
@@ -248,6 +267,10 @@ function normalizePersistedTrace(
     mimeType: trace.mimeType ?? null,
     imageWidth: trace.imageWidth ?? null,
     imageHeight: trace.imageHeight ?? null,
+    cropX: normalizedCrop.cropX,
+    cropY: normalizedCrop.cropY,
+    cropWidth: normalizedCrop.cropWidth,
+    cropHeight: normalizedCrop.cropHeight,
     offsetX: trace.offsetX ?? 0,
     offsetY: trace.offsetY ?? 0,
     scale: trace.scale ?? 1,

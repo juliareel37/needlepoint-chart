@@ -18,6 +18,7 @@ import type {
   RemoveTraceCommand,
   UpdateTraceCommand,
 } from "../types";
+import { createFullTraceCrop } from "../../trace/crop";
 
 export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand> = {
   canHandle(command): command is AttachTraceCommand {
@@ -33,6 +34,10 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
       mimeType: command.payload.mimeType,
       imageWidth: command.payload.imageWidth,
       imageHeight: command.payload.imageHeight,
+      ...createFullTraceCrop(
+        command.payload.imageWidth,
+        command.payload.imageHeight,
+      ),
       blendMode: "image",
       opacity: 0.35,
       offsetX: 0,
