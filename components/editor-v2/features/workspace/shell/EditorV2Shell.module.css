@@ -1652,7 +1652,7 @@
 .stageToolbarBottomRight {
   position: absolute;
   right: 24px;
-  bottom: 12px;
+  bottom: 24px;
   z-index: var(--z-editor-stage-toolbar);
   display: flex;
   justify-content: flex-end;
@@ -3179,7 +3179,7 @@
     position: absolute;
     left: 16px;
     right: 16px;
-    bottom: 10px;
+    bottom: 16px;
     max-width: none;
   }
 

@@ -151,7 +151,6 @@ export function CanvasAidsFloatingToolbar({
             type="button"
             variant="ghostNeutral"
             iconOnly
-            popoverTrigger
             active={open}
             aria-expanded={open}
             aria-haspopup="dialog"
