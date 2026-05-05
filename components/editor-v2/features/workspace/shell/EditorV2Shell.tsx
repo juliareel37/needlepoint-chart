@@ -65,6 +65,8 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createCancelTraceRepositionCommand,
+  createCommitTraceRepositionCommand,
   createCancelIconPlacementCommand,
   createClearSelectionCommand,
   createRedoCommand,
@@ -294,10 +296,6 @@ export function EditorV2Shell({
   const mirrorSession = state.session.mirrorInteraction.session;
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
-  const repositionModeActive =
-    traceRepositionActive || textPlacement !== null || iconPlacement !== null;
-  const canUndoFromToolbar = canUndo && !repositionModeActive;
-  const canRedoFromToolbar = canRedo && !repositionModeActive;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
@@ -356,6 +354,10 @@ export function EditorV2Shell({
     setTraceCropSnapshot(null);
   }, [trace?.previewUrl]);
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
+  const repositionModeActive =
+    traceRepositionActive || traceCropEditing || textPlacement !== null || iconPlacement !== null;
+  const canUndoFromToolbar = canUndo && !repositionModeActive;
+  const canRedoFromToolbar = canRedo && !repositionModeActive;
   const handleBeginTraceCrop = useCallback(() => {
     if (!trace || traceRepositionActive) {
       return;
@@ -2479,9 +2481,19 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {traceRepositionActive && trace ? (
+                    {(traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
                         dispatch={dispatch}
+                        onCancel={
+                          traceCropEditing
+                            ? handleCancelTraceCrop
+                            : () => dispatch(createCancelTraceRepositionCommand())
+                        }
+                        onCommit={
+                          traceCropEditing
+                            ? handleCommitTraceCrop
+                            : () => dispatch(createCommitTraceRepositionCommand())
+                        }
                         trace={trace}
                       />
                     ) : textPlacement ? (

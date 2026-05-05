@@ -4,8 +4,6 @@ import type { TraceDocument } from "@/lib/editor-v2/editor/store";
 import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
-  createCancelTraceRepositionCommand,
-  createCommitTraceRepositionCommand,
   createSetActiveSidebarSectionCommand,
   createSetSidebarCollapsedCommand,
 } from "../workspaceCommands";
@@ -13,11 +11,15 @@ import styles from "./EditorV2Shell.module.css";
 
 interface TraceRepositionToolbarProps {
   dispatch: EditorStore["dispatch"];
+  onCancel: () => void;
+  onCommit: () => void;
   trace: TraceDocument;
 }
 
 export function TraceRepositionToolbar({
   dispatch,
+  onCancel,
+  onCommit,
   trace: _trace,
 }: TraceRepositionToolbarProps) {
   return (
@@ -29,7 +31,7 @@ export function TraceRepositionToolbar({
             variant="ghost"
             iconOnly
             className={styles.selectionToolbarCloseButton}
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}
+            onClick={onCancel}
           >
             <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
@@ -81,7 +83,7 @@ export function TraceRepositionToolbar({
             variant="ghost"
             iconOnly
             className={styles.selectionToolbarCloseButton}
-            onClick={() => dispatch(createCommitTraceRepositionCommand())}
+            onClick={onCommit}
           >
             <ToolbarIcon icon="/icons/lucide/check.svg" />
           </ToolbarButton>

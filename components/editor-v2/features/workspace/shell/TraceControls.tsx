@@ -638,112 +638,121 @@ export function TraceControls({
           {/* <TraceSection  */}
           {/* // title="Positioning" */}
           {/* > */}
-            {positioningEnabled && !preservePositioningSectionLayout ? (
-              <div className={styles.panelRow}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => dispatch(createCancelTraceRepositionCommand())}
-                   style={{ width: "47%"}}
+            <>
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Position
+                  </span>
+                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant={positioningEnabled ? "primary" : "secondary"}
+                      size="sm"
+                      disabled={!trace || cropEditing}
+                      onClick={() => {
+                        if (positioningEnabled) {
+                          return;
+                        }
+
+                        dispatch(createBeginTraceRepositionCommand("panel"));
+                      }}
+                    >
+                      <ButtonIcon icon="/icons/lucide/vector_square.svg" />
+                      {positioningEnabled ? "Repositioning" : "Reposition"}
+                    </Button>
+                  </div>
+                </div>
+              </Field>
+
+              {positioningEnabled && !preservePositioningSectionLayout ? (
+                <div
+                  className={styles.panelRow}
+                  style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => dispatch(createCommitTraceRepositionCommand())}
-                   style={{ width: "47%"}}
-                >
-                  Done
-                </Button>
-              </div>
-            ) : (
-              <>
-                <Field>
-                  <div className={styles.traceInlineFieldRow}>
-                    <span
-                      className={styles.traceInlineFieldLabel}
-                      style={typographyStyles.p2}
-                    >
-                      Position
-                    </span>
-                    <div className={styles.traceInlineActionControl}>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        disabled={!trace || positioningEnabled || cropEditing}
-                        onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
-                      >
-                        <ButtonIcon icon="/icons/lucide/vector_square.svg" />
-                        Reposition
-                      </Button>
-                    </div>
-                  </div>
-                </Field>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    style={{ minWidth: 96, flexShrink: 0 }}
+                    onClick={() => dispatch(createCancelTraceRepositionCommand())}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    style={{ minWidth: 96, flexShrink: 0 }}
+                    onClick={() => dispatch(createCommitTraceRepositionCommand())}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : null}
 
-                <Field>
-                  <div className={styles.traceInlineFieldRow}>
-                    <span
-                      className={styles.traceInlineFieldLabel}
-                      style={typographyStyles.p2}
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Crop
+                  </span>
+                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant={cropEditing ? "primary" : "secondary"}
+                      size="sm"
+                      disabled={!trace || positioningEnabled}
+                      onClick={onBeginCrop}
                     >
-                      Crop
-                    </span>
-                    <div className={styles.traceInlineActionControl}>
-                      <Button
-                        type="button"
-                        variant={cropEditing ? "primary" : "secondary"}
-                        size="sm"
-                        disabled={!trace || positioningEnabled}
-                        onClick={onBeginCrop}
-                      >
-                        <ButtonIcon icon="/icons/lucide/crop.svg" />
-                        {cropEditing ? "Cropping" : "Crop"}
-                      </Button>
-                    </div>
+                      <ButtonIcon icon="/icons/lucide/crop.svg" />
+                      {cropEditing ? "Cropping" : "Crop"}
+                    </Button>
                   </div>
-                </Field>
+                </div>
+              </Field>
 
-                {cropEditing && cropDraft ? (
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <p
-                      className={styles.emptyMessage}
-                      style={{ ...typographyStyles.p2, opacity: 0.8 }}
+              {cropEditing && cropDraft ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div
+                    className={styles.panelRow}
+                    style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
+                  >
+                    <Button
+                      type="button"
+                      variant="ghostV2"
+                      size="sm"
+                      onClick={onResetCrop}
                     >
-                      Crop directly on the canvas by dragging the frame corners or the image inside the frame.
-                    </p>
-
-                    <div className={styles.panelRow}>
-                      <Button
-                        type="button"
-                        variant="ghostV2"
-                        size="sm"
-                        onClick={onResetCrop}
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={onCancelCrop}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={onCommitCrop}
-                      >
-                        Done
-                      </Button>
-                    </div>
+                      Reset
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      style={{ minWidth: 96, flexShrink: 0 }}
+                      onClick={onCancelCrop}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      style={{ minWidth: 96, flexShrink: 0 }}
+                      onClick={onCommitCrop}
+                    >
+                      Done
+                    </Button>
                   </div>
-                ) : null}
-              </>
-            )}
+                </div>
+              ) : null}
+            </>
           {/* </TraceSection> */}
 
 
