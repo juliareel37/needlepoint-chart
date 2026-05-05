@@ -254,6 +254,10 @@ export const commitTraceRepositionCommandHandler: EditorCommandHandler<CommitTra
       offsetY: currentTrace.offsetY,
       scale: currentTrace.scale,
       rotation: currentTrace.rotation,
+      cropX: currentTrace.cropX,
+      cropY: currentTrace.cropY,
+      cropWidth: currentTrace.cropWidth,
+      cropHeight: currentTrace.cropHeight,
       locked: true,
     };
 
@@ -339,6 +343,10 @@ function buildTraceRepositionSnapshot(
     offsetY: trace.offsetY,
     scale: trace.scale,
     rotation: trace.rotation,
+    cropX: trace.cropX,
+    cropY: trace.cropY,
+    cropWidth: trace.cropWidth,
+    cropHeight: trace.cropHeight,
     locked: true,
   };
 }

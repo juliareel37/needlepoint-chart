@@ -421,7 +421,7 @@ export function EditorV2Shell({
   const canUndoFromToolbar = canUndo && !repositionModeActive;
   const canRedoFromToolbar = canRedo && !repositionModeActive;
   const handleBeginTraceCrop = useCallback(() => {
-    if (!trace || traceRepositionActive) {
+    if (!trace) {
       return;
     }
 
@@ -429,7 +429,7 @@ export function EditorV2Shell({
     setTraceCropSnapshot(nextCrop);
     setTracePreviewCrop(nextCrop);
     setTraceCropAspectRatioId("freehand");
-  }, [trace, traceRepositionActive]);
+  }, [trace]);
 
   const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
     setTracePreviewCrop(crop);
@@ -518,15 +518,25 @@ export function EditorV2Shell({
           scale: nextScale,
         },
         {
-        history: { mode: "push", label: "Crop Trace" },
-        source: "toolbar",
+          history: traceRepositionActive
+            ? { mode: "skip" }
+            : { mode: "push", label: "Crop Trace" },
+          source: "toolbar",
         },
       ),
     );
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
     setTraceCropAspectRatioId("freehand");
-  }, [dispatch, state.document.grid.height, state.document.grid.width, trace, traceCropSnapshot, tracePreviewCrop]);
+  }, [
+    dispatch,
+    state.document.grid.height,
+    state.document.grid.width,
+    trace,
+    traceCropSnapshot,
+    tracePreviewCrop,
+    traceRepositionActive,
+  ]);
   const traceCropAspectRatio = useMemo(() => {
     if (!trace) {
       return null;
@@ -2580,8 +2590,12 @@ export function EditorV2Shell({
                   >
                     {(traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
+                        cropEditing={traceCropEditing}
                         cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         dispatch={dispatch}
+                        onBeginCrop={
+                          traceCropEditing ? undefined : handleBeginTraceCrop
+                        }
                         onCropAspectRatioChange={
                           traceCropEditing ? handleTraceCropAspectRatioChange : undefined
                         }

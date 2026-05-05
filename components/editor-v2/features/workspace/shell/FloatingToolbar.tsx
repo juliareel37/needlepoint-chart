@@ -1275,7 +1275,7 @@ export function FloatingToolbar({
                     }}
                   >
                     <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-                    <ToolbarLabel>Display settings</ToolbarLabel>
+                    <ToolbarLabel>Settings</ToolbarLabel>
                   </ToolbarButton>
 
                   <ToolbarDivider />

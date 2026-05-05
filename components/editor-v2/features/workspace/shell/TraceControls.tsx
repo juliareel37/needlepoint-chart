@@ -678,6 +678,7 @@ export function TraceControls({
                     variant="secondary"
                     size="sm"
                     style={{ minWidth: 96, flexShrink: 0 }}
+                    disabled={cropEditing}
                     onClick={() => dispatch(createCancelTraceRepositionCommand())}
                   >
                     Cancel
@@ -687,6 +688,7 @@ export function TraceControls({
                     variant="primary"
                     size="sm"
                     style={{ minWidth: 96, flexShrink: 0 }}
+                    disabled={cropEditing}
                     onClick={() => dispatch(createCommitTraceRepositionCommand())}
                   >
                     Done
@@ -707,7 +709,7 @@ export function TraceControls({
                       type="button"
                       variant={cropEditing ? "primary" : "secondary"}
                       size="sm"
-                      disabled={!trace || positioningEnabled}
+                      disabled={!trace}
                       onClick={onBeginCrop}
                     >
                       <ButtonIcon icon="/icons/lucide/crop.svg" />

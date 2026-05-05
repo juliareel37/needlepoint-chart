@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -954,13 +955,44 @@ function TraceCropEditorOverlay({
               top: `${getCropHandleTop(handle, displayFrameBounds.height, handleSize)}px`,
               width: `${handleSize}px`,
               height: `${handleSize}px`,
-              borderRadius: "999px",
-              background: "#ffffff",
-              border: "1px solid rgba(15, 23, 42, 0.22)",
-              boxShadow: "0 2px 6px rgba(15, 23, 42, 0.24)",
               cursor: getCropHandleCursor(handle),
             }}
-          />
+          >
+            {(() => {
+              const visualSize = Math.max(handleSize + 14, 32);
+              const visualOffset = getCropHandleVisualOffset(handle, handleSize, visualSize);
+
+              return (
+            <div
+              style={{
+                position: "absolute",
+                left: `${visualOffset.left}px`,
+                top: `${visualOffset.top}px`,
+                width: `${visualSize}px`,
+                height: `${visualSize}px`,
+                filter: "drop-shadow(0 2px 6px rgba(15, 23, 42, 0.42))",
+              }}
+            >
+              <svg
+                aria-hidden="true"
+                width="100%"
+                height="100%"
+                viewBox="0 0 32 32"
+                style={{ display: "block", overflow: "visible" }}
+              >
+                <path
+                  d={getCropHandleCornerPath(handle)}
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.99)"
+                  strokeWidth="8"
+                  strokeLinecap="square"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+              );
+            })()}
+          </div>
         ))}
       </div>
     </div>
@@ -985,6 +1017,45 @@ function getCropHandleTop(
 
 function getCropHandleCursor(handle: "nw" | "ne" | "se" | "sw"): string {
   return handle === "nw" || handle === "se" ? "nwse-resize" : "nesw-resize";
+}
+
+function getCropHandleVisualOffset(
+  handle: "nw" | "ne" | "se" | "sw",
+  hitSize: number,
+  visualSize: number,
+): { left: number; top: number } {
+  const center = hitSize / 2;
+  const cornerInset = 8;
+
+  if (handle === "nw") {
+    return { left: center - cornerInset, top: center - cornerInset };
+  }
+  if (handle === "ne") {
+    return { left: center - (visualSize - cornerInset), top: center - cornerInset };
+  }
+  if (handle === "se") {
+    return {
+      left: center - (visualSize - cornerInset),
+      top: center - (visualSize - cornerInset),
+    };
+  }
+
+  return { left: center - cornerInset, top: center - (visualSize - cornerInset) };
+}
+
+function getCropHandleCornerPath(
+  handle: "nw" | "ne" | "se" | "sw",
+): string {
+  if (handle === "nw") {
+    return "M 28 8 H 8 V 28";
+  }
+  if (handle === "ne") {
+    return "M 4 8 H 24 V 28";
+  }
+  if (handle === "se") {
+    return "M 4 24 H 24 V 4";
+  }
+  return "M 28 24 H 8 V 4";
 }
 
 function fitFrameBoundsToAspectRatio(

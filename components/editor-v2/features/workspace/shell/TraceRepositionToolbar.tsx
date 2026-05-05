@@ -133,8 +133,10 @@ function AspectRatioGlyph({
 }
 
 interface TraceRepositionToolbarProps {
+  cropEditing?: boolean;
   cropAspectRatioId?: TraceCropAspectRatioId;
   dispatch: EditorStore["dispatch"];
+  onBeginCrop?: () => void;
   onCropAspectRatioChange?: (value: TraceCropAspectRatioId) => void;
   onCancel: () => void;
   onCommit: () => void;
@@ -257,8 +259,10 @@ function TraceToolbarPortalPopover({
 }
 
 export function TraceRepositionToolbar({
+  cropEditing = false,
   cropAspectRatioId,
   dispatch,
+  onBeginCrop,
   onCropAspectRatioChange,
   onCancel,
   onCommit,
@@ -298,9 +302,9 @@ export function TraceRepositionToolbar({
               }}
             >
               <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-              <ToolbarLabel>Display settings</ToolbarLabel>
+              <ToolbarLabel>Settings</ToolbarLabel>
             </ToolbarButton>
-            {cropAspectRatioId && onCropAspectRatioChange ? (
+            {cropEditing && cropAspectRatioId && onCropAspectRatioChange ? (
               <>
                 <ToolbarDivider />
                 <ToolbarAnchor ref={cropAspectRatioAnchorRef}>
@@ -347,6 +351,18 @@ export function TraceRepositionToolbar({
                     </TraceToolbarPortalPopover>
                   ) : null}
                 </ToolbarAnchor>
+              </>
+            ) : onBeginCrop ? (
+              <>
+                <ToolbarDivider />
+                <ToolbarButton
+                  type="button"
+                  labelled
+                  onClick={onBeginCrop}
+                >
+                  <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                  <ToolbarLabel>Crop</ToolbarLabel>
+                </ToolbarButton>
               </>
             ) : null}
           </ToolbarGroup>

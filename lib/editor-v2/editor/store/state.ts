@@ -247,7 +247,15 @@ export type TraceRepositionOrigin =
 
 export type TraceRepositionSnapshot = Pick<
   TraceDocument,
-  "offsetX" | "offsetY" | "scale" | "rotation" | "locked"
+  | "offsetX"
+  | "offsetY"
+  | "scale"
+  | "rotation"
+  | "locked"
+  | "cropX"
+  | "cropY"
+  | "cropWidth"
+  | "cropHeight"
 >;
 
 export interface TextInteractionState {
