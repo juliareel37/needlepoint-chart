@@ -29,6 +29,7 @@ import {
 import {
   clearSelectionCommandHandler,
   commitSelectionCommandHandler,
+  moveSelectionCommandHandler,
   setSelectionShapeCommandHandler,
   startSelectionCommandHandler,
   updateSelectionCommandHandler,
@@ -71,6 +72,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   startSelectionCommandHandler,
   updateSelectionCommandHandler,
   commitSelectionCommandHandler,
+  moveSelectionCommandHandler,
   clearSelectionCommandHandler,
   setSelectionShapeCommandHandler,
   beginMirrorFromSelectionCommandHandler,

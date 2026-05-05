@@ -43,6 +43,7 @@ interface GridCanvasStageProps {
   getGridPointFromClient: (clientX: number, clientY: number) => GridPoint | null;
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
   gridWidth: number;
+  handleHover: (selectionPoint: SelectionPoint | null) => void;
   handlePointerDown: (point: GridPoint, selectionPoint: SelectionPoint) => void;
   handlePointerEnter: (point: GridPoint) => void;
   interactionEnabled?: boolean;
@@ -74,6 +75,7 @@ export function GridCanvasStage({
   getGridPointFromClient,
   getSelectionPointFromClient,
   gridWidth,
+  handleHover,
   handlePointerDown,
   handlePointerEnter,
   interactionEnabled = true,
@@ -583,6 +585,12 @@ export function GridCanvasStage({
             return;
           }
 
+          handleHover(
+            event.pointerType === "touch"
+              ? null
+              : getSelectionPointFromClient(event.clientX, event.clientY),
+          );
+
           if (
             event.pointerType === "touch" &&
             (touchGestureLockedRef.current || activeTouchPointerIdsRef.current.size > 1)
@@ -685,6 +693,13 @@ export function GridCanvasStage({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
+        }}
+        onPointerLeave={() => {
+          if (!interactionEnabled) {
+            return;
+          }
+
+          handleHover(null);
         }}
         style={{
           position: "absolute",

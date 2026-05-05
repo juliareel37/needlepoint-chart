@@ -230,6 +230,18 @@ export function createSelectionCommitCommand(
   );
 }
 
+export function createMoveSelectionCommand(
+  deltaX: number,
+  deltaY: number,
+): EditorCommand {
+  return createCommand(
+    "selection.move",
+    { deltaX, deltaY },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
 export function createClearSelectionCommand(
   source: EditorCommandSource = "toolbar",
 ): EditorCommand {

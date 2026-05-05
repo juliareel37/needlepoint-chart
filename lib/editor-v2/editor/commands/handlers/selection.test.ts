@@ -105,4 +105,82 @@ describe("selection command handlers", () => {
       preview: null,
     });
   });
+
+  it("moves a committed rectangular selection without changing canvas data", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+    initial.document.grid.width = 12;
+    initial.document.grid.height = 12;
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-4",
+      kind: "selection.move",
+      payload: { deltaX: 3, deltaY: -2 },
+      meta: { source: "canvas", timestamp: 4, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 5, y: 1, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 5, y: 1 },
+        { x: 8, y: 5 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("clamps selection movement to the canvas bounds", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 1, y: 1, width: 3, height: 3 },
+      lassoPoints: [
+        { x: 1.2, y: 1.4 },
+        { x: 3.8, y: 1.2 },
+        { x: 2.6, y: 3.7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-5",
+      kind: "selection.move",
+      payload: { deltaX: 4, deltaY: 4 },
+      meta: { source: "canvas", timestamp: 5, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 2, y: 2, width: 3, height: 3 },
+      lassoPoints: [
+        { x: 2.2, y: 2.4 },
+        { x: 4.8, y: 2.2 },
+        { x: 3.6, y: 4.7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
 });

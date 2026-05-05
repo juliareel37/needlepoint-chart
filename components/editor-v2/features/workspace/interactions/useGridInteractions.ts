@@ -63,6 +63,7 @@ export function useGridInteractions({
     activeTool,
     dispatch,
     getClampedSelectionPointFromClient,
+    state,
     selectionShape: state.session.selection.shape,
   });
   const mirrorDrag = useMirrorDrag({
@@ -83,6 +84,8 @@ export function useGridInteractions({
 
   return {
     cancelPaintStroke: paintStroke.cancelStroke,
+    cursor: selectionDrag.cursor,
+    handleHover,
     handlePointerDown,
     handlePointerEnter,
   };
@@ -115,6 +118,10 @@ export function useGridInteractions({
     }
 
     paintStroke.handlePointerEnter(point);
+  }
+
+  function handleHover(selectionPoint: SelectionPoint | null): void {
+    selectionDrag.handlePointerHover(selectionPoint);
   }
 
   function handleEyedropperPointerDown(point: GridPoint): void {

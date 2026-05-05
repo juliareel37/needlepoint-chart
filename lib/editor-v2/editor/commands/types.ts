@@ -36,6 +36,7 @@ export type EditorCommandKind =
   | "selection.start"
   | "selection.update"
   | "selection.commit"
+  | "selection.move"
   | "selection.clear"
   | "selection.setShape"
   | "mirror.beginFromSelection"
@@ -152,6 +153,11 @@ export type UpdateSelectionCommand = BaseEditorCommand<
 export type CommitSelectionCommand = BaseEditorCommand<
   "selection.commit",
   { point: SelectionPoint | null }
+>;
+
+export type MoveSelectionCommand = BaseEditorCommand<
+  "selection.move",
+  { deltaX: number; deltaY: number }
 >;
 
 export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>;
@@ -431,6 +437,7 @@ export type EditorCommand =
   | StartSelectionCommand
   | UpdateSelectionCommand
   | CommitSelectionCommand
+  | MoveSelectionCommand
   | ClearSelectionCommand
   | SetSelectionShapeCommand
   | BeginMirrorFromSelectionCommand

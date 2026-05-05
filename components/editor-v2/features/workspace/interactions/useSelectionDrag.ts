@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ActiveTool,
   EditorStore,
+  EditorStoreState,
   SelectionState,
   SelectionPoint,
 } from "@/lib/editor-v2/editor/store";
+import { isPointInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import {
+  createMoveSelectionCommand,
   createSelectionCommitCommand,
   createSelectionStartCommand,
   createSelectionUpdateCommand,
@@ -20,6 +23,7 @@ interface UseSelectionDragOptions {
     clientX: number,
     clientY: number,
   ) => SelectionPoint | null;
+  state: EditorStoreState;
   selectionShape: SelectionState["shape"];
 }
 
@@ -27,17 +31,44 @@ export function useSelectionDrag({
   activeTool,
   dispatch,
   getClampedSelectionPointFromClient,
+  state,
   selectionShape,
 }: UseSelectionDragOptions) {
   const [isLassoing, setIsLassoing] = useState(false);
+  const [isMovingSelection, setIsMovingSelection] = useState(false);
+  const [hoveringMovableSelection, setHoveringMovableSelection] = useState(false);
   const lastLassoPointRef = useRef<SelectionPoint | null>(null);
+  const lastSelectionDragCellRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (!isLassoing) {
+    if (activeTool === "lasso") {
+      return;
+    }
+
+    lastLassoPointRef.current = null;
+    lastSelectionDragCellRef.current = null;
+    setIsLassoing(false);
+    setIsMovingSelection(false);
+    setHoveringMovableSelection(false);
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (!isLassoing && !isMovingSelection) {
       return;
     }
 
     function handleWindowPointerUp(event: PointerEvent) {
+      if (isMovingSelection) {
+        const point = getClampedSelectionPointFromClient(
+          event.clientX,
+          event.clientY,
+        );
+        setHoveringMovableSelection(Boolean(point && isSelectionMovableAtPoint(state, point)));
+        lastSelectionDragCellRef.current = null;
+        setIsMovingSelection(false);
+        return;
+      }
+
       const rawPoint = getClampedSelectionPointFromClient(
         event.clientX,
         event.clientY,
@@ -71,6 +102,30 @@ export function useSelectionDrag({
         return;
       }
 
+      if (isMovingSelection) {
+        const currentCell = {
+          x: Math.floor(point.x),
+          y: Math.floor(point.y),
+        };
+        const lastCell = lastSelectionDragCellRef.current;
+
+        if (!lastCell) {
+          lastSelectionDragCellRef.current = currentCell;
+          return;
+        }
+
+        const deltaX = currentCell.x - lastCell.x;
+        const deltaY = currentCell.y - lastCell.y;
+
+        if (deltaX === 0 && deltaY === 0) {
+          return;
+        }
+
+        lastSelectionDragCellRef.current = currentCell;
+        dispatch(createMoveSelectionCommand(deltaX, deltaY));
+        return;
+      }
+
       const lastPoint = lastLassoPointRef.current;
       const minStep = 0.3;
 
@@ -93,21 +148,43 @@ export function useSelectionDrag({
       window.removeEventListener("pointerup", handleWindowPointerUp);
       window.removeEventListener("pointercancel", handleWindowPointerUp);
     };
-  }, [dispatch, getClampedSelectionPointFromClient, isLassoing, selectionShape]);
+  }, [
+    dispatch,
+    getClampedSelectionPointFromClient,
+    isLassoing,
+    isMovingSelection,
+    selectionShape,
+    state,
+  ]);
 
   return {
     clearDragSelection,
+    cursor: isMovingSelection ? "grabbing" : hoveringMovableSelection ? "grab" : null,
     handlePointerDown,
+    handlePointerHover,
   };
 
   function clearDragSelection(): void {
     lastLassoPointRef.current = null;
+    lastSelectionDragCellRef.current = null;
     setIsLassoing(false);
+    setIsMovingSelection(false);
+    setHoveringMovableSelection(false);
   }
 
   function handlePointerDown(point: SelectionPoint): boolean {
     if (activeTool !== "lasso") {
       return false;
+    }
+
+    if (isSelectionMovableAtPoint(state, point)) {
+      lastSelectionDragCellRef.current = {
+        x: Math.floor(point.x),
+        y: Math.floor(point.y),
+      };
+      setHoveringMovableSelection(true);
+      setIsMovingSelection(true);
+      return true;
     }
 
     const normalizedPoint =
@@ -124,4 +201,27 @@ export function useSelectionDrag({
 
     return true;
   }
+
+  function handlePointerHover(point: SelectionPoint | null): void {
+    if (activeTool !== "lasso" || isLassoing || isMovingSelection) {
+      setHoveringMovableSelection(false);
+      return;
+    }
+
+    setHoveringMovableSelection(Boolean(point && isSelectionMovableAtPoint(state, point)));
+  }
+}
+
+function isSelectionMovableAtPoint(
+  state: EditorStoreState,
+  point: SelectionPoint,
+): boolean {
+  const selection = state.session.selection;
+
+  return Boolean(
+    selection.mode !== "none" &&
+      selection.rect &&
+      !selection.preview &&
+      isPointInSelection(state, point),
+  );
 }

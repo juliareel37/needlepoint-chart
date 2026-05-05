@@ -4,6 +4,7 @@ import type { EditorCommandHandler } from "./types";
 import type {
   ClearSelectionCommand,
   CommitSelectionCommand,
+  MoveSelectionCommand,
   SetSelectionShapeCommand,
   StartSelectionCommand,
   UpdateSelectionCommand,
@@ -116,6 +117,50 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
         mirrorInteraction: {
           session: null,
         },
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const moveSelectionCommandHandler: EditorCommandHandler<MoveSelectionCommand> = {
+  canHandle(command): command is MoveSelectionCommand {
+    return command.kind === "selection.move";
+  },
+  handle(state, command) {
+    const translatedSelection = translateSelection(
+      state.session.selection,
+      command.payload.deltaX,
+      command.payload.deltaY,
+      state.document.grid.width,
+      state.document.grid.height,
+    );
+
+    if (translatedSelection === state.session.selection) {
+      return {
+        nextSession: state.session,
+        nextUi: state.ui,
+        patches: [],
+        inversePatches: [],
+        effects: [],
+        event: {
+          type: "session",
+          commandId: command.id,
+        },
+      };
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        selection: translatedSelection,
       },
       nextUi: state.ui,
       patches: [],
@@ -305,4 +350,60 @@ function buildRectSelectionBounds(
   const height = Math.abs(point.y - anchor.y) + 1;
 
   return { x, y, width, height };
+}
+
+function translateSelection(
+  selection: SelectionState,
+  requestedDeltaX: number,
+  requestedDeltaY: number,
+  gridWidth: number,
+  gridHeight: number,
+): SelectionState {
+  if (!selection.rect || selection.preview) {
+    return selection;
+  }
+
+  const effectiveDeltaX = clampSelectionDeltaX(selection.rect, requestedDeltaX, gridWidth);
+  const effectiveDeltaY = clampSelectionDeltaY(selection.rect, requestedDeltaY, gridHeight);
+
+  if (effectiveDeltaX === 0 && effectiveDeltaY === 0) {
+    return selection;
+  }
+
+  const nextRect = {
+    ...selection.rect,
+    x: selection.rect.x + effectiveDeltaX,
+    y: selection.rect.y + effectiveDeltaY,
+  };
+
+  return {
+    ...selection,
+    rect: nextRect,
+    lassoPoints: selection.lassoPoints.map((point) => ({
+      x: point.x + effectiveDeltaX,
+      y: point.y + effectiveDeltaY,
+    })),
+  };
+}
+
+function clampSelectionDeltaX(
+  rect: { x: number; width: number },
+  deltaX: number,
+  gridWidth: number,
+): number {
+  const minDelta = -rect.x;
+  const maxDelta = gridWidth - (rect.x + rect.width);
+
+  return Math.min(Math.max(deltaX, minDelta), maxDelta);
+}
+
+function clampSelectionDeltaY(
+  rect: { y: number; height: number },
+  deltaY: number,
+  gridHeight: number,
+): number {
+  const minDelta = -rect.y;
+  const maxDelta = gridHeight - (rect.y + rect.height);
+
+  return Math.min(Math.max(deltaY, minDelta), maxDelta);
 }

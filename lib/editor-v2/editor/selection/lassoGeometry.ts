@@ -116,6 +116,50 @@ export function isCellInSelection(
   );
 }
 
+export function isPointInSelection(
+  state: EditorStoreState,
+  point: SelectionPoint,
+): boolean {
+  const selection = state.session.selection;
+
+  if (!selection.rect) {
+    return false;
+  }
+
+  const { rect } = selection;
+
+  if (
+    point.x < rect.x ||
+    point.y < rect.y ||
+    point.x >= rect.x + rect.width ||
+    point.y >= rect.y + rect.height
+  ) {
+    return false;
+  }
+
+  if (selection.mode === "lasso") {
+    return pointInPolygon(point, selection.lassoPoints);
+  }
+
+  if (selection.mode === "circle") {
+    const radiusX = rect.width / 2;
+    const radiusY = rect.height / 2;
+
+    if (radiusX <= 0 || radiusY <= 0) {
+      return false;
+    }
+
+    const centerX = rect.x + radiusX;
+    const centerY = rect.y + radiusY;
+    const normalizedX = (point.x - centerX) / radiusX;
+    const normalizedY = (point.y - centerY) / radiusY;
+
+    return normalizedX * normalizedX + normalizedY * normalizedY <= 1;
+  }
+
+  return true;
+}
+
 export function pointInPolygon(
   point: SelectionPoint,
   polygon: SelectionPoint[],

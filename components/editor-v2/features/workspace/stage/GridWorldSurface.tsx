@@ -303,7 +303,7 @@ export function GridWorldSurface({
     },
     [getSelectionPointFromClient],
   );
-  const { cancelPaintStroke, handlePointerDown, handlePointerEnter } = useGridInteractions({
+  const { cancelPaintStroke, cursor: selectionCursor, handleHover, handlePointerDown, handlePointerEnter } = useGridInteractions({
     activeColorId,
     activeTool,
     brushSize,
@@ -476,7 +476,7 @@ export function GridWorldSurface({
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        cursor: interactionLocked ? "default" : cursor,
+        cursor: interactionLocked ? "default" : selectionCursor ?? cursor,
         touchAction: interactionLocked ? "auto" : "none",
       }}
     >
@@ -587,6 +587,7 @@ export function GridWorldSurface({
               getGridPointFromClient={getGridPointFromClient}
               getSelectionPointFromClient={getSelectionPointFromClient}
               gridWidth={grid.width}
+              handleHover={handleHover}
               handlePointerDown={handlePointerDown}
               handlePointerEnter={handlePointerEnter}
               interactionEnabled={!interactionLocked && !paintDisabled}
