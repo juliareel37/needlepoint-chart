@@ -288,36 +288,9 @@ export function TraceRepositionToolbar({
 
   return (
     <div className={styles.selectionToolbarCluster}>
-      {/* <div className={styles.selectionToolbarCloseViewport}>
-        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
-          <ToolbarButton
-            type="button"
-            variant="ghost"
-            iconOnly
-            className={styles.selectionToolbarCloseButton}
-            onClick={onCancel}
-          >
-            <ToolbarIcon icon="/icons/lucide/x.svg" />
-          </ToolbarButton>
-        </Toolbar>
-      </div> */}
-
       <div className={styles.selectionToolbarMainViewport}>
         <Toolbar className={styles.floatingToolbar}>
           <ToolbarGroup>
-            {/* <ToolbarButton
-              type="button"
-              labelled
-              onClick={() => {
-                dispatch(createSetActiveSidebarSectionCommand("trace"));
-                dispatch(createSetSidebarCollapsedCommand(false));
-              }}
-            >
-              <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-              <ToolbarLabel>Settings</ToolbarLabel>
-            </ToolbarButton>
-            <ToolbarDivider /> */}
-
             {onBeginCrop ? (
               <>
                 {cropEditing ? (
@@ -384,29 +357,15 @@ export function TraceRepositionToolbar({
                       Cancel
                     </ToolbarButton>
 
-                    {/* <ToolbarButton
-                      type="button"
-                      variant="primary"
-                      textOnly
-                      onClick={() => {
-                        setCropAspectRatioMenuOpen(false);
-                        onCommitCrop?.();
-                      }}
-                    >
-                      Apply crop
-                    </ToolbarButton> */}
-
                     <ToolbarButton
                     type="button"
                     variant="primary"
                     textOnly
-                    // className={styles.selectionToolbarCloseButton}
                       onClick={() => {
                         setCropAspectRatioMenuOpen(false);
                         onCommitCrop?.();
                       }}
                   >
-                    {/* <ToolbarIcon icon="/icons/lucide/check.svg" /> */}
                     Apply crop
                   </ToolbarButton>
                   </>
@@ -436,10 +395,8 @@ export function TraceRepositionToolbar({
             type="button"
             variant="secondary"
             textOnly
-            // className={styles.selectionToolbarCloseButton}
             onClick={onCancel}
           >
-            {/* <ToolbarIcon icon="/icons/lucide/x.svg" /> */}
             Cancel
           </ToolbarButton>
 
@@ -447,52 +404,16 @@ export function TraceRepositionToolbar({
             type="button"
             variant="primary"
             textOnly
-            // className={styles.selectionToolbarCloseButton}
             onClick={onCommit}
           >
-            {/* <ToolbarIcon icon="/icons/lucide/check.svg" /> */}
             Done
           </ToolbarButton>
           </>
             ) : null}
 
           </ToolbarGroup>
-            {/* <ToolbarButton
-              type="button"
-              variant="secondary"
-              textOnly
-              // className={styles.selectionToolbarCloseButton}
-              onClick={onCancel}
-            >
-            Cancel
-            </ToolbarButton>
-
-            <ToolbarButton
-              type="button"
-              variant="primary"
-              textOnly
-              // className={styles.selectionToolbarCloseButton}
-              onClick={onCommit}
-            >
-            Done
-            </ToolbarButton> */}
         </Toolbar>
       </div>
-
-      {/* <div className={styles.selectionToolbarCloseViewport}>
-        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
-          <ToolbarButton
-            type="button"
-            variant="ghost"
-            iconOnly
-            className={styles.selectionToolbarCloseButton}
-            onClick={onCommit}
-          >
-            <ToolbarIcon icon="/icons/lucide/check.svg" />
-          </ToolbarButton>
-        </Toolbar>
-      </div> */}
-
     </div>
   );
 }
