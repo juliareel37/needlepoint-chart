@@ -82,7 +82,12 @@ interface EditorSidebarProps {
   textViewportCenter: WorldPoint | null;
   textViewportWidth: number | null;
   textViewportHeight: number | null;
-  onPreviewCropChange?: (crop: TraceCropRect | null) => void;
+  traceCropDraft?: TraceCropRect | null;
+  traceCropEditing?: boolean;
+  onBeginTraceCrop?: () => void;
+  onCancelTraceCrop?: () => void;
+  onCommitTraceCrop?: () => void;
+  onResetTraceCrop?: () => void;
 }
 
 export function EditorSidebar({
@@ -141,7 +146,12 @@ export function EditorSidebar({
   textViewportCenter,
   textViewportWidth,
   textViewportHeight,
-  onPreviewCropChange,
+  traceCropDraft = null,
+  traceCropEditing = false,
+  onBeginTraceCrop,
+  onCancelTraceCrop,
+  onCommitTraceCrop,
+  onResetTraceCrop,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
@@ -317,10 +327,15 @@ export function EditorSidebar({
 
           {activeSection === "trace" ? (
               <TracePanelPage
+                cropDraft={traceCropDraft}
+                cropEditing={traceCropEditing}
                 dispatch={dispatch}
                 grid={document.grid}
                 gridMetrics={gridMetrics}
-                onPreviewCropChange={onPreviewCropChange}
+                onBeginCrop={onBeginTraceCrop}
+                onCancelCrop={onCancelTraceCrop}
+                onCommitCrop={onCommitTraceCrop}
+                onResetCrop={onResetTraceCrop}
                 palette={palette}
                 repositionActive={traceRepositionActive}
                 repositionOrigin={traceRepositionOrigin}

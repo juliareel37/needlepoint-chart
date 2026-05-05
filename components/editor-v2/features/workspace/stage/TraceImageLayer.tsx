@@ -19,10 +19,12 @@ import type {
 } from "@/lib/editor-v2/editor/viewport";
 import {
   getContainedRect,
+  getLocalPointWithinRotatedBounds,
   getPositionedBounds,
   getRotationCss,
 } from "@/lib/editor-v2/editor/positioning";
 import {
+  getNormalizedTraceCrop,
   getTraceAssetCropRect,
   getTraceDisplaySize,
 } from "@/lib/editor-v2/editor/trace/crop";
@@ -35,10 +37,13 @@ const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
+  cropBase?: TraceDisplayOverride;
+  cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
+  onCropPreviewChange?: (crop: TraceDisplayOverride) => void;
   positioningEnabled: boolean;
   portalHost?: HTMLElement | null;
   stageBounds: { left: number; top: number; width: number; height: number };
@@ -52,10 +57,13 @@ interface TraceImageLayerProps {
 }
 
 export function TraceImageLayer({
+  cropBase = null,
+  cropEditing = false,
   dispatch,
   getWorldPointFromClient,
   imageOpacity,
   metrics,
+  onCropPreviewChange,
   positioningEnabled,
   portalHost = null,
   stageBounds,
@@ -180,6 +188,8 @@ export function TraceImageLayer({
       height: mobileDisplayStageBounds.height,
     };
   }, [mobileDisplayStageBounds, stageBounds.left, stageBounds.top]);
+  const cropAssetWidth = traceAsset?.width ?? mobilePreviewSize?.width ?? trace.imageWidth ?? 0;
+  const cropAssetHeight = traceAsset?.height ?? mobilePreviewSize?.height ?? trace.imageHeight ?? 0;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -440,10 +450,34 @@ export function TraceImageLayer({
         )
       : null;
 
+  const cropOverlay =
+    cropEditing &&
+    cropAssetWidth > 0 &&
+    cropAssetHeight > 0 &&
+    onCropPreviewChange
+      ? (
+          <TraceCropEditorOverlay
+            assetHeight={cropAssetHeight}
+            assetWidth={cropAssetWidth}
+            cropBase={getNormalizedTraceCrop(cropBase ? { ...trace, ...cropBase } : renderTrace, cropAssetWidth, cropAssetHeight)}
+            crop={getNormalizedTraceCrop(renderTrace, cropAssetWidth, cropAssetHeight)}
+            getWorldPointFromClient={getWorldPointFromClient}
+            imageOpacity={imageOpacity}
+            onCropPreviewChange={onCropPreviewChange}
+            trace={renderTrace}
+            traceTransform={traceTransform}
+            surfaceHeight={metrics.surfaceHeight}
+            surfaceWidth={metrics.surfaceWidth}
+            zoom={zoom}
+          />
+        )
+      : null;
+
   return (
     <>
-      {mobileOverlay}
-      {!coarsePointer || !positioningEnabled ? (
+      {cropOverlay}
+      {cropEditing ? null : mobileOverlay}
+      {!cropEditing && (!coarsePointer || !positioningEnabled) ? (
         <div
           style={{
             position: "absolute",
@@ -523,6 +557,416 @@ export function TraceImageLayer({
       ) : null}
     </>
   );
+}
+
+type TraceCropDragMode = "move" | "nw" | "ne" | "se" | "sw";
+
+interface TraceCropEditorOverlayProps {
+  assetHeight: number;
+  assetWidth: number;
+  cropBase: NonNullable<TraceDisplayOverride>;
+  crop: NonNullable<TraceDisplayOverride>;
+  getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
+  imageOpacity: number;
+  onCropPreviewChange: (crop: TraceDisplayOverride) => void;
+  surfaceHeight: number;
+  surfaceWidth: number;
+  trace: TraceDocument;
+  traceTransform: { offsetX: number; offsetY: number; scale: number; rotation: number };
+  zoom: number;
+}
+
+function TraceCropEditorOverlay({
+  assetHeight,
+  assetWidth,
+  cropBase,
+  crop,
+  getWorldPointFromClient,
+  imageOpacity,
+  onCropPreviewChange,
+  surfaceHeight,
+  surfaceWidth,
+  trace,
+  traceTransform,
+  zoom,
+}: TraceCropEditorOverlayProps) {
+  const dragSessionRef = useRef<{
+    mode: TraceCropDragMode;
+    frameBounds: { left: number; top: number; width: number; height: number };
+    imageBounds: { left: number; top: number; width: number; height: number };
+    pointerId: number;
+    startLocalPoint: WorldPoint;
+  } | null>(null);
+  const handleSize = Math.max(14 / Math.max(zoom, 0.0001), 14);
+  const baseDisplaySize = getTraceDisplaySize(
+    {
+      ...trace,
+      ...cropBase,
+    },
+    assetWidth,
+    assetHeight,
+  );
+  const baseRect = getContainedRect(
+    baseDisplaySize.width,
+    baseDisplaySize.height,
+    surfaceWidth,
+    surfaceHeight,
+  );
+  const baseFrameBounds = getPositionedBounds(baseRect, traceTransform);
+  const imageScaleX = baseFrameBounds.width / Math.max(cropBase.cropWidth, 1);
+  const imageScaleY = baseFrameBounds.height / Math.max(cropBase.cropHeight, 1);
+  const minFrameWidth = baseFrameBounds.width / Math.max(cropBase.cropWidth, 1);
+  const minFrameHeight = baseFrameBounds.height / Math.max(cropBase.cropHeight, 1);
+  const initialImageBounds = useMemo(
+    () => ({
+      left: baseFrameBounds.left - cropBase.cropX * imageScaleX,
+      top: baseFrameBounds.top - cropBase.cropY * imageScaleY,
+      width: assetWidth * imageScaleX,
+      height: assetHeight * imageScaleY,
+    }),
+    [
+      assetHeight,
+      assetWidth,
+      baseFrameBounds.left,
+      baseFrameBounds.top,
+      cropBase.cropX,
+      cropBase.cropY,
+      imageScaleX,
+      imageScaleY,
+    ],
+  );
+  const initialFrameBounds = useMemo(
+    () => ({
+      left: initialImageBounds.left + crop.cropX * imageScaleX,
+      top: initialImageBounds.top + crop.cropY * imageScaleY,
+      width: crop.cropWidth * imageScaleX,
+      height: crop.cropHeight * imageScaleY,
+    }),
+    [
+      crop.cropHeight,
+      crop.cropWidth,
+      crop.cropX,
+      crop.cropY,
+      initialImageBounds.left,
+      initialImageBounds.top,
+      imageScaleX,
+      imageScaleY,
+    ],
+  );
+  const [displayImageBounds, setDisplayImageBounds] = useState(initialImageBounds);
+  const [displayFrameBounds, setDisplayFrameBounds] = useState(initialFrameBounds);
+
+  useEffect(() => {
+    const localCrop = getNormalizedTraceCrop(
+      {
+        imageWidth: assetWidth,
+        imageHeight: assetHeight,
+        cropX: (displayFrameBounds.left - displayImageBounds.left) * (assetWidth / Math.max(displayImageBounds.width, 1)),
+        cropY: (displayFrameBounds.top - displayImageBounds.top) * (assetHeight / Math.max(displayImageBounds.height, 1)),
+        cropWidth: displayFrameBounds.width * (assetWidth / Math.max(displayImageBounds.width, 1)),
+        cropHeight: displayFrameBounds.height * (assetHeight / Math.max(displayImageBounds.height, 1)),
+      },
+      assetWidth,
+      assetHeight,
+    );
+
+    if (dragSessionRef.current) {
+      return;
+    }
+
+    if (
+      localCrop.cropX === crop.cropX &&
+      localCrop.cropY === crop.cropY &&
+      localCrop.cropWidth === crop.cropWidth &&
+      localCrop.cropHeight === crop.cropHeight
+    ) {
+      return;
+    }
+
+    setDisplayImageBounds(initialImageBounds);
+    setDisplayFrameBounds(initialFrameBounds);
+  }, [
+    assetHeight,
+    assetWidth,
+    crop,
+    displayFrameBounds.height,
+    displayFrameBounds.left,
+    displayFrameBounds.top,
+    displayFrameBounds.width,
+    displayImageBounds.height,
+    displayImageBounds.left,
+    displayImageBounds.top,
+    displayImageBounds.width,
+    initialFrameBounds,
+    initialImageBounds,
+  ]);
+
+  const getImageLocalPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const worldPoint = getWorldPointFromClient(clientX, clientY);
+      if (!worldPoint) {
+        return null;
+      }
+
+      const localPoint = getLocalPointWithinRotatedBounds(
+        worldPoint,
+        displayImageBounds,
+        trace.rotation,
+      );
+
+      return {
+        x: displayImageBounds.left + localPoint.x,
+        y: displayImageBounds.top + localPoint.y,
+      };
+    },
+    [displayImageBounds, getWorldPointFromClient, trace.rotation],
+  );
+
+  const emitCropFromBounds = useCallback(
+    (
+      nextFrameBounds: { left: number; top: number; width: number; height: number },
+      nextImageBounds: { left: number; top: number; width: number; height: number },
+    ) => {
+      const scaleX = assetWidth / Math.max(nextImageBounds.width, 1);
+      const scaleY = assetHeight / Math.max(nextImageBounds.height, 1);
+      onCropPreviewChange(
+        getNormalizedTraceCrop(
+          {
+            imageWidth: assetWidth,
+            imageHeight: assetHeight,
+            cropX: (nextFrameBounds.left - nextImageBounds.left) * scaleX,
+            cropY: (nextFrameBounds.top - nextImageBounds.top) * scaleY,
+            cropWidth: nextFrameBounds.width * scaleX,
+            cropHeight: nextFrameBounds.height * scaleY,
+          },
+          assetWidth,
+          assetHeight,
+        ),
+      );
+    },
+    [assetHeight, assetWidth, onCropPreviewChange],
+  );
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const session = dragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      const localPoint = getImageLocalPoint(event.clientX, event.clientY);
+      if (!localPoint) {
+        return;
+      }
+
+      const deltaX = localPoint.x - session.startLocalPoint.x;
+      const deltaY = localPoint.y - session.startLocalPoint.y;
+
+      if (session.mode === "move") {
+        const nextFrameLeft = clamp(
+          session.frameBounds.left + deltaX,
+          session.imageBounds.left,
+          session.imageBounds.left + session.imageBounds.width - session.frameBounds.width,
+        );
+        const nextFrameTop = clamp(
+          session.frameBounds.top + deltaY,
+          session.imageBounds.top,
+          session.imageBounds.top + session.imageBounds.height - session.frameBounds.height,
+        );
+        const nextFrameBounds = {
+          ...session.frameBounds,
+          left: nextFrameLeft,
+          top: nextFrameTop,
+        };
+        setDisplayFrameBounds(nextFrameBounds);
+        setDisplayImageBounds(session.imageBounds);
+
+        emitCropFromBounds(nextFrameBounds, session.imageBounds);
+        return;
+      }
+
+      const startRight = session.frameBounds.left + session.frameBounds.width;
+      const startBottom = session.frameBounds.top + session.frameBounds.height;
+      let nextLeft = session.frameBounds.left;
+      let nextTop = session.frameBounds.top;
+      let nextRight = startRight;
+      let nextBottom = startBottom;
+
+      if (session.mode === "nw" || session.mode === "sw") {
+        nextLeft = clamp(
+          localPoint.x,
+          session.imageBounds.left,
+          startRight - minFrameWidth,
+        );
+      }
+      if (session.mode === "ne" || session.mode === "se") {
+        nextRight = clamp(
+          localPoint.x,
+          session.frameBounds.left + minFrameWidth,
+          session.imageBounds.left + session.imageBounds.width,
+        );
+      }
+      if (session.mode === "nw" || session.mode === "ne") {
+        nextTop = clamp(
+          localPoint.y,
+          session.imageBounds.top,
+          startBottom - minFrameHeight,
+        );
+      }
+      if (session.mode === "sw" || session.mode === "se") {
+        nextBottom = clamp(
+          localPoint.y,
+          session.frameBounds.top + minFrameHeight,
+          session.imageBounds.top + session.imageBounds.height,
+        );
+      }
+
+      const nextFrameBounds = {
+        left: nextLeft,
+        top: nextTop,
+        width: nextRight - nextLeft,
+        height: nextBottom - nextTop,
+      };
+      setDisplayFrameBounds(nextFrameBounds);
+      setDisplayImageBounds(session.imageBounds);
+      emitCropFromBounds(nextFrameBounds, session.imageBounds);
+    };
+
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (dragSessionRef.current?.pointerId === event.pointerId) {
+        dragSessionRef.current = null;
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [emitCropFromBounds, getImageLocalPoint, minFrameHeight, minFrameWidth]);
+
+  const beginDrag = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>, mode: TraceCropDragMode) => {
+      const localPoint = getImageLocalPoint(event.clientX, event.clientY);
+      if (!localPoint) {
+        return;
+      }
+
+      dragSessionRef.current = {
+        mode,
+        frameBounds: displayFrameBounds,
+        imageBounds: displayImageBounds,
+        pointerId: event.pointerId,
+        startLocalPoint: localPoint,
+      };
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [displayFrameBounds, displayImageBounds, getImageLocalPoint],
+  );
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 5,
+        pointerEvents: "none",
+        overflow: "visible",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: `${displayImageBounds.left}px`,
+          top: `${displayImageBounds.top}px`,
+          width: `${displayImageBounds.width}px`,
+          height: `${displayImageBounds.height}px`,
+          transform: getRotationCss(trace.rotation),
+          transformOrigin: "center center",
+          opacity: imageOpacity,
+          pointerEvents: "none",
+          overflow: "visible",
+        }}
+      >
+          <img
+            aria-hidden="true"
+            src={trace.previewUrl}
+          alt=""
+          draggable={false}
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "fill",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: `${displayFrameBounds.left}px`,
+          top: `${displayFrameBounds.top}px`,
+          width: `${displayFrameBounds.width}px`,
+          height: `${displayFrameBounds.height}px`,
+          transform: getRotationCss(trace.rotation),
+          transformOrigin: "center center",
+          pointerEvents: "auto",
+          touchAction: "none",
+          boxSizing: "border-box",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.42)",
+          border: "1.5px solid rgba(255, 255, 255, 0.96)",
+          cursor: "move",
+        }}
+        onPointerDown={(event) => beginDrag(event, "move")}
+      >
+        {(["nw", "ne", "se", "sw"] as const).map((handle) => (
+          <div
+            key={handle}
+            onPointerDown={(event) => beginDrag(event, handle)}
+            style={{
+              position: "absolute",
+              left: `${getCropHandleLeft(handle, displayFrameBounds.width, handleSize)}px`,
+              top: `${getCropHandleTop(handle, displayFrameBounds.height, handleSize)}px`,
+              width: `${handleSize}px`,
+              height: `${handleSize}px`,
+              borderRadius: "999px",
+              background: "#ffffff",
+              border: "1px solid rgba(15, 23, 42, 0.22)",
+              boxShadow: "0 2px 6px rgba(15, 23, 42, 0.24)",
+              cursor: getCropHandleCursor(handle),
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getCropHandleLeft(
+  handle: "nw" | "ne" | "se" | "sw",
+  width: number,
+  size: number,
+): number {
+  return handle === "nw" || handle === "sw" ? -size / 2 : width - size / 2;
+}
+
+function getCropHandleTop(
+  handle: "nw" | "ne" | "se" | "sw",
+  height: number,
+  size: number,
+): number {
+  return handle === "nw" || handle === "ne" ? -size / 2 : height - size / 2;
+}
+
+function getCropHandleCursor(handle: "nw" | "ne" | "se" | "sw"): string {
+  return handle === "nw" || handle === "se" ? "nwse-resize" : "nesw-resize";
 }
 
 function applyDesktopTransform(

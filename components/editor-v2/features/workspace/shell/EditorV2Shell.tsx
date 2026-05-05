@@ -43,6 +43,14 @@ import type {
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
 import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
+import {
+  createFullTraceCrop,
+  getNormalizedTraceCrop,
+} from "@/lib/editor-v2/editor/trace/crop";
+import {
+  getContainedRect,
+  getPositionedBounds,
+} from "@/lib/editor-v2/editor/positioning";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
@@ -65,6 +73,7 @@ import {
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createUpdateTraceCommand,
   createUndoCommand,
 } from "../workspaceCommands";
 import { EditorRail } from "./EditorRail";
@@ -322,6 +331,7 @@ export function EditorV2Shell({
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
+  const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -343,7 +353,113 @@ export function EditorV2Shell({
 
   useEffect(() => {
     setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
   }, [trace?.previewUrl]);
+  const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
+  const handleBeginTraceCrop = useCallback(() => {
+    if (!trace || traceRepositionActive) {
+      return;
+    }
+
+    const nextCrop = getNormalizedTraceCrop(trace);
+    setTraceCropSnapshot(nextCrop);
+    setTracePreviewCrop(nextCrop);
+  }, [trace, traceRepositionActive]);
+
+  const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
+    setTracePreviewCrop(crop);
+  }, []);
+
+  const handleCancelTraceCrop = useCallback(() => {
+    setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
+  }, []);
+
+  const handleResetTraceCrop = useCallback(() => {
+    if (!trace || !tracePreviewCrop) {
+      return;
+    }
+
+    setTracePreviewCrop(
+      createFullTraceCrop(trace.imageWidth ?? tracePreviewCrop.cropWidth, trace.imageHeight ?? tracePreviewCrop.cropHeight),
+    );
+  }, [trace, tracePreviewCrop]);
+
+  const handleCommitTraceCrop = useCallback(() => {
+    if (!trace || !traceCropSnapshot || !tracePreviewCrop) {
+      setTracePreviewCrop(null);
+      setTraceCropSnapshot(null);
+      return;
+    }
+
+    if (
+      traceCropSnapshot.cropX === tracePreviewCrop.cropX &&
+      traceCropSnapshot.cropY === tracePreviewCrop.cropY &&
+      traceCropSnapshot.cropWidth === tracePreviewCrop.cropWidth &&
+      traceCropSnapshot.cropHeight === tracePreviewCrop.cropHeight
+    ) {
+      setTracePreviewCrop(null);
+      setTraceCropSnapshot(null);
+      return;
+    }
+
+    const cropMetrics = createGridWorldMetrics(
+      state.document.grid.width,
+      state.document.grid.height,
+      DEFAULT_CELL_SIZE,
+      0,
+    );
+    const baseRect = getContainedRect(
+      traceCropSnapshot.cropWidth,
+      traceCropSnapshot.cropHeight,
+      cropMetrics.surfaceWidth,
+      cropMetrics.surfaceHeight,
+    );
+    const baseFrameBounds = getPositionedBounds(baseRect, {
+      offsetX: trace.offsetX,
+      offsetY: trace.offsetY,
+      scale: trace.scale,
+      rotation: trace.rotation,
+    });
+    const imageScaleX = baseFrameBounds.width / Math.max(traceCropSnapshot.cropWidth, 1);
+    const imageScaleY = baseFrameBounds.height / Math.max(traceCropSnapshot.cropHeight, 1);
+    const imageBounds = {
+      left: baseFrameBounds.left - traceCropSnapshot.cropX * imageScaleX,
+      top: baseFrameBounds.top - traceCropSnapshot.cropY * imageScaleY,
+      width: (trace.imageWidth ?? tracePreviewCrop.cropWidth) * imageScaleX,
+      height: (trace.imageHeight ?? tracePreviewCrop.cropHeight) * imageScaleY,
+    };
+    const committedFrameBounds = {
+      left: imageBounds.left + tracePreviewCrop.cropX * imageScaleX,
+      top: imageBounds.top + tracePreviewCrop.cropY * imageScaleY,
+      width: tracePreviewCrop.cropWidth * imageScaleX,
+      height: tracePreviewCrop.cropHeight * imageScaleY,
+    };
+    const nextBaseRect = getContainedRect(
+      tracePreviewCrop.cropWidth,
+      tracePreviewCrop.cropHeight,
+      cropMetrics.surfaceWidth,
+      cropMetrics.surfaceHeight,
+    );
+    const nextScale = committedFrameBounds.width / Math.max(nextBaseRect.width, 1);
+
+    dispatch(
+      createUpdateTraceCommand(
+        {
+          ...tracePreviewCrop,
+          offsetX: committedFrameBounds.left - nextBaseRect.left,
+          offsetY: committedFrameBounds.top - nextBaseRect.top,
+          scale: nextScale,
+        },
+        {
+        history: { mode: "push", label: "Crop Trace" },
+        source: "toolbar",
+        },
+      ),
+    );
+    setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
+  }, [dispatch, state.document.grid.height, state.document.grid.width, trace, traceCropSnapshot, tracePreviewCrop]);
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -2324,7 +2440,12 @@ export function EditorV2Shell({
                     onStartOver={onStartOver}
                     previewMode={previewMode}
                     previewModeDisabled={previewModeDisabled}
-                    onPreviewCropChange={setTracePreviewCrop}
+                    traceCropDraft={tracePreviewCrop}
+                    traceCropEditing={traceCropEditing}
+                    onBeginTraceCrop={handleBeginTraceCrop}
+                    onCancelTraceCrop={handleCancelTraceCrop}
+                    onCommitTraceCrop={handleCommitTraceCrop}
+                    onResetTraceCrop={handleResetTraceCrop}
                     trace={trace}
                     traceRepositionActive={traceRepositionActive}
                     traceRepositionOrigin={traceRepositionOrigin}
@@ -2447,7 +2568,10 @@ export function EditorV2Shell({
                     showRuler={showRuler}
                     showSymbols={showSymbols}
                     state={state}
+                    traceCropBase={traceCropSnapshot}
+                    traceCropEditing={traceCropEditing}
                     traceDisplayOverride={tracePreviewCrop}
+                    onTraceCropPreviewChange={handlePreviewTraceCropChange}
                     zoomAnchor={zoomAnchor}
                   />
                 </div>

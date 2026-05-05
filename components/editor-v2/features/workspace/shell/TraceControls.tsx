@@ -28,11 +28,7 @@ import {
   convertTraceImageToPattern,
   loadTraceImage,
 } from "@/lib/editor-v2/editor/trace/convertTraceImageToPattern";
-import {
-  createFullTraceCrop,
-  getNormalizedTraceCrop,
-  type TraceCropRect,
-} from "@/lib/editor-v2/editor/trace/crop";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   createApplyTraceConversionCommand,
   createAttachTraceCommand,
@@ -56,7 +52,12 @@ interface TraceControlsProps {
   palette: PaletteColor[];
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
-  onPreviewCropChange?: (crop: TraceCropRect | null) => void;
+  cropDraft?: TraceCropRect | null;
+  cropEditing?: boolean;
+  onBeginCrop?: () => void;
+  onCancelCrop?: () => void;
+  onCommitCrop?: () => void;
+  onResetCrop?: () => void;
   repositionActive?: boolean;
   repositionOrigin?: TraceRepositionOrigin | null;
 }
@@ -67,7 +68,12 @@ export function TraceControls({
   palette,
   trace,
   dispatch,
-  onPreviewCropChange,
+  cropDraft = null,
+  cropEditing = false,
+  onBeginCrop,
+  onCancelCrop,
+  onCommitCrop,
+  onResetCrop,
   repositionActive = false,
   repositionOrigin = null,
 }: TraceControlsProps) {
@@ -95,13 +101,11 @@ export function TraceControls({
   const [traceUploadErrorMessage, setTraceUploadErrorMessage] = useState<string | null>(
     null,
   );
-  const [cropEditing, setCropEditing] = useState(false);
-  const [cropSnapshot, setCropSnapshot] = useState<TraceCropRect | null>(null);
-  const [cropDraft, setCropDraft] = useState<TraceCropRect | null>(null);
   const [traceUploadStatus, setTraceUploadStatus] = useState<
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
+  const traceEditingPreviewActive = positioningEnabled || cropEditing;
   const preservePositioningSectionLayout =
     repositionOrigin === "upload" || repositionOrigin === "replace";
   const traceFileName = trace ? getTraceDisplayName(trace) : null;
@@ -111,17 +115,6 @@ export function TraceControls({
   const canConvert = Boolean(trace && !repositionActive && !cropEditing);
   const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const normalizedTraceCrop = trace ? getNormalizedTraceCrop(trace) : null;
-  const traceImageWidth =
-    trace?.imageWidth ??
-    normalizedTraceCrop?.cropWidth ??
-    cropDraft?.cropWidth ??
-    1;
-  const traceImageHeight =
-    trace?.imageHeight ??
-    normalizedTraceCrop?.cropHeight ??
-    cropDraft?.cropHeight ??
-    1;
 
   const handleTraceFileSelect = async (file: File) => {
     if (!dispatch) return;
@@ -283,19 +276,7 @@ export function TraceControls({
     setPendingConversion(null);
     setOverwriteCount(0);
     setSkipWarningForOneDay(false);
-    setCropEditing(false);
-    setCropSnapshot(null);
-    setCropDraft(null);
-    onPreviewCropChange?.(null);
-  }, [onPreviewCropChange, trace?.previewUrl]);
-
-  useEffect(() => {
-    if (!trace || cropEditing) {
-      return;
-    }
-
-    setCropDraft(getNormalizedTraceCrop(trace, traceImageWidth, traceImageHeight));
-  }, [cropEditing, trace, traceImageHeight, traceImageWidth]);
+  }, [trace?.previewUrl]);
 
   useEffect(() => {
     if (!dispatch) {
@@ -307,7 +288,7 @@ export function TraceControls({
       return;
     }
 
-    if (positioningEnabled) {
+    if (traceEditingPreviewActive) {
       if (positioningPreviewRef.current?.previewUrl !== trace.previewUrl) {
         positioningPreviewRef.current = {
           previewUrl: trace.previewUrl,
@@ -388,7 +369,7 @@ export function TraceControls({
         },
       ),
     );
-  }, [dispatch, positioningEnabled, trace]);
+  }, [dispatch, trace, traceEditingPreviewActive]);
 
   if (!dispatch) {
     return trace ? (
@@ -715,21 +696,7 @@ export function TraceControls({
                         variant={cropEditing ? "primary" : "secondary"}
                         size="sm"
                         disabled={!trace || positioningEnabled}
-                        onClick={() => {
-                          if (!trace || cropEditing) {
-                            return;
-                          }
-
-                          const nextCrop = getNormalizedTraceCrop(
-                            trace,
-                            traceImageWidth,
-                            traceImageHeight,
-                          );
-                          setCropSnapshot(nextCrop);
-                          setCropDraft(nextCrop);
-                          setCropEditing(true);
-                          onPreviewCropChange?.(nextCrop);
-                        }}
+                        onClick={onBeginCrop}
                       >
                         <ButtonIcon icon="/icons/lucide/crop.svg" />
                         {cropEditing ? "Cropping" : "Crop"}
@@ -744,182 +711,15 @@ export function TraceControls({
                       className={styles.emptyMessage}
                       style={{ ...typographyStyles.p2, opacity: 0.8 }}
                     >
-                      {`Showing ${Math.round(cropDraft.cropWidth)} x ${Math.round(
-                        cropDraft.cropHeight,
-                      )} px from the original image.`}
+                      Crop directly on the canvas by dragging the frame corners or the image inside the frame.
                     </p>
-
-                    <Field>
-                      <div className={styles.traceInlineFieldRow}>
-                        <span
-                          className={styles.traceInlineFieldLabel}
-                          style={typographyStyles.p2}
-                        >
-                          Left
-                        </span>
-                        <div className={styles.traceSliderControl}>
-                          <div className={styles.traceSliderRow}>
-                            <Slider
-                              className={styles.traceSliderFullWidth}
-                              min="0"
-                              max={String(Math.max(0, traceImageWidth - cropDraft.cropWidth))}
-                              step="1"
-                              value={cropDraft.cropX}
-                              aria-label="Crop left offset"
-                              onChange={(event) =>
-                                previewCropDraft(
-                                  {
-                                    cropX: Number(event.target.value),
-                                  },
-                                  cropDraft,
-                                  traceImageWidth,
-                                  traceImageHeight,
-                                  setCropDraft,
-                                  onPreviewCropChange,
-                                )
-                              }
-                            />
-                            <span className={styles.traceSliderValue}>
-                              {Math.round(cropDraft.cropX)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Field>
-
-                    <Field>
-                      <div className={styles.traceInlineFieldRow}>
-                        <span
-                          className={styles.traceInlineFieldLabel}
-                          style={typographyStyles.p2}
-                        >
-                          Top
-                        </span>
-                        <div className={styles.traceSliderControl}>
-                          <div className={styles.traceSliderRow}>
-                            <Slider
-                              className={styles.traceSliderFullWidth}
-                              min="0"
-                              max={String(Math.max(0, traceImageHeight - cropDraft.cropHeight))}
-                              step="1"
-                              value={cropDraft.cropY}
-                              aria-label="Crop top offset"
-                              onChange={(event) =>
-                                previewCropDraft(
-                                  {
-                                    cropY: Number(event.target.value),
-                                  },
-                                  cropDraft,
-                                  traceImageWidth,
-                                  traceImageHeight,
-                                  setCropDraft,
-                                  onPreviewCropChange,
-                                )
-                              }
-                            />
-                            <span className={styles.traceSliderValue}>
-                              {Math.round(cropDraft.cropY)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Field>
-
-                    <Field>
-                      <div className={styles.traceInlineFieldRow}>
-                        <span
-                          className={styles.traceInlineFieldLabel}
-                          style={typographyStyles.p2}
-                        >
-                          Width
-                        </span>
-                        <div className={styles.traceSliderControl}>
-                          <div className={styles.traceSliderRow}>
-                            <Slider
-                              className={styles.traceSliderFullWidth}
-                              min="1"
-                              max={String(Math.max(1, traceImageWidth - cropDraft.cropX))}
-                              step="1"
-                              value={cropDraft.cropWidth}
-                              aria-label="Crop width"
-                              onChange={(event) =>
-                                previewCropDraft(
-                                  {
-                                    cropWidth: Number(event.target.value),
-                                  },
-                                  cropDraft,
-                                  traceImageWidth,
-                                  traceImageHeight,
-                                  setCropDraft,
-                                  onPreviewCropChange,
-                                )
-                              }
-                            />
-                            <span className={styles.traceSliderValue}>
-                              {Math.round(cropDraft.cropWidth)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Field>
-
-                    <Field>
-                      <div className={styles.traceInlineFieldRow}>
-                        <span
-                          className={styles.traceInlineFieldLabel}
-                          style={typographyStyles.p2}
-                        >
-                          Height
-                        </span>
-                        <div className={styles.traceSliderControl}>
-                          <div className={styles.traceSliderRow}>
-                            <Slider
-                              className={styles.traceSliderFullWidth}
-                              min="1"
-                              max={String(Math.max(1, traceImageHeight - cropDraft.cropY))}
-                              step="1"
-                              value={cropDraft.cropHeight}
-                              aria-label="Crop height"
-                              onChange={(event) =>
-                                previewCropDraft(
-                                  {
-                                    cropHeight: Number(event.target.value),
-                                  },
-                                  cropDraft,
-                                  traceImageWidth,
-                                  traceImageHeight,
-                                  setCropDraft,
-                                  onPreviewCropChange,
-                                )
-                              }
-                            />
-                            <span className={styles.traceSliderValue}>
-                              {Math.round(cropDraft.cropHeight)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Field>
 
                     <div className={styles.panelRow}>
                       <Button
                         type="button"
                         variant="ghostV2"
                         size="sm"
-                        onClick={() => {
-                          const fullCrop = createFullTraceCrop(
-                            trace.imageWidth ?? traceImageWidth,
-                            trace.imageHeight ?? traceImageHeight,
-                          );
-                          previewCropDraft(
-                            fullCrop,
-                            cropDraft,
-                            traceImageWidth,
-                            traceImageHeight,
-                            setCropDraft,
-                            onPreviewCropChange,
-                          );
-                        }}
+                        onClick={onResetCrop}
                       >
                         Reset
                       </Button>
@@ -927,18 +727,7 @@ export function TraceControls({
                         type="button"
                         variant="secondary"
                         size="sm"
-                        onClick={() => {
-                          if (!cropSnapshot) {
-                            setCropEditing(false);
-                            setCropDraft(null);
-                            onPreviewCropChange?.(null);
-                            return;
-                          }
-                          setCropDraft(cropSnapshot);
-                          setCropSnapshot(null);
-                          setCropEditing(false);
-                          onPreviewCropChange?.(null);
-                        }}
+                        onClick={onCancelCrop}
                       >
                         Cancel
                       </Button>
@@ -946,30 +735,7 @@ export function TraceControls({
                         type="button"
                         variant="primary"
                         size="sm"
-                        onClick={() => {
-                          if (!cropSnapshot || !cropDraft) {
-                            setCropEditing(false);
-                            setCropSnapshot(null);
-                            onPreviewCropChange?.(null);
-                            return;
-                          }
-
-                          if (areCropRectsEqual(cropSnapshot, cropDraft)) {
-                            setCropEditing(false);
-                            setCropSnapshot(null);
-                            onPreviewCropChange?.(null);
-                            return;
-                          }
-                          dispatch(
-                            createUpdateTraceCommand(cropDraft, {
-                              history: { mode: "push", label: "Crop Trace" },
-                              source: "toolbar",
-                            }),
-                          );
-                          setCropSnapshot(null);
-                          setCropEditing(false);
-                          onPreviewCropChange?.(null);
-                        }}
+                        onClick={onCommitCrop}
                       >
                         Done
                       </Button>
@@ -1351,38 +1117,6 @@ function splitFileNameForDisplay(fileName: string): {
     baseName: trimmedFileName.slice(0, lastDotIndex),
     extension: trimmedFileName.slice(lastDotIndex),
   };
-}
-
-function previewCropDraft(
-  nextChanges: Partial<TraceCropRect>,
-  currentDraft: TraceCropRect,
-  imageWidth: number,
-  imageHeight: number,
-  setCropDraft: (draft: TraceCropRect) => void,
-  onPreviewCropChange?: (crop: TraceCropRect | null) => void,
-) {
-  const nextDraft = getNormalizedTraceCrop(
-    {
-      ...currentDraft,
-      ...nextChanges,
-      imageWidth,
-      imageHeight,
-    },
-    imageWidth,
-    imageHeight,
-  );
-
-  setCropDraft(nextDraft);
-  onPreviewCropChange?.(nextDraft);
-}
-
-function areCropRectsEqual(left: TraceCropRect, right: TraceCropRect): boolean {
-  return (
-    left.cropX === right.cropX &&
-    left.cropY === right.cropY &&
-    left.cropWidth === right.cropWidth &&
-    left.cropHeight === right.cropHeight
-  );
 }
 
 function TraceSection({

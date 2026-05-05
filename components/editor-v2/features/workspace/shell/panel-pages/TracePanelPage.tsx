@@ -13,10 +13,15 @@ import { TraceControls } from "../TraceControls";
 import styles from "../EditorV2Shell.module.css";
 
 interface TracePanelPageProps {
+  cropDraft?: TraceCropRect | null;
+  cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
-  onPreviewCropChange?: (crop: TraceCropRect | null) => void;
+  onBeginCrop?: () => void;
+  onCancelCrop?: () => void;
+  onCommitCrop?: () => void;
+  onResetCrop?: () => void;
   palette: PaletteColor[];
   repositionActive: boolean;
   repositionOrigin: TraceRepositionOrigin | null;
@@ -24,10 +29,15 @@ interface TracePanelPageProps {
 }
 
 export function TracePanelPage({
+  cropDraft,
+  cropEditing = false,
   dispatch,
   grid,
   gridMetrics,
-  onPreviewCropChange,
+  onBeginCrop,
+  onCancelCrop,
+  onCommitCrop,
+  onResetCrop,
   palette,
   repositionActive,
   repositionOrigin,
@@ -37,10 +47,15 @@ export function TracePanelPage({
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
         <TraceControls
+          cropDraft={cropDraft}
+          cropEditing={cropEditing}
           dispatch={dispatch}
           grid={grid}
           gridMetrics={gridMetrics}
-          onPreviewCropChange={onPreviewCropChange}
+          onBeginCrop={onBeginCrop}
+          onCancelCrop={onCancelCrop}
+          onCommitCrop={onCommitCrop}
+          onResetCrop={onResetCrop}
           palette={palette}
           repositionActive={repositionActive}
           repositionOrigin={repositionOrigin}

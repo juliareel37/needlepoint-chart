@@ -42,7 +42,10 @@ interface GridWorldSurfaceProps {
   showRuler: boolean;
   showSymbols: boolean;
   state: EditorStoreState;
+  traceCropEditing?: boolean;
+  traceCropBase?: TraceCropRect | null;
   traceDisplayOverride?: TraceCropRect | null;
+  onTraceCropPreviewChange?: (crop: TraceCropRect | null) => void;
   zoomAnchor: { x: number; y: number } | null;
 }
 
@@ -60,7 +63,10 @@ export function GridWorldSurface({
   showRuler,
   showSymbols,
   state,
+  traceCropEditing = false,
+  traceCropBase = null,
   traceDisplayOverride = null,
+  onTraceCropPreviewChange,
   zoomAnchor,
 }: GridWorldSurfaceProps) {
   const grid = state.document.grid;
@@ -77,11 +83,15 @@ export function GridWorldSurface({
   const traceVisible = Boolean(trace?.visible) && !previewMode;
   const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
   const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
-  const showTraceOverlay = Boolean(trace && traceVisible && tracePositioningEnabled);
+  const traceCropActive = Boolean(trace && traceVisible && traceCropEditing);
+  const showTraceOverlay = Boolean(
+    trace && traceVisible && (tracePositioningEnabled || traceCropActive),
+  );
   const showDisplayTrace = Boolean(
     trace &&
       traceVisible &&
-      !tracePositioningEnabled,
+      !tracePositioningEnabled &&
+      !traceCropActive,
   );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
@@ -121,7 +131,7 @@ export function GridWorldSurface({
   const positioningCursorActive =
     tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const paintDisabled =
-    interactionLocked || positioningCursorActive;
+    interactionLocked || positioningCursorActive || traceCropActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -535,6 +545,9 @@ export function GridWorldSurface({
                   ? loadedTraceAsset
                   : null
               }
+              cropEditing={traceCropActive}
+              cropBase={traceCropBase}
+              onCropPreviewChange={onTraceCropPreviewChange}
               traceDisplayOverride={traceDisplayOverride}
               viewport={viewport as ViewportState}
               worldBounds={worldBounds}
