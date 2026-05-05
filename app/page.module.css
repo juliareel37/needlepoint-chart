@@ -31,10 +31,6 @@
   --landing-hero-base: linear-gradient(180deg, #26252a 0%, #17171b 100%);
 }
 
-:global(:root[data-theme="dark"]) .resumeCard {
-  background: var(--landing-secondary-surface);
-}
-
 .shell {
   width: min(1680px, 100%);
   margin: 0 auto;
@@ -121,40 +117,16 @@
   justify-content: space-between;
 }
 
+.secondaryCta {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+}
+
 .ctaLabel {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-
-.resumeCard {
-  flex: 1 1 0;
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-  padding: 10px 18px;
-  border-radius: 8px;
-  border: 1px solid var(--landing-secondary-border);
-  background:
-    linear-gradient(180deg, color-mix(in oklch, white 52%, transparent), transparent),
-    var(--landing-secondary-surface);
-  box-shadow: var(--ui-shadow-sm);
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-.resumeLabel {
-  color: var(--text-secondary);
-  font-family: var(--font-secondary);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.resumeTitle {
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .heroPreviewWrap {
@@ -386,13 +358,6 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .resumeCard:hover {
-    border-color: color-mix(in oklch, var(--brand-200) 42%, var(--secondary-300));
-    box-shadow: var(--ui-shadow-md);
-  }
 }
 
 @media (max-width: 1200px) {

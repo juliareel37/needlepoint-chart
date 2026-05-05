@@ -262,7 +262,7 @@
   --brand-500: #3aa4ca;
   --brand-600: #01678c;
   --brand-700: #104356;
-
+  --brand-800: #062936;
 
   --secondary-base: rgb(236, 119, 189);
 
@@ -371,12 +371,23 @@
 
   /* --button-secondary-active-text: var(--neutral); */
 
-  --button-outlined-default: var(--neutral-0);
-  --button-outlined-default-border: var(--neutral-500);
+  /* OUTLINE: BRAND COLOR */
+  --button-outlined-default: transparent;
+  --button-outlined-default-border: var(--brand-500);
+  --button-outlined-default-text: var(--brand-600);
+  --button-outlined-hover: var(--brand-50);
+  --button-outlined-active: var(--brand-100);
+  --button-outlined-active-border: var(--brand-500);
+  --button-outlined-active-text: var(--brand-600);
+
+  /* OUTLINE: NEUTRAL */
+  /* --button-outlined-default: var(--neutral-0);
+  --button-outlined-default-border: var(--neutral-400);
   --button-outlined-default-text: var(--neutral-800);
   --button-outlined-hover: var(--neutral-100);
   --button-outlined-active: var(--neutral-200);
-  --button-outlined-active-text: var(--neutral-800);
+  --button-outlined-active-border: var(--neutral-500);
+  --button-outlined-active-text: var(--neutral-800); */
 
   --button-ghost-default: transparent;
   --button-ghost-hover: var(--neutral-0);
@@ -427,7 +438,7 @@
 
 :root[data-theme="dark"] {
   --neutral-0: #fffffff2;
-  --brand-600: #523b5c;
+  /* --brand-600: #423b5c; */
   --ui-tooltip-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
   --ui-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.22);
   --ui-shadow-md: 0 3px 10px rgba(0, 0, 0, 0.26);
@@ -471,21 +482,43 @@
   --button-secondary-active: var(--brand-500);
   --button-secondary-active-text: var(--neutral-0); */
 
-  --button-primary-default: var(--brand-500);
-  --button-primary-hover: var(--brand-400);
+  --button-primary-default: var(--brand-600);
+  --button-primary-hover: var(--brand-500);
   --button-primary-active: var(--brand-400);
 
   --button-secondary-default: var(--neutral-700);
   --button-secondary-hover: var(--neutral-600);
-  --button-secondary-active: var(--brand-600);
+  --button-secondary-active: var(--neutral-500);
   --button-secondary-active-text: var(--neutral-0);
+/* 
+  --button-outlined-default: transparent;
+  --button-outlined-default-text: var(--text-primary);
 
-  --button-outlined-default: var(--neutral-700);
-  --button-outlined-hover: var(--neutral-600);
+  --button-outlined-hover: var(--neutral-700);
   --button-outlined-active: var(--brand-600);
   --button-outlined-active-text: var(--brand-100);
 
+  --button-outlined-default-border: var(--neutral-600); */
+
+
+  /* OUTLINE: BRAND COLOR */
+  --button-outlined-default: transparent;
+  --button-outlined-default-border: var(--brand-500);
+  --button-outlined-default-text: var(--brand-300);
+  --button-outlined-hover: var(--brand-800);
+  --button-outlined-active: var(--brand-600);
+  --button-outlined-active-border: var(--brand-400);
+  --button-outlined-active-text: var(--brand-200);
+
+  /* OUTLINE: NEUTRAL */
+  /* --button-outlined-default: transparent;
   --button-outlined-default-border: var(--neutral-600);
+  --button-outlined-default-text: var(--neutral-300);
+  --button-outlined-hover: var(--neutral-700);
+  --button-outlined-active: var(--neutral-600);
+  --button-outlined-active-border: var(--neutral-500);
+  --button-outlined-active-text: var(--neutral-200); */
+
 
 
   --button-ghost-hover: var(--neutral-800);
@@ -500,12 +533,12 @@
   --zoom-menu-bg: var(--neutral-800);
   
   --toolbar-button-hover-bg: var(--neutral-600);
-  --toolbar-button-active-bg: var(--brand-500);
+  --toolbar-button-active-bg: var(--brand-600);
   --toolbar-button-active-text: var(--neutral-0);
   
   --sidebar-button-hover-bg: var(--neutral-700);
-  --sidebar-button-active-bg: var(--brand-600);
-  --sidebar-button-active-text: var(--neutral-0);
+  --sidebar-button-active-bg: var(--brand-700);
+  --sidebar-button-active-text: var(--brand-200);
 
 
   /* --status-warning-soft: #564110; */

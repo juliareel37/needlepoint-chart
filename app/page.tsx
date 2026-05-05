@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
 import { Button, ButtonIcon } from "@/components/design-system";
+import { useAuthSession } from "@/lib/auth/client";
 import styles from "./page.module.css";
 
 const heroHighlights = [
@@ -48,6 +48,9 @@ const featureCards = [
 
 export default function Page() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuthSession();
+  const showResumeCta = isLoaded && isSignedIn;
+  const secondaryCtaLabel = showResumeCta ? "View my designs" : "Sign up for free";
 
   return (
     <main className={styles.page}>
@@ -79,10 +82,21 @@ export default function Page() {
                 <span className={styles.ctaLabel}>Start designing</span>
                 <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
               </Button>
-              <Link href="/library" className={styles.resumeCard}>
-                <span className={styles.resumeLabel} style={marketingTypographyStyles.eyebrow}>Resume wip</span>
-                <span className={styles.resumeTitle} style={typographyStyles.p2}>Meadow_Study_IV.wip</span>
-              </Link>
+              <Button
+                type="button"
+                variant="outlined"
+                size="lg"
+                className={styles.secondaryCta}
+                onClick={() =>
+                  router.push(
+                    showResumeCta
+                      ? "/library"
+                      : `/sign-in/sign-up?redirect_url=${encodeURIComponent("/")}`,
+                  )
+                }
+              >
+                {secondaryCtaLabel}
+              </Button>
             </div>
             <div className={styles.heroPreviewWrap}>
               <div className={styles.heroPreviewStage}>

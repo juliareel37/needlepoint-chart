@@ -108,9 +108,9 @@ export default function AppHeaderNav() {
         </nav> */}
       </div>
       <div style={landingHeaderRightStyle}>
-        <Link href="/library" style={utilityLinkStyle}>
+        {/* <Link href="/library" style={utilityLinkStyle}>
           My Library
-        </Link>
+        </Link> */}
         <Link href="/editor" style={{ textDecoration: "none" }}>
           <Button type="button" variant="secondary" size="md">
             Launch Editor
