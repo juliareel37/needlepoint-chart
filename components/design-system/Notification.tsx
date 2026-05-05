@@ -11,32 +11,24 @@ export type NotificationLayout = "default" | "compact";
 
 const toneConfig: Record<
   NotificationTone,
-  { background: string; border: string; icon: string; badge: string; badgeForeground: string }
+  { icon: string; badge: string; badgeForeground: string }
 > = {
   info: {
-    background: "var(--brand-lightest)",
-    border: "var(--brand-200)",
     icon: "/icons/lucide/info.svg",
     badge: "var(--brand-200)",
     badgeForeground: "var(--brand-600)",
   },
   success: {
-    background: "var(--status-success-soft)",
-    border: "var(--status-success-base)",
     icon: "/icons/lucide/check.svg",
     badge: "var(--status-success-base)",
     badgeForeground: "var(--neutral-0)",
   },
   warning: {
-    background: "var(--status-warning-soft)",
-    border: "var(--status-warning-base)",
     icon: "/icons/lucide/alert.svg",
     badge: "var(--status-warning-base)",
     badgeForeground: "var(--neutral-900)",
   },
   destructive: {
-    background: "var(--status-destructive-soft)",
-    border: "var(--status-destructive-base)",
     icon: "/icons/lucide/alert.svg",
     badge: "var(--status-destructive-base)",
     badgeForeground: "var(--neutral-0)",
@@ -76,10 +68,6 @@ export function Notification({
       className={[styles.card, layout === "compact" ? styles.compact : null]
         .filter(Boolean)
         .join(" ")}
-      style={{
-        background: neutralSurface ? "var(--surface-card)" : toneStyles.background,
-        borderColor: neutralSurface ? "var(--ui-border-subtle)" : toneStyles.border,
-      }}
     >
       <span
         className={styles.iconBadge}

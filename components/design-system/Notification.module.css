@@ -4,7 +4,8 @@
   gap: 12px;
   align-items: center;
   padding: 12px;
-  border: 1px solid var(--ui-border-subtle);
+  background: var(--surface-primary);
+  border: 1px solid transparent;
   border-radius: 12px;
   box-shadow: var(--ui-shadow-md);
 }
@@ -43,7 +44,7 @@
 .title,
 .description {
   margin: 0;
-  color: var(--neutral-800);
+  color: var(--text-primary);
 }
 
 .controls {
@@ -64,5 +65,9 @@
 }
 
 .closeGhost {
-  color: var(--neutral-900);
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .card {
+  border-color: var(--ui-border-subtle);
 }
