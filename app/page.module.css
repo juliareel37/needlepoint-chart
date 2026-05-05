@@ -1,18 +1,34 @@
 .page {
-  --landing-accent-soft: var(--brand-50);
+  --landing-accent-soft: color-mix(in srgb, white 72%, var(--brand-100));
   --landing-accent-strong: var(--brand-400);
-  --landing-secondary-soft: color-mix(in oklch, white 76%, var(--secondary-base));
+  --landing-secondary-soft: color-mix(in srgb, white 76%, var(--secondary-base));
   --landing-secondary-surface: color-mix(in oklch, var(--surface-primary) 80%, var(--secondary-50));
   --landing-secondary-border: color-mix(in oklch, var(--ui-border-reg) 60%, var(--secondary-100));
   --landing-surface-elevated: var(--surface-card);
   --landing-dark-surface: var(--neutral-900);
+  --landing-hero-left-glow: var(--landing-accent-soft);
+  --landing-hero-right-glow: var(--landing-secondary-soft);
+  --landing-hero-center-glow: transparent;
+  --landing-hero-base: linear-gradient(180deg, var(--surface-primary) 0%, var(--surface-app) 100%);
   min-height: calc(100dvh - var(--app-top-offset, 52px));
   overflow-x: clip;
   background:
-    radial-gradient(circle at 85% 10%, var(--landing-secondary-soft) 0%, transparent 34%),
-    radial-gradient(circle at top left, var(--landing-accent-soft) 0%, transparent 30%),
-    linear-gradient(180deg, var(--surface-primary) 0%, var(--surface-app) 100%);
+    radial-gradient(circle at 84% 10%, var(--landing-hero-right-glow) 0%, transparent 36%),
+    radial-gradient(circle at 14% 12%, var(--landing-hero-left-glow) 0%, transparent 32%),
+    radial-gradient(circle at 50% 38%, var(--landing-hero-center-glow) 0%, transparent 42%),
+    var(--landing-hero-base);
   color: var(--text-primary);
+}
+
+:global(:root[data-theme="dark"]) .page {
+  --landing-accent-soft: color-mix(in srgb, var(--brand-400) 22%, transparent);
+  --landing-secondary-soft: color-mix(in srgb, var(--secondary-400) 24%, transparent);
+  --landing-secondary-surface: color-mix(in srgb, var(--surface-card) 92%, var(--secondary-400));
+  --landing-secondary-border: color-mix(in srgb, var(--ui-border-reg) 76%, var(--secondary-300));
+  --landing-hero-left-glow: rgba(87, 183, 224, 0.24);
+  --landing-hero-right-glow: rgba(230, 173, 214, 0.26);
+  --landing-hero-center-glow: rgba(142, 110, 154, 0.14);
+  --landing-hero-base: linear-gradient(180deg, #26252a 0%, #17171b 100%);
 }
 
 .shell {
