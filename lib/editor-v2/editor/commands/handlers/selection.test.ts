@@ -220,6 +220,13 @@ describe("selection command handlers", () => {
 
     expect(store.getState().session.duplicatePlacement).toEqual({
       sourceRect: { x: 1, y: 1, width: 2, height: 2 },
+      selectionMode: "lasso",
+      outlinePoints: [
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 2, y: 2 },
+        { x: 0, y: 2 },
+      ],
       cells: [
         { x: 0, y: 0, colorId: "dmc:310" },
         { x: 1, y: 0, colorId: "dmc:321" },

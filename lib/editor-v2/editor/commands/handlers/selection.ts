@@ -152,8 +152,12 @@ export const beginDuplicatePlacementCommandHandler: EditorCommandHandler<BeginDu
     return command.kind === "selection.beginDuplicatePlacement";
   },
   handle(state, command) {
+    const selectionMode = state.session.selection.mode;
+
     if (
-      state.session.selection.mode === "none" ||
+      (selectionMode !== "rect" &&
+        selectionMode !== "circle" &&
+        selectionMode !== "lasso") ||
       !state.session.selection.rect ||
       state.session.selection.preview ||
       state.session.duplicatePlacement
@@ -166,6 +170,8 @@ export const beginDuplicatePlacementCommandHandler: EditorCommandHandler<BeginDu
         ...state.session,
         duplicatePlacement: {
           sourceRect: state.session.selection.rect,
+          selectionMode,
+          outlinePoints: buildDuplicatePlacementOutlinePoints(state),
           cells: buildDuplicatePlacementCells(state),
         },
       },
@@ -598,6 +604,19 @@ function buildDuplicatePlacementCells(state: EditorStoreState): DuplicatePlaceme
   }
 
   return cells;
+}
+
+function buildDuplicatePlacementOutlinePoints(state: EditorStoreState) {
+  const selectionBounds = state.session.selection.rect;
+
+  if (!selectionBounds) {
+    return [];
+  }
+
+  return state.session.selection.lassoPoints.map((point) => ({
+    x: point.x - selectionBounds.x,
+    y: point.y - selectionBounds.y,
+  }));
 }
 
 function clampSelectionDeltaX(

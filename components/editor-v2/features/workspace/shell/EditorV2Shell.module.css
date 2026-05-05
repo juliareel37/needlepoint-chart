@@ -1618,6 +1618,18 @@
   border-radius: 999px;
 }
 
+.duplicatePlacementActionButton {
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .selectionShapeTrigger {
   justify-content: space-between;
   min-width: 0;
