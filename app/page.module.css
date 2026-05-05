@@ -31,6 +31,10 @@
   --landing-hero-base: linear-gradient(180deg, #26252a 0%, #17171b 100%);
 }
 
+:global(:root[data-theme="dark"]) .resumeCard {
+  background: var(--landing-secondary-surface);
+}
+
 .shell {
   width: min(1680px, 100%);
   margin: 0 auto;
