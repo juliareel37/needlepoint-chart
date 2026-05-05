@@ -1181,6 +1181,15 @@ input[type="number"] {
     gap: 8px !important;
     z-index: 2;
   }
+  #app-shell-root[data-header-nav-mode="landing"] .app-shell-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  #app-shell-root[data-header-nav-mode="landing"] .app-header-title-slot {
+    display: none;
+  }
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-actions {
+    display: none !important;
+  }
   .app-shell-header-right {
     gap: 8px !important;
     z-index: 3;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { Button } from "@/components/design-system";
 
@@ -81,6 +82,25 @@ export default function AppHeaderNav() {
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
 
+  useEffect(() => {
+    const appShellRoot = window.document.getElementById("app-shell-root");
+    if (!appShellRoot) {
+      return;
+    }
+
+    const headerNavMode = showLandingHeader
+      ? "landing"
+      : showEditorBrandOnly
+        ? "editor"
+        : "default";
+
+    appShellRoot.setAttribute("data-header-nav-mode", headerNavMode);
+
+    return () => {
+      appShellRoot.removeAttribute("data-header-nav-mode");
+    };
+  }, [showEditorBrandOnly, showLandingHeader]);
+
   if (showEditorBrandOnly) {
     return <Link href="/" style={editorBrandStyle}>wippa.</Link>;
   }
@@ -107,7 +127,7 @@ export default function AppHeaderNav() {
           </Link>
         </nav> */}
       </div>
-      <div style={landingHeaderRightStyle}>
+      <div className="landing-header-actions" style={landingHeaderRightStyle}>
         {/* <Link href="/library" style={utilityLinkStyle}>
           My Library
         </Link> */}
