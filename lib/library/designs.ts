@@ -1,18 +1,26 @@
 import { normalizeProjectTitle, parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
 import { prisma } from "@/lib/db";
+import {
+  getActiveEditorDesignWhere,
+  getDeletedEditorDesignWhere,
+} from "@/lib/editor-v2/server/designDeletion";
 import { buildLibraryStitchSnapshot, type LibraryStitchSnapshot } from "./stitchSnapshot";
 
 export const LIBRARY_PAGE_SIZE = 12;
 const MAX_LIBRARY_PAGE_SIZE = 24;
+export type LibraryDesignView = "active" | "deleted";
 
 export interface LibraryDesignRecord {
   id: string;
+  state: LibraryDesignView;
   title: string;
   gridWidth: number;
   gridHeight: number;
   createdAt: string;
   updatedAt: string;
   updatedLabel: string;
+  deletedAt: string | null;
+  purgeAfterAt: string | null;
   colorCount: number | null;
   previewUrl: string | null;
   thumbnailUrl: string | null;
@@ -32,29 +40,40 @@ export interface LibraryTracePlacement {
 export interface LibraryDesignPage {
   designs: LibraryDesignRecord[];
   totalCount: number;
+  activeCount: number;
+  deletedCount: number;
   hasMore: boolean;
   nextOffset: number | null;
 }
 
 export async function loadLibraryDesignPage({
   appUserId,
+  view = "active",
   limit = LIBRARY_PAGE_SIZE,
   offset = 0,
 }: {
   appUserId: string;
+  view?: LibraryDesignView;
   limit?: number;
   offset?: number;
 }): Promise<LibraryDesignPage> {
   const normalizedLimit = Math.max(1, Math.min(MAX_LIBRARY_PAGE_SIZE, Math.floor(limit)));
   const normalizedOffset = Math.max(0, Math.floor(offset));
+  const where =
+    view === "deleted"
+      ? getDeletedEditorDesignWhere({ appUserId })
+      : getActiveEditorDesignWhere({ appUserId });
 
-  const [totalCount, designs] = await Promise.all([
+  const [activeCount, deletedCount, designs] = await Promise.all([
     prisma.editorDesign.count({
-      where: { appUserId },
+      where: getActiveEditorDesignWhere({ appUserId }),
+    }),
+    prisma.editorDesign.count({
+      where: getDeletedEditorDesignWhere({ appUserId }),
     }),
     prisma.editorDesign.findMany({
-      where: { appUserId },
-      orderBy: { updatedAt: "desc" },
+      where,
+      orderBy: view === "deleted" ? { deletedAt: "desc" } : { updatedAt: "desc" },
       skip: normalizedOffset,
       take: normalizedLimit + 1,
       select: {
@@ -64,6 +83,8 @@ export async function loadLibraryDesignPage({
         gridHeight: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
+        purgeAfterAt: true,
         data: true,
       },
     }),
@@ -78,6 +99,7 @@ export async function loadLibraryDesignPage({
 
       return {
         id: design.id,
+        state: design.deletedAt ? "deleted" : "active",
         title: parsed
           ? normalizeProjectTitle(parsed.project.title)
           : normalizeProjectTitle(design.title),
@@ -85,7 +107,11 @@ export async function loadLibraryDesignPage({
         gridHeight: design.gridHeight,
         createdAt: design.createdAt.toISOString(),
         updatedAt: design.updatedAt.toISOString(),
-        updatedLabel: formatUpdatedLabel(design.updatedAt),
+        updatedLabel: design.deletedAt
+          ? formatDeletedLabel(design.deletedAt, design.purgeAfterAt)
+          : formatUpdatedLabel(design.updatedAt),
+        deletedAt: design.deletedAt?.toISOString() ?? null,
+        purgeAfterAt: design.purgeAfterAt?.toISOString() ?? null,
         colorCount: parsed ? countUsedColors(parsed.grid.cells) : null,
         previewUrl: parsed?.trace?.previewUrl ?? null,
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
@@ -109,7 +135,9 @@ export async function loadLibraryDesignPage({
           : null,
       };
     }),
-    totalCount,
+    totalCount: view === "deleted" ? deletedCount : activeCount,
+    activeCount,
+    deletedCount,
     hasMore,
     nextOffset: hasMore ? normalizedOffset + visibleDesigns.length : null,
   };
@@ -154,4 +182,19 @@ function formatUpdatedLabel(updatedAt: Date) {
     day: "numeric",
     year: updatedAt.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
   })}`;
+}
+
+function formatDeletedLabel(deletedAt: Date | null, purgeAfterAt: Date | null) {
+  if (!deletedAt || !purgeAfterAt) {
+    return "In Recently Deleted";
+  }
+
+  const remainingMs = purgeAfterAt.getTime() - Date.now();
+  const remainingDays = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+
+  if (remainingDays <= 1) {
+    return "Deletes permanently in 1 day";
+  }
+
+  return `Deletes permanently in ${remainingDays} days`;
 }

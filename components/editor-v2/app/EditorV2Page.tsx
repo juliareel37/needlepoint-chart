@@ -20,6 +20,7 @@ import {
 } from "./EditorV2Workspace";
 import {
   deleteSavedEditorV2Document,
+  EditorV2PersistenceError,
   listEditorV2DesignVersions,
   listSavedEditorV2Documents,
   loadEditorV2DesignVersion,
@@ -184,6 +185,7 @@ export function EditorV2Page({
       const result = await listSavedEditorV2Documents({
         limit: SAVED_DOCUMENTS_PAGE_SIZE,
         offset: 0,
+        view: "active",
       });
       hasLoadedSavedDocumentsRef.current = true;
       nextSavedDocumentsOffsetRef.current =
@@ -221,6 +223,7 @@ export function EditorV2Page({
       const result = await listSavedEditorV2Documents({
         limit: SAVED_DOCUMENTS_PAGE_SIZE,
         offset: nextSavedDocumentsOffsetRef.current,
+        view: "active",
       });
       nextSavedDocumentsOffsetRef.current =
         result.nextOffset ?? nextSavedDocumentsOffsetRef.current + result.documents.length;
@@ -699,6 +702,11 @@ export function EditorV2Page({
       }
 
       void loadDesignIntoWorkspace(routeStorageId).catch((error) => {
+        if (error instanceof EditorV2PersistenceError && error.status === 410) {
+          router.replace("/library?view=deleted&notice=deleted-design");
+          return;
+        }
+
         const message = getErrorMessage(error, "Try again in a moment.");
         navigateToEntryRoute("full");
         setSetupErrorMessage(message);
@@ -922,6 +930,9 @@ export function EditorV2Page({
             setSavedDocuments((existing) =>
               existing.filter((record) => record.storageId !== currentStorageId),
             );
+            setRestoreSuccessNotification({
+              title: "Moved to Recently Deleted",
+            });
           }
 
           if (localSnapshotKey) {

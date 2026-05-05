@@ -2070,10 +2070,10 @@ export function EditorV2Shell({
         : null}
       <Modal
         isOpen={deleteConfirmationOpen}
-        title={currentStorageId ? "Delete this design?" : "Discard this design?"}
+        title={currentStorageId ? "Move this design to Recently Deleted?" : "Discard this design?"}
         description={
           currentStorageId
-            ? "This will permanently delete the current design from your saved designs."
+            ? "This design can be restored for 30 days from My Designs."
             : "This will discard the current design."
         }
         tone="fail"
@@ -2081,10 +2081,10 @@ export function EditorV2Shell({
         confirmLabel={
           deleteButtonState === "deleting"
             ? currentStorageId
-              ? "Deleting..."
+              ? "Moving..."
               : "Discarding..."
             : currentStorageId
-              ? "Delete design"
+              ? "Move to Recently Deleted"
               : "Discard design"
         }
         confirmVariant="destructive"

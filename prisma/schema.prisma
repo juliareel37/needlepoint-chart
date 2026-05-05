@@ -78,6 +78,8 @@ model EditorDesign {
   lastSaveSource  SaveSource?
   lastVersionAt   DateTime?
   lastVersionHash String?
+  deletedAt       DateTime?
+  purgeAfterAt    DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   versions        EditorDesignVersion[]
@@ -86,6 +88,8 @@ model EditorDesign {
   @@index([appUserId])
   @@index([userId])
   @@index([updatedAt])
+  @@index([appUserId, deletedAt, updatedAt])
+  @@index([deletedAt, purgeAfterAt])
 }
 
 model EditorDesignVersion {

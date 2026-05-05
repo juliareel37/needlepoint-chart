@@ -11,6 +11,7 @@ import {
   createEditorDesignVersionSnapshot,
   hashPersistedEditorV2Design,
 } from "@/lib/editor-v2/server/versioning";
+import type { LibraryDesignView } from "@/lib/library/designs";
 import { deleteBlobIfExists } from "@/lib/blob";
 import { loadLibraryDesignPage } from "@/lib/library/designs";
 
@@ -34,10 +35,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const requestedLimitParam = url.searchParams.get("limit");
   const requestedOffsetParam = url.searchParams.get("offset");
+  const requestedViewParam = url.searchParams.get("view");
   const requestedLimit =
     requestedLimitParam === null ? Number.NaN : Number(requestedLimitParam);
   const requestedOffset =
     requestedOffsetParam === null ? Number.NaN : Number(requestedOffsetParam);
+  const view: LibraryDesignView =
+    requestedViewParam === "deleted" ? "deleted" : "active";
   const limit = Number.isFinite(requestedLimit)
     ? Math.max(1, Math.min(MAX_LIMIT, Math.floor(requestedLimit)))
     : DEFAULT_LIMIT;
@@ -45,7 +49,7 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  return NextResponse.json(await loadLibraryDesignPage({ appUserId, limit, offset }));
+  return NextResponse.json(await loadLibraryDesignPage({ appUserId, view, limit, offset }));
 }
 
 export async function POST(req: Request) {
@@ -80,6 +84,8 @@ export async function POST(req: Request) {
         lastSaveSource: saveSource,
         lastVersionAt: now,
         lastVersionHash: dataHash,
+        deletedAt: null,
+        purgeAfterAt: null,
       },
     });
 

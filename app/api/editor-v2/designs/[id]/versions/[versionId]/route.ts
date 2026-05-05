@@ -2,12 +2,28 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import { parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
+import { getDeletedEditorDesignMetadata } from "@/lib/editor-v2/server/designDeletion";
 
 export const runtime = "nodejs";
 
 type RouteContext =
   | { params: { id: string; versionId: string } }
   | { params: Promise<{ id: string; versionId: string }> };
+
+function deletedDesignResponse(design: {
+  id: string;
+  title: string;
+  deletedAt: Date;
+  purgeAfterAt: Date | null;
+}) {
+  return NextResponse.json(
+    {
+      error: "This design is in Recently Deleted.",
+      deletedDesign: getDeletedEditorDesignMetadata(design),
+    },
+    { status: 410 },
+  );
+}
 
 export async function GET(_req: Request, context: RouteContext) {
   const appUserId = await getCurrentUserId();
@@ -26,11 +42,20 @@ export async function GET(_req: Request, context: RouteContext) {
     where: { id, appUserId },
     select: {
       id: true,
+      title: true,
       createdAt: true,
+      deletedAt: true,
+      purgeAfterAt: true,
     },
   });
   if (!design) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (design.deletedAt) {
+    return deletedDesignResponse({
+      ...design,
+      deletedAt: design.deletedAt,
+    });
   }
 
   const version = await prisma.editorDesignVersion.findFirst({

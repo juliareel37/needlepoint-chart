@@ -246,8 +246,8 @@ export function EditorV2Workspace({
           try {
             await onDeleteCurrentDesign(document);
             setSuccessNotification({
-              title: "Design deleted",
-              description: "The design was removed and the editor has been reset.",
+              title: "Moved to Recently Deleted",
+              description: "The design can be restored for 30 days from My Designs.",
             });
             setErrorNotification(null);
           } catch (error) {

@@ -30,12 +30,15 @@ function createTallSnapshotCells() {
 
 const TEST_DESIGN: LibraryDesignRecord = {
   id: "grid-preview-test",
+  state: "active",
   title: "Tall Preview Test",
   gridWidth: GRID_WIDTH,
   gridHeight: GRID_HEIGHT,
   createdAt: "2026-04-30T12:00:00.000Z",
   updatedAt: "2026-04-30T12:00:00.000Z",
   updatedLabel: "Edited just now",
+  deletedAt: null,
+  purgeAfterAt: null,
   colorCount: 2,
   previewUrl: null,
   thumbnailUrl: null,
@@ -64,7 +67,8 @@ export default async function LibraryThumbnailPreviewPage({
         initialHasMore={false}
         initialNextOffset={null}
         deferInitialLoad={false}
-        initialViewMode={mode}
+        initialViewMode="active"
+        initialLayoutMode={mode}
       />
     </main>
   );

@@ -96,7 +96,7 @@ describe("editor-v2 design collection routes", () => {
 
   it("lists signed-in user designs", async () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
-    countMock.mockResolvedValue(1);
+    countMock.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     const state = createNewDesignState(20, 15);
     state.document.project.title = "Pattern One";
     const [firstColorId, secondColorId] = Object.keys(state.document.palette.colorsById);
@@ -120,11 +120,14 @@ describe("editor-v2 design collection routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(countMock).toHaveBeenCalledWith({
-      where: { appUserId: "user_1" },
+    expect(countMock).toHaveBeenNthCalledWith(1, {
+      where: { appUserId: "user_1", deletedAt: null },
+    });
+    expect(countMock).toHaveBeenNthCalledWith(2, {
+      where: { appUserId: "user_1", deletedAt: { not: null } },
     });
     expect(findManyMock).toHaveBeenCalledWith({
-      where: { appUserId: "user_1" },
+      where: { appUserId: "user_1", deletedAt: null },
       orderBy: { updatedAt: "desc" },
       skip: 0,
       take: 7,
@@ -135,6 +138,8 @@ describe("editor-v2 design collection routes", () => {
         gridHeight: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
+        purgeAfterAt: true,
         data: true,
       },
     });
@@ -142,12 +147,15 @@ describe("editor-v2 design collection routes", () => {
       designs: [
         {
           id: "design_1",
+          state: "active",
           title: "Pattern One",
           gridWidth: 20,
           gridHeight: 15,
           createdAt: "2026-04-15T12:00:00.000Z",
           updatedAt: "2026-04-16T12:00:00.000Z",
           updatedLabel: expect.any(String),
+          deletedAt: null,
+          purgeAfterAt: null,
           colorCount: expect.any(Number),
           previewUrl: null,
           thumbnailUrl: null,
@@ -160,6 +168,8 @@ describe("editor-v2 design collection routes", () => {
         },
       ],
       totalCount: 1,
+      activeCount: 1,
+      deletedCount: 0,
       hasMore: false,
       nextOffset: null,
     });
@@ -167,7 +177,7 @@ describe("editor-v2 design collection routes", () => {
 
   it("pages signed-in user designs", async () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
-    countMock.mockResolvedValue(13);
+    countMock.mockResolvedValueOnce(13).mockResolvedValueOnce(2);
     findManyMock.mockResolvedValue(
       Array.from({ length: 7 }, (_, index) => {
         const state = createNewDesignState(20 + index, 15 + index);
@@ -192,7 +202,7 @@ describe("editor-v2 design collection routes", () => {
 
     expect(response.status).toBe(200);
     expect(findManyMock).toHaveBeenCalledWith({
-      where: { appUserId: "user_1" },
+      where: { appUserId: "user_1", deletedAt: null },
       orderBy: { updatedAt: "desc" },
       skip: 6,
       take: 7,
@@ -203,13 +213,70 @@ describe("editor-v2 design collection routes", () => {
         gridHeight: true,
         createdAt: true,
         updatedAt: true,
+        deletedAt: true,
+        purgeAfterAt: true,
         data: true,
       },
     });
     expect(body.designs).toHaveLength(6);
     expect(body.totalCount).toBe(13);
+    expect(body.activeCount).toBe(13);
+    expect(body.deletedCount).toBe(2);
     expect(body.hasMore).toBe(true);
     expect(body.nextOffset).toBe(12);
+  });
+
+  it("lists recently deleted designs separately", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user_1");
+    countMock.mockResolvedValueOnce(4).mockResolvedValueOnce(1);
+    const state = createNewDesignState(8, 8);
+    state.document.project.title = "Deleted Design";
+    findManyMock.mockResolvedValue([
+      {
+        id: "design_deleted",
+        title: "Deleted Design",
+        gridWidth: 8,
+        gridHeight: 8,
+        createdAt: new Date("2026-04-15T12:00:00.000Z"),
+        updatedAt: new Date("2026-04-16T12:00:00.000Z"),
+        deletedAt: new Date("2026-05-01T12:00:00.000Z"),
+        purgeAfterAt: new Date("2026-05-31T12:00:00.000Z"),
+        data: serializeEditorV2Document(state.document),
+      },
+    ]);
+
+    const response = await GET(
+      new Request("http://localhost/api/editor-v2/designs?view=deleted"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(findManyMock).toHaveBeenCalledWith({
+      where: { appUserId: "user_1", deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      skip: 0,
+      take: 7,
+      select: {
+        id: true,
+        title: true,
+        gridWidth: true,
+        gridHeight: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        purgeAfterAt: true,
+        data: true,
+      },
+    });
+    expect(body.totalCount).toBe(1);
+    expect(body.activeCount).toBe(4);
+    expect(body.deletedCount).toBe(1);
+    expect(body.designs[0]).toMatchObject({
+      id: "design_deleted",
+      state: "deleted",
+      deletedAt: "2026-05-01T12:00:00.000Z",
+      purgeAfterAt: "2026-05-31T12:00:00.000Z",
+    });
   });
 
   it("creates a profile-owned design from a persisted payload", async () => {
@@ -248,6 +315,8 @@ describe("editor-v2 design collection routes", () => {
         lastSaveSource: SaveSource.MANUAL,
         lastVersionAt: expect.any(Date),
         lastVersionHash: expect.any(String),
+        deletedAt: null,
+        purgeAfterAt: null,
       },
     });
     expect(versionCreateMock).toHaveBeenCalledWith({

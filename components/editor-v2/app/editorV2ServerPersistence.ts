@@ -15,8 +15,19 @@ export interface SavedEditorV2DocumentRecord {
   updatedAt: string;
 }
 
+export interface DeletedEditorV2DesignMetadata {
+  id: string;
+  title: string;
+  deletedAt: string;
+  purgeAfterAt: string;
+}
+
+export type SavedEditorV2DocumentView = "active" | "deleted";
+
 export interface ListSavedEditorV2DocumentsResult {
   documents: SavedEditorV2DocumentRecord[];
+  activeCount: number;
+  deletedCount: number;
   hasMore: boolean;
   nextOffset: number | null;
 }
@@ -66,26 +77,48 @@ export interface LoadEditorV2DocumentResult {
 
 export interface DeleteEditorV2DocumentResult {
   storageId: string;
+  deletedAt?: string;
+  purgeAfterAt?: string;
+  deletedPermanently?: boolean;
+}
+
+export interface RestoreDeletedEditorV2DocumentResult {
+  storageId: string;
+  title: string;
+  gridWidth: number;
+  gridHeight: number;
+  createdAt: string;
+  updatedAt: string;
+  versionToken: string;
 }
 
 export class EditorV2PersistenceError extends Error {
   status: number;
   versionToken: string | null;
+  deletedDesign: DeletedEditorV2DesignMetadata | null;
 
-  constructor(message: string, status = 500, versionToken: string | null = null) {
+  constructor(
+    message: string,
+    status = 500,
+    versionToken: string | null = null,
+    deletedDesign: DeletedEditorV2DesignMetadata | null = null,
+  ) {
     super(message);
     this.name = "EditorV2PersistenceError";
     this.status = status;
     this.versionToken = versionToken;
+    this.deletedDesign = deletedDesign;
   }
 }
 
 export async function listSavedEditorV2Documents({
   limit,
   offset,
+  view = "active",
 }: {
   limit?: number;
   offset?: number;
+  view?: SavedEditorV2DocumentView;
 } = {}): Promise<ListSavedEditorV2DocumentsResult> {
   const searchParams = new URLSearchParams();
 
@@ -96,6 +129,8 @@ export async function listSavedEditorV2Documents({
   if (typeof offset === "number") {
     searchParams.set("offset", String(offset));
   }
+
+  searchParams.set("view", view);
 
   const response = await fetch(
     `/api/editor-v2/designs${searchParams.size ? `?${searchParams.toString()}` : ""}`,
@@ -110,12 +145,14 @@ export async function listSavedEditorV2Documents({
           id: string;
           title: string;
           gridWidth: number;
-          gridHeight: number;
-          updatedAt: string;
-        }>;
-        hasMore?: boolean;
-        nextOffset?: number | null;
-        error?: string;
+        gridHeight: number;
+        updatedAt: string;
+      }>;
+      activeCount?: number;
+      deletedCount?: number;
+      hasMore?: boolean;
+      nextOffset?: number | null;
+      error?: string;
       }
     | null;
 
@@ -136,6 +173,8 @@ export async function listSavedEditorV2Documents({
         updatedAt: design.updatedAt,
       }))
       : [],
+    activeCount: typeof body?.activeCount === "number" ? body.activeCount : 0,
+    deletedCount: typeof body?.deletedCount === "number" ? body.deletedCount : 0,
     hasMore: body?.hasMore === true,
     nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
   };
@@ -149,7 +188,11 @@ export async function loadSavedEditorV2Document(
     credentials: "same-origin",
   });
   const body = (await response.json().catch(() => null)) as
-    | ({ error?: string; versionToken?: string } & Partial<PersistedEditorV2DesignRecord>)
+    | ({
+        error?: string;
+        versionToken?: string;
+        deletedDesign?: DeletedEditorV2DesignMetadata;
+      } & Partial<PersistedEditorV2DesignRecord>)
     | null;
 
   if (
@@ -164,6 +207,7 @@ export async function loadSavedEditorV2Document(
       body?.error ?? "Couldn't load this design.",
       response.status,
       body?.versionToken ?? null,
+      body?.deletedDesign ?? null,
     );
   }
 
@@ -393,14 +437,26 @@ export async function restoreEditorV2DesignVersion(
 
 export async function deleteSavedEditorV2Document(
   storageId: string,
+  options: { permanent?: boolean } = {},
 ): Promise<DeleteEditorV2DocumentResult> {
-  const response = await fetch(`/api/editor-v2/designs/${storageId}`, {
+  const searchParams = new URLSearchParams();
+  if (options.permanent) {
+    searchParams.set("mode", "permanent");
+  }
+
+  const response = await fetch(
+    `/api/editor-v2/designs/${storageId}${searchParams.size ? `?${searchParams.toString()}` : ""}`,
+    {
     method: "DELETE",
     credentials: "same-origin",
-  });
+    },
+  );
   const body = (await response.json().catch(() => null)) as
     | {
         id?: string;
+        deletedAt?: string;
+        purgeAfterAt?: string;
+        deletedPermanently?: boolean;
         error?: string;
       }
     | null;
@@ -414,5 +470,55 @@ export async function deleteSavedEditorV2Document(
 
   return {
     storageId: body.id,
+    deletedAt: body.deletedAt,
+    purgeAfterAt: body.purgeAfterAt,
+    deletedPermanently: body.deletedPermanently,
+  };
+}
+
+export async function restoreDeletedEditorV2Document(
+  storageId: string,
+): Promise<RestoreDeletedEditorV2DocumentResult> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}/restore`, {
+    method: "POST",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        title?: string;
+        gridWidth?: number;
+        gridHeight?: number;
+        createdAt?: string;
+        updatedAt?: string;
+        versionToken?: string;
+        error?: string;
+      }
+    | null;
+
+  if (
+    !response.ok ||
+    !body?.id ||
+    !body.title ||
+    typeof body.gridWidth !== "number" ||
+    typeof body.gridHeight !== "number" ||
+    !body.createdAt ||
+    !body.updatedAt ||
+    !body.versionToken
+  ) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't restore this design.",
+      response.status,
+    );
+  }
+
+  return {
+    storageId: body.id,
+    title: body.title,
+    gridWidth: body.gridWidth,
+    gridHeight: body.gridHeight,
+    createdAt: body.createdAt,
+    updatedAt: body.updatedAt,
+    versionToken: body.versionToken,
   };
 }

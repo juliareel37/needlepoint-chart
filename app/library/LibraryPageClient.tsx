@@ -19,7 +19,9 @@ import {
 import {
   deleteSavedEditorV2Document,
   loadSavedEditorV2Document,
+  restoreDeletedEditorV2Document,
   saveEditorV2Document,
+  type SavedEditorV2DocumentView,
 } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { LibraryDesignRecord } from "@/lib/library/designs";
@@ -30,10 +32,14 @@ import styles from "./page.module.css";
 const PAGE_SIZE = 12;
 const LOADING_CARD_COUNT = PAGE_SIZE;
 const DESIGN_OPEN_TRANSITION_MS = 70;
-const baseCardMenuItems = [
+const activeCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
+] as const;
+const deletedCardMenuItems = [
+  { id: "restore", label: "Restore", icon: "/icons/lucide/undo.svg" },
+  { id: "delete-permanently", label: "Delete permanently", icon: "/icons/lucide/trash2.svg" },
 ] as const;
 const touchSelectionCardMenuItem = {
   id: "toggle-selection",
@@ -48,28 +54,35 @@ const sortOptions = [
   { id: "colors-desc", label: "Color count" },
 ] as const;
 
-type CardMenuItem = (typeof baseCardMenuItems)[number] | typeof touchSelectionCardMenuItem;
+type ActiveCardMenuItem = (typeof activeCardMenuItems)[number];
+type DeletedCardMenuItem = (typeof deletedCardMenuItems)[number];
+type CardMenuItem =
+  | ActiveCardMenuItem
+  | DeletedCardMenuItem
+  | typeof touchSelectionCardMenuItem;
 type CardMenuAction = CardMenuItem["id"];
 type SortOption = (typeof sortOptions)[number];
 type LibrarySortMode = SortOption["id"];
 type LibraryViewMode = "grid" | "list";
+type LibraryCollectionView = SavedEditorV2DocumentView;
 type DeleteConfirmationState =
   | {
       kind: "single";
       design: LibraryDesignRecord;
+      mode: "trash" | "permanent";
     }
   | {
       kind: "bulk";
       designIds: string[];
+      mode: "trash" | "permanent";
     };
 type LibrarySuccessNotification = {
   title: string;
   description?: string;
 };
-type PendingDeletion = {
+type UndoTrashState = {
   designIds: string[];
-  previousDesigns: LibraryDesignRecord[];
-  previousTotalCount: number;
+  count: number;
 };
 type NavigableDesignClickEvent = Pick<
   MouseEvent,
@@ -80,10 +93,11 @@ function countUsedColors(cells: Array<string | null>) {
   return new Set(cells.filter((cellId): cellId is string => Boolean(cellId))).size;
 }
 
-async function fetchLibraryPage(offset: number) {
+async function fetchLibraryPage(offset: number, view: LibraryCollectionView) {
   const searchParams = new URLSearchParams({
     limit: String(PAGE_SIZE),
     offset: String(offset),
+    view,
   });
   const response = await fetch(`/api/editor-v2/designs?${searchParams.toString()}`, {
     method: "GET",
@@ -94,6 +108,8 @@ async function fetchLibraryPage(offset: number) {
     | {
         designs?: LibraryDesignRecord[];
         totalCount?: number;
+        activeCount?: number;
+        deletedCount?: number;
         hasMore?: boolean;
         nextOffset?: number | null;
         error?: string;
@@ -107,6 +123,8 @@ async function fetchLibraryPage(offset: number) {
   return {
     designs: Array.isArray(body?.designs) ? body.designs : [],
     totalCount: typeof body?.totalCount === "number" ? body.totalCount : 0,
+    activeCount: typeof body?.activeCount === "number" ? body.activeCount : 0,
+    deletedCount: typeof body?.deletedCount === "number" ? body.deletedCount : 0,
     hasMore: body?.hasMore === true,
     nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
   };
@@ -118,18 +136,28 @@ export function LibraryPageClient({
   initialHasMore = false,
   initialNextOffset = null,
   deferInitialLoad = false,
-  initialViewMode = "grid",
+  initialViewMode = "active",
+  initialLayoutMode = "grid",
+  initialNotice = null,
 }: {
   initialDesigns?: LibraryDesignRecord[];
   initialTotalCount?: number;
   initialHasMore?: boolean;
   initialNextOffset?: number | null;
   deferInitialLoad?: boolean;
-  initialViewMode?: LibraryViewMode;
+  initialViewMode?: LibraryCollectionView;
+  initialLayoutMode?: LibraryViewMode;
+  initialNotice?: string | null;
 }) {
   const router = useRouter();
   const [designs, setDesigns] = useState(initialDesigns);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
+  const [activeCount, setActiveCount] = useState(
+    initialViewMode === "active" ? initialTotalCount : 0,
+  );
+  const [deletedCount, setDeletedCount] = useState(
+    initialViewMode === "deleted" ? initialTotalCount : 0,
+  );
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextOffset, setNextOffset] = useState(initialNextOffset);
   const [initialLoadPending, setInitialLoadPending] = useState(deferInitialLoad);
@@ -147,7 +175,9 @@ export function LibraryPageClient({
   const [draftHeightInches, setDraftHeightInches] = useState("8");
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [cardActionError, setCardActionError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<LibraryViewMode>(initialViewMode);
+  const [collectionView, setCollectionView] =
+    useState<LibraryCollectionView>(initialViewMode);
+  const [viewMode, setViewMode] = useState<LibraryViewMode>(initialLayoutMode);
   const [sortMode, setSortMode] = useState<LibrarySortMode>("updated-desc");
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
     () => new Set(),
@@ -157,7 +187,7 @@ export function LibraryPageClient({
     useState<DeleteConfirmationState | null>(null);
   const [successNotification, setSuccessNotification] =
     useState<LibrarySuccessNotification | null>(null);
-  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
+  const [undoTrashState, setUndoTrashState] = useState<UndoTrashState | null>(null);
   const [pendingCardAction, setPendingCardAction] = useState<{
     designId: string;
     action: CardMenuAction;
@@ -166,8 +196,6 @@ export function LibraryPageClient({
   const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [touchSelectionMode, setTouchSelectionMode] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const pendingDeletionTimeoutRef = useRef<number | null>(null);
-  const pendingDeletionRef = useRef<PendingDeletion | null>(null);
   const designOpenTimeoutRef = useRef<number | null>(null);
   const touchMenuInteractionBlockUntilRef = useRef(0);
 
@@ -183,6 +211,13 @@ export function LibraryPageClient({
 
     return [...designs].sort((left, right) => {
       if (sortMode === "updated-desc") {
+        if (collectionView === "deleted") {
+          return (
+            Date.parse(right.deletedAt ?? right.updatedAt) -
+            Date.parse(left.deletedAt ?? left.updatedAt)
+          );
+        }
+
         return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
       }
 
@@ -213,7 +248,7 @@ export function LibraryPageClient({
 
       return collator.compare(left.title, right.title);
     });
-  }, [designs, sortMode]);
+  }, [collectionView, designs, sortMode]);
   const selectedDesignCount = selectedDesignIds.size;
   const desktopSelectionMode = !touchPrimaryInput && selectedDesignCount > 0;
   const showBulkBar = selectedDesignCount > 0 || (touchPrimaryInput && touchSelectionMode);
@@ -226,9 +261,11 @@ export function LibraryPageClient({
     setLoadMoreError(null);
 
     try {
-      const result = await fetchLibraryPage(0);
+      const result = await fetchLibraryPage(0, collectionView);
       setDesigns(result.designs);
       setTotalCount(result.totalCount);
+      setActiveCount(result.activeCount);
+      setDeletedCount(result.deletedCount);
       setHasMore(result.hasMore);
       setNextOffset(result.nextOffset);
     } catch (error) {
@@ -241,16 +278,12 @@ export function LibraryPageClient({
   }
 
   useEffect(() => {
-    pendingDeletionRef.current = pendingDeletion;
-  }, [pendingDeletion]);
-
-  useEffect(() => {
     if (!deferInitialLoad) {
       return;
     }
 
     void loadInitialPage();
-  }, [deferInitialLoad]);
+  }, [collectionView, deferInitialLoad]);
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError || initialLoadPending) {
@@ -272,7 +305,7 @@ export function LibraryPageClient({
         setLoadingMore(true);
         setLoadMoreError(null);
 
-        void fetchLibraryPage(nextOffset ?? designs.length)
+        void fetchLibraryPage(nextOffset ?? designs.length, collectionView)
           .then((result) => {
             setDesigns((existing) => [
               ...existing,
@@ -281,6 +314,8 @@ export function LibraryPageClient({
               ),
             ]);
             setTotalCount(result.totalCount);
+            setActiveCount(result.activeCount);
+            setDeletedCount(result.deletedCount);
             setHasMore(result.hasMore);
             setNextOffset(result.nextOffset);
           })
@@ -300,13 +335,10 @@ export function LibraryPageClient({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [designs.length, hasMore, initialLoadPending, loadMoreError, loadingMore, nextOffset]);
+  }, [collectionView, designs.length, hasMore, initialLoadPending, loadMoreError, loadingMore, nextOffset]);
 
   useEffect(
     () => () => {
-      if (pendingDeletionTimeoutRef.current !== null) {
-        window.clearTimeout(pendingDeletionTimeoutRef.current);
-      }
       if (designOpenTimeoutRef.current !== null) {
         window.clearTimeout(designOpenTimeoutRef.current);
       }
@@ -366,10 +398,26 @@ export function LibraryPageClient({
     }
   }, [touchPrimaryInput, touchSelectionMode]);
 
+  useEffect(() => {
+    if (!initialNotice) {
+      return;
+    }
+
+    setSuccessNotification({
+      title: "Recently Deleted",
+      description: initialNotice,
+    });
+  }, [initialNotice]);
+
   function navigateToDesign(
     event: NavigableDesignClickEvent,
     designId: string,
   ) {
+    if (collectionView === "deleted") {
+      event.preventDefault();
+      return;
+    }
+
     if (
       event.button !== 0 ||
       event.metaKey ||
@@ -539,6 +587,42 @@ export function LibraryPageClient({
       setDeleteConfirmation({
         kind: "single",
         design,
+        mode: "trash",
+      });
+      return;
+    }
+
+    if (menuAction === "restore") {
+      setPendingCardAction({ designId: design.id, action: menuAction });
+
+      try {
+        await restoreDeletedEditorV2Document(design.id);
+        setDesigns((existing) => existing.filter((record) => record.id !== design.id));
+        setTotalCount((current) => Math.max(0, current - 1));
+        setDeletedCount((current) => Math.max(0, current - 1));
+        setActiveCount((current) => current + 1);
+        setUndoTrashState(null);
+        setSuccessNotification({
+          title: "Design restored",
+          description: `"${design.title}" is back in All Designs.`,
+        });
+      } catch (error) {
+        setCardActionError(
+          error instanceof Error ? error.message : "Couldn't restore design.",
+        );
+      } finally {
+        setPendingCardAction((current) =>
+          current?.designId === design.id ? null : current,
+        );
+      }
+      return;
+    }
+
+    if (menuAction === "delete-permanently") {
+      setDeleteConfirmation({
+        kind: "single",
+        design,
+        mode: "permanent",
       });
       return;
     }
@@ -553,12 +637,15 @@ export function LibraryPageClient({
         setDesigns((existing) => [
           {
             id: saved.storageId,
+            state: "active",
             title: saved.title,
             gridWidth: saved.gridWidth,
             gridHeight: saved.gridHeight,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
             updatedLabel: "Edited just now",
+            deletedAt: null,
+            purgeAfterAt: null,
             colorCount: countUsedColors(loaded.document.grid.cells),
             previewUrl: loaded.document.trace?.previewUrl ?? null,
             thumbnailUrl: loaded.document.trace?.thumbnailUrl ?? null,
@@ -582,6 +669,12 @@ export function LibraryPageClient({
           ...existing,
         ]);
         setTotalCount((current) => current + 1);
+        setActiveCount((current) => current + 1);
+        setUndoTrashState(null);
+        setSuccessNotification({
+          title: "Design duplicated",
+          description: `"${saved.title}" was added to All Designs.`,
+        });
         return;
       }
 
@@ -631,110 +724,45 @@ export function LibraryPageClient({
       designIds: designs
         .filter((design) => selectedDesignIds.has(design.id))
         .map((design) => design.id),
+      mode: collectionView === "deleted" ? "permanent" : "trash",
     });
   }
 
-  function clearPendingDeletionTimeout() {
-    if (pendingDeletionTimeoutRef.current === null) {
+  async function handleUndoTrash() {
+    if (!undoTrashState) {
       return;
     }
 
-    window.clearTimeout(pendingDeletionTimeoutRef.current);
-    pendingDeletionTimeoutRef.current = null;
-  }
-
-  function restoreDesignSnapshot(previousDesigns: LibraryDesignRecord[]) {
-    setDesigns((current) => {
-      const snapshotIds = new Set(previousDesigns.map((design) => design.id));
-      const extras = current.filter((design) => !snapshotIds.has(design.id));
-      return [...previousDesigns, ...extras];
-    });
-  }
-
-  async function commitPendingDeletionToServer(nextPendingDeletion: PendingDeletion) {
-    await Promise.all(
-      nextPendingDeletion.designIds.map((designId) =>
-        deleteSavedEditorV2Document(designId),
-      ),
-    );
-  }
-
-  function schedulePendingDeletion(
-    nextPendingDeletion: PendingDeletion,
-    notification: LibrarySuccessNotification,
-  ) {
-    clearPendingDeletionTimeout();
-    setPendingDeletion(nextPendingDeletion);
-    setSuccessNotification(notification);
-    pendingDeletionTimeoutRef.current = window.setTimeout(() => {
-      const currentPendingDeletion = pendingDeletionRef.current;
-
-      if (!currentPendingDeletion) {
-        return;
+    try {
+      await Promise.all(
+        undoTrashState.designIds.map((designId) =>
+          restoreDeletedEditorV2Document(designId),
+        ),
+      );
+      setUndoTrashState(null);
+      setSuccessNotification({
+        title:
+          undoTrashState.count === 1 ? "Delete undone" : `${undoTrashState.count} restores complete`,
+        description:
+          undoTrashState.count === 1
+            ? "The design is back in All Designs."
+            : "The selected designs are back in All Designs.",
+      });
+      if (collectionView === "deleted") {
+        void loadInitialPage();
       }
-
-      void commitPendingDeletionToServer(currentPendingDeletion)
-        .then(() => {
-          setPendingDeletion(null);
-          setSuccessNotification(null);
-        })
-        .catch((error) => {
-          restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
-          setTotalCount(currentPendingDeletion.previousTotalCount);
-          setPendingDeletion(null);
-          setSuccessNotification(null);
-          setCardActionError(
-            error instanceof Error ? error.message : "Couldn't delete design.",
-          );
-        })
-        .finally(() => {
-          clearPendingDeletionTimeout();
-        });
-    }, 5000);
-  }
-
-  function handleUndoPendingDeletion() {
-    const currentPendingDeletion = pendingDeletionRef.current;
-
-    if (!currentPendingDeletion) {
-      return;
+      setActiveCount((current) => current + undoTrashState.count);
+      setDeletedCount((current) => Math.max(0, current - undoTrashState.count));
+    } catch (error) {
+      setCardActionError(
+        error instanceof Error ? error.message : "Couldn't undo delete.",
+      );
     }
-
-    clearPendingDeletionTimeout();
-    restoreDesignSnapshot(currentPendingDeletion.previousDesigns);
-    setTotalCount(currentPendingDeletion.previousTotalCount);
-    setPendingDeletion(null);
-    setSuccessNotification(null);
   }
 
-  function handleDismissPendingDeletionNotification() {
-    clearPendingDeletionTimeout();
-    setPendingDeletion(null);
+  function handleDismissSuccessNotification() {
+    setUndoTrashState(null);
     setSuccessNotification(null);
-  }
-
-  function extendPendingDeletion(nextDesignIds: string[]) {
-    const currentPendingDeletion = pendingDeletionRef.current;
-
-    if (!currentPendingDeletion) {
-      return {
-        mergedPendingDeletion: null,
-        mergedCount: nextDesignIds.length,
-      };
-    }
-
-    const mergedDesignIds = Array.from(
-      new Set([...currentPendingDeletion.designIds, ...nextDesignIds]),
-    );
-
-    return {
-      mergedPendingDeletion: {
-        designIds: mergedDesignIds,
-        previousDesigns: currentPendingDeletion.previousDesigns,
-        previousTotalCount: currentPendingDeletion.previousTotalCount,
-      } satisfies PendingDeletion,
-      mergedCount: mergedDesignIds.length,
-    };
   }
 
   async function handleConfirmDelete() {
@@ -746,73 +774,58 @@ export function LibraryPageClient({
     setBulkDeletePending(true);
 
     try {
-      if (deleteConfirmation.kind === "single") {
-        const designId = deleteConfirmation.design.id;
-        const designTitle = deleteConfirmation.design.title;
-        const { mergedPendingDeletion, mergedCount } = extendPendingDeletion([designId]);
-        const previousDesigns =
-          mergedPendingDeletion?.previousDesigns ?? designs;
-        const previousTotalCount =
-          mergedPendingDeletion?.previousTotalCount ?? totalCount;
+      const idsToDelete =
+        deleteConfirmation.kind === "single"
+          ? [deleteConfirmation.design.id]
+          : deleteConfirmation.designIds;
 
-        setDesigns((existing) => existing.filter((record) => record.id !== designId));
-        setSelectedDesignIds((current) => {
-          const next = new Set(current);
-          next.delete(designId);
-          return next;
+      if (deleteConfirmation.mode === "trash") {
+        await Promise.all(idsToDelete.map((designId) => deleteSavedEditorV2Document(designId)));
+        setDesigns((existing) => existing.filter((design) => !idsToDelete.includes(design.id)));
+        setSelectedDesignIds(new Set<string>());
+        setTotalCount((current) => Math.max(0, current - idsToDelete.length));
+        setActiveCount((current) => Math.max(0, current - idsToDelete.length));
+        setDeletedCount((current) => current + idsToDelete.length);
+        setUndoTrashState({
+          designIds: idsToDelete,
+          count: idsToDelete.length,
         });
-        schedulePendingDeletion(
-          mergedPendingDeletion ?? {
-            designIds: [designId],
-            previousDesigns,
-            previousTotalCount,
-          },
-          {
-            title:
-              mergedCount === 1 ? "Design deleted" : `Deleted ${mergedCount} designs`,
-            description:
-              mergedCount === 1
-                ? `"${designTitle}" was removed from your saved designs.`
-                : `${mergedCount} designs were removed from your saved designs.`,
-          },
-        );
-        setTotalCount((current) => Math.max(0, current - 1));
         setDeleteConfirmation(null);
+        setSuccessNotification({
+          title:
+            idsToDelete.length === 1
+              ? "Moved to Recently Deleted"
+              : `Moved ${idsToDelete.length} designs to Recently Deleted`,
+          description:
+            deleteConfirmation.kind === "single"
+              ? `"${deleteConfirmation.design.title}" can be restored for 30 days.`
+              : "The selected designs can be restored for 30 days.",
+        });
         return;
       }
 
-      const deletedCount = deleteConfirmation.designIds.length;
-      const { mergedPendingDeletion, mergedCount } = extendPendingDeletion(
-        deleteConfirmation.designIds,
+      await Promise.all(
+        idsToDelete.map((designId) =>
+          deleteSavedEditorV2Document(designId, { permanent: true }),
+        ),
       );
-      const previousDesigns =
-        mergedPendingDeletion?.previousDesigns ?? designs;
-      const previousTotalCount =
-        mergedPendingDeletion?.previousTotalCount ?? totalCount;
-      const idsToDelete = new Set(deleteConfirmation.designIds);
-      setDesigns((existing) =>
-        existing.filter((design) => !idsToDelete.has(design.id)),
-      );
+      setDesigns((existing) => existing.filter((design) => !idsToDelete.includes(design.id)));
       setSelectedDesignIds(new Set<string>());
-      schedulePendingDeletion(
-        mergedPendingDeletion ?? {
-          designIds: [...deleteConfirmation.designIds],
-          previousDesigns,
-          previousTotalCount,
-        },
-        {
-          title:
-            mergedCount === 1 ? "Deleted 1 design" : `Deleted ${mergedCount} designs`,
-          description:
-            mergedCount === 1
-              ? "The selected design was removed from your saved designs."
-              : `${mergedCount} designs were removed from your saved designs.`,
-        },
-      );
-      setTotalCount((current) =>
-        Math.max(0, current - deletedCount),
-      );
+      setTotalCount((current) => Math.max(0, current - idsToDelete.length));
+      setDeletedCount((current) => Math.max(0, current - idsToDelete.length));
+      setUndoTrashState(null);
       setDeleteConfirmation(null);
+      setSuccessNotification({
+        title:
+          idsToDelete.length === 1
+            ? "Design permanently deleted"
+            : `${idsToDelete.length} designs permanently deleted`,
+        description:
+          idsToDelete.length === 1
+            ? "The design was removed from Recently Deleted."
+            : "The selected designs were removed from Recently Deleted.",
+      });
+      return;
     } catch (error) {
       setCardActionError(
         error instanceof Error ? error.message : "Couldn't delete design.",
@@ -850,7 +863,9 @@ export function LibraryPageClient({
       <span
         className={[
           styles.cardMenuItemLabel,
-          item.id === "delete" ? styles.cardMenuItemLabelDestructive : null,
+          item.id === "delete" || item.id === "delete-permanently"
+            ? styles.cardMenuItemLabelDestructive
+            : null,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -866,6 +881,8 @@ export function LibraryPageClient({
   }
 
   function renderDesignMenu(design: LibraryDesignRecord) {
+    const baseCardMenuItems =
+      collectionView === "deleted" ? deletedCardMenuItems : activeCardMenuItems;
     const cardMenuItems = touchPrimaryInput
       ? [touchSelectionCardMenuItem, ...baseCardMenuItems]
       : [...baseCardMenuItems];
@@ -956,8 +973,32 @@ export function LibraryPageClient({
         </header>
 
         <div className={styles.viewRow}>
+          <SegmentedControl<LibraryCollectionView>
+            ariaLabel="Design collection view"
+            className={styles.viewToggle}
+            itemClassName={styles.viewToggleItem}
+            value={collectionView}
+            onChange={(value) => {
+              setCollectionView(value);
+              setSelectedDesignIds(new Set<string>());
+              setTouchSelectionMode(false);
+              setNextOffset(null);
+            }}
+            options={[
+              {
+                value: "active",
+                label: `All Designs (${activeCount})`,
+              },
+              {
+                value: "deleted",
+                label: `Recently Deleted (${deletedCount})`,
+              },
+            ]}
+          />
           <div className={styles.viewSummary}>
-            <span className={styles.viewSummaryLabel}>All Designs</span>
+            <span className={styles.viewSummaryLabel}>
+              {collectionView === "deleted" ? "Recently Deleted" : "All Designs"}
+            </span>
             <span className={styles.viewSummaryCount}>({totalCount})</span>
           </div>
           <div className={styles.sortControl}>
@@ -1015,6 +1056,10 @@ export function LibraryPageClient({
               <section className={styles.grid} aria-label="Saved designs">
                 {sortedDesigns.map((design) => {
                   const isSelected = selectedDesignIds.has(design.id);
+                  const designHref =
+                    collectionView === "deleted"
+                      ? "/library?view=deleted"
+                      : `/editor/designs/${design.id}`;
                   const cardSelectable = touchPrimaryInput
                     ? touchSelectionMode
                     : desktopSelectionMode;
@@ -1103,7 +1148,7 @@ export function LibraryPageClient({
                       <div className={styles.cardBody}>
                         <div className={styles.cardTopRow}>
                           <Link
-                            href={`/editor/designs/${design.id}`}
+                            href={designHref}
                             className={styles.cardTitleLink}
                             onClick={(event) => navigateToDesign(event, design.id)}
                           >
@@ -1114,7 +1159,7 @@ export function LibraryPageClient({
                         </div>
 
                         <Link
-                          href={`/editor/designs/${design.id}`}
+                          href={designHref}
                           className={styles.cardDetailsLink}
                           onClick={(event) => navigateToDesign(event, design.id)}
                         >
@@ -1180,6 +1225,10 @@ export function LibraryPageClient({
                 <div className={styles.listBody}>
                   {sortedDesigns.map((design) => {
                     const isSelected = selectedDesignIds.has(design.id);
+                    const designHref =
+                      collectionView === "deleted"
+                        ? "/library?view=deleted"
+                        : `/editor/designs/${design.id}`;
                     const showListSelectionControl =
                       !touchPrimaryInput || touchSelectionMode || isSelected;
 
@@ -1198,7 +1247,7 @@ export function LibraryPageClient({
                       }}
                     >
                       <Link
-                        href={`/editor/designs/${design.id}`}
+                        href={designHref}
                         className={styles.listNameCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
@@ -1244,7 +1293,7 @@ export function LibraryPageClient({
                       </Link>
 
                       <Link
-                        href={`/editor/designs/${design.id}`}
+                        href={designHref}
                         className={styles.listMetaCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
@@ -1263,7 +1312,7 @@ export function LibraryPageClient({
                         {design.gridWidth} × {design.gridHeight} cells
                       </Link>
                       <Link
-                        href={`/editor/designs/${design.id}`}
+                        href={designHref}
                         className={styles.listMetaCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
@@ -1286,7 +1335,7 @@ export function LibraryPageClient({
                           : "—"}
                       </Link>
                       <Link
-                        href={`/editor/designs/${design.id}`}
+                        href={designHref}
                         className={styles.listMetaCell}
                         onClick={(event) => {
                           if (touchPrimaryInput && touchSelectionMode) {
@@ -1429,9 +1478,13 @@ export function LibraryPageClient({
           )
         ) : (
           <section className={styles.emptyState}>
-            <h2 className={styles.emptyStateTitle}>No designs yet</h2>
+            <h2 className={styles.emptyStateTitle}>
+              {collectionView === "deleted" ? "Nothing in Recently Deleted" : "No designs yet"}
+            </h2>
             <p className={styles.emptyStateBody}>
-              Your saved needlepoint designs will show up here once you create one.
+              {collectionView === "deleted"
+                ? "Designs you delete will stay here for 30 days before they are permanently removed."
+                : "Your saved needlepoint designs will show up here once you create one."}
             </p>
             {loadMoreError ? (
               <p className={styles.loadMoreError}>{loadMoreError}</p>
@@ -1495,30 +1548,44 @@ export function LibraryPageClient({
         isOpen={deleteConfirmation !== null}
         title={
           deleteConfirmation?.kind === "bulk"
-            ? `Delete ${deleteConfirmation.designIds.length} design${
-                deleteConfirmation.designIds.length === 1 ? "" : "s"
-              }?`
-            : "Delete this design?"
+            ? deleteConfirmation.mode === "trash"
+              ? `Move ${deleteConfirmation.designIds.length} design${
+                  deleteConfirmation.designIds.length === 1 ? "" : "s"
+                } to Recently Deleted?`
+              : `Delete ${deleteConfirmation.designIds.length} design${
+                  deleteConfirmation.designIds.length === 1 ? "" : "s"
+                } permanently?`
+            : deleteConfirmation?.mode === "trash"
+              ? "Move this design to Recently Deleted?"
+              : "Delete this design permanently?"
         }
         description={
           deleteConfirmation?.kind === "bulk"
-            ? `This will permanently delete ${deleteConfirmation.designIds.length} selected design${
-                deleteConfirmation.designIds.length === 1 ? "" : "s"
-              } from your saved designs.`
-            : "This will permanently delete the selected design from your saved designs."
+            ? deleteConfirmation.mode === "trash"
+              ? `The selected design${
+                  deleteConfirmation.designIds.length === 1 ? "" : "s"
+                } can be restored for 30 days from Recently Deleted.`
+              : `This will permanently delete ${deleteConfirmation.designIds.length} selected design${
+                  deleteConfirmation.designIds.length === 1 ? "" : "s"
+                } from Recently Deleted.`
+            : deleteConfirmation?.mode === "trash"
+              ? "You can restore this design for 30 days from Recently Deleted."
+              : "This permanently removes the selected design from Recently Deleted."
         }
         tone="fail"
         dismissLabel="Cancel"
         confirmLabel={
-          deleteConfirmation?.kind === "bulk"
-            ? bulkDeletePending
-              ? "Deleting..."
-              : deleteConfirmation.designIds.length === 1
-                ? "Delete design"
-                : "Delete designs"
-            : bulkDeletePending
-              ? "Deleting..."
-              : "Delete design"
+          bulkDeletePending
+            ? deleteConfirmation?.mode === "trash"
+              ? "Moving..."
+              : "Deleting..."
+            : deleteConfirmation?.mode === "trash"
+              ? deleteConfirmation?.kind === "bulk"
+                ? "Move to Recently Deleted"
+                : "Move to Recently Deleted"
+              : deleteConfirmation?.kind === "bulk"
+                ? "Delete permanently"
+                : "Delete permanently"
         }
         confirmVariant="destructive"
         onDismiss={() => {
@@ -1542,10 +1609,10 @@ export function LibraryPageClient({
               tone="success"
               title={successNotification.title}
               description={successNotification.description}
-              actionLabel="Undo"
-              actionVariant="outlined"
-              onAction={handleUndoPendingDeletion}
-              onDismiss={handleDismissPendingDeletionNotification}
+              actionLabel={undoTrashState ? "Undo" : undefined}
+              actionVariant={undoTrashState ? "outlined" : undefined}
+              onAction={undoTrashState ? handleUndoTrash : undefined}
+              onDismiss={handleDismissSuccessNotification}
             />
           </div>
         </div>
@@ -1595,7 +1662,15 @@ export function LibraryPageClient({
                 className={`${styles.bulkBarActionIcon} ${styles.bulkBarDeleteIcon}`}
                 aria-hidden="true"
               />
-              <span>{bulkDeletePending ? "Deleting..." : "Delete"}</span>
+              <span>
+                {bulkDeletePending
+                  ? collectionView === "deleted"
+                    ? "Deleting..."
+                    : "Moving..."
+                  : collectionView === "deleted"
+                    ? "Delete Permanently"
+                    : "Move to Recently Deleted"}
+              </span>
             </button>
           </div>
         </div>

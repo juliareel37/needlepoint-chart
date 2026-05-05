@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import {
+  loadSavedEditorV2Document,
+  listSavedEditorV2Documents,
+  restoreDeletedEditorV2Document,
   restoreEditorV2DesignVersion,
   saveEditorV2Document,
 } from "./editorV2ServerPersistence";
@@ -172,6 +175,77 @@ describe("editorV2ServerPersistence", () => {
         versionId: "version_7",
         mode: "copy",
       }),
+    });
+  });
+
+  it("requests active saved designs explicitly", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        designs: [],
+        activeCount: 3,
+        deletedCount: 1,
+        hasMore: false,
+        nextOffset: null,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listSavedEditorV2Documents({ view: "active", limit: 6, offset: 0 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/editor-v2/designs?limit=6&offset=0&view=active",
+      {
+        method: "GET",
+        credentials: "same-origin",
+      },
+    );
+  });
+
+  it("exposes deleted-design metadata on load failures", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 410,
+      json: async () => ({
+        error: "This design is in Recently Deleted.",
+        deletedDesign: {
+          id: "design_123",
+          title: "Deleted Design",
+          deletedAt: "2026-05-01T12:00:00.000Z",
+          purgeAfterAt: "2026-05-31T12:00:00.000Z",
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadSavedEditorV2Document("design_123")).rejects.toMatchObject({
+      status: 410,
+      deletedDesign: {
+        id: "design_123",
+      },
+    });
+  });
+
+  it("restores deleted designs through the dedicated route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "design_123",
+        title: "Restored Design",
+        gridWidth: 8,
+        gridHeight: 8,
+        createdAt: "2026-04-01T12:00:00.000Z",
+        updatedAt: "2026-05-02T12:00:00.000Z",
+        versionToken: "2026-05-02T12:00:00.000Z",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await restoreDeletedEditorV2Document("design_123");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/editor-v2/designs/design_123/restore", {
+      method: "POST",
+      credentials: "same-origin",
     });
   });
 });
