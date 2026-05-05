@@ -85,6 +85,9 @@ import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
+import {
+  type TraceCropAspectRatioId,
+} from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -130,6 +133,62 @@ const AUTH_REQUIRED_FILE_MENU_ACTION_IDS = new Set([
   "save-version",
   "delete",
 ]);
+
+function getAspectRatioValueFromId(
+  value: TraceCropAspectRatioId,
+  assetWidth: number,
+  assetHeight: number,
+): number | null {
+  if (value === "freehand") {
+    return null;
+  }
+
+  if (value === "original") {
+    return assetWidth > 0 && assetHeight > 0 ? assetWidth / assetHeight : null;
+  }
+
+  const [widthText, heightText] = value.split(":");
+  const width = Number(widthText);
+  const height = Number(heightText);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null;
+  }
+
+  return width / height;
+}
+
+function fitCropToAspectRatio(
+  crop: TraceCropRect,
+  aspectRatio: number | null,
+  assetWidth: number,
+  assetHeight: number,
+): TraceCropRect {
+  if (!aspectRatio || aspectRatio <= 0) {
+    return crop;
+  }
+
+  const centeredWidth = Math.min(crop.cropWidth, crop.cropHeight * aspectRatio);
+  const centeredHeight = centeredWidth / aspectRatio;
+  const fallbackHeight = Math.min(crop.cropHeight, crop.cropWidth / aspectRatio);
+  const nextWidth = centeredWidth > 0 ? centeredWidth : fallbackHeight * aspectRatio;
+  const nextHeight = centeredWidth > 0 ? centeredHeight : fallbackHeight;
+  const centerX = crop.cropX + crop.cropWidth / 2;
+  const centerY = crop.cropY + crop.cropHeight / 2;
+
+  return getNormalizedTraceCrop(
+    {
+      imageWidth: assetWidth,
+      imageHeight: assetHeight,
+      cropX: centerX - nextWidth / 2,
+      cropY: centerY - nextHeight / 2,
+      cropWidth: nextWidth,
+      cropHeight: nextHeight,
+    },
+    assetWidth,
+    assetHeight,
+  );
+}
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
@@ -330,6 +389,8 @@ export function EditorV2Shell({
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
+  const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
+    useState<TraceCropAspectRatioId>("freehand");
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -352,6 +413,7 @@ export function EditorV2Shell({
   useEffect(() => {
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
   }, [trace?.previewUrl]);
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
   const repositionModeActive =
@@ -366,6 +428,7 @@ export function EditorV2Shell({
     const nextCrop = getNormalizedTraceCrop(trace);
     setTraceCropSnapshot(nextCrop);
     setTracePreviewCrop(nextCrop);
+    setTraceCropAspectRatioId("freehand");
   }, [trace, traceRepositionActive]);
 
   const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
@@ -375,6 +438,7 @@ export function EditorV2Shell({
   const handleCancelTraceCrop = useCallback(() => {
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
   }, []);
 
   const handleResetTraceCrop = useCallback(() => {
@@ -461,7 +525,40 @@ export function EditorV2Shell({
     );
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
   }, [dispatch, state.document.grid.height, state.document.grid.width, trace, traceCropSnapshot, tracePreviewCrop]);
+  const traceCropAspectRatio = useMemo(() => {
+    if (!trace) {
+      return null;
+    }
+
+    const assetWidth = trace.imageWidth ?? tracePreviewCrop?.cropWidth ?? traceCropSnapshot?.cropWidth ?? 0;
+    const assetHeight = trace.imageHeight ?? tracePreviewCrop?.cropHeight ?? traceCropSnapshot?.cropHeight ?? 0;
+
+    return getAspectRatioValueFromId(traceCropAspectRatioId, assetWidth, assetHeight);
+  }, [trace, traceCropAspectRatioId, traceCropSnapshot, tracePreviewCrop]);
+  const handleTraceCropAspectRatioChange = useCallback(
+    (value: TraceCropAspectRatioId) => {
+      setTraceCropAspectRatioId(value);
+
+      if (!trace || !tracePreviewCrop) {
+        return;
+      }
+
+      const assetWidth = trace.imageWidth ?? tracePreviewCrop.cropWidth;
+      const assetHeight = trace.imageHeight ?? tracePreviewCrop.cropHeight;
+      const nextAspectRatio = getAspectRatioValueFromId(value, assetWidth, assetHeight);
+
+      setTracePreviewCrop((currentCrop) => {
+        if (!currentCrop) {
+          return currentCrop;
+        }
+
+        return fitCropToAspectRatio(currentCrop, nextAspectRatio, assetWidth, assetHeight);
+      });
+    },
+    [trace, tracePreviewCrop],
+  );
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -2483,7 +2580,11 @@ export function EditorV2Shell({
                   >
                     {(traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
+                        cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         dispatch={dispatch}
+                        onCropAspectRatioChange={
+                          traceCropEditing ? handleTraceCropAspectRatioChange : undefined
+                        }
                         onCancel={
                           traceCropEditing
                             ? handleCancelTraceCrop
@@ -2581,6 +2682,7 @@ export function EditorV2Shell({
                     showSymbols={showSymbols}
                     state={state}
                     traceCropBase={traceCropSnapshot}
+                    traceCropAspectRatio={traceCropAspectRatio}
                     traceCropEditing={traceCropEditing}
                     traceDisplayOverride={tracePreviewCrop}
                     onTraceCropPreviewChange={handlePreviewTraceCropChange}

@@ -42,6 +42,7 @@ interface GridWorldSurfaceProps {
   showRuler: boolean;
   showSymbols: boolean;
   state: EditorStoreState;
+  traceCropAspectRatio?: number | null;
   traceCropEditing?: boolean;
   traceCropBase?: TraceCropRect | null;
   traceDisplayOverride?: TraceCropRect | null;
@@ -63,6 +64,7 @@ export function GridWorldSurface({
   showRuler,
   showSymbols,
   state,
+  traceCropAspectRatio = null,
   traceCropEditing = false,
   traceCropBase = null,
   traceDisplayOverride = null,
@@ -546,6 +548,7 @@ export function GridWorldSurface({
                   : null
               }
               cropEditing={traceCropActive}
+              cropAspectRatio={traceCropAspectRatio}
               cropBase={traceCropBase}
               onCropPreviewChange={onTraceCropPreviewChange}
               traceDisplayOverride={traceDisplayOverride}

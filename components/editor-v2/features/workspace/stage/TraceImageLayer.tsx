@@ -37,6 +37,7 @@ const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
 
 interface TraceImageLayerProps {
+  cropAspectRatio?: number | null;
   cropBase?: TraceDisplayOverride;
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
@@ -57,6 +58,7 @@ interface TraceImageLayerProps {
 }
 
 export function TraceImageLayer({
+  cropAspectRatio = null,
   cropBase = null,
   cropEditing = false,
   dispatch,
@@ -459,6 +461,7 @@ export function TraceImageLayer({
           <TraceCropEditorOverlay
             assetHeight={cropAssetHeight}
             assetWidth={cropAssetWidth}
+            cropAspectRatio={cropAspectRatio}
             cropBase={getNormalizedTraceCrop(cropBase ? { ...trace, ...cropBase } : renderTrace, cropAssetWidth, cropAssetHeight)}
             crop={getNormalizedTraceCrop(renderTrace, cropAssetWidth, cropAssetHeight)}
             getWorldPointFromClient={getWorldPointFromClient}
@@ -564,6 +567,7 @@ type TraceCropDragMode = "move" | "nw" | "ne" | "se" | "sw";
 interface TraceCropEditorOverlayProps {
   assetHeight: number;
   assetWidth: number;
+  cropAspectRatio: number | null;
   cropBase: NonNullable<TraceDisplayOverride>;
   crop: NonNullable<TraceDisplayOverride>;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
@@ -579,6 +583,7 @@ interface TraceCropEditorOverlayProps {
 function TraceCropEditorOverlay({
   assetHeight,
   assetWidth,
+  cropAspectRatio,
   cropBase,
   crop,
   getWorldPointFromClient,
@@ -655,6 +660,7 @@ function TraceCropEditorOverlay({
   );
   const [displayImageBounds, setDisplayImageBounds] = useState(initialImageBounds);
   const [displayFrameBounds, setDisplayFrameBounds] = useState(initialFrameBounds);
+  const previousCropAspectRatioRef = useRef<number | null>(cropAspectRatio);
 
   useEffect(() => {
     const localCrop = getNormalizedTraceCrop(
@@ -748,6 +754,45 @@ function TraceCropEditorOverlay({
   );
 
   useEffect(() => {
+    if (dragSessionRef.current || previousCropAspectRatioRef.current === cropAspectRatio) {
+      return;
+    }
+
+    previousCropAspectRatioRef.current = cropAspectRatio;
+
+    if (!cropAspectRatio || cropAspectRatio <= 0) {
+      return;
+    }
+
+    const nextFrameBounds = fitFrameBoundsToAspectRatio(
+      displayFrameBounds,
+      displayImageBounds,
+      cropAspectRatio,
+      minFrameWidth,
+      minFrameHeight,
+    );
+
+    if (
+      nextFrameBounds.left === displayFrameBounds.left &&
+      nextFrameBounds.top === displayFrameBounds.top &&
+      nextFrameBounds.width === displayFrameBounds.width &&
+      nextFrameBounds.height === displayFrameBounds.height
+    ) {
+      return;
+    }
+
+    setDisplayFrameBounds(nextFrameBounds);
+    emitCropFromBounds(nextFrameBounds, displayImageBounds);
+  }, [
+    cropAspectRatio,
+    displayFrameBounds,
+    displayImageBounds,
+    emitCropFromBounds,
+    minFrameHeight,
+    minFrameWidth,
+  ]);
+
+  useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       const session = dragSessionRef.current;
       if (!session || event.pointerId !== session.pointerId) {
@@ -785,48 +830,15 @@ function TraceCropEditorOverlay({
         return;
       }
 
-      const startRight = session.frameBounds.left + session.frameBounds.width;
-      const startBottom = session.frameBounds.top + session.frameBounds.height;
-      let nextLeft = session.frameBounds.left;
-      let nextTop = session.frameBounds.top;
-      let nextRight = startRight;
-      let nextBottom = startBottom;
-
-      if (session.mode === "nw" || session.mode === "sw") {
-        nextLeft = clamp(
-          localPoint.x,
-          session.imageBounds.left,
-          startRight - minFrameWidth,
-        );
-      }
-      if (session.mode === "ne" || session.mode === "se") {
-        nextRight = clamp(
-          localPoint.x,
-          session.frameBounds.left + minFrameWidth,
-          session.imageBounds.left + session.imageBounds.width,
-        );
-      }
-      if (session.mode === "nw" || session.mode === "ne") {
-        nextTop = clamp(
-          localPoint.y,
-          session.imageBounds.top,
-          startBottom - minFrameHeight,
-        );
-      }
-      if (session.mode === "sw" || session.mode === "se") {
-        nextBottom = clamp(
-          localPoint.y,
-          session.frameBounds.top + minFrameHeight,
-          session.imageBounds.top + session.imageBounds.height,
-        );
-      }
-
-      const nextFrameBounds = {
-        left: nextLeft,
-        top: nextTop,
-        width: nextRight - nextLeft,
-        height: nextBottom - nextTop,
-      };
+      const nextFrameBounds = getNextCropFrameBoundsForHandleDrag(
+        session.mode,
+        localPoint,
+        session.frameBounds,
+        session.imageBounds,
+        minFrameWidth,
+        minFrameHeight,
+        cropAspectRatio,
+      );
       setDisplayFrameBounds(nextFrameBounds);
       setDisplayImageBounds(session.imageBounds);
       emitCropFromBounds(nextFrameBounds, session.imageBounds);
@@ -846,7 +858,13 @@ function TraceCropEditorOverlay({
       window.removeEventListener("pointerup", handlePointerEnd);
       window.removeEventListener("pointercancel", handlePointerEnd);
     };
-  }, [emitCropFromBounds, getImageLocalPoint, minFrameHeight, minFrameWidth]);
+  }, [
+    cropAspectRatio,
+    emitCropFromBounds,
+    getImageLocalPoint,
+    minFrameHeight,
+    minFrameWidth,
+  ]);
 
   const beginDrag = useCallback(
     (event: React.PointerEvent<HTMLDivElement>, mode: TraceCropDragMode) => {
@@ -967,6 +985,134 @@ function getCropHandleTop(
 
 function getCropHandleCursor(handle: "nw" | "ne" | "se" | "sw"): string {
   return handle === "nw" || handle === "se" ? "nwse-resize" : "nesw-resize";
+}
+
+function fitFrameBoundsToAspectRatio(
+  frameBounds: { left: number; top: number; width: number; height: number },
+  imageBounds: { left: number; top: number; width: number; height: number },
+  aspectRatio: number,
+  minFrameWidth: number,
+  minFrameHeight: number,
+): { left: number; top: number; width: number; height: number } {
+  if (!(aspectRatio > 0)) {
+    return frameBounds;
+  }
+
+  const widthFromHeight = frameBounds.height * aspectRatio;
+  const nextWidth = widthFromHeight <= frameBounds.width
+    ? widthFromHeight
+    : frameBounds.width;
+  const nextHeight = widthFromHeight <= frameBounds.width
+    ? frameBounds.height
+    : frameBounds.width / aspectRatio;
+  const clampedWidth = clamp(nextWidth, minFrameWidth, imageBounds.width);
+  const clampedHeight = clamp(nextHeight, minFrameHeight, imageBounds.height);
+  const centerX = frameBounds.left + frameBounds.width / 2;
+  const centerY = frameBounds.top + frameBounds.height / 2;
+  const left = clamp(
+    centerX - clampedWidth / 2,
+    imageBounds.left,
+    imageBounds.left + imageBounds.width - clampedWidth,
+  );
+  const top = clamp(
+    centerY - clampedHeight / 2,
+    imageBounds.top,
+    imageBounds.top + imageBounds.height - clampedHeight,
+  );
+
+  return {
+    left,
+    top,
+    width: clampedWidth,
+    height: clampedHeight,
+  };
+}
+
+function getNextCropFrameBoundsForHandleDrag(
+  mode: "nw" | "ne" | "se" | "sw",
+  localPoint: WorldPoint,
+  frameBounds: { left: number; top: number; width: number; height: number },
+  imageBounds: { left: number; top: number; width: number; height: number },
+  minFrameWidth: number,
+  minFrameHeight: number,
+  cropAspectRatio: number | null,
+): { left: number; top: number; width: number; height: number } {
+  const startRight = frameBounds.left + frameBounds.width;
+  const startBottom = frameBounds.top + frameBounds.height;
+
+  if (!cropAspectRatio || !(cropAspectRatio > 0)) {
+    let nextLeft = frameBounds.left;
+    let nextTop = frameBounds.top;
+    let nextRight = startRight;
+    let nextBottom = startBottom;
+
+    if (mode === "nw" || mode === "sw") {
+      nextLeft = clamp(localPoint.x, imageBounds.left, startRight - minFrameWidth);
+    }
+    if (mode === "ne" || mode === "se") {
+      nextRight = clamp(
+        localPoint.x,
+        frameBounds.left + minFrameWidth,
+        imageBounds.left + imageBounds.width,
+      );
+    }
+    if (mode === "nw" || mode === "ne") {
+      nextTop = clamp(localPoint.y, imageBounds.top, startBottom - minFrameHeight);
+    }
+    if (mode === "sw" || mode === "se") {
+      nextBottom = clamp(
+        localPoint.y,
+        frameBounds.top + minFrameHeight,
+        imageBounds.top + imageBounds.height,
+      );
+    }
+
+    return {
+      left: nextLeft,
+      top: nextTop,
+      width: nextRight - nextLeft,
+      height: nextBottom - nextTop,
+    };
+  }
+
+  const anchorX = mode === "nw" || mode === "sw" ? startRight : frameBounds.left;
+  const anchorY = mode === "nw" || mode === "ne" ? startBottom : frameBounds.top;
+  const leftEdgeDragged = mode === "nw" || mode === "sw";
+  const topEdgeDragged = mode === "nw" || mode === "ne";
+  const maxWidth = leftEdgeDragged
+    ? anchorX - imageBounds.left
+    : imageBounds.left + imageBounds.width - anchorX;
+  const maxHeight = topEdgeDragged
+    ? anchorY - imageBounds.top
+    : imageBounds.top + imageBounds.height - anchorY;
+  const maxAspectWidth = Math.max(0, Math.min(maxWidth, maxHeight * cropAspectRatio));
+  const maxAspectHeight = maxAspectWidth / cropAspectRatio;
+  const minAspectWidth = Math.min(
+    Math.max(minFrameWidth, minFrameHeight * cropAspectRatio),
+    maxAspectWidth,
+  );
+  const minAspectHeight = minAspectWidth / cropAspectRatio;
+  const rawWidth = Math.abs(localPoint.x - anchorX);
+  const rawHeight = Math.abs(localPoint.y - anchorY);
+  const widthCandidate = clamp(rawWidth, minAspectWidth, maxAspectWidth);
+  const heightFromWidth = widthCandidate / cropAspectRatio;
+  const heightCandidate = clamp(rawHeight, minAspectHeight, maxAspectHeight);
+  const widthFromHeight = heightCandidate * cropAspectRatio;
+  const widthDrivenError =
+    Math.abs(rawWidth - widthCandidate) + Math.abs(rawHeight - heightFromWidth);
+  const heightDrivenError =
+    Math.abs(rawWidth - widthFromHeight) + Math.abs(rawHeight - heightCandidate);
+  const nextWidth = widthDrivenError <= heightDrivenError ? widthCandidate : widthFromHeight;
+  const nextHeight = widthDrivenError <= heightDrivenError ? heightFromWidth : heightCandidate;
+  const nextLeft = leftEdgeDragged ? anchorX - nextWidth : anchorX;
+  const nextTop = topEdgeDragged ? anchorY - nextHeight : anchorY;
+
+  return {
+    left: nextLeft,
+    top: nextTop,
+    width: nextWidth,
+    height: nextHeight,
+  };
 }
 
 function applyDesktopTransform(
