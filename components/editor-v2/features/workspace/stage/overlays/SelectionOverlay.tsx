@@ -2,6 +2,7 @@
 
 import type {
   ActiveTool,
+  DuplicatePlacementSession,
   MirrorInteractionState,
   SelectionState,
   ViewportState,
@@ -19,6 +20,10 @@ const SELECTION_OUTER_STROKE_WIDTH = 3;
 
 interface SelectionOverlayProps {
   activeTool: ActiveTool;
+  duplicatePlacement: {
+    session: DuplicatePlacementSession;
+    offsetCells: { x: number; y: number };
+  } | null;
   metrics: GridWorldMetrics;
   mirrorInteraction: MirrorInteractionState;
   selection: SelectionState;
@@ -27,6 +32,7 @@ interface SelectionOverlayProps {
 
 export function SelectionOverlay({
   activeTool,
+  duplicatePlacement,
   metrics,
   mirrorInteraction,
   selection,
@@ -58,6 +64,12 @@ export function SelectionOverlay({
     hasCommittedCircleSelection;
   const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
   const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
+  const duplicateCutout = duplicatePlacement
+    ? buildDuplicateCutout({
+        duplicatePlacement,
+        projectedCellSize,
+      })
+    : null;
   const shouldDimCanvas =
     activeTool === "lasso" ||
     activeTool === "mirror" ||
@@ -80,6 +92,7 @@ export function SelectionOverlay({
     hasCommittedCircleSelection && selection.rect
       ? buildEllipsePath(selection.rect, projectedCellSize)
       : null,
+    duplicateCutout,
     hasCommittedMirrorSelection &&
     mirrorCutoutPath &&
       mirrorCutoutPath !== selectionRectPath
@@ -362,4 +375,36 @@ function buildEllipsePath(
   const ry = (rect.height * cellSize) / 2;
 
   return `M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
+}
+
+function buildDuplicateCutout(options: {
+  duplicatePlacement: {
+    session: DuplicatePlacementSession;
+    offsetCells: { x: number; y: number };
+  };
+  projectedCellSize: number;
+}): string | null {
+  const { session, offsetCells } = options.duplicatePlacement;
+  const translatedRect = {
+    ...session.sourceRect,
+    x: session.sourceRect.x + offsetCells.x,
+    y: session.sourceRect.y + offsetCells.y,
+  };
+
+  if (session.selectionMode === "lasso" && session.outlinePoints.length >= 3) {
+    const points = session.outlinePoints
+      .map(
+        (point) =>
+          `${(translatedRect.x + point.x) * options.projectedCellSize},${(translatedRect.y + point.y) * options.projectedCellSize}`,
+      )
+      .join(" ");
+
+    return `M ${points} Z`;
+  }
+
+  if (session.selectionMode === "circle") {
+    return buildEllipsePath(translatedRect, options.projectedCellSize);
+  }
+
+  return buildRectPath(translatedRect, options.projectedCellSize);
 }

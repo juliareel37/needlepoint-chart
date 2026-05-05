@@ -124,6 +124,10 @@ export function GridWorldSurface({
     width: 0,
     height: 0,
   });
+  const [duplicatePlacementOffset, setDuplicatePlacementOffset] = useState({
+    x: 0,
+    y: 0,
+  });
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -207,6 +211,10 @@ export function GridWorldSurface({
     mediaQuery.addListener(update);
     return () => mediaQuery.removeListener(update);
   }, []);
+
+  useEffect(() => {
+    setDuplicatePlacementOffset({ x: 0, y: 0 });
+  }, [duplicatePlacement]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -516,6 +524,14 @@ export function GridWorldSurface({
 
         <SelectionOverlay
           activeTool={activeTool}
+          duplicatePlacement={
+            duplicatePlacement
+              ? {
+                  session: duplicatePlacement,
+                  offsetCells: duplicatePlacementOffset,
+                }
+              : null
+          }
           metrics={metrics}
           mirrorInteraction={mirrorInteraction}
           selection={selection}
@@ -644,6 +660,8 @@ export function GridWorldSurface({
               dispatch={dispatch}
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
+              offsetCells={duplicatePlacementOffset}
+              onOffsetCellsChange={setDuplicatePlacementOffset}
               portalHost={stageRef.current}
               session={duplicatePlacement}
               stageBounds={stageBounds}

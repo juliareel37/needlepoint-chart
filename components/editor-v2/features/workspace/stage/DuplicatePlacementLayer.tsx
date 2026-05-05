@@ -26,6 +26,8 @@ interface DuplicatePlacementLayerProps {
   dispatch: EditorStore["dispatch"];
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   metrics: GridWorldMetrics;
+  offsetCells: { x: number; y: number };
+  onOffsetCellsChange: (offset: { x: number; y: number }) => void;
   portalHost?: HTMLElement | null;
   session: DuplicatePlacementSession;
   stageBounds: { left: number; top: number; width: number; height: number };
@@ -44,6 +46,8 @@ export function DuplicatePlacementLayer({
   dispatch,
   getWorldPointFromClient,
   metrics,
+  offsetCells,
+  onOffsetCellsChange,
   portalHost = null,
   session,
   stageBounds,
@@ -53,7 +57,6 @@ export function DuplicatePlacementLayer({
   const pitch = metrics.cellSize + metrics.cellGap;
   const projectedCellSize = metrics.cellSize * viewport.zoom;
   const projectedPitch = pitch * viewport.zoom;
-  const [offsetCells, setOffsetCells] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragSessionRef = useRef<DragSession | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -125,7 +128,6 @@ export function DuplicatePlacementLayer({
   );
 
   useEffect(() => {
-    setOffsetCells({ x: 0, y: 0 });
     setIsDragging(false);
   }, [session]);
 
@@ -196,7 +198,7 @@ export function DuplicatePlacementLayer({
         return;
       }
 
-      setOffsetCells({
+      onOffsetCellsChange({
         x: dragSession.startOffset.x + Math.round((point.x - dragSession.startPoint.x) / pitch),
         y: dragSession.startOffset.y + Math.round((point.y - dragSession.startPoint.y) / pitch),
       });
@@ -220,7 +222,7 @@ export function DuplicatePlacementLayer({
       window.removeEventListener("pointerup", handleWindowPointerEnd);
       window.removeEventListener("pointercancel", handleWindowPointerEnd);
     };
-  }, [getWorldPointFromClient, pitch]);
+  }, [getWorldPointFromClient, onOffsetCellsChange, pitch]);
 
   return (
     <>
