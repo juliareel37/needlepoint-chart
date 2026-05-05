@@ -282,6 +282,81 @@
   word-break: break-word;
 }
 
+.sessionTableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-card) 92%, var(--surface-app));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 45%, transparent);
+}
+
+.sessionTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sessionTable th,
+.sessionTable td {
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sessionTable th {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--ui-border-reg);
+  background: color-mix(in srgb, var(--surface-card) 84%, var(--surface-app));
+}
+
+.sessionTable tbody tr + tr td {
+  border-top: 1px solid var(--ui-border-subtle);
+}
+
+.sessionIdentity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sessionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sessionTitle {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sessionBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
+  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  letter-spacing: 0.02em;
+}
+
+.sessionSubtitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.sessionActionCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.sessionCurrentValue {
+  color: var(--text-secondary);
+}
+
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -301,7 +376,7 @@
 }
 
 .modalShell {
-  width: min(560px, calc(100vw - 40px));
+  width: min(700px, calc(100vw - 40px));
   max-height: calc(100dvh - var(--app-header-height, 52px) - 40px);
   min-height: 0;
 }
@@ -371,9 +446,74 @@
     padding: 20px;
     border-radius: 24px;
   }
+
+  .sessionTableWrap {
+    overflow: visible;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sessionTable,
+  .sessionTable thead,
+  .sessionTable tbody,
+  .sessionTable tr,
+  .sessionTable td {
+    display: block;
+  }
+
+  .sessionTable thead {
+    display: none;
+  }
+
+  .sessionTable tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .sessionTable tbody tr {
+    padding: 14px;
+    border: 1px solid var(--ui-border-reg);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-card) 92%, var(--surface-app));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 45%, transparent);
+  }
+
+  .sessionTable tbody tr + tr td {
+    border-top: none;
+  }
+
+  .sessionTable td {
+    display: grid;
+    gap: 4px;
+    padding: 0;
+  }
+
+  .sessionTable td + td {
+    margin-top: 10px;
+  }
+
+  .sessionTable td::before {
+    content: attr(data-label);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .sessionActionCell {
+    width: auto;
+    white-space: normal;
+  }
 }
 
 :global(:root[data-theme="dark"]) .authMethodBadge {
+  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
+}
+
+:global(:root[data-theme="dark"]) .sessionBadge {
   background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
   color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }

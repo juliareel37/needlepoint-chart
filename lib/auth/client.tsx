@@ -4,6 +4,21 @@ import type { ReactNode } from "react";
 import { createAuthClient } from "@neondatabase/auth/next";
 
 const authClient = createAuthClient();
+const authActions = {
+  changeEmail: authClient.changeEmail,
+  changePassword: authClient.changePassword,
+  listSessions: authClient.listSessions,
+  requestPasswordReset: authClient.requestPasswordReset,
+  revokeOtherSessions: authClient.revokeOtherSessions,
+  revokeSession: authClient.revokeSession,
+  sendVerificationEmail: authClient.sendVerificationEmail,
+  resetPassword: authClient.resetPassword,
+  signInWithEmail: authClient.signIn.email,
+  signInWithGoogle: authClient.signIn.social,
+  signOut: authClient.signOut,
+  signUpWithEmail: authClient.signUp.email,
+  updateUser: authClient.updateUser,
+};
 
 export function AuthProvider({
   children,
@@ -33,18 +48,7 @@ export function useAuthStatus() {
 }
 
 export function useAuthActions() {
-  return {
-    changeEmail: authClient.changeEmail,
-    changePassword: authClient.changePassword,
-    requestPasswordReset: authClient.requestPasswordReset,
-    sendVerificationEmail: authClient.sendVerificationEmail,
-    resetPassword: authClient.resetPassword,
-    signInWithEmail: authClient.signIn.email,
-    signInWithGoogle: authClient.signIn.social,
-    signOut: authClient.signOut,
-    signUpWithEmail: authClient.signUp.email,
-    updateUser: authClient.updateUser,
-  };
+  return authActions;
 }
 
 export function AuthSignedIn({ children }: { children: ReactNode }) {

@@ -21,6 +21,16 @@ type StatusState =
   | { tone: "success"; message: string }
   | null;
 
+type AuthSessionSummary = {
+  id: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  expiresAt: string | Date;
+  token: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+};
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) {
     return error;
@@ -52,14 +62,101 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return source.slice(0, 2).toUpperCase();
 }
 
+function formatSessionDate(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getRelativeSessionDateLabel(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (diffMs < hourMs) {
+    const minutes = Math.max(1, Math.round(diffMs / minuteMs));
+    return `${minutes} min ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.max(1, Math.round(diffMs / hourMs));
+    return `${hours} hr ago`;
+  }
+
+  const days = Math.max(1, Math.round(diffMs / dayMs));
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function getSessionDeviceLabel(userAgent: string | null | undefined, isCurrentSession: boolean) {
+  if (!userAgent?.trim()) {
+    return isCurrentSession ? "This device" : "Signed-in device";
+  }
+
+  const normalizedUserAgent = userAgent.toLowerCase();
+  const browser =
+    normalizedUserAgent.includes("edg/")
+      ? "Edge"
+      : normalizedUserAgent.includes("chrome/")
+        ? "Chrome"
+        : normalizedUserAgent.includes("safari/") && !normalizedUserAgent.includes("chrome/")
+          ? "Safari"
+          : normalizedUserAgent.includes("firefox/")
+            ? "Firefox"
+            : normalizedUserAgent.includes("opr/")
+              ? "Opera"
+              : "Browser";
+  const device =
+    normalizedUserAgent.includes("iphone") || normalizedUserAgent.includes("ios")
+      ? "iPhone"
+      : normalizedUserAgent.includes("ipad")
+        ? "iPad"
+        : normalizedUserAgent.includes("android")
+          ? "Android device"
+          : normalizedUserAgent.includes("mac os x") || normalizedUserAgent.includes("macintosh")
+            ? "Mac"
+            : normalizedUserAgent.includes("windows")
+              ? "Windows device"
+              : normalizedUserAgent.includes("linux")
+                ? "Linux device"
+                : "device";
+
+  return `${browser} on ${device}`;
+}
+
+function getSessionLocationLabel(ipAddress: string | null | undefined) {
+  return ipAddress?.trim() ? ipAddress : "Unavailable";
+}
+
 export function AuthAccountSettingsPanel({
   onAfterSignOut,
 }: {
   onAfterSignOut?: () => void;
 }) {
   const router = useRouter();
-  const { changeEmail, requestPasswordReset, signOut, updateUser } = useAuthActions();
-  const { isLoaded, isSignedIn, refetch, user } = useAuthSession();
+  const {
+    changeEmail,
+    listSessions,
+    requestPasswordReset,
+    revokeOtherSessions,
+    revokeSession,
+    signOut,
+    updateUser,
+  } = useAuthActions();
+  const { isLoaded, isSignedIn, refetch, session, user } = useAuthSession();
   const [nameValue, setNameValue] = useState("");
   const [emailValue, setEmailValue] = useState("");
   const [accountSettingsContext, setAccountSettingsContext] =
@@ -71,9 +168,15 @@ export function AuthAccountSettingsPanel({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [status, setStatus] = useState<StatusState>(null);
+  const [sessions, setSessions] = useState<AuthSessionSummary[]>([]);
+  const [isSessionsLoading, setIsSessionsLoading] = useState(false);
+  const [sessionsStatus, setSessionsStatus] = useState<StatusState>(null);
+  const [revokingSessionToken, setRevokingSessionToken] = useState<string | null>(null);
+  const [isRevokingOtherSessions, setIsRevokingOtherSessions] = useState(false);
 
   const currentName = user?.name ?? "";
   const currentEmail = user?.email ?? "";
+  const currentSessionToken = session?.token ?? null;
   const nextName = nameValue.trim();
   const nextEmail = emailValue.trim();
   const hasGoogleOAuth = accountSettingsContext?.hasGoogleOAuth ?? false;
@@ -98,6 +201,52 @@ export function AuthAccountSettingsPanel({
     setIsDeleteModalOpen(false);
     setStatus(null);
   }, [currentEmail, currentName, user?.id]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !user) {
+      setSessions([]);
+      setSessionsStatus(null);
+      setIsSessionsLoading(false);
+      setRevokingSessionToken(null);
+      setIsRevokingOtherSessions(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function loadSessionsList() {
+      try {
+        setIsSessionsLoading(true);
+        const result = await listSessions();
+
+        if (result.error) {
+          throw new Error(result.error.message ?? "We couldn't load your active sessions.");
+        }
+
+        if (!isCancelled) {
+          setSessions(result.data ?? []);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setSessions([]);
+          setSessionsStatus({
+            tone: "error",
+            message: getErrorMessage(error, "We couldn't load your active sessions."),
+          });
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSessionsLoading(false);
+        }
+      }
+    }
+
+    void loadSessionsList();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
@@ -446,6 +595,103 @@ export function AuthAccountSettingsPanel({
     );
   }
 
+  function renderSessionsStatus() {
+    if (!sessionsStatus) {
+      return null;
+    }
+
+    return (
+      <div
+        className={[
+          styles.status,
+          sessionsStatus.tone === "error" ? styles.statusError : styles.statusSuccess,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={typographyStyles.p2}
+      >
+        {sessionsStatus.message}
+      </div>
+    );
+  }
+
+  async function refreshSessions(options?: { successMessage?: string }) {
+    try {
+      const result = await listSessions();
+      if (result.error) {
+        throw new Error(result.error.message ?? "We couldn't refresh your sessions.");
+      }
+
+      setSessions(result.data ?? []);
+      if (options?.successMessage) {
+        setSessionsStatus({ tone: "success", message: options.successMessage });
+      }
+    } catch (error) {
+      setSessionsStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't refresh your sessions."),
+      });
+    }
+  }
+
+  async function handleRevokeSession(sessionToken: string) {
+    setRevokingSessionToken(sessionToken);
+    setSessionsStatus(null);
+
+    try {
+      const result = await revokeSession({ token: sessionToken });
+      if (result.error) {
+        throw new Error(result.error.message ?? "We couldn't sign out that device.");
+      }
+
+      await refreshSessions({ successMessage: "That device has been signed out." });
+    } catch (error) {
+      setSessionsStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't sign out that device."),
+      });
+    } finally {
+      setRevokingSessionToken(null);
+    }
+  }
+
+  async function handleRevokeOtherSessions() {
+    setIsRevokingOtherSessions(true);
+    setSessionsStatus(null);
+
+    try {
+      const result = await revokeOtherSessions();
+      if (result.error) {
+        throw new Error(result.error.message ?? "We couldn't sign out your other devices.");
+      }
+
+      await refreshSessions({
+        successMessage: "Your other devices have been signed out.",
+      });
+    } catch (error) {
+      setSessionsStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't sign out your other devices."),
+      });
+    } finally {
+      setIsRevokingOtherSessions(false);
+    }
+  }
+
+  const sortedSessions = [...sessions].sort((left, right) => {
+    const leftIsCurrent = left.token === currentSessionToken;
+    const rightIsCurrent = right.token === currentSessionToken;
+
+    if (leftIsCurrent !== rightIsCurrent) {
+      return leftIsCurrent ? -1 : 1;
+    }
+
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  });
+  const otherSessions = sortedSessions.filter(
+    (sessionEntry) => sessionEntry.token !== currentSessionToken,
+  );
+
   return (
     <div className={styles.accountGrid}>
       {!isLoaded ? (
@@ -580,6 +826,147 @@ export function AuthAccountSettingsPanel({
               {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </Button> */}
+            </div>
+          </Panel>
+
+          <Panel className={styles.mainPanel} title="Sessions">
+            <div className={styles.form}>
+              {renderSessionsStatus()}
+              <p style={panelMutedTextStyle}>
+                Review the devices that are signed into your account and remove anything you
+                don&apos;t recognize.
+              </p>
+              {isSessionsLoading ? (
+                <p style={panelMutedTextStyle}>Loading your active sessions...</p>
+              ) : sortedSessions.length > 0 ? (
+                <div className={styles.sessionTableWrap}>
+                  <table className={styles.sessionTable}>
+                    <thead>
+                      <tr>
+                        <th scope="col" style={typographyStyles.s}>
+                          Device
+                        </th>
+                        <th scope="col" style={typographyStyles.s}>
+                          Last active
+                        </th>
+                        <th scope="col" style={typographyStyles.s}>
+                          Signed in
+                        </th>
+                        <th scope="col" style={typographyStyles.s}>
+                          Expires
+                        </th>
+                        <th scope="col" style={typographyStyles.s}>
+                          IP address
+                        </th>
+                        <th scope="col" style={typographyStyles.s}>
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedSessions.map((sessionEntry) => {
+                        const isCurrentSession = sessionEntry.token === currentSessionToken;
+                        const isRevokingThisSession = revokingSessionToken === sessionEntry.token;
+                        const lastActiveRelativeLabel = getRelativeSessionDateLabel(
+                          sessionEntry.updatedAt,
+                        );
+
+                        return (
+                          <tr key={sessionEntry.id}>
+                            <td data-label="Device">
+                              <div className={styles.sessionIdentity}>
+                                <div className={styles.sessionTitleRow}>
+                                  <strong
+                                    className={styles.sessionTitle}
+                                    style={typographyStyles.p2}
+                                  >
+                                    {getSessionDeviceLabel(
+                                      sessionEntry.userAgent,
+                                      isCurrentSession,
+                                    )}
+                                  </strong>
+                                  {/* {isCurrentSession ? (
+                                    <span
+                                      className={styles.sessionBadge}
+                                      style={typographyStyles.s}
+                                    >
+                                      Current
+                                    </span>
+                                  ) : null} */}
+                                </div>
+                                <p className={styles.sessionSubtitle} style={typographyStyles.s}>
+                                  {lastActiveRelativeLabel
+                                    ? `Seen ${lastActiveRelativeLabel}`
+                                    : "Recent session activity"}
+                                </p>
+                              </div>
+                            </td>
+                            <td data-label="Last active" style={typographyStyles.p2}>
+                              {formatSessionDate(sessionEntry.updatedAt)}
+                            </td>
+                            <td data-label="Signed in" style={typographyStyles.p2}>
+                              {formatSessionDate(sessionEntry.createdAt)}
+                            </td>
+                            <td data-label="Expires" style={typographyStyles.p2}>
+                              {formatSessionDate(sessionEntry.expiresAt)}
+                            </td>
+                            <td data-label="IP address" style={typographyStyles.p2}>
+                              {getSessionLocationLabel(sessionEntry.ipAddress)}
+                            </td>
+                            <td data-label="Action" className={styles.sessionActionCell}>
+                              {isCurrentSession ? (
+                                <span
+                                  className={styles.sessionCurrentValue}
+                                  style={typographyStyles.s}
+                                >
+                                  This device
+                                </span>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void handleRevokeSession(sessionEntry.token)}
+                                  disabled={
+                                    isBusy || isRevokingOtherSessions || isRevokingThisSession
+                                  }
+                                >
+                                  {isRevokingThisSession ? "Signing out..." : "Sign out"}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={panelMutedTextStyle}>No active sessions were found for this account.</p>
+              )}
+              <div className={styles.buttonRow}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void refreshSessions()}
+                  disabled={isBusy || isSessionsLoading || isRevokingOtherSessions}
+                >
+                  Refresh
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => void handleRevokeOtherSessions()}
+                  disabled={
+                    isBusy ||
+                    isSessionsLoading ||
+                    isRevokingOtherSessions ||
+                    otherSessions.length === 0
+                  }
+                >
+                  {isRevokingOtherSessions ? "Signing out..." : "Sign out other devices"}
+                </Button>
+              </div>
             </div>
           </Panel>
 
