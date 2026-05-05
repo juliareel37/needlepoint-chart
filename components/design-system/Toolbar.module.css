@@ -72,6 +72,11 @@
   padding-inline: 12px;
 }
 
+.buttonTextOnly {
+  padding-inline: 12px;
+}
+
+
 .buttonVariantToolbar {
   background: transparent;
   color: var(--text-primary);
@@ -159,7 +164,7 @@
   background: var(--toolbar-button-active-bg);
   color: var(--toolbar-button-active-text);
   filter: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); */
 }
 
 .buttonVariantSecondary[data-active="true"] {
@@ -263,6 +268,11 @@
   /* background: var(--brand-lightest); */
   /* color: var(--brand-600); */
   /* box-shadow: none !important; */
+}
+
+.buttonPopoverTrigger[data-active="true"] {
+  background: var(--button-outlined-hover);
+  color: var(--button-outlined-hover-text);
 }
 
 .popover .divider {

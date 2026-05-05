@@ -1235,23 +1235,24 @@ export function FloatingToolbar({
         <ToolbarAnchor ref={imageAnchorRef}>
           <ToolbarButton
             type="button"
-          active={imageOpen}
-          aria-pressed={imageOpen}
-          aria-label="Image"
-          data-tooltip="Image"
-          title="Image"
-          disabled={Boolean(selectionCommitted && selectionBounds)}
-          onClick={() => {
-              closeColorLibrary();
-              if (imageOpen) {
-                closeImageMenu();
-              } else {
-                setImageOpen(true);
-              }
-              closeDrawMenu();
-            }}
-          >
-            <ToolbarIcon icon="/icons/lucide/image.svg" />
+            popoverTrigger
+            active={imageOpen}
+            aria-pressed={imageOpen}
+            aria-label="Image"
+            data-tooltip="Image"
+            title="Image"
+            disabled={Boolean(selectionCommitted && selectionBounds)}
+            onClick={() => {
+                closeColorLibrary();
+                if (imageOpen) {
+                  closeImageMenu();
+                } else {
+                  setImageOpen(true);
+                }
+                closeDrawMenu();
+              }}
+            >
+              <ToolbarIcon icon="/icons/lucide/image.svg" />
           </ToolbarButton>
 
           {imageOpen ? (

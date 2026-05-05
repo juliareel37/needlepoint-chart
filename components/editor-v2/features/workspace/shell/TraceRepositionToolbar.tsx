@@ -137,6 +137,8 @@ interface TraceRepositionToolbarProps {
   cropAspectRatioId?: TraceCropAspectRatioId;
   dispatch: EditorStore["dispatch"];
   onBeginCrop?: () => void;
+  onCancelCrop?: () => void;
+  onCommitCrop?: () => void;
   onCropAspectRatioChange?: (value: TraceCropAspectRatioId) => void;
   onCancel: () => void;
   onCommit: () => void;
@@ -144,11 +146,13 @@ interface TraceRepositionToolbarProps {
 }
 
 function TraceToolbarPortalPopover({
+  align = "start",
   anchorRef,
   children,
   onRequestClose,
   ...props
 }: React.ComponentProps<typeof ToolbarPopover> & {
+  align?: "start" | "center";
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onRequestClose?: () => void;
 }) {
@@ -181,7 +185,7 @@ function TraceToolbarPortalPopover({
       const rect = anchor.getBoundingClientRect();
       const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
       const horizontalPosition = getToolbarPopoverHorizontalPosition({
-        align: "start",
+        align,
         anchorRect: rect,
         popoverWidth,
       });
@@ -205,7 +209,7 @@ function TraceToolbarPortalPopover({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [anchorRef, mounted]);
+  }, [align, anchorRef, mounted]);
 
   useEffect(() => {
     if (!mounted || !onRequestClose) {
@@ -263,16 +267,25 @@ export function TraceRepositionToolbar({
   cropAspectRatioId,
   dispatch,
   onBeginCrop,
+  onCancelCrop,
+  onCommitCrop,
   onCropAspectRatioChange,
   onCancel,
   onCommit,
   trace,
 }: TraceRepositionToolbarProps) {
   const [cropAspectRatioMenuOpen, setCropAspectRatioMenuOpen] = useState(false);
+  const cropToolbarAnchorRef = useRef<HTMLDivElement | null>(null);
   const cropAspectRatioAnchorRef = useRef<HTMLDivElement | null>(null);
   const activeCropAspectRatio =
     TRACE_CROP_ASPECT_RATIO_OPTIONS.find((option) => option.id === cropAspectRatioId) ??
     TRACE_CROP_ASPECT_RATIO_OPTIONS[0];
+
+  useEffect(() => {
+    if (!cropEditing) {
+      setCropAspectRatioMenuOpen(false);
+    }
+  }, [cropEditing]);
 
   return (
     <div className={styles.selectionToolbarCluster}>
@@ -304,68 +317,52 @@ export function TraceRepositionToolbar({
               <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
               <ToolbarLabel>Settings</ToolbarLabel>
             </ToolbarButton>
-            {cropEditing && cropAspectRatioId && onCropAspectRatioChange ? (
+            {onBeginCrop ? (
               <>
                 <ToolbarDivider />
-                <ToolbarAnchor ref={cropAspectRatioAnchorRef}>
+                <ToolbarAnchor ref={cropToolbarAnchorRef}>
                   <ToolbarButton
                     type="button"
-                    labelled
-                    active={cropAspectRatioMenuOpen}
-                    aria-expanded={cropAspectRatioMenuOpen}
-                    aria-haspopup="menu"
-                    onClick={() => setCropAspectRatioMenuOpen((open) => !open)}
-                    className={styles.selectionShapeTrigger}
-                  >
-                    <AspectRatioGlyph optionId={activeCropAspectRatio.id} trace={trace} />
-                    <ToolbarLabel>{activeCropAspectRatio.label}</ToolbarLabel>
-                    <MenuChevronIcon open={cropAspectRatioMenuOpen} />
-                  </ToolbarButton>
+                    iconOnly
+                    popoverTrigger
+                    active={cropEditing}
+                    onClick={() => {
+                      if (cropEditing) {
+                        setCropAspectRatioMenuOpen(false);
+                        onCancelCrop?.();
+                        return;
+                      }
 
-                  {cropAspectRatioMenuOpen ? (
-                    <TraceToolbarPortalPopover
-                      anchorRef={cropAspectRatioAnchorRef}
-                      onRequestClose={() => setCropAspectRatioMenuOpen(false)}
-                      role="menu"
-                      aria-label="Crop aspect ratio"
-                      className={styles.selectionShapeMenu}
-                    >
-                      {TRACE_CROP_ASPECT_RATIO_OPTIONS.map((option) => (
-                        <ToolbarButton
-                          key={option.id}
-                          type="button"
-                          labelled
-                          role="menuitemradio"
-                          active={cropAspectRatioId === option.id}
-                          aria-checked={cropAspectRatioId === option.id}
-                          onClick={() => {
-                            onCropAspectRatioChange(option.id);
-                            setCropAspectRatioMenuOpen(false);
-                          }}
-                          className={styles.selectionShapeMenuItem}
-                        >
-                          <AspectRatioGlyph optionId={option.id} trace={trace} />
-                          <ToolbarLabel>{option.label}</ToolbarLabel>
-                        </ToolbarButton>
-                      ))}
-                    </TraceToolbarPortalPopover>
-                  ) : null}
+                      onBeginCrop();
+                    }}
+                  >
+                    <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                    {/* <ToolbarLabel>Crop</ToolbarLabel> */}
+                  </ToolbarButton>
                 </ToolbarAnchor>
               </>
-            ) : onBeginCrop ? (
-              <>
-                <ToolbarDivider />
-                <ToolbarButton
-                  type="button"
-                  labelled
-                  onClick={onBeginCrop}
-                >
-                  <ToolbarIcon icon="/icons/lucide/crop.svg" />
-                  <ToolbarLabel>Crop</ToolbarLabel>
-                </ToolbarButton>
-              </>
             ) : null}
+          {/* <ToolbarDivider /> */}
           </ToolbarGroup>
+            {/* <ToolbarButton
+              type="button"
+              variant="secondary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              onClick={onCancel}
+            >
+            Cancel
+            </ToolbarButton>
+
+            <ToolbarButton
+              type="button"
+              variant="primary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              onClick={onCommit}
+            >
+            Done
+            </ToolbarButton> */}
         </Toolbar>
       </div>
 
@@ -382,6 +379,93 @@ export function TraceRepositionToolbar({
           </ToolbarButton>
         </Toolbar>
       </div>
+
+      {cropEditing && cropAspectRatioId && onCropAspectRatioChange ? (
+        <TraceToolbarPortalPopover
+          align="center"
+          anchorRef={cropToolbarAnchorRef}
+          subtoolbar
+          role="dialog"
+          aria-label="Crop tools"
+        >
+          <ToolbarGroup>
+
+            <ToolbarAnchor ref={cropAspectRatioAnchorRef}>
+              <ToolbarButton
+                type="button"
+                labelled
+                active={cropAspectRatioMenuOpen}
+                aria-expanded={cropAspectRatioMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setCropAspectRatioMenuOpen((open) => !open)}
+                className={styles.selectionShapeTrigger}
+              >
+                <AspectRatioGlyph optionId={activeCropAspectRatio.id} trace={trace} />
+                <ToolbarLabel>{activeCropAspectRatio.label}</ToolbarLabel>
+                <MenuChevronIcon open={cropAspectRatioMenuOpen} />
+              </ToolbarButton>
+
+              {cropAspectRatioMenuOpen ? (
+                <TraceToolbarPortalPopover
+                  anchorRef={cropAspectRatioAnchorRef}
+                  onRequestClose={() => setCropAspectRatioMenuOpen(false)}
+                  role="menu"
+                  aria-label="Crop aspect ratio"
+                  className={styles.selectionShapeMenu}
+                >
+                  {TRACE_CROP_ASPECT_RATIO_OPTIONS.map((option) => (
+                    <ToolbarButton
+                      key={option.id}
+                      type="button"
+                      labelled
+                      role="menuitemradio"
+                      active={cropAspectRatioId === option.id}
+                      aria-checked={cropAspectRatioId === option.id}
+                      onClick={() => {
+                        onCropAspectRatioChange(option.id);
+                        setCropAspectRatioMenuOpen(false);
+                      }}
+                      className={styles.selectionShapeMenuItem}
+                    >
+                      <AspectRatioGlyph optionId={option.id} trace={trace} />
+                      <ToolbarLabel>{option.label}</ToolbarLabel>
+                    </ToolbarButton>
+                  ))}
+                </TraceToolbarPortalPopover>
+              ) : null}
+            </ToolbarAnchor>
+
+            <ToolbarDivider />
+            <ToolbarButton
+              type="button"
+              variant="secondary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              onClick={() => {
+                setCropAspectRatioMenuOpen(false);
+                onCancelCrop?.();
+              }}
+            >
+              Cancel
+              {/* <ToolbarIcon icon="/icons/lucide/x.svg" /> */}
+            </ToolbarButton>
+
+            <ToolbarButton
+              type="button"
+              variant="primary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              onClick={() => {
+                setCropAspectRatioMenuOpen(false);
+                onCommitCrop?.();
+              }}
+            >
+              {/* <ToolbarIcon icon="/icons/lucide/check.svg" /> */}
+              Apply crop
+            </ToolbarButton>
+          </ToolbarGroup>
+        </TraceToolbarPortalPopover>
+      ) : null}
     </div>
   );
 }

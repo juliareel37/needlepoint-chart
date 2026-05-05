@@ -421,6 +421,13 @@ export function EditorV2Shell({
   const canUndoFromToolbar = canUndo && !repositionModeActive;
   const canRedoFromToolbar = canRedo && !repositionModeActive;
   const handleBeginTraceCrop = useCallback(() => {
+    if (traceCropEditing) {
+      setTracePreviewCrop(null);
+      setTraceCropSnapshot(null);
+      setTraceCropAspectRatioId("freehand");
+      return;
+    }
+
     if (!trace) {
       return;
     }
@@ -429,7 +436,7 @@ export function EditorV2Shell({
     setTraceCropSnapshot(nextCrop);
     setTracePreviewCrop(nextCrop);
     setTraceCropAspectRatioId("freehand");
-  }, [trace]);
+  }, [trace, traceCropEditing]);
 
   const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
     setTracePreviewCrop(crop);
@@ -2593,22 +2600,14 @@ export function EditorV2Shell({
                         cropEditing={traceCropEditing}
                         cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         dispatch={dispatch}
-                        onBeginCrop={
-                          traceCropEditing ? undefined : handleBeginTraceCrop
-                        }
+                        onBeginCrop={handleBeginTraceCrop}
+                        onCancelCrop={handleCancelTraceCrop}
+                        onCommitCrop={handleCommitTraceCrop}
                         onCropAspectRatioChange={
                           traceCropEditing ? handleTraceCropAspectRatioChange : undefined
                         }
-                        onCancel={
-                          traceCropEditing
-                            ? handleCancelTraceCrop
-                            : () => dispatch(createCancelTraceRepositionCommand())
-                        }
-                        onCommit={
-                          traceCropEditing
-                            ? handleCommitTraceCrop
-                            : () => dispatch(createCommitTraceRepositionCommand())
-                        }
+                        onCancel={() => dispatch(createCancelTraceRepositionCommand())}
+                        onCommit={() => dispatch(createCommitTraceRepositionCommand())}
                         trace={trace}
                       />
                     ) : textPlacement ? (

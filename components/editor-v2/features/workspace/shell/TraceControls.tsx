@@ -655,6 +655,7 @@ export function TraceControls({
                       disabled={!trace || cropEditing}
                       onClick={() => {
                         if (positioningEnabled) {
+                          dispatch(createCancelTraceRepositionCommand());
                           return;
                         }
 
@@ -668,7 +669,7 @@ export function TraceControls({
                 </div>
               </Field>
 
-              {positioningEnabled && !preservePositioningSectionLayout ? (
+              {/* {positioningEnabled && !preservePositioningSectionLayout ? (
                 <div
                   className={styles.panelRow}
                   style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
@@ -694,8 +695,8 @@ export function TraceControls({
                     Done
                   </Button>
                 </div>
-              ) : null}
-
+              ) : null} */}
+{/* 
               <Field>
                 <div className={styles.traceInlineFieldRow}>
                   <span
@@ -717,9 +718,9 @@ export function TraceControls({
                     </Button>
                   </div>
                 </div>
-              </Field>
+              </Field> */}
 
-              {cropEditing && cropDraft ? (
+              {/* {cropEditing && cropDraft ? (
                 <div style={{ display: "grid", gap: 10 }}>
                   <div
                     className={styles.panelRow}
@@ -753,7 +754,7 @@ export function TraceControls({
                     </Button>
                   </div>
                 </div>
-              ) : null}
+              ) : null} */}
             </>
           {/* </TraceSection> */}
 
