@@ -81,13 +81,13 @@ export function EditorV2Page({
   const router = useRouter();
   const openSignIn = useOpenSignIn();
   const [mounted, setMounted] = useState(false);
-  const [draftWidth, setDraftWidth] = useState("120");
-  const [draftHeight, setDraftHeight] = useState("120");
+  const [draftWidth, setDraftWidth] = useState("");
+  const [draftHeight, setDraftHeight] = useState("");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
     "inches",
   );
-  const [draftWidthInches, setDraftWidthInches] = useState("8");
-  const [draftHeightInches, setDraftHeightInches] = useState("8");
+  const [draftWidthInches, setDraftWidthInches] = useState("");
+  const [draftHeightInches, setDraftHeightInches] = useState("");
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
   const [savedDocumentsLoading, setSavedDocumentsLoading] = useState(false);

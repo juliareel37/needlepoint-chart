@@ -21,11 +21,13 @@ import type { SavedEditorV2DocumentRecord } from "./editorV2ServerPersistence";
 import styles from "./EditorV2SetupModal.module.css";
 
 const LARGE_GRID_PRESETS = [
-  { label: "120 x 120", width: 120, height: 120 },
-  { label: "160 x 160", width: 160, height: 160 },
-  { label: "200 x 200", width: 200, height: 200 },
-  { label: "240 x 240", width: 240, height: 240 },
-  { label: "300 x 300", width: 300, height: 300 },
+  { label: "60 x 100", width: 60, height: 100 },
+  { label: "80 x 80", width: 80, height: 80 },
+  { label: "110 x 70", width: 110, height: 70 },
+  { label: "130 x 160", width: 130, height: 160 },
+  { label: "144 x 144", width: 144, height: 144 },
+  { label: "200 x 130", width: 200, height: 130 },
+
 ] as const;
 const INCH_SIZE_PRESETS = [
   { label: '6" x 10"', width: 6, height: 10 },
@@ -329,9 +331,14 @@ export function EditorV2SetupModal({
                           size="sm"
                           // className={styles.tertiaryPresetButton}
                           active={active}
-                          inertWhenActive={active}
                           aria-pressed={active}
                           onClick={() => {
+                            if (active) {
+                              onDraftWidthChange("");
+                              onDraftHeightChange("");
+                              return;
+                            }
+
                             onDraftWidthChange(String(preset.width));
                             onDraftHeightChange(String(preset.height));
                           }}
@@ -407,9 +414,14 @@ export function EditorV2SetupModal({
                             size="sm"
                             // className={styles.tertiaryCompactPresetButton}
                             active={active}
-                            inertWhenActive={active}
                             aria-pressed={active}
                             onClick={() => {
+                              if (active) {
+                                onDraftWidthInchesChange("");
+                                onDraftHeightInchesChange("");
+                                return;
+                              }
+
                               onDraftWidthInchesChange(String(preset.width));
                               onDraftHeightInchesChange(String(preset.height));
                             }}
