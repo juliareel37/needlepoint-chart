@@ -161,7 +161,7 @@ export default function RootLayout({
                   position: "absolute",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  zIndex: 0,
+                  zIndex: 4,
                 }}
               />
               <div className="app-shell-header-right" style={{ display: "flex", alignItems: "center", gap: 16, position: "relative", zIndex: 3 }}>
