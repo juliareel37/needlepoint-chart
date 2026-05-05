@@ -7,6 +7,7 @@ import {
   SegmentedControl,
 } from "@/components/design-system";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
+import { useAuthStatus } from "@/lib/auth/client";
 import type {
   EditorStore,
 } from "@/lib/editor-v2/editor/store";
@@ -35,46 +36,49 @@ export function SettingsPanelPage({
   showRuler,
   showSymbols,
 }: SettingsPanelPageProps) {
+  const { isSignedIn } = useAuthStatus();
   const { themeMode, setThemeMode } = useThemeMode();
 
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
-        <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
-            <h3 style={typographyStyles.h5}>App Theme</h3>
+        {!isSignedIn ? (
+          <div className={styles.sidebarSubsection}>
+            <div className={styles.sidebarSubsectionHeader}>
+              <h3 style={typographyStyles.h5}>App Theme</h3>
+            </div>
+            <SegmentedChoiceSetting
+              label="Theme"
+              value={themeMode}
+              ariaLabel="Application theme"
+              options={[
+                {
+                  label: (
+                    <>
+                      <ButtonIcon icon="/icons/lucide/sun.svg" />
+                      Light
+                    </>
+                  ),
+                  value: "light",
+                },
+                {
+                  label: "System",
+                  value: "system",
+                },
+                {
+                  label: (
+                    <>
+                      <ButtonIcon icon="/icons/lucide/moon.svg" />
+                      Dark
+                    </>
+                  ),
+                  value: "dark",
+                },
+              ]}
+              onChange={(nextValue) => setThemeMode(nextValue)}
+            />
           </div>
-          <SegmentedChoiceSetting
-            label="Theme"
-            value={themeMode}
-            ariaLabel="Application theme"
-            options={[
-              {
-                label: (
-                  <>
-                    <ButtonIcon icon="/icons/lucide/sun.svg" />
-                    Light
-                  </>
-                ),
-                value: "light",
-              },
-              {
-                label: "System",
-                value: "system",
-              },
-              {
-                label: (
-                  <>
-                    <ButtonIcon icon="/icons/lucide/moon.svg" />
-                    Dark
-                  </>
-                ),
-                value: "dark",
-              },
-            ]}
-            onChange={(nextValue) => setThemeMode(nextValue)}
-          />
-        </div>
+        ) : null}
 
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSubsectionHeader}>
