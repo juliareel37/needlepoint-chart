@@ -1476,6 +1476,9 @@ export function EditorV2Shell({
     ((saveMode === "autosave" && showSaveStatus) ||
       (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
   const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
+  const renderHeaderSaveStatusCard = showHeaderSaveStatus && showSaveStatus;
+  const showHeaderSaveStatusInFileMenu =
+    !isBottomPanelLayout && isCompactHistoryLayout && renderHeaderSaveStatusCard;
   const versionHistoryDisplayState = useMemo(() => {
     if (!isVersionHistoryMode || !state.document.trace) {
       return state;
@@ -2000,8 +2003,22 @@ export function EditorV2Shell({
                   recentSavedDocuments={recentSavedDocuments}
                   saveButtonState={saveButtonState}
                   savedDocumentsLoading={savedDocumentsLoading}
+                  showSaveStatusCard={showHeaderSaveStatusInFileMenu}
+                  saveStatusCard={(
+                    <SaveStatusCard
+                      autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                      hasSavedDesignAccess={hasSavedDesignAccess}
+                      hasUnsavedChanges={hasUnsavedChanges}
+                      layout="header"
+                      onDismiss={null}
+                      onSignIn={openSignInForCurrentDesign}
+                      recoveredLocalChanges={recoveredLocalChanges}
+                      saveMode={saveMode}
+                      saveMessage={saveMessage}
+                    />
+                  )}
                 />
-                {showHeaderSaveStatus ? (
+                {!showHeaderSaveStatusInFileMenu && renderHeaderSaveStatusCard ? (
                   <SaveStatusCard
                     autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
                     hasSavedDesignAccess={hasSavedDesignAccess}
@@ -2745,7 +2762,9 @@ function HeaderFileMenu({
   onOpenSavedDocuments,
   recentSavedDocuments,
   saveButtonState,
+  saveStatusCard,
   savedDocumentsLoading,
+  showSaveStatusCard,
 }: {
   currentStorageId: string;
   deleteButtonState: DeleteButtonState;
@@ -2758,7 +2777,9 @@ function HeaderFileMenu({
   onOpenSavedDocuments: () => Promise<void> | void;
   recentSavedDocuments: SavedEditorV2DocumentRecord[];
   saveButtonState: SaveButtonState;
+  saveStatusCard: ReactNode;
   savedDocumentsLoading: boolean;
+  showSaveStatusCard: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -2973,6 +2994,17 @@ function HeaderFileMenu({
               {items.map((item) =>
                 item.kind === "divider" ? (
                   <MenuDivider key={item.id} />
+                ) : item.id === "version-history" && showSaveStatusCard ? (
+                  <div key="save-status-with-version-history">
+                    <div className={styles.headerFileMenuStatus}>{saveStatusCard}</div>
+                    <MenuItem
+                      type="button"
+                      disabled={getItemDisabled(item)}
+                      onClick={() => handleAction(item.id)}
+                    >
+                      {getItemLabel(item)}
+                    </MenuItem>
+                  </div>
                 ) : item.id === "library" ? (
                   <div key={item.id} className={styles.headerFileMenuSubmenuGroup}>
                     <MenuItem
