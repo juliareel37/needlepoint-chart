@@ -1376,12 +1376,49 @@
   transform-origin: top left;
   max-height: 400px !important;
   width: 220px !important;
+  overflow: visible !important;
+}
+
+.headerFileMenuSurfaceSubmenuOpen {
+  overflow: visible !important;
 }
 
 .headerFileMenuItemLabel {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+}
+
+.headerFileMenuSubmenuGroup {
+  display: grid;
+  gap: 4px;
+}
+
+.headerFileMenuSubmenuItem {
+  position: relative;
+}
+
+.headerFileMenuSubmenuTrigger {
+  justify-content: space-between;
+}
+
+.headerFileRecentMenuSurface {
+  position: absolute;
+  top: -10px;
+  left: calc(100% + 6px);
+  width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.headerFileRecentMenuItem {
+  min-width: 0;
+}
+
+.headerFileRecentMenuItem > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

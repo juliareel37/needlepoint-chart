@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
@@ -19,6 +28,12 @@ import {
 import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import {
   Button,
+  ButtonIcon,
+  MenuCaretIcon,
+  MenuDivider,
+  MenuItem,
+  MenuSurface,
+  MenuTrigger,
   SingleSelectDropdown,
   ToolbarButton,
   ToolbarIcon,
@@ -54,7 +69,7 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import { FloatingToolbar } from "./FloatingToolbar";
-import { ButtonIcon, Modal, Notification } from "@/components/design-system";
+import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
@@ -76,6 +91,7 @@ const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
+const HEADER_FILE_RECENT_LIMIT = 5;
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
 const versionHistoryTimelineScrollCache = new Map<string, number>();
 type HeaderFileMenuItem = {
@@ -1256,6 +1272,13 @@ export function EditorV2Shell({
       ),
     [saveMode],
   );
+  const recentSavedDocuments = useMemo(
+    () =>
+      savedDocuments
+        .filter((record) => record.storageId !== currentStorageId)
+        .slice(0, HEADER_FILE_RECENT_LIMIT),
+    [currentStorageId, savedDocuments],
+  );
   const showLoggedOutTopBanner = !hasSavedDesignAccess && !saveBannerDismissed;
   const showTopSaveBanner = showLoggedOutTopBanner;
   const showSaveConfirmationOverlay =
@@ -1734,38 +1757,19 @@ export function EditorV2Shell({
               ) : null
             ) : (
               <div className={styles.headerFileMenuGroup}>
-                <SingleSelectDropdown
-                  ariaLabel="File actions"
-                  items={headerFileMenuItems}
-                  value=""
-                  placeholder="File"
-                  triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
-                  triggerVariant="ghost"
-                  showChevron={false}
-                  menuPortalToViewport
-                  menuPlacement="bottom-start"
-                  menuShowTrailingCheck={false}
-                  minWidth="auto"
-                  menuWidth={180}
-                  getItemIsDivider={(item) => item.kind === "divider"}
-                  getItemValue={(item) => item.id}
+                <HeaderFileMenu
+                  currentStorageId={currentStorageId}
+                  deleteButtonState={deleteButtonState}
+                  exportButtonState={exportButtonState}
                   getItemLabel={renderHeaderMenuItemLabel}
-                  getItemDisabled={(item) =>
-                    item.kind === "divider" ||
-                    (item.id === "save-version" &&
-                      (saveButtonState === "saving" ||
-                        !hasPersistableUnsavedChanges)) ||
-                    (item.id === "version-history" &&
-                      hasSavedDesignAccess &&
-                      !currentStorageId) ||
-                    (item.id === "download" && exportButtonState === "exporting") ||
-                    (item.id === "delete" && deleteButtonState === "deleting")
-                  }
-                  onValueChange={handleHeaderMenuAction}
-                  wrapperClassName={styles.headerFileMenu}
-                  triggerClassName={styles.headerFileMenuTrigger}
-                  menuClassName={styles.headerFileMenuSurface}
-                  triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
+                  hasPersistableUnsavedChanges={hasPersistableUnsavedChanges}
+                  hasSavedDesignAccess={hasSavedDesignAccess}
+                  items={headerFileMenuItems}
+                  onAction={handleHeaderMenuAction}
+                  onOpenSavedDocuments={onOpenSavedDocuments}
+                  recentSavedDocuments={recentSavedDocuments}
+                  saveButtonState={saveButtonState}
+                  savedDocumentsLoading={savedDocumentsLoading}
                 />
                 {showHeaderSaveStatus ? (
                   <SaveStatusCard
@@ -2462,6 +2466,295 @@ export function EditorV2Shell({
           )
         : null}
     </main>
+  );
+}
+
+function HeaderFileMenu({
+  currentStorageId,
+  deleteButtonState,
+  exportButtonState,
+  getItemLabel,
+  hasPersistableUnsavedChanges,
+  hasSavedDesignAccess,
+  items,
+  onAction,
+  onOpenSavedDocuments,
+  recentSavedDocuments,
+  saveButtonState,
+  savedDocumentsLoading,
+}: {
+  currentStorageId: string;
+  deleteButtonState: DeleteButtonState;
+  exportButtonState: ExportButtonState;
+  getItemLabel: (item: HeaderFileMenuItem) => ReactNode;
+  hasPersistableUnsavedChanges: boolean;
+  hasSavedDesignAccess: boolean;
+  items: HeaderFileMenuItem[];
+  onAction: (value: string) => void;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  recentSavedDocuments: SavedEditorV2DocumentRecord[];
+  saveButtonState: SaveButtonState;
+  savedDocumentsLoading: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      const clickedTrigger = Boolean(target && rootRef.current?.contains(target));
+      const clickedMenu = Boolean(target && menuRef.current?.contains(target));
+
+      if (!target || clickedTrigger || clickedMenu) {
+        return;
+      }
+
+      setOpen(false);
+      setRecentOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setRecentOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setRecentOpen(false);
+      return;
+    }
+
+    if (
+      hasSavedDesignAccess &&
+      !savedDocumentsLoading &&
+      recentSavedDocuments.length === 0
+    ) {
+      void onOpenSavedDocuments();
+    }
+  }, [
+    hasSavedDesignAccess,
+    onOpenSavedDocuments,
+    open,
+    recentSavedDocuments.length,
+    savedDocumentsLoading,
+  ]);
+
+  const updatePortalStyle = useCallback(() => {
+    if (!rootRef.current || !menuRef.current) {
+      return;
+    }
+
+    const viewportPadding = 8;
+    const triggerRect = rootRef.current.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const measuredMenuWidth = menuRect.width || 220;
+    const measuredMenuHeight = menuRect.height || 0;
+    const left = Math.min(
+      Math.max(triggerRect.left, viewportPadding),
+      window.innerWidth - measuredMenuWidth - viewportPadding,
+    );
+    const top = Math.min(
+      triggerRect.bottom + 4,
+      window.innerHeight - measuredMenuHeight - viewportPadding,
+    );
+    const maxHeight = Math.max(window.innerHeight - triggerRect.bottom - 12, 160);
+
+    setPortalStyle({
+      position: "fixed",
+      top,
+      left,
+      zIndex: "var(--z-editor-popover)",
+      width: 220,
+      maxHeight: Math.min(400, maxHeight),
+      overflowY: "auto",
+      visibility: "visible",
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open || !mounted) {
+      return;
+    }
+
+    updatePortalStyle();
+
+    const rafId = window.requestAnimationFrame(updatePortalStyle);
+    window.addEventListener("resize", updatePortalStyle);
+    window.addEventListener("scroll", updatePortalStyle, true);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updatePortalStyle);
+      window.removeEventListener("scroll", updatePortalStyle, true);
+    };
+  }, [mounted, open, updatePortalStyle]);
+
+  function getItemDisabled(item: HeaderFileMenuItem) {
+    return (
+      item.kind === "divider" ||
+      (item.id === "save-version" &&
+        (saveButtonState === "saving" || !hasPersistableUnsavedChanges)) ||
+      (item.id === "version-history" &&
+        hasSavedDesignAccess &&
+        !currentStorageId) ||
+      (item.id === "download" && exportButtonState === "exporting") ||
+      (item.id === "delete" && deleteButtonState === "deleting")
+    );
+  }
+
+  function closeMenus() {
+    setOpen(false);
+    setRecentOpen(false);
+  }
+
+  function handleAction(value: string) {
+    closeMenus();
+    onAction(value);
+  }
+
+  function handleOpenRecentDesign(storageId: string) {
+    closeMenus();
+    window.location.assign(`/editor/designs/${storageId}`);
+  }
+
+  function handleViewAll() {
+    closeMenus();
+    window.location.assign("/library");
+  }
+
+  const recentSubmenuLabel = !hasSavedDesignAccess
+    ? "Sign in to view recent designs"
+    : savedDocumentsLoading && recentSavedDocuments.length === 0
+      ? "Loading recent designs..."
+      : recentSavedDocuments.length === 0
+        ? "No recent designs yet"
+        : null;
+
+  return (
+    <div ref={rootRef} className={styles.headerFileMenu}>
+      <MenuTrigger
+        type="button"
+        variant="ghost"
+        open={open}
+        onClick={() => setOpen((currentValue) => !currentValue)}
+        className={styles.headerFileMenuTrigger}
+        style={{ minWidth: "auto", padding: "6px 8px" }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <span className={styles.headerFileMenuTriggerLabel}>File</span>
+      </MenuTrigger>
+      {open && mounted
+        ? createPortal(
+            <MenuSurface
+              ref={menuRef}
+              className={[
+                styles.headerFileMenuSurface,
+                recentOpen ? styles.headerFileMenuSurfaceSubmenuOpen : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              role="menu"
+              aria-label="File actions"
+              style={portalStyle ?? { visibility: "hidden" }}
+            >
+              {items.map((item) =>
+                item.kind === "divider" ? (
+                  <MenuDivider key={item.id} />
+                ) : item.id === "library" ? (
+                  <div key={item.id} className={styles.headerFileMenuSubmenuGroup}>
+                    <MenuItem
+                      type="button"
+                      disabled={getItemDisabled(item)}
+                      onClick={() => handleAction(item.id)}
+                    >
+                      {getItemLabel(item)}
+                    </MenuItem>
+                    <div
+                      className={styles.headerFileMenuSubmenuItem}
+                      onMouseEnter={() => setRecentOpen(true)}
+                      onMouseLeave={() => setRecentOpen(false)}
+                    >
+                      <MenuItem
+                        type="button"
+                        trailing={<MenuCaretIcon />}
+                        onClick={() => setRecentOpen((currentValue) => !currentValue)}
+                        onFocus={() => setRecentOpen(true)}
+                        className={styles.headerFileMenuSubmenuTrigger}
+                      >
+                        <span className={styles.headerOverflowItemLabel}>
+                          <ButtonIcon
+                            icon="/icons/lucide/history.svg"
+                            className={styles.saveButtonIcon}
+                          />
+                          <span>Open recent</span>
+                        </span>
+                      </MenuItem>
+                      {recentOpen ? (
+                        <MenuSurface
+                          className={styles.headerFileRecentMenuSurface}
+                          role="menu"
+                          aria-label="Recent designs"
+                        >
+                          {recentSubmenuLabel ? (
+                            <MenuItem type="button" disabled>
+                              {recentSubmenuLabel}
+                            </MenuItem>
+                          ) : (
+                            recentSavedDocuments.map((record) => (
+                              <MenuItem
+                                key={record.storageId}
+                                type="button"
+                                onClick={() => handleOpenRecentDesign(record.storageId)}
+                                className={styles.headerFileRecentMenuItem}
+                                title={record.title}
+                              >
+                                {record.title}
+                              </MenuItem>
+                            ))
+                          )}
+                          <MenuDivider />
+                          <MenuItem type="button" onClick={handleViewAll}>
+                            View all
+                          </MenuItem>
+                        </MenuSurface>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <MenuItem
+                    key={item.id}
+                    type="button"
+                    disabled={getItemDisabled(item)}
+                    onClick={() => handleAction(item.id)}
+                  >
+                    {getItemLabel(item)}
+                  </MenuItem>
+                ),
+              )}
+            </MenuSurface>,
+            document.body,
+          )
+        : null}
+    </div>
   );
 }
 
