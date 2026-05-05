@@ -633,7 +633,31 @@ export function TraceControls({
 
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
-          <TraceSection title="Settings">
+          <TraceSection
+            title="Display settings"
+            action={(
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={styles.traceSectionHeaderActionButton}
+                aria-label={trace.visible ? "Hide image" : "Show image"}
+                aria-pressed={trace.visible}
+                onClick={() =>
+                  dispatch(
+                    createUpdateTraceCommand(
+                      { visible: !trace.visible },
+                      { history: { mode: "skip" } },
+                    ),
+                  )
+                }
+              >
+                <ButtonIcon
+                  icon={trace.visible ? "/icons/lucide/eye.svg" : "/icons/lucide/eye-off.svg"}
+                />
+              </Button>
+            )}
+          >
 
           {/* <TraceSection  */}
           {/* // title="Positioning" */}
@@ -757,36 +781,6 @@ export function TraceControls({
               ) : null} */}
             </>
           {/* </TraceSection> */}
-
-
-
-            <Field>
-              <div className={styles.traceInlineFieldRow}>
-                <span
-                  className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
-                >
-                  Image
-                </span>
-                <SegmentedControl
-                  ariaLabel="Image visibility"
-                  value={trace.visible ? "show" : "hide"}
-                  onChange={(next) =>
-                    dispatch(
-                      createUpdateTraceCommand(
-                        { visible: next === "show" },
-                        { history: { mode: "skip" } },
-                      ),
-                    )
-                  }
-                  options={[
-                    { label: "Show", value: "show" },
-                    { label: "Hide", value: "hide" },
-                  ]}
-                />
-              </div>
-            </Field>
-
             <div
               className={styles.traceOpacityControls}
               data-disabled={trace.visible ? "false" : "true"}
@@ -875,7 +869,7 @@ export function TraceControls({
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection
-            title="Convert to Pattern"
+            title="Convert to stitches"
             // hint="Sample the image onto the stitch grid using your thread palette."
           >
             <Field>
@@ -1132,10 +1126,12 @@ function splitFileNameForDisplay(fileName: string): {
 }
 
 function TraceSection({
+  action,
   children,
   hint,
   title,
 }: {
+  action?: ReactNode;
   children: ReactNode;
   hint?: string;
   title: string;
@@ -1143,9 +1139,12 @@ function TraceSection({
   return (
     <section className={styles.traceSection}>
       <div className={styles.traceSectionHeader}>
-        <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>
-          {title}
-        </h3>
+        <div className={styles.traceSectionTitleRow}>
+          <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>
+            {title}
+          </h3>
+          {action}
+        </div>
         {hint ? (
           <p className={styles.traceSectionHint} style={typographyStyles.s}>
             {hint}
