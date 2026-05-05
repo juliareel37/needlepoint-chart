@@ -32,7 +32,7 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: var(--neutral-200);
+  background: var(--surface-primary);
   color: var(--text-primary);
   border: 1px solid var(--ui-border-reg);
   flex: 0 0 auto;

@@ -47,6 +47,11 @@ const brandStyle = {
   fontFamily: "Playfair Display",
 } as const;
 
+const editorBrandStyle = {
+  ...brandStyle,
+  fontSize: 24,
+} as const;
+
 const navLinkStyle = {
   ...typographyStyles.p1,
   minHeight: 36,
@@ -73,6 +78,12 @@ const utilityLinkStyle = {
 export default function AppHeaderNav() {
   const pathname = usePathname();
   const showLandingHeader = pathname === "/" || pathname === "/library";
+  const showEditorBrandOnly =
+    pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
+
+  if (showEditorBrandOnly) {
+    return <Link href="/" style={editorBrandStyle}>wippa.</Link>;
+  }
 
   if (!showLandingHeader) {
     return null;
@@ -101,7 +112,7 @@ export default function AppHeaderNav() {
           My Library
         </Link>
         <Link href="/editor" style={{ textDecoration: "none" }}>
-          <Button type="button" variant="secondary2" size="lg">
+          <Button type="button" variant="secondary" size="md">
             Launch Editor
           </Button>
         </Link>

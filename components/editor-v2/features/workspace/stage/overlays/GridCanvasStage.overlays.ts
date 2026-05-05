@@ -32,7 +32,7 @@ export function drawGridOverlay(
     zoom,
   } = options;
 
-  const majorLineColor = "rgba(179, 109, 200, 0.52)";
+  const majorLineColor = "rgba(3, 62, 164, 0.52)";
   const minorLineColor = "rgba(120, 113, 108, 0.3)";
   const highlightMajorColor = "rgba(252, 247, 255, 0.24)";
   const highlightMinorColor = "rgba(255, 255, 255, 0.08)";

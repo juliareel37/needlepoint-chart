@@ -2083,12 +2083,12 @@
 }
 
 .usedColorsItem[data-selectable="true"]:focus-visible {
-  outline: 2px solid var(--button-secondary2-active);
+  outline: 2px solid var(--button-outlined-active);
   outline-offset: 2px;
 }
 
 .usedColorsRow[data-selected="true"] .usedColorsItem {
-  background: var(--button-secondary2-active);
+  background: var(--button-outlined-active);
   color: var(--button-secondary-active-text);
   border-color: transparent;
   box-shadow: none;

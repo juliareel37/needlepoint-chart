@@ -103,19 +103,19 @@ const paletteGroups = [
 ];
 
 const buttonVariants: Array<{
-  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2";
   label: string;
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
-  { variant: "secondary2", label: "Secondary2" },
+  { variant: "outlined", label: "outlined" },
   // { variant: "destructive", label: "Destructive" },
   // { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 
 const buttonHoverStyles: Record<
-  "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2",
+  "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2",
   CSSProperties
 > = {
   primary: {
@@ -124,8 +124,8 @@ const buttonHoverStyles: Record<
   secondary: {
     background: "var(--button-secondary-hover)",
   },
-  secondary2: {
-    background: "var(--button-secondary2-hover)",
+  outlined: {
+    background: "var(--button-outlined-hover)",
   },
   destructive: {
     background: "var(--status-destructive-strong)",
@@ -627,7 +627,7 @@ function ButtonStateRow({
   active: boolean;
   label: string;
   onToggle: () => void;
-  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2";
 }) {
   return (
     <>

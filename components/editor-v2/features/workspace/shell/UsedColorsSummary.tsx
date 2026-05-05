@@ -819,7 +819,7 @@ export function UsedColorsSummary({
             <div className={styles.usedColorsActionRow}>
               <Button
                 type="button"
-                variant="secondary2"
+                variant="secondary"
                 size="sm"
                 active={actionMode === "merge"}
                 className={styles.usedColorsActionToggle}
@@ -832,7 +832,7 @@ export function UsedColorsSummary({
               </Button>
               <Button
                 type="button"
-                variant="secondary2"
+                variant="secondary"
                 size="sm"
                 active={actionMode === "delete"}
                 className={styles.usedColorsActionToggle}

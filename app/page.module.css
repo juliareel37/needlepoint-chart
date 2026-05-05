@@ -30,8 +30,8 @@
   height: 1px;
   background: var(--ui-border-reg);
   margin-left: -50dvw;
-  margin-top: -28px;
-  margin-bottom: -36px;
+  margin-top: -72px;
+  margin-bottom: -72px;
 }
 
 /* .hero {
@@ -47,7 +47,7 @@
   align-content: start;
   justify-items: center;
   text-align: center;
-  padding: 100px 200px;
+  padding: 100px 200px 0;
 }
 
 .eyebrow {
@@ -135,6 +135,37 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.heroPreviewWrap {
+  position: relative;
+  justify-self: stretch;
+  left: 50%;
+  width: 100dvw;
+  max-width: 100dvw;
+  margin-left: -50dvw;
+  margin-top: -24px;
+  display: grid;
+  justify-items: center;
+  overflow: hidden;
+}
+
+.heroPreviewStage {
+  width: 100%;
+}
+
+.heroPreviewCard {
+  width: 100%;
+  max-height: clamp(300px, 52vw, 640px);
+  overflow: hidden;
+}
+
+.heroPreviewImage {
+  display: block;
+  width: 112%;
+  max-width: none;
+  height: auto;
+  margin-left: -2%;
 }
 
 .heroFeatureGrid {
@@ -361,6 +392,14 @@
     max-width: none;
   }
 
+  .heroCopy {
+    padding-inline: 80px;
+  }
+
+  .heroPreviewStage {
+    width: 100%;
+  }
+
   .featureCard {
     padding: 24px 24px 28px;
   }
@@ -374,6 +413,10 @@
 
   .hero {
     grid-template-columns: 1fr;
+  }
+
+  .heroCopy {
+    padding: 56px 24px 0;
   }
 
   .featuresGrid {
@@ -398,6 +441,7 @@
   .heroFeature {
     padding-right: 0;
   }
+
 }
 
 @media (max-width: 720px) {
@@ -410,6 +454,10 @@
   .features,
   .footerInner {
     gap: 24px;
+  }
+
+  .heroCopy {
+    padding-inline: 0;
   }
 
   .heroActions,
@@ -435,4 +483,17 @@
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .heroPreviewStage {
+  }
+
+  .heroPreviewImage {
+    width: 122%;
+    margin-left: -6%;
+  }
+
+  .heroPreviewCard {
+    max-height: clamp(220px, 44vw, 360px);
+  }
+
 }

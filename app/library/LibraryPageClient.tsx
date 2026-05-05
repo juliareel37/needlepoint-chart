@@ -1543,7 +1543,7 @@ export function LibraryPageClient({
               title={successNotification.title}
               description={successNotification.description}
               actionLabel="Undo"
-              actionVariant="secondary2"
+              actionVariant="outlined"
               onAction={handleUndoPendingDeletion}
               onDismiss={handleDismissPendingDeletionNotification}
             />

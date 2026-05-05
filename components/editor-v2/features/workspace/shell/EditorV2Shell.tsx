@@ -1807,7 +1807,7 @@ export function EditorV2Shell({
               {previewMode ? (
                 <Button
                   type="button"
-                  variant="secondary2"
+                  variant="outlined"
                   size="sm"
                   className={styles.headerMobilePreviewButton}
                   onClick={exitPreviewMode}
@@ -1907,7 +1907,7 @@ export function EditorV2Shell({
               ) : null}
               <Button
                 type="button"
-                variant={previewMode ? "secondary" : "secondary2"}
+                variant="secondary"
                 size="md"
                 className={styles.headerPreviewButton}
                 disabled={!previewMode && previewModeDisabled}

@@ -325,7 +325,7 @@ export function EditorV2SetupModal({
                         <Button
                           key={preset.label}
                           type="button"
-                          variant="secondary2"
+                          variant="outlined"
                           size="sm"
                           // className={styles.tertiaryPresetButton}
                           active={active}
@@ -403,7 +403,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset.label}
                             type="button"
-                            variant="secondary2"
+                            variant="outlined"
                             size="sm"
                             // className={styles.tertiaryCompactPresetButton}
                             active={active}
@@ -442,7 +442,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset}
                             type="button"
-                            variant="secondary2"
+                            variant="outlined"
                             size="md"
                             className={styles.meshPresetButton}
                             active={active}

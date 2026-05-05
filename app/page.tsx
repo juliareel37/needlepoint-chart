@@ -84,6 +84,21 @@ export default function Page() {
                 <span className={styles.resumeTitle} style={typographyStyles.p2}>Meadow_Study_IV.wip</span>
               </Link>
             </div>
+            <div className={styles.heroPreviewWrap}>
+              <div className={styles.heroPreviewStage}>
+                <div className={styles.heroPreviewCard}>
+                  <Image
+                    src="/editor-warp.png"
+                    alt="Wippa editor interface showing a needlepoint design workspace"
+                    width={2840}
+                    height={1657}
+                    priority
+                    sizes="100vw"
+                    className={styles.heroPreviewImage}
+                  />
+                </div>
+              </div>
+            </div>
             {/* <div className={styles.heroFeatureGrid}>
               {heroHighlights.map((item) => (
                 <div key={item.title} className={styles.heroFeature}>
@@ -172,7 +187,7 @@ export default function Page() {
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary2"
+                    variant="secondary"
                     size="lg"
                     className={styles.footerSecondary}
                     onClick={() => router.push("/library")}
