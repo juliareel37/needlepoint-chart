@@ -793,25 +793,27 @@ export function TraceControls({
                   >
                     Blending
                   </span>
-                  <SegmentedControl
-                    ariaLabel="Opacity blending mode"
-                    disabled={!trace.visible}
-                    value={trace.blendMode ?? "image"}
-                    onChange={(mode) =>
-                      dispatch(
-                        createUpdateTraceCommand(
-                          {
-                            blendMode: mode,
-                          },
-                          { history: { mode: "skip" } },
-                        ),
-                      )
-                    }
-                    options={[
-                      { label: "Crossfade", value: "crossfade" },
-                      { label: "Image only", value: "image" },
-                    ]}
-                  />
+                  <div className={styles.traceInlineActionControl}>
+                    <SegmentedControl
+                      ariaLabel="Opacity blending mode"
+                      disabled={!trace.visible}
+                      value={trace.blendMode ?? "image"}
+                      onChange={(mode) =>
+                        dispatch(
+                          createUpdateTraceCommand(
+                            {
+                              blendMode: mode,
+                            },
+                            { history: { mode: "skip" } },
+                          ),
+                        )
+                      }
+                      options={[
+                        { label: "Crossfade", value: "crossfade" },
+                        { label: "Image only", value: "image" },
+                      ]}
+                    />
+                  </div>
                 </div>
               </Field>
 
