@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   ButtonIcon,
@@ -96,12 +96,19 @@ function countUsedColors(cells: Array<string | null>) {
   return new Set(cells.filter((cellId): cellId is string => Boolean(cellId))).size;
 }
 
-async function fetchLibraryPage(offset: number, view: LibraryCollectionView) {
+async function fetchLibraryPage(
+  offset: number,
+  view: LibraryCollectionView,
+  search: string,
+) {
   const searchParams = new URLSearchParams({
     limit: String(PAGE_SIZE),
     offset: String(offset),
     view,
   });
+  if (search.trim().length > 0) {
+    searchParams.set("search", search.trim());
+  }
   const response = await fetch(`/api/editor-v2/designs?${searchParams.toString()}`, {
     method: "GET",
     credentials: "same-origin",
@@ -182,6 +189,7 @@ export function LibraryPageClient({
     useState<LibraryCollectionView>(initialViewMode);
   const [viewMode, setViewMode] = useState<LibraryViewMode>(initialLayoutMode);
   const [sortMode, setSortMode] = useState<LibrarySortMode>("updated-desc");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -204,6 +212,10 @@ export function LibraryPageClient({
   const touchMenuInteractionBlockUntilRef = useRef(0);
   const pendingPermanentDeletionTimeoutRef = useRef<number | null>(null);
   const pendingPermanentDeletionRef = useRef<PendingPermanentDeletion | null>(null);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = deferredSearchQuery.trim();
+  const requestKey = `${collectionView}:${normalizedSearchQuery.toLowerCase()}`;
+  const requestKeyRef = useRef(requestKey);
 
   const loadingCards = useMemo(
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
@@ -255,6 +267,7 @@ export function LibraryPageClient({
       return collator.compare(left.title, right.title);
     });
   }, [collectionView, designs, sortMode]);
+  const hasSearchQuery = normalizedSearchQuery.length > 0;
   const selectedDesignCount = selectedDesignIds.size;
   const desktopSelectionMode = !touchPrimaryInput && selectedDesignCount > 0;
   const showBulkBar = selectedDesignCount > 0 || (touchPrimaryInput && touchSelectionMode);
@@ -263,11 +276,15 @@ export function LibraryPageClient({
   const isInitialLoading = initialLoadPending && designs.length === 0;
 
   async function loadInitialPage() {
+    const currentRequestKey = requestKey;
     setInitialLoadPending(true);
     setLoadMoreError(null);
 
     try {
-      const result = await fetchLibraryPage(0, collectionView);
+      const result = await fetchLibraryPage(0, collectionView, normalizedSearchQuery);
+      if (requestKeyRef.current !== currentRequestKey) {
+        return;
+      }
       setDesigns(result.designs);
       setTotalCount(result.totalCount);
       setActiveCount(result.activeCount);
@@ -275,13 +292,22 @@ export function LibraryPageClient({
       setHasMore(result.hasMore);
       setNextOffset(result.nextOffset);
     } catch (error) {
+      if (requestKeyRef.current !== currentRequestKey) {
+        return;
+      }
       setLoadMoreError(
         error instanceof Error ? error.message : "Couldn't load designs.",
       );
     } finally {
-      setInitialLoadPending(false);
+      if (requestKeyRef.current === currentRequestKey) {
+        setInitialLoadPending(false);
+      }
     }
   }
+
+  useEffect(() => {
+    requestKeyRef.current = requestKey;
+  }, [requestKey]);
 
   useEffect(() => {
     if (!deferInitialLoad) {
@@ -289,7 +315,7 @@ export function LibraryPageClient({
     }
 
     void loadInitialPage();
-  }, [collectionView, deferInitialLoad]);
+  }, [collectionView, deferInitialLoad, normalizedSearchQuery]);
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError || initialLoadPending) {
@@ -311,8 +337,13 @@ export function LibraryPageClient({
         setLoadingMore(true);
         setLoadMoreError(null);
 
-        void fetchLibraryPage(nextOffset ?? designs.length, collectionView)
+        const currentRequestKey = requestKey;
+
+        void fetchLibraryPage(nextOffset ?? designs.length, collectionView, normalizedSearchQuery)
           .then((result) => {
+            if (requestKeyRef.current !== currentRequestKey) {
+              return;
+            }
             setDesigns((existing) => [
               ...existing,
               ...result.designs.filter(
@@ -326,12 +357,17 @@ export function LibraryPageClient({
             setNextOffset(result.nextOffset);
           })
           .catch((error) => {
+            if (requestKeyRef.current !== currentRequestKey) {
+              return;
+            }
             setLoadMoreError(
               error instanceof Error ? error.message : "Couldn't load more designs.",
             );
           })
           .finally(() => {
-            setLoadingMore(false);
+            if (requestKeyRef.current === currentRequestKey) {
+              setLoadingMore(false);
+            }
           });
       },
       {
@@ -341,7 +377,17 @@ export function LibraryPageClient({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [collectionView, designs.length, hasMore, initialLoadPending, loadMoreError, loadingMore, nextOffset]);
+  }, [
+    collectionView,
+    designs.length,
+    hasMore,
+    initialLoadPending,
+    loadMoreError,
+    loadingMore,
+    nextOffset,
+    normalizedSearchQuery,
+    requestKey,
+  ]);
 
   useEffect(
     () => () => {
@@ -1121,6 +1167,26 @@ export function LibraryPageClient({
           />
         </div>
 
+        <div className={styles.searchRow}>
+          <label className={styles.searchField}>
+            <span className={styles.searchIcon} aria-hidden="true" />
+            <FieldInput
+              type="search"
+              name="search"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setSelectedDesignIds(new Set<string>());
+                setTouchSelectionMode(false);
+                setNextOffset(null);
+              }}
+              placeholder="Search designs"
+              aria-label="Search designs"
+              className={styles.searchInput}
+            />
+          </label>
+        </div>
+
         {designs.length > 0 ? (
           <>
             {viewMode === "grid" ? (
@@ -1550,12 +1616,18 @@ export function LibraryPageClient({
         ) : (
           <section className={styles.emptyState}>
             <h2 className={styles.emptyStateTitle}>
-              {collectionView === "deleted" ? "Trash is empty" : "No designs yet"}
+              {hasSearchQuery
+                ? "No matching designs"
+                : collectionView === "deleted"
+                  ? "Trash is empty"
+                  : "No designs yet"}
             </h2>
             <p className={styles.emptyStateBody}>
-              {collectionView === "deleted"
-                ? "Designs you delete will stay here for 30 days before they are permanently removed."
-                : "Your saved needlepoint designs will show up here once you create one."}
+              {hasSearchQuery
+                ? `No designs found for "${normalizedSearchQuery}".`
+                : collectionView === "deleted"
+                  ? "Designs you delete will stay here for 30 days before they are permanently removed."
+                  : "Your saved needlepoint designs will show up here once you create one."}
             </p>
             {loadMoreError ? (
               <p className={styles.loadMoreError}>{loadMoreError}</p>

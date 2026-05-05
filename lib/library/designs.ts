@@ -51,18 +51,31 @@ export async function loadLibraryDesignPage({
   view = "active",
   limit = LIBRARY_PAGE_SIZE,
   offset = 0,
+  search = "",
 }: {
   appUserId: string;
   view?: LibraryDesignView;
   limit?: number;
   offset?: number;
+  search?: string;
 }): Promise<LibraryDesignPage> {
   const normalizedLimit = Math.max(1, Math.min(MAX_LIBRARY_PAGE_SIZE, Math.floor(limit)));
   const normalizedOffset = Math.max(0, Math.floor(offset));
-  const where =
+  const normalizedSearch = search.trim();
+  const baseWhere =
     view === "deleted"
       ? getDeletedEditorDesignWhere({ appUserId })
       : getActiveEditorDesignWhere({ appUserId });
+  const where =
+    normalizedSearch.length > 0
+      ? {
+          ...baseWhere,
+          title: {
+            contains: normalizedSearch,
+            mode: "insensitive" as const,
+          },
+        }
+      : baseWhere;
 
   const [activeCount, deletedCount, designs] = await Promise.all([
     prisma.editorDesign.count({

@@ -36,6 +36,7 @@ export async function GET(req: Request) {
   const requestedLimitParam = url.searchParams.get("limit");
   const requestedOffsetParam = url.searchParams.get("offset");
   const requestedViewParam = url.searchParams.get("view");
+  const requestedSearchParam = url.searchParams.get("search") ?? "";
   const requestedLimit =
     requestedLimitParam === null ? Number.NaN : Number(requestedLimitParam);
   const requestedOffset =
@@ -49,7 +50,15 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  return NextResponse.json(await loadLibraryDesignPage({ appUserId, view, limit, offset }));
+  return NextResponse.json(
+    await loadLibraryDesignPage({
+      appUserId,
+      view,
+      limit,
+      offset,
+      search: requestedSearchParam,
+    }),
+  );
 }
 
 export async function POST(req: Request) {

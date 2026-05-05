@@ -95,6 +95,12 @@
   margin-bottom: 18px;
 }
 
+.searchRow {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
 .notificationOverlayTop {
   position: fixed;
   top: 16px;
