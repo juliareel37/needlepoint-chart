@@ -108,15 +108,19 @@ function AspectRatioGlyph({
   optionId: TraceCropAspectRatioId;
   trace: TraceDocument;
 }) {
+  if (optionId === "freehand") {
+    return <ToolbarIcon icon="/icons/lucide/free.svg" />;
+  }
+
+  if (optionId === "original") {
+    return <ToolbarIcon icon="/icons/lucide/image.svg" />;
+  }
+
   const aspectRatio = getAspectRatioValue(optionId, trace);
   const dimensions = getAspectRatioGlyphDimensions(aspectRatio);
 
   return (
-    <span
-      aria-hidden="true"
-      className={styles.aspectRatioGlyph}
-      data-freehand={optionId === "freehand" ? "true" : undefined}
-    >
+    <span aria-hidden="true" className={styles.aspectRatioGlyph}>
       <span
         className={styles.aspectRatioGlyphFrame}
         style={{
@@ -124,7 +128,6 @@ function AspectRatioGlyph({
           height: `${dimensions.height}px`,
         }}
       />
-      {optionId === "freehand" ? <span className={styles.aspectRatioGlyphSlash} /> : null}
     </span>
   );
 }
