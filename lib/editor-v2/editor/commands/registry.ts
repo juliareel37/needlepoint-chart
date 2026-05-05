@@ -27,6 +27,9 @@ import {
   setSidebarCollapsedCommandHandler,
 } from "./handlers/sidebarShell";
 import {
+  beginDuplicatePlacementCommandHandler,
+  cancelDuplicatePlacementCommandHandler,
+  commitDuplicatePlacementCommandHandler,
   clearSelectionCommandHandler,
   commitSelectionCommandHandler,
   moveSelectionCommandHandler,
@@ -73,6 +76,9 @@ export const commandHandlers: EditorCommandHandler[] = [
   updateSelectionCommandHandler,
   commitSelectionCommandHandler,
   moveSelectionCommandHandler,
+  beginDuplicatePlacementCommandHandler,
+  cancelDuplicatePlacementCommandHandler,
+  commitDuplicatePlacementCommandHandler,
   clearSelectionCommandHandler,
   setSelectionShapeCommandHandler,
   beginMirrorFromSelectionCommandHandler,

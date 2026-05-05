@@ -146,6 +146,7 @@ function createSwapTestState(
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

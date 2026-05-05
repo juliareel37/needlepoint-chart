@@ -76,8 +76,10 @@ export function useGridInteractions({
   useClearSelectionOnEscape({
     clearLocalSelection: selectionDrag.clearDragSelection,
     dispatch,
+    duplicatePlacementActive: Boolean(state.session.duplicatePlacement),
     hasSelection:
       activeTool === "lasso" ||
+      Boolean(state.session.duplicatePlacement) ||
       Boolean(state.session.selection.rect) ||
       Boolean(state.session.mirrorInteraction.session),
   });

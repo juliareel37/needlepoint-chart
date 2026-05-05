@@ -242,6 +242,36 @@ export function createMoveSelectionCommand(
   );
 }
 
+export function createBeginDuplicatePlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.beginDuplicatePlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelDuplicatePlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.cancelDuplicatePlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitDuplicatePlacementCommand(
+  deltaX: number,
+  deltaY: number,
+): EditorCommand {
+  return createCommand(
+    "selection.commitDuplicatePlacement",
+    { deltaX, deltaY },
+    "toolbar",
+    { mode: "push", label: "Duplicate Selection" },
+  );
+}
+
 export function createClearSelectionCommand(
   source: EditorCommandSource = "toolbar",
 ): EditorCommand {

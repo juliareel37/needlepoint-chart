@@ -183,4 +183,91 @@ describe("selection command handlers", () => {
       preview: null,
     });
   });
+
+  it("starts duplicate placement from the painted cells inside the selection", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+    initial.document.grid.cells = [
+      null, null, null, null, null,
+      null, "dmc:310", "dmc:321", null, null,
+      null, null, "dmc:666", null, null,
+      null, null, null, null, null,
+      null, null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 3, y: 1 },
+        { x: 3, y: 3 },
+        { x: 1, y: 3 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-6",
+      kind: "selection.beginDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 6, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toEqual({
+      sourceRect: { x: 1, y: 1, width: 2, height: 2 },
+      cells: [
+        { x: 0, y: 0, colorId: "dmc:310" },
+        { x: 1, y: 0, colorId: "dmc:321" },
+        { x: 1, y: 1, colorId: "dmc:666" },
+      ],
+    });
+  });
+
+  it("commits duplicate placement as a single paint step and clears the session", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 6;
+    initial.document.grid.height = 6;
+    initial.document.grid.cells = new Array(36).fill(null);
+    initial.document.grid.cells[1 * 6 + 1] = "dmc:310";
+    initial.document.grid.cells[1 * 6 + 2] = "dmc:321";
+    initial.document.grid.cells[2 * 6 + 2] = "dmc:666";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-7",
+      kind: "selection.beginDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 7, history: { mode: "skip" } },
+    });
+
+    store.dispatch({
+      id: "cmd-8",
+      kind: "selection.commitDuplicatePlacement",
+      payload: { deltaX: 2, deltaY: 1 },
+      meta: { source: "toolbar", timestamp: 8, history: { mode: "push", label: "Duplicate Selection" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 6 + 3]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[2 * 6 + 4]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[3 * 6 + 4]).toBe("dmc:666");
+    expect(store.getState().document.grid.cells[1 * 6 + 1]).toBe("dmc:310");
+  });
 });

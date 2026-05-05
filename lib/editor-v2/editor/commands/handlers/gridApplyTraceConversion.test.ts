@@ -139,6 +139,7 @@ function createTestState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

@@ -158,6 +158,7 @@ function createDeleteTestState(
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

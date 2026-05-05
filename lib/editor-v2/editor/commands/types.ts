@@ -37,6 +37,9 @@ export type EditorCommandKind =
   | "selection.update"
   | "selection.commit"
   | "selection.move"
+  | "selection.beginDuplicatePlacement"
+  | "selection.cancelDuplicatePlacement"
+  | "selection.commitDuplicatePlacement"
   | "selection.clear"
   | "selection.setShape"
   | "mirror.beginFromSelection"
@@ -157,6 +160,21 @@ export type CommitSelectionCommand = BaseEditorCommand<
 
 export type MoveSelectionCommand = BaseEditorCommand<
   "selection.move",
+  { deltaX: number; deltaY: number }
+>;
+
+export type BeginDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.beginDuplicatePlacement",
+  object
+>;
+
+export type CancelDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.cancelDuplicatePlacement",
+  object
+>;
+
+export type CommitDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.commitDuplicatePlacement",
   { deltaX: number; deltaY: number }
 >;
 
@@ -438,6 +456,9 @@ export type EditorCommand =
   | UpdateSelectionCommand
   | CommitSelectionCommand
   | MoveSelectionCommand
+  | BeginDuplicatePlacementCommand
+  | CancelDuplicatePlacementCommand
+  | CommitDuplicatePlacementCommand
   | ClearSelectionCommand
   | SetSelectionShapeCommand
   | BeginMirrorFromSelectionCommand

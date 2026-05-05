@@ -1,14 +1,30 @@
-import type { SelectionState } from "../../store/state";
-import { getLassoBounds } from "../../selection/lassoGeometry";
+import type {
+  DuplicatePlacementCell,
+  EditorStoreState,
+  SelectionState,
+} from "../../store/state";
+import { getLassoBounds, isCellInSelection } from "../../selection/lassoGeometry";
 import type { EditorCommandHandler } from "./types";
 import type {
+  BeginDuplicatePlacementCommand,
+  CancelDuplicatePlacementCommand,
   ClearSelectionCommand,
+  CommitDuplicatePlacementCommand,
   CommitSelectionCommand,
   MoveSelectionCommand,
   SetSelectionShapeCommand,
   StartSelectionCommand,
   UpdateSelectionCommand,
 } from "../types";
+import {
+  buildDirtySession,
+  buildInverseReplaceCellsPatch,
+  filterValidCells,
+} from "./gridMutationUtils";
+import {
+  buildAppendOnlyInverseSymbolPatches,
+  buildAssignSymbolsPatch,
+} from "./symbolAssignments";
 
 export const startSelectionCommandHandler: EditorCommandHandler<StartSelectionCommand> = {
   canHandle(command): command is StartSelectionCommand {
@@ -114,9 +130,70 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
           mirrorAxis: null,
           preview: null,
         },
+        duplicatePlacement: null,
         mirrorInteraction: {
           session: null,
         },
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const beginDuplicatePlacementCommandHandler: EditorCommandHandler<BeginDuplicatePlacementCommand> = {
+  canHandle(command): command is BeginDuplicatePlacementCommand {
+    return command.kind === "selection.beginDuplicatePlacement";
+  },
+  handle(state, command) {
+    if (
+      state.session.selection.mode === "none" ||
+      !state.session.selection.rect ||
+      state.session.selection.preview ||
+      state.session.duplicatePlacement
+    ) {
+      return buildSelectionSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        duplicatePlacement: {
+          sourceRect: state.session.selection.rect,
+          cells: buildDuplicatePlacementCells(state),
+        },
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const cancelDuplicatePlacementCommandHandler: EditorCommandHandler<CancelDuplicatePlacementCommand> = {
+  canHandle(command): command is CancelDuplicatePlacementCommand {
+    return command.kind === "selection.cancelDuplicatePlacement";
+  },
+  handle(state, command) {
+    if (!state.session.duplicatePlacement) {
+      return buildSelectionSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        duplicatePlacement: null,
       },
       nextUi: state.ui,
       patches: [],
@@ -174,6 +251,96 @@ export const moveSelectionCommandHandler: EditorCommandHandler<MoveSelectionComm
   },
 };
 
+export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<CommitDuplicatePlacementCommand> = {
+  canHandle(command): command is CommitDuplicatePlacementCommand {
+    return command.kind === "selection.commitDuplicatePlacement";
+  },
+  handle(state, command) {
+    const session = state.session.duplicatePlacement;
+
+    if (!session) {
+      return buildSelectionSessionNoop(state, command.id);
+    }
+
+    const candidateDestinations = session.cells.map((cell) => ({
+      point: {
+        x: session.sourceRect.x + cell.x + command.payload.deltaX,
+        y: session.sourceRect.y + cell.y + command.payload.deltaY,
+      },
+      colorId: cell.colorId,
+    }));
+    const validDestinations = filterValidCells(
+      candidateDestinations.map((entry) => entry.point),
+      state,
+    );
+    const destinationMap = new Map(
+      candidateDestinations.map((entry) => [`${entry.point.x}:${entry.point.y}`, entry.colorId]),
+    );
+    const changedDestinations = validDestinations.filter((cell) => {
+      const nextColorId = destinationMap.get(`${cell.x}:${cell.y}`);
+
+      return (
+        typeof nextColorId === "string" &&
+        state.document.grid.cells[cell.y * state.document.grid.width + cell.x] !== nextColorId
+      );
+    });
+    const replacements = changedDestinations
+      .map((cell) => ({
+        index: cell.y * state.document.grid.width + cell.x,
+        value: destinationMap.get(`${cell.x}:${cell.y}`) ?? null,
+      }))
+      .filter((replacement): replacement is { index: number; value: string } => {
+        return typeof replacement.value === "string";
+      });
+    const colorIds = Array.from(new Set(replacements.map((replacement) => replacement.value)))
+      .filter((value): value is string => Boolean(value));
+    const symbolPatches = buildAssignSymbolsPatch(state, colorIds);
+    const hasGridChanges = replacements.length > 0;
+
+    if (!hasGridChanges) {
+      return {
+        nextSession: {
+          ...state.session,
+          duplicatePlacement: null,
+        },
+        nextUi: state.ui,
+        patches: [],
+        inversePatches: [],
+        effects: [],
+        event: {
+          type: "session",
+          commandId: command.id,
+        },
+      };
+    }
+
+    return {
+      nextSession: {
+        ...buildDirtySession(state),
+        duplicatePlacement: null,
+      },
+      nextUi: state.ui,
+      patches: [
+        {
+          type: "grid.replaceCells",
+          cells: replacements,
+        },
+        ...symbolPatches,
+      ],
+      inversePatches: [
+        ...buildInverseReplaceCellsPatch(state, changedDestinations),
+        ...buildAppendOnlyInverseSymbolPatches(symbolPatches),
+      ],
+      effects: [],
+      event: {
+        type: "command",
+        commandId: command.id,
+        label: "Duplicate Selection",
+      },
+    };
+  },
+};
+
 export const setSelectionShapeCommandHandler: EditorCommandHandler<SetSelectionShapeCommand> = {
   canHandle(command): command is SetSelectionShapeCommand {
     return command.kind === "selection.setShape";
@@ -192,6 +359,7 @@ export const setSelectionShapeCommandHandler: EditorCommandHandler<SetSelectionS
           mirrorAxis: null,
           preview: null,
         },
+        duplicatePlacement: null,
         mirrorInteraction: {
           session: null,
         },
@@ -384,6 +552,52 @@ function translateSelection(
       y: point.y + effectiveDeltaY,
     })),
   };
+}
+
+function buildSelectionSessionNoop(state: EditorStoreState, commandId: string) {
+  return {
+    nextSession: state.session,
+    nextUi: state.ui,
+    patches: [],
+    inversePatches: [],
+    effects: [],
+    event: {
+      type: "session" as const,
+      commandId,
+    },
+  };
+}
+
+function buildDuplicatePlacementCells(state: EditorStoreState): DuplicatePlacementCell[] {
+  const selectionBounds = state.session.selection.rect;
+
+  if (!selectionBounds) {
+    return [];
+  }
+
+  const cells: DuplicatePlacementCell[] = [];
+
+  for (let y = selectionBounds.y; y < selectionBounds.y + selectionBounds.height; y += 1) {
+    for (let x = selectionBounds.x; x < selectionBounds.x + selectionBounds.width; x += 1) {
+      if (!isCellInSelection(state, { x, y })) {
+        continue;
+      }
+
+      const colorId = state.document.grid.cells[y * state.document.grid.width + x];
+
+      if (!colorId) {
+        continue;
+      }
+
+      cells.push({
+        x: x - selectionBounds.x,
+        y: y - selectionBounds.y,
+        colorId,
+      });
+    }
+  }
+
+  return cells;
 }
 
 function clampSelectionDeltaX(

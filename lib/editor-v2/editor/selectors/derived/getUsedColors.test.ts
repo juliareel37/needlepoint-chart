@@ -88,6 +88,7 @@ function createSelectorTestState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

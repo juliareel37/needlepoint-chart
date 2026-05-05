@@ -149,6 +149,7 @@ function createMergeTestState(
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

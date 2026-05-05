@@ -112,6 +112,7 @@ export interface EditorSessionState {
   eyedropperReturnTool: ActiveTool | null;
   viewport: ViewportState;
   selection: SelectionState;
+  duplicatePlacement: DuplicatePlacementSession | null;
   mirrorInteraction: MirrorInteractionState;
   history: HistoryState;
   persistence: PersistenceSessionState;
@@ -190,6 +191,17 @@ export interface GridRect {
 export interface SelectionPreviewState {
   hoveredCell: GridPoint | null;
   liveRegion: GridRect | null;
+}
+
+export interface DuplicatePlacementSession {
+  sourceRect: GridRect;
+  cells: DuplicatePlacementCell[];
+}
+
+export interface DuplicatePlacementCell {
+  x: number;
+  y: number;
+  colorId: string;
 }
 
 export interface HistoryState {
@@ -440,6 +452,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },

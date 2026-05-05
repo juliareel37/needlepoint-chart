@@ -2666,6 +2666,7 @@ export function EditorV2Shell({
                         selectionShape={state.session.selection.shape}
                         sidebarCollapsed={sidebarCollapsed}
                         trace={trace}
+                        duplicatePlacementActive={Boolean(state.session.duplicatePlacement)}
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
                         selectionRequestKey={selectionRequestKey}

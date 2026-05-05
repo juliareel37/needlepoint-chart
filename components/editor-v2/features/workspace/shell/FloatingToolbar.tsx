@@ -29,6 +29,7 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createBeginDuplicatePlacementCommand,
   createCancelMirrorCommand,
   createBeginTraceRepositionCommand,
   createBeginMirrorFromSelectionCommand,
@@ -291,6 +292,7 @@ interface FloatingToolbarProps {
   activeSidebarSection: EditorSidebarSection;
   sidebarCollapsed: boolean;
   trace: TraceDocument | null;
+  duplicatePlacementActive: boolean;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
   selectionRequestKey: number;
@@ -317,6 +319,7 @@ export function FloatingToolbar({
   activeSidebarSection,
   sidebarCollapsed,
   trace,
+  duplicatePlacementActive,
   mirrorSessionActive,
   isBottomPanelLayout,
   selectionRequestKey,
@@ -363,6 +366,7 @@ export function FloatingToolbar({
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
+  const canDuplicateSelection = selectionCommitted && !duplicatePlacementActive;
   const traceSidebarOpen = !sidebarCollapsed && activeSidebarSection === "trace";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked =
@@ -547,6 +551,14 @@ export function FloatingToolbar({
   }, [selectionVisible]);
 
   useEffect(() => {
+    if (!duplicatePlacementActive) {
+      return;
+    }
+
+    setSelectionShapeMenuOpen(false);
+  }, [duplicatePlacementActive]);
+
+  useEffect(() => {
     if (selectionRequestKey === handledSelectionRequestKeyRef.current) {
       return;
     }
@@ -630,6 +642,10 @@ export function FloatingToolbar({
   }
 
   function handleSelectionButtonClick() {
+    if (duplicatePlacementActive) {
+      return;
+    }
+
     closeColorLibrary();
     closeDrawMenu();
     closeImageMenu();
@@ -772,6 +788,7 @@ export function FloatingToolbar({
             active={selectionShapeMenuOpen}
             aria-expanded={selectionShapeMenuOpen}
             aria-haspopup="menu"
+            disabled={duplicatePlacementActive}
             onClick={() => setSelectionShapeMenuOpen((open) => !open)}
             className={styles.selectionShapeTrigger}
           >
@@ -822,9 +839,9 @@ export function FloatingToolbar({
           labelled
           active={mirrorSessionActive}
           aria-pressed={mirrorSessionActive}
-          disabled={!canMirrorSelection}
+          disabled={!canMirrorSelection || duplicatePlacementActive}
           onClick={() => {
-            if (!canMirrorSelection) {
+            if (!canMirrorSelection || duplicatePlacementActive) {
               return;
             }
 
@@ -840,6 +857,24 @@ export function FloatingToolbar({
           <ToolbarIcon icon="/icons/flip.svg" />
           <ToolbarLabel>Mirror</ToolbarLabel>
         </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          labelled
+          active={duplicatePlacementActive}
+          aria-pressed={duplicatePlacementActive}
+          disabled={!canDuplicateSelection}
+          onClick={() => {
+            if (!canDuplicateSelection) {
+              return;
+            }
+
+            dispatch(createBeginDuplicatePlacementCommand());
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/copy.svg" />
+          <ToolbarLabel>Duplicate</ToolbarLabel>
+        </ToolbarButton>
       </ToolbarGroup>
 
       <ToolbarDivider />
@@ -847,9 +882,9 @@ export function FloatingToolbar({
       <ToolbarButton
         type="button"
         labelled
-        disabled={!canEraseSelection}
+        disabled={!canEraseSelection || duplicatePlacementActive}
         onClick={() => {
-          if (!selectionBounds) {
+          if (!selectionBounds || duplicatePlacementActive) {
             return;
           }
 
@@ -861,10 +896,10 @@ export function FloatingToolbar({
         }}
       >
         <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-        <ToolbarLabel>Erase all</ToolbarLabel>
+        <ToolbarLabel>Erase</ToolbarLabel>
       </ToolbarButton>
 
-      {selectionDrawTool ? (
+      {selectionDrawTool && !duplicatePlacementActive ? (
         <>
           <ToolbarDivider />
           <ToolbarSubtoolGroup>
@@ -1026,6 +1061,7 @@ export function FloatingToolbar({
             aria-label="Select"
             data-tooltip="Select"
             title="Select"
+            disabled={duplicatePlacementActive}
             onClick={handleSelectionButtonClick}
           >
             <ToolbarIcon icon="/icons/lucide/selection.svg" />
@@ -1055,6 +1091,7 @@ export function FloatingToolbar({
                       type="button"
                       variant="ghost"
                       iconOnly
+                      disabled={duplicatePlacementActive}
                       className={styles.selectionToolbarCloseButton}
                       onClick={handleExitSelection}
                     >

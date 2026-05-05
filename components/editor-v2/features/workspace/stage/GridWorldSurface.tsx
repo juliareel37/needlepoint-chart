@@ -22,6 +22,7 @@ import { SelectionOverlay } from "./overlays/SelectionOverlay";
 import { TextPlacementLayer } from "./TextPlacementLayer";
 import { IconPlacementLayer } from "./IconPlacementLayer";
 import { TraceImageLayer } from "./TraceImageLayer";
+import { DuplicatePlacementLayer } from "./DuplicatePlacementLayer";
 import { useStagePanInteractions } from "./useStagePanInteractions";
 import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
@@ -75,6 +76,7 @@ export function GridWorldSurface({
   const trace = state.document.trace;
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
+  const duplicatePlacement = state.session.duplicatePlacement;
   const viewport = state.session.viewport;
   const selection = state.session.selection;
   const mirrorInteraction = state.session.mirrorInteraction;
@@ -130,10 +132,11 @@ export function GridWorldSurface({
   };
   const textPlacementActive = Boolean(textPlacement);
   const iconPlacementActive = Boolean(iconPlacement);
+  const duplicatePlacementActive = Boolean(duplicatePlacement);
   const positioningCursorActive =
     tracePositioningEnabled || textPlacementActive || iconPlacementActive;
   const paintDisabled =
-    interactionLocked || positioningCursorActive || traceCropActive;
+    interactionLocked || positioningCursorActive || traceCropActive || duplicatePlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -632,6 +635,20 @@ export function GridWorldSurface({
               viewport={viewport}
               worldBounds={worldBounds}
               zoom={viewport.zoom}
+            />
+          ) : null}
+
+          {duplicatePlacement ? (
+            <DuplicatePlacementLayer
+              colorsById={colorsById}
+              dispatch={dispatch}
+              getWorldPointFromClient={getWorldPointFromClient}
+              metrics={metrics}
+              portalHost={stageRef.current}
+              session={duplicatePlacement}
+              stageBounds={stageBounds}
+              viewport={viewport}
+              worldBounds={worldBounds}
             />
           ) : null}
         </div>
