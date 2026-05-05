@@ -65,7 +65,7 @@ export function Modal({
   confirmVariant = "primary",
   tone = "none",
   closeOnBackdropClick = false,
-  closeOnEscape = false,
+  closeOnEscape = true,
   confirmDisabled = false,
   dismissDisabled = false,
   showCloseButton = false,
@@ -73,26 +73,56 @@ export function Modal({
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
+  const handleClose = onClose ?? onDismiss;
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isOpen || !closeOnEscape) {
+    if (!isOpen) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (!closeOnEscape || dismissDisabled) {
+          return;
+        }
+
         event.preventDefault();
-        (onClose ?? onDismiss)();
+        handleClose();
+        return;
       }
+
+      if (
+        event.key !== "Enter" ||
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        confirmDisabled
+      ) {
+        return;
+      }
+
+      const target =
+        event.target instanceof HTMLElement ? event.target : null;
+      const tagName = target?.tagName;
+
+      if (tagName === "TEXTAREA" || target?.closest("button, a, [role='button']")) {
+        return;
+      }
+
+      event.preventDefault();
+      onConfirm();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closeOnEscape, isOpen, onClose, onDismiss]);
+  }, [closeOnEscape, confirmDisabled, dismissDisabled, handleClose, isOpen, onConfirm]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -111,7 +141,6 @@ export function Modal({
     return null;
   }
 
-  const handleClose = onClose ?? onDismiss;
   const toneStyles = tone === "none" ? null : toneConfig[tone];
 
   return createPortal(

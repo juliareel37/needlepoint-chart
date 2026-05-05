@@ -8,6 +8,7 @@ import {
   Button,
   Field,
   FieldInput,
+  Modal,
   Panel,
   panelMutedTextStyle,
 } from "@/components/design-system";
@@ -66,6 +67,9 @@ export function AuthAccountSettingsPanel({
   const [isAccountSettingsContextLoading, setIsAccountSettingsContextLoading] =
     useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmationValue, setDeleteConfirmationValue] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [status, setStatus] = useState<StatusState>(null);
 
   const currentName = user?.name ?? "";
@@ -84,10 +88,14 @@ export function AuthAccountSettingsPanel({
   const hasChanges = isGoogleOAuthUser
     ? nextName !== currentName
     : nextName !== currentName || nextEmail !== currentEmail;
+  const deleteConfirmationMatches = deleteConfirmationValue.trim().toLowerCase() === "delete";
+  const isBusy = isSubmitting || isDeletingAccount;
 
   useEffect(() => {
     setNameValue(currentName);
     setEmailValue(currentEmail);
+    setDeleteConfirmationValue("");
+    setIsDeleteModalOpen(false);
     setStatus(null);
   }, [currentEmail, currentName, user?.id]);
 
@@ -149,6 +157,15 @@ export function AuthAccountSettingsPanel({
     } catch {
       return;
     }
+  }
+
+  function handleDeleteModalDismiss() {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    setIsDeleteModalOpen(false);
+    setDeleteConfirmationValue("");
   }
 
   function handleResetForm() {
@@ -356,6 +373,59 @@ export function AuthAccountSettingsPanel({
     });
   }
 
+  async function handleDeleteAccount() {
+    if (!user) {
+      return;
+    }
+
+    if (!deleteConfirmationMatches) {
+      setStatus({
+        tone: "error",
+        message: 'Type "delete" to confirm account deletion.',
+      });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch("/api/auth/delete-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirmation: deleteConfirmationValue }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; ok?: boolean }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error ?? "We couldn't delete your account.");
+      }
+
+      onAfterSignOut?.();
+      setIsDeleteModalOpen(false);
+      setDeleteConfirmationValue("");
+      await refetch();
+      if (typeof window !== "undefined") {
+        window.location.assign("/");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't delete your account."),
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }
+
   function renderStatus() {
     if (!status) {
       return null;
@@ -480,7 +550,7 @@ export function AuthAccountSettingsPanel({
                     Reset
                   </Button>
                 ) : null} */}
-                <Button type="submit" variant="primary" disabled={isSubmitting || !hasChanges}>
+                <Button type="submit" variant="primary" disabled={isBusy || !hasChanges}>
                   {isSubmitting ? "Saving..." : "Save changes"}
                 </Button>
               </div>
@@ -503,7 +573,7 @@ export function AuthAccountSettingsPanel({
                 onClick={() =>
                   void (hasEmailPassword ? handleRequestPasswordReset() : handleSetPassword())
                 }
-                disabled={isSubmitting || isAccountSettingsContextLoading || !hasLoadedPasswordState}
+                disabled={isBusy || isAccountSettingsContextLoading || !hasLoadedPasswordState}
               >
                 {isSubmitting ? "Sending..." : passwordActionLabel}
               </Button>
@@ -512,6 +582,62 @@ export function AuthAccountSettingsPanel({
               </Button> */}
             </div>
           </Panel>
+
+          <Panel className={styles.mainPanel} title="Delete account">
+            <p style={panelMutedTextStyle}>
+              Permanently delete your profile, saved designs, and account history. This can&apos;t
+              be undone.
+            </p>
+            <div className={styles.buttonRow}>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  setStatus(null);
+                  setIsDeleteModalOpen(true);
+                }}
+                disabled={isBusy}
+              >
+                Delete account
+              </Button>
+            </div>
+          </Panel>
+
+          <Modal
+            isOpen={isDeleteModalOpen}
+            title="Delete your account?"
+            description={
+              <div className={styles.form}>
+                <p style={panelMutedTextStyle}>
+                  This permanently removes your profile and saved account data. Type{" "}
+                  <strong>delete</strong> to confirm.
+                </p>
+                <Field label='Type "delete" to confirm'>
+                  <FieldInput
+                    type="text"
+                    value={deleteConfirmationValue}
+                    onChange={(event) => setDeleteConfirmationValue(event.currentTarget.value)}
+                    placeholder="delete"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    disabled={isDeletingAccount}
+                  />
+                </Field>
+              </div>
+            }
+            dismissLabel="Cancel"
+            confirmLabel={isDeletingAccount ? "Deleting..." : "Delete account"}
+            confirmVariant="destructive"
+            tone="fail"
+            onDismiss={handleDeleteModalDismiss}
+            onConfirm={() => void handleDeleteAccount()}
+            confirmDisabled={!deleteConfirmationMatches || isDeletingAccount}
+            dismissDisabled={isDeletingAccount}
+            closeOnBackdropClick
+            closeOnEscape
+            showCloseButton
+          />
         </>
       )}
     </div>
