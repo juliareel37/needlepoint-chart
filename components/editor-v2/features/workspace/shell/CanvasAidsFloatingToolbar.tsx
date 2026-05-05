@@ -2,14 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { typographyStyles } from "@/app/design-system/typography";
 import {
-  MenuChevronIcon,
   Toolbar,
   ToolbarAnchor,
   ToolbarButton,
   ToolbarIcon,
-  ToolbarLabel,
   ToolbarPopover,
 } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
@@ -145,13 +142,16 @@ export function CanvasAidsFloatingToolbar({
 
   return (
     <>
-      <Toolbar className={styles.canvasAidsToolbar}>
+      <Toolbar
+        className={styles.canvasAidsToolbar}
+        data-open={open ? "true" : "false"}
+      >
         <ToolbarAnchor ref={anchorRef}>
           <ToolbarButton
+            className={styles.canvasAidsToolbarButton}
             type="button"
             variant="ghostNeutral"
             iconOnly
-            active={open}
             aria-expanded={open}
             aria-haspopup="dialog"
             aria-label="Canvas aids settings"
@@ -159,8 +159,6 @@ export function CanvasAidsFloatingToolbar({
             onClick={() => setOpen((current) => !current)}
           >
             <ToolbarIcon icon="/icons/lucide/settings.svg" />
-            {/* <ToolbarLabel>Canvas Aids</ToolbarLabel> */}
-            {/* <MenuChevronIcon open={open} direction="up" /> */}
           </ToolbarButton>
         </ToolbarAnchor>
       </Toolbar>
@@ -186,9 +184,6 @@ export function CanvasAidsFloatingToolbar({
               }}
             >
               <div className={styles.canvasAidsPopoverCard}>
-                {/* <p className={styles.canvasAidsPopoverTitle} style={typographyStyles.p2}>
-                  Canvas Aids
-                </p> */}
                 <CanvasAidsControls
                   dispatch={dispatch}
                   showGridlines={showGridlines}
