@@ -2498,6 +2498,7 @@ function HeaderFileMenu({
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const recentCloseTimeoutRef = useRef<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [recentOpen, setRecentOpen] = useState(false);
@@ -2506,6 +2507,15 @@ function HeaderFileMenu({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (recentCloseTimeoutRef.current !== null) {
+        window.clearTimeout(recentCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -2621,8 +2631,29 @@ function HeaderFileMenu({
   }
 
   function closeMenus() {
+    if (recentCloseTimeoutRef.current !== null) {
+      window.clearTimeout(recentCloseTimeoutRef.current);
+      recentCloseTimeoutRef.current = null;
+    }
     setOpen(false);
     setRecentOpen(false);
+  }
+
+  function clearRecentCloseTimeout() {
+    if (recentCloseTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(recentCloseTimeoutRef.current);
+    recentCloseTimeoutRef.current = null;
+  }
+
+  function scheduleRecentClose() {
+    clearRecentCloseTimeout();
+    recentCloseTimeoutRef.current = window.setTimeout(() => {
+      setRecentOpen(false);
+      recentCloseTimeoutRef.current = null;
+    }, 180);
   }
 
   function handleAction(value: string) {
@@ -2690,14 +2721,24 @@ function HeaderFileMenu({
                     </MenuItem>
                     <div
                       className={styles.headerFileMenuSubmenuItem}
-                      onMouseEnter={() => setRecentOpen(true)}
-                      onMouseLeave={() => setRecentOpen(false)}
+                      onMouseEnter={() => {
+                        clearRecentCloseTimeout();
+                        setRecentOpen(true);
+                      }}
+                      onMouseLeave={scheduleRecentClose}
                     >
                       <MenuItem
                         type="button"
                         trailing={<MenuCaretIcon />}
-                        onClick={() => setRecentOpen((currentValue) => !currentValue)}
-                        onFocus={() => setRecentOpen(true)}
+                        onClick={() => {
+                          clearRecentCloseTimeout();
+                          setRecentOpen((currentValue) => !currentValue);
+                        }}
+                        onFocus={() => {
+                          clearRecentCloseTimeout();
+                          setRecentOpen(true);
+                        }}
+                        onBlur={scheduleRecentClose}
                         className={styles.headerFileMenuSubmenuTrigger}
                       >
                         <span className={styles.headerOverflowItemLabel}>
@@ -2713,6 +2754,8 @@ function HeaderFileMenu({
                           className={styles.headerFileRecentMenuSurface}
                           role="menu"
                           aria-label="Recent designs"
+                          onMouseEnter={clearRecentCloseTimeout}
+                          onMouseLeave={scheduleRecentClose}
                         >
                           {recentSubmenuLabel ? (
                             <MenuItem type="button" disabled>
