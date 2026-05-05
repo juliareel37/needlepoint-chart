@@ -29,6 +29,7 @@ import {
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
+import type { TraceDisplayOverride } from "./GridCanvasStage.shared";
 
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
@@ -43,6 +44,7 @@ interface TraceImageLayerProps {
   stageBounds: { left: number; top: number; width: number; height: number };
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
+  traceDisplayOverride?: TraceDisplayOverride;
   viewport: ViewportState;
   worldBounds: { left: number; top: number; width: number; height: number };
   zIndex?: number;
@@ -59,11 +61,16 @@ export function TraceImageLayer({
   stageBounds,
   trace,
   traceAsset,
+  traceDisplayOverride = null,
   viewport,
   worldBounds,
   zIndex = 3,
   zoom,
 }: TraceImageLayerProps) {
+  const renderTrace = useMemo(
+    () => (traceDisplayOverride ? { ...trace, ...traceDisplayOverride } : trace),
+    [trace, traceDisplayOverride],
+  );
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
   const snapContainerBounds = useMemo(
@@ -102,14 +109,14 @@ export function TraceImageLayer({
   const traceSourceSize = useMemo(() => {
     const fallbackWidth = traceAsset?.width ?? mobilePreviewSize?.width ?? null;
     const fallbackHeight = traceAsset?.height ?? mobilePreviewSize?.height ?? null;
-    const displaySize = getTraceDisplaySize(trace, fallbackWidth, fallbackHeight);
+    const displaySize = getTraceDisplaySize(renderTrace, fallbackWidth, fallbackHeight);
 
     return displaySize.width > 0 && displaySize.height > 0
       ? displaySize
       : null;
   }, [
     mobilePreviewSize,
-    trace,
+    renderTrace,
     traceAsset?.height,
     traceAsset?.width,
   ]);
@@ -127,12 +134,12 @@ export function TraceImageLayer({
   );
   const traceTransform = useMemo(
     () => ({
-      offsetX: trace.offsetX,
-      offsetY: trace.offsetY,
-      scale: trace.scale,
-      rotation: trace.rotation,
+      offsetX: renderTrace.offsetX,
+      offsetY: renderTrace.offsetY,
+      scale: renderTrace.scale,
+      rotation: renderTrace.rotation,
     }),
-    [trace.offsetX, trace.offsetY, trace.rotation, trace.scale],
+    [renderTrace.offsetX, renderTrace.offsetY, renderTrace.rotation, renderTrace.scale],
   );
   const traceBounds = useMemo(
     () =>
@@ -195,7 +202,7 @@ export function TraceImageLayer({
 
   useEffect(() => {
     setMobilePreviewSize(null);
-  }, [trace.previewUrl]);
+  }, [renderTrace.previewUrl]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -217,7 +224,7 @@ export function TraceImageLayer({
         });
       }
     };
-    image.src = trace.previewUrl;
+    image.src = renderTrace.previewUrl;
 
     if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
       setMobilePreviewSize({
@@ -230,7 +237,7 @@ export function TraceImageLayer({
       cancelled = true;
       image.onload = null;
     };
-  }, [trace.previewUrl]);
+  }, [renderTrace.previewUrl]);
 
   useEffect(() => {
     const desktopCanvas = desktopCanvasRef.current;
@@ -261,12 +268,12 @@ export function TraceImageLayer({
       }
     } else if (desktopCanvas) {
       drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
-        trace,
+        trace: renderTrace,
         width: traceAsset.width,
         height: traceAsset.height,
       });
     }
-  }, [coarsePointer, trace, traceAsset]);
+  }, [coarsePointer, renderTrace, traceAsset]);
 
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
     const clampedTrace = traceBaseRect
@@ -385,7 +392,7 @@ export function TraceImageLayer({
             >
               <img
                 aria-hidden="true"
-                src={trace.previewUrl}
+                src={renderTrace.previewUrl}
                 alt=""
                 draggable={false}
                 style={{
@@ -395,7 +402,7 @@ export function TraceImageLayer({
                   imageRendering: "auto",
                   objectFit: "cover",
                   objectPosition: getObjectPositionPercent(
-                    trace,
+                    renderTrace,
                     mobilePreviewSize?.width ?? trace.imageWidth ?? 1,
                     mobilePreviewSize?.height ?? trace.imageHeight ?? 1,
                   ),

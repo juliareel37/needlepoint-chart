@@ -18,6 +18,7 @@ import {
 import type {
   CanvasSizing,
   LoadedTraceAsset,
+  TraceDisplayOverride,
 } from "./GridCanvasStage.shared";
 import {
   configureSourceCanvas,
@@ -34,6 +35,7 @@ interface GridCanvasStageProps {
   highlightedColorId?: string | null;
   onDisplayRendered?: () => void;
   displayTraceAsset: LoadedTraceAsset | null;
+  displayTraceOverride?: TraceDisplayOverride;
   paintOpacity?: number;
   previewMode?: boolean;
   displayTrace?: TraceDocument | null;
@@ -64,6 +66,7 @@ export function GridCanvasStage({
   highlightedColorId = null,
   onDisplayRendered,
   displayTraceAsset,
+  displayTraceOverride = null,
   paintOpacity = 1,
   previewMode = false,
   displayTrace = null,
@@ -319,8 +322,9 @@ export function GridCanvasStage({
       colorsById,
       deferPaintUntilTraceReady,
       displayTrace,
-      displayTraceAsset,
-      frameOrigin,
+        displayTraceAsset,
+        displayTraceOverride,
+        frameOrigin,
       gridOverlayStep,
       gridWidth,
       highlightedColorId,
@@ -365,10 +369,18 @@ export function GridCanvasStage({
     symbolAssignments,
     displayTrace?.offsetX,
     displayTrace?.offsetY,
+    displayTrace?.rotation,
     displayTrace?.opacity,
     displayTrace?.scale,
+    displayTrace?.cropX,
+    displayTrace?.cropY,
+    displayTrace?.cropWidth,
+    displayTrace?.cropHeight,
+    displayTrace?.imageWidth,
+    displayTrace?.imageHeight,
     displayTrace?.previewUrl,
     displayTraceAsset,
+    displayTraceOverride,
     paintOpacity,
     previewMode,
     isZoomInteractionActive,

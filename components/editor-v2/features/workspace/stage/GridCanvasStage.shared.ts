@@ -1,5 +1,7 @@
 "use client";
 
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
+
 export interface LoadedTraceAsset {
   previewUrl: string;
   height: number;
@@ -13,3 +15,5 @@ export interface CanvasSizing {
   height: number;
   pixelRatio: number;
 }
+
+export type TraceDisplayOverride = TraceCropRect | null;

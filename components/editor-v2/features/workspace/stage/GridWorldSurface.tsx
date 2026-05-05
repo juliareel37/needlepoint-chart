@@ -8,6 +8,7 @@ import type {
   PaletteColor,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   clampWorldPointToSurface,
   clampViewportOffsets,
@@ -41,6 +42,7 @@ interface GridWorldSurfaceProps {
   showRuler: boolean;
   showSymbols: boolean;
   state: EditorStoreState;
+  traceDisplayOverride?: TraceCropRect | null;
   zoomAnchor: { x: number; y: number } | null;
 }
 
@@ -58,6 +60,7 @@ export function GridWorldSurface({
   showRuler,
   showSymbols,
   state,
+  traceDisplayOverride = null,
   zoomAnchor,
 }: GridWorldSurfaceProps) {
   const grid = state.document.grid;
@@ -532,6 +535,7 @@ export function GridWorldSurface({
                   ? loadedTraceAsset
                   : null
               }
+              traceDisplayOverride={traceDisplayOverride}
               viewport={viewport as ViewportState}
               worldBounds={worldBounds}
               zIndex={3}
@@ -559,6 +563,7 @@ export function GridWorldSurface({
                   ? loadedTraceAsset
                   : null
               }
+              displayTraceOverride={traceDisplayOverride}
               paintOpacity={gridOpacity}
               previewMode={previewMode}
               displayTrace={showDisplayTrace ? trace : null}

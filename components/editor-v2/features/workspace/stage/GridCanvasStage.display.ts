@@ -15,6 +15,7 @@ import {
 import type {
   CanvasSizing,
   LoadedTraceAsset,
+  TraceDisplayOverride,
 } from "./GridCanvasStage.shared";
 import {
   drawGridOverlay,
@@ -63,6 +64,7 @@ export function renderDisplayCanvas(options: {
   deferPaintUntilTraceReady?: boolean;
   displayTrace?: TraceDocument | null;
   displayTraceAsset: LoadedTraceAsset | null;
+  displayTraceOverride?: TraceDisplayOverride;
   frameOrigin: { x: number; y: number };
   gridOverlayStep: number;
   gridWidth: number;
@@ -87,6 +89,7 @@ export function renderDisplayCanvas(options: {
     deferPaintUntilTraceReady = false,
     displayTrace = null,
     displayTraceAsset,
+    displayTraceOverride = null,
     frameOrigin,
     gridOverlayStep,
     gridWidth,
@@ -139,8 +142,14 @@ export function renderDisplayCanvas(options: {
     displayTraceAsset.width > 0 &&
     displayTraceAsset.height > 0
   ) {
+    const renderTrace = displayTraceOverride
+      ? {
+          ...displayTrace,
+          ...displayTraceOverride,
+        }
+      : displayTrace;
     const displaySize = getTraceDisplaySize(
-      displayTrace,
+      renderTrace,
       displayTraceAsset.width,
       displayTraceAsset.height,
     );
@@ -151,15 +160,15 @@ export function renderDisplayCanvas(options: {
       metrics.surfaceHeight,
     );
     const cropRect = getTraceAssetCropRect(
-      displayTrace,
+      renderTrace,
       displayTraceAsset.width,
       displayTraceAsset.height,
     );
     const bounds = getPositionedBounds(baseRect, {
-      offsetX: displayTrace.offsetX,
-      offsetY: displayTrace.offsetY,
-      scale: displayTrace.scale,
-      rotation: displayTrace.rotation,
+      offsetX: renderTrace.offsetX,
+      offsetY: renderTrace.offsetY,
+      scale: renderTrace.scale,
+      rotation: renderTrace.rotation,
     });
     const traceRect = snapRectToDevicePixels(
       {
@@ -172,9 +181,9 @@ export function renderDisplayCanvas(options: {
     );
 
     context.save();
-    context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
+    context.globalAlpha = Math.min(Math.max(renderTrace.opacity, 0), 1);
     context.translate(traceRect.x + traceRect.width / 2, traceRect.y + traceRect.height / 2);
-    context.rotate((displayTrace.rotation * Math.PI) / 180);
+    context.rotate((renderTrace.rotation * Math.PI) / 180);
     context.drawImage(
       displayTraceAsset.image,
       cropRect.cropX,

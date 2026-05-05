@@ -17,6 +17,7 @@ import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewpo
 import type {
   SavedEditorV2DocumentRecord,
 } from "../../../app/editorV2ServerPersistence";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -81,6 +82,7 @@ interface EditorSidebarProps {
   textViewportCenter: WorldPoint | null;
   textViewportWidth: number | null;
   textViewportHeight: number | null;
+  onPreviewCropChange?: (crop: TraceCropRect | null) => void;
 }
 
 export function EditorSidebar({
@@ -139,6 +141,7 @@ export function EditorSidebar({
   textViewportCenter,
   textViewportWidth,
   textViewportHeight,
+  onPreviewCropChange,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
@@ -313,13 +316,14 @@ export function EditorSidebar({
           ) : null}
 
           {activeSection === "trace" ? (
-            <TracePanelPage
-              dispatch={dispatch}
-              grid={document.grid}
-              gridMetrics={gridMetrics}
-              palette={palette}
-              repositionActive={traceRepositionActive}
-              repositionOrigin={traceRepositionOrigin}
+              <TracePanelPage
+                dispatch={dispatch}
+                grid={document.grid}
+                gridMetrics={gridMetrics}
+                onPreviewCropChange={onPreviewCropChange}
+                palette={palette}
+                repositionActive={traceRepositionActive}
+                repositionOrigin={traceRepositionOrigin}
               trace={trace}
             />
           ) : null}

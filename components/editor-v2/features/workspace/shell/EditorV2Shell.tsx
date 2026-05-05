@@ -42,6 +42,7 @@ import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/edi
 import type {
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
@@ -320,6 +321,7 @@ export function EditorV2Shell({
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -338,6 +340,10 @@ export function EditorV2Shell({
   const [selectedVersionHistoryId, setSelectedVersionHistoryId] = useState<"current" | string>(
     () => versionPreviewMeta?.versionId ?? "current",
   );
+
+  useEffect(() => {
+    setTracePreviewCrop(null);
+  }, [trace?.previewUrl]);
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -2318,6 +2324,7 @@ export function EditorV2Shell({
                     onStartOver={onStartOver}
                     previewMode={previewMode}
                     previewModeDisabled={previewModeDisabled}
+                    onPreviewCropChange={setTracePreviewCrop}
                     trace={trace}
                     traceRepositionActive={traceRepositionActive}
                     traceRepositionOrigin={traceRepositionOrigin}
@@ -2440,6 +2447,7 @@ export function EditorV2Shell({
                     showRuler={showRuler}
                     showSymbols={showSymbols}
                     state={state}
+                    traceDisplayOverride={tracePreviewCrop}
                     zoomAnchor={zoomAnchor}
                   />
                 </div>

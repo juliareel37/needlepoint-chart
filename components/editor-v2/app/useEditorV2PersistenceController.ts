@@ -99,6 +99,8 @@ export function useEditorV2PersistenceController({
   const lastSerializedHashRef = useRef<string | null>(
     initialLocalSnapshot?.serializedHash ?? null,
   );
+  const lastObservedPersistableHashRef = useRef<string | null>(null);
+  const lastAutosaveProcessedHashRef = useRef<string | null>(null);
   const dirtyChunksRef = useRef(new Set(initialLocalSnapshot?.dirtyChunks ?? []));
   const localFlushTimerRef = useRef<number | null>(null);
   const serverFlushTimerRef = useRef<number | null>(null);
@@ -152,6 +154,8 @@ export function useEditorV2PersistenceController({
 
     const document = getPersistableEditorDocument(store.getState());
     const { hash } = computeSerializedDocumentHash(document);
+    lastObservedPersistableHashRef.current = hash;
+    lastAutosaveProcessedHashRef.current = hash;
     setHasPersistableUnsavedChanges(hash !== lastSerializedHashRef.current);
   }, [initialLocalSnapshot]);
 
@@ -159,6 +163,7 @@ export function useEditorV2PersistenceController({
     return store.subscribe((nextState) => {
       const document = getPersistableEditorDocument(nextState);
       const { hash } = computeSerializedDocumentHash(document);
+      lastObservedPersistableHashRef.current = hash;
       setHasPersistableUnsavedChanges(hash !== lastSerializedHashRef.current);
     });
   }, [store]);
@@ -257,6 +262,8 @@ export function useEditorV2PersistenceController({
         setSyncStatus("saved");
         dirtyChunksRef.current.clear();
         lastSerializedHashRef.current = hash;
+        lastObservedPersistableHashRef.current = hash;
+        lastAutosaveProcessedHashRef.current = hash;
         setHasPersistableUnsavedChanges(false);
       } else {
         setSyncStatus("saved");
@@ -389,11 +396,10 @@ export function useEditorV2PersistenceController({
       const nextHash = computeSerializedDocumentHash(
         getPersistableEditorDocument(nextState),
       ).hash;
-      const prevHash = computeSerializedDocumentHash(
-        getPersistableEditorDocument(prevState),
-      ).hash;
+      const previousProcessedHash = lastAutosaveProcessedHashRef.current;
+      lastAutosaveProcessedHashRef.current = nextHash;
 
-      if (nextHash === prevHash) {
+      if (previousProcessedHash !== null && nextHash === previousProcessedHash) {
         return;
       }
 

@@ -8,6 +8,7 @@ import type {
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import { TraceControls } from "../TraceControls";
 import styles from "../EditorV2Shell.module.css";
 
@@ -15,6 +16,7 @@ interface TracePanelPageProps {
   dispatch: EditorStore["dispatch"];
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
+  onPreviewCropChange?: (crop: TraceCropRect | null) => void;
   palette: PaletteColor[];
   repositionActive: boolean;
   repositionOrigin: TraceRepositionOrigin | null;
@@ -25,6 +27,7 @@ export function TracePanelPage({
   dispatch,
   grid,
   gridMetrics,
+  onPreviewCropChange,
   palette,
   repositionActive,
   repositionOrigin,
@@ -37,6 +40,7 @@ export function TracePanelPage({
           dispatch={dispatch}
           grid={grid}
           gridMetrics={gridMetrics}
+          onPreviewCropChange={onPreviewCropChange}
           palette={palette}
           repositionActive={repositionActive}
           repositionOrigin={repositionOrigin}
