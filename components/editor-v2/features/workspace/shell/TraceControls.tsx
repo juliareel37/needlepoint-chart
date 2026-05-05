@@ -478,22 +478,6 @@ export function TraceControls({
               <span className={styles.traceAttachmentThumbFrame}>
                 {traceUploadStatus === "uploading" ? (
                   <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                ) : positioningEnabled ? (
-                  <span
-                    aria-hidden="true"
-                    className={styles.traceAttachmentThumbOverlay}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "var(--surface-subtle, rgba(148, 163, 184, 0.14))",
-                      opacity: 1,
-                    }}
-                  >
-                    <ButtonIcon icon="/icons/lucide/image.svg" />
-                  </span>
                 ) : (
                   <>
                     <img
