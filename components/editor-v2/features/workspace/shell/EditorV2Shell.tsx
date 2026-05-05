@@ -1270,23 +1270,13 @@ export function EditorV2Shell({
       return;
     }
 
-    if (!isBottomPanelLayout && activeSidebarSection !== "trace") {
-      dispatch(createSetActiveSidebarSectionCommand("trace"));
-    }
-
     if (isBottomPanelLayout) {
       if (!mobileTraceRepositionWasActiveRef.current && !sidebarCollapsed) {
         dispatch(createSetSidebarCollapsedCommand(true));
       }
       mobileTraceRepositionWasActiveRef.current = true;
-      return;
-    }
-
-    if (sidebarCollapsed) {
-      dispatch(createSetSidebarCollapsedCommand(false));
     }
   }, [
-    activeSidebarSection,
     dispatch,
     isBottomPanelLayout,
     sidebarCollapsed,

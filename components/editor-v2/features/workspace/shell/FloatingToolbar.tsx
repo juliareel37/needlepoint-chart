@@ -1298,7 +1298,6 @@ export function FloatingToolbar({
                     aria-label="Reposition trace"
                     title="Reposition trace"
                     onClick={() => {
-                      openSidebarSection("trace");
                       closeImageMenu();
                       dispatch(
                         createBeginTraceRepositionCommand("toolbar"),
