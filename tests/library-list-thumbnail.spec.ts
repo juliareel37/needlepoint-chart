@@ -5,7 +5,7 @@ test("list thumbnail keeps painted content scaled within the canvas", async ({
 }) => {
   await page.goto("/dev/library-thumbnail-preview?mode=list");
 
-  const thumbnail = page.getByTestId("list-thumbnail-grid-preview-test");
+  const thumbnail = page.getByTestId("list-thumbnail-grid-preview-test-1");
   await expect(thumbnail).toBeVisible();
 
   const contentBounds = await thumbnail.locator("canvas").evaluate((node) => {

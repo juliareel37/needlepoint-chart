@@ -27,6 +27,21 @@ function createScratchCanvas(width: number, height: number) {
   return canvas;
 }
 
+function getMeasurementSize(element: HTMLElement) {
+  const computedStyle = window.getComputedStyle(element);
+  const paddingX =
+    parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight);
+  const paddingY =
+    parseFloat(computedStyle.paddingTop) + parseFloat(computedStyle.paddingBottom);
+  const width = element.clientWidth - paddingX;
+  const height = element.clientHeight - paddingY;
+
+  return {
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+  };
+}
+
 export function StitchThumbnailCanvas({
   snapshot,
   traceThumbnailUrl,
@@ -111,9 +126,9 @@ export function StitchThumbnailCanvas({
         return;
       }
 
-      const surfaceBounds = currentSurface.getBoundingClientRect();
-      const surfaceWidth = Math.max(1, Math.round(surfaceBounds.width));
-      const surfaceHeight = Math.max(1, Math.round(surfaceBounds.height));
+      const measurementElement = currentSurface.parentElement ?? currentSurface;
+      const { width: surfaceWidth, height: surfaceHeight } =
+        getMeasurementSize(measurementElement);
       const thumbnailSurface = snapshot
         ? getContainedRect(
             snapshot.width,
@@ -328,10 +343,67 @@ export function StitchThumbnailCanvas({
     };
 
     render();
-    const observer = new ResizeObserver(() => render());
-    observer.observe(surface);
+    let resizeTimeoutId: number | null = null;
+    let animationFrameId: number | null = null;
+    let lastMeasuredWidth = -1;
+    let lastMeasuredHeight = -1;
 
-    return () => observer.disconnect();
+    const renderOnNextFrame = () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        render();
+      });
+    };
+
+    const scheduleSettledRender = () => {
+      if (resizeTimeoutId !== null) {
+        window.clearTimeout(resizeTimeoutId);
+      }
+
+      resizeTimeoutId = window.setTimeout(() => {
+        resizeTimeoutId = null;
+        renderOnNextFrame();
+      }, 140);
+    };
+
+    const measurementElement = surface.parentElement ?? surface;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextWidth = Math.round(entry?.contentRect.width ?? 0);
+      const nextHeight = Math.round(entry?.contentRect.height ?? 0);
+
+      if (nextWidth === lastMeasuredWidth && nextHeight === lastMeasuredHeight) {
+        return;
+      }
+
+      lastMeasuredWidth = nextWidth;
+      lastMeasuredHeight = nextHeight;
+      renderOnNextFrame();
+      scheduleSettledRender();
+    });
+    observer.observe(measurementElement);
+
+    const handleWindowResize = () => {
+      scheduleSettledRender();
+    };
+    window.addEventListener("resize", handleWindowResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", handleWindowResize);
+
+      if (resizeTimeoutId !== null) {
+        window.clearTimeout(resizeTimeoutId);
+      }
+
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [backgroundColor, snapshot, tracePlacement, traceThumbnailUrl]);
 
   return (

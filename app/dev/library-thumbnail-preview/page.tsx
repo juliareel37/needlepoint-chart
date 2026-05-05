@@ -28,27 +28,33 @@ function createTallSnapshotCells() {
   return cells;
 }
 
-const TEST_DESIGN: LibraryDesignRecord = {
-  id: "grid-preview-test",
-  state: "active",
-  title: "Tall Preview Test",
-  gridWidth: GRID_WIDTH,
-  gridHeight: GRID_HEIGHT,
-  createdAt: "2026-04-30T12:00:00.000Z",
-  updatedAt: "2026-04-30T12:00:00.000Z",
-  updatedLabel: "Edited just now",
-  deletedAt: null,
-  purgeAfterAt: null,
-  colorCount: 2,
-  previewUrl: null,
-  thumbnailUrl: null,
-  tracePlacement: null,
-  stitchSnapshot: {
-    width: GRID_WIDTH,
-    height: GRID_HEIGHT,
-    cells: createTallSnapshotCells(),
-  },
-};
+function createTestDesign(id: string, title: string): LibraryDesignRecord {
+  return {
+    id,
+    state: "active",
+    title,
+    gridWidth: GRID_WIDTH,
+    gridHeight: GRID_HEIGHT,
+    createdAt: "2026-04-30T12:00:00.000Z",
+    updatedAt: "2026-04-30T12:00:00.000Z",
+    updatedLabel: "Edited just now",
+    deletedAt: null,
+    purgeAfterAt: null,
+    colorCount: 2,
+    previewUrl: null,
+    thumbnailUrl: null,
+    tracePlacement: null,
+    stitchSnapshot: {
+      width: GRID_WIDTH,
+      height: GRID_HEIGHT,
+      cells: createTallSnapshotCells(),
+    },
+  };
+}
+
+const TEST_DESIGNS: LibraryDesignRecord[] = Array.from({ length: 8 }, (_, index) =>
+  createTestDesign(`grid-preview-test-${index + 1}`, `Tall Preview Test ${index + 1}`),
+);
 
 export default async function LibraryThumbnailPreviewPage({
   searchParams,
@@ -62,8 +68,8 @@ export default async function LibraryThumbnailPreviewPage({
   return (
     <main style={{ minHeight: "100vh", padding: "32px", background: "#f4f0ea" }}>
       <LibraryPageClient
-        initialDesigns={[TEST_DESIGN]}
-        initialTotalCount={1}
+        initialDesigns={TEST_DESIGNS}
+        initialTotalCount={TEST_DESIGNS.length}
         initialHasMore={false}
         initialNextOffset={null}
         deferInitialLoad={false}
