@@ -88,7 +88,7 @@
 
 .viewRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 14px;
   row-gap: 12px;
@@ -230,28 +230,17 @@
   cursor: default;
 }
 
-.viewSummary {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  color: var(--text-secondary);
-}
-
-.viewSummaryLabel,
-.viewSummaryCount {
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 700;
-}
-
-.viewSummaryLabel {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .viewToggle {
   width: auto;
+  justify-self: start;
+}
+
+.collectionToggle {
+  justify-self: start;
+}
+
+.layoutToggle {
+  justify-self: start;
 }
 
 .viewControlsDividerKeep {
@@ -265,6 +254,7 @@
   display: inline-flex;
   align-items: center;
   min-width: 0;
+  justify-self: end;
 }
 
 .sortDropdown {
@@ -1026,7 +1016,7 @@
   .viewRow {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "summary menu"
+      "menu menu"
       "sort toggle";
     align-items: center;
     row-gap: 24px;
@@ -1059,22 +1049,22 @@
     column-gap: 12px;
   }
 
-  .viewSummary {
-    grid-area: summary;
-  }
-
   .sortControl {
     grid-area: sort;
     justify-self: start;
   }
 
-  .viewToggle {
+  .layoutToggle {
     grid-area: toggle;
     justify-self: end;
   }
 
   .viewControlsDividerKeep {
     display: none;
+  }
+
+  .collectionToggle {
+    justify-self: start;
   }
 }
 
@@ -1250,11 +1240,6 @@
 }
 
 @media (max-width: 480px) {
-  .viewSummary {
-    width: 100%;
-    align-items: center;
-  }
-
   .viewRow {
     column-gap: 10px;
   }

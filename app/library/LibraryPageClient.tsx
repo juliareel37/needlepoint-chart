@@ -84,6 +84,13 @@ type UndoTrashState = {
   designIds: string[];
   count: number;
 };
+type PendingPermanentDeletion = {
+  designIds: string[];
+  previousDesigns: LibraryDesignRecord[];
+  previousTotalCount: number;
+  previousDeletedCount: number;
+  count: number;
+};
 type NavigableDesignClickEvent = Pick<
   MouseEvent,
   "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "preventDefault"
@@ -188,6 +195,8 @@ export function LibraryPageClient({
   const [successNotification, setSuccessNotification] =
     useState<LibrarySuccessNotification | null>(null);
   const [undoTrashState, setUndoTrashState] = useState<UndoTrashState | null>(null);
+  const [pendingPermanentDeletion, setPendingPermanentDeletion] =
+    useState<PendingPermanentDeletion | null>(null);
   const [pendingCardAction, setPendingCardAction] = useState<{
     designId: string;
     action: CardMenuAction;
@@ -198,6 +207,8 @@ export function LibraryPageClient({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const designOpenTimeoutRef = useRef<number | null>(null);
   const touchMenuInteractionBlockUntilRef = useRef(0);
+  const pendingPermanentDeletionTimeoutRef = useRef<number | null>(null);
+  const pendingPermanentDeletionRef = useRef<PendingPermanentDeletion | null>(null);
 
   const loadingCards = useMemo(
     () => Array.from({ length: LOADING_CARD_COUNT }, (_, index) => index),
@@ -342,6 +353,9 @@ export function LibraryPageClient({
       if (designOpenTimeoutRef.current !== null) {
         window.clearTimeout(designOpenTimeoutRef.current);
       }
+      if (pendingPermanentDeletionTimeoutRef.current !== null) {
+        window.clearTimeout(pendingPermanentDeletionTimeoutRef.current);
+      }
     },
     [],
   );
@@ -397,6 +411,10 @@ export function LibraryPageClient({
       setTouchSelectionMode(false);
     }
   }, [touchPrimaryInput, touchSelectionMode]);
+
+  useEffect(() => {
+    pendingPermanentDeletionRef.current = pendingPermanentDeletion;
+  }, [pendingPermanentDeletion]);
 
   useEffect(() => {
     if (!initialNotice) {
@@ -728,6 +746,70 @@ export function LibraryPageClient({
     });
   }
 
+  function restoreDesignSnapshot(previousDesigns: LibraryDesignRecord[]) {
+    setDesigns((current) => {
+      const snapshotIds = new Set(previousDesigns.map((design) => design.id));
+      const extras = current.filter((design) => !snapshotIds.has(design.id));
+      return [...previousDesigns, ...extras];
+    });
+  }
+
+  function clearPendingPermanentDeletionTimeout() {
+    if (pendingPermanentDeletionTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(pendingPermanentDeletionTimeoutRef.current);
+    pendingPermanentDeletionTimeoutRef.current = null;
+  }
+
+  async function commitPendingPermanentDeletion(
+    nextPendingPermanentDeletion: PendingPermanentDeletion,
+  ) {
+    await Promise.all(
+      nextPendingPermanentDeletion.designIds.map((designId) =>
+        deleteSavedEditorV2Document(designId, { permanent: true }),
+      ),
+    );
+  }
+
+  function schedulePendingPermanentDeletion(
+    nextPendingPermanentDeletion: PendingPermanentDeletion,
+    notification: LibrarySuccessNotification,
+  ) {
+    clearPendingPermanentDeletionTimeout();
+    setPendingPermanentDeletion(nextPendingPermanentDeletion);
+    setSuccessNotification(notification);
+    pendingPermanentDeletionTimeoutRef.current = window.setTimeout(() => {
+      const currentPendingPermanentDeletion = pendingPermanentDeletionRef.current;
+
+      if (!currentPendingPermanentDeletion) {
+        return;
+      }
+
+      void commitPendingPermanentDeletion(currentPendingPermanentDeletion)
+        .then(() => {
+          setPendingPermanentDeletion(null);
+          setSuccessNotification(null);
+        })
+        .catch((error) => {
+          restoreDesignSnapshot(currentPendingPermanentDeletion.previousDesigns);
+          setTotalCount(currentPendingPermanentDeletion.previousTotalCount);
+          setDeletedCount(currentPendingPermanentDeletion.previousDeletedCount);
+          setPendingPermanentDeletion(null);
+          setSuccessNotification(null);
+          setCardActionError(
+            error instanceof Error
+              ? error.message
+              : "Couldn't permanently delete design.",
+          );
+        })
+        .finally(() => {
+          clearPendingPermanentDeletionTimeout();
+        });
+    }, 5000);
+  }
+
   async function handleUndoTrash() {
     if (!undoTrashState) {
       return;
@@ -760,7 +842,40 @@ export function LibraryPageClient({
     }
   }
 
+  function handleUndoPendingPermanentDeletion() {
+    const currentPendingPermanentDeletion = pendingPermanentDeletionRef.current;
+
+    if (!currentPendingPermanentDeletion) {
+      return;
+    }
+
+    clearPendingPermanentDeletionTimeout();
+    restoreDesignSnapshot(currentPendingPermanentDeletion.previousDesigns);
+    setTotalCount(currentPendingPermanentDeletion.previousTotalCount);
+    setDeletedCount(currentPendingPermanentDeletion.previousDeletedCount);
+    setPendingPermanentDeletion(null);
+    setSuccessNotification(null);
+  }
+
   function handleDismissSuccessNotification() {
+    if (pendingPermanentDeletionRef.current) {
+      const currentPendingPermanentDeletion = pendingPermanentDeletionRef.current;
+      clearPendingPermanentDeletionTimeout();
+      setPendingPermanentDeletion(null);
+      setSuccessNotification(null);
+      void commitPendingPermanentDeletion(currentPendingPermanentDeletion).catch((error) => {
+        restoreDesignSnapshot(currentPendingPermanentDeletion.previousDesigns);
+        setTotalCount(currentPendingPermanentDeletion.previousTotalCount);
+        setDeletedCount(currentPendingPermanentDeletion.previousDeletedCount);
+        setCardActionError(
+          error instanceof Error
+            ? error.message
+            : "Couldn't permanently delete design.",
+        );
+      });
+      return;
+    }
+
     setUndoTrashState(null);
     setSuccessNotification(null);
   }
@@ -804,27 +919,34 @@ export function LibraryPageClient({
         return;
       }
 
-      await Promise.all(
-        idsToDelete.map((designId) =>
-          deleteSavedEditorV2Document(designId, { permanent: true }),
-        ),
-      );
+      const previousDesigns = designs;
+      const previousTotalCount = totalCount;
+      const previousDeletedCount = deletedCount;
       setDesigns((existing) => existing.filter((design) => !idsToDelete.includes(design.id)));
       setSelectedDesignIds(new Set<string>());
       setTotalCount((current) => Math.max(0, current - idsToDelete.length));
       setDeletedCount((current) => Math.max(0, current - idsToDelete.length));
       setUndoTrashState(null);
       setDeleteConfirmation(null);
-      setSuccessNotification({
-        title:
-          idsToDelete.length === 1
-            ? "Design permanently deleted"
-            : `${idsToDelete.length} designs permanently deleted`,
-        description:
-          idsToDelete.length === 1
-            ? "The design was removed from Recently Deleted."
-            : "The selected designs were removed from Recently Deleted.",
-      });
+      schedulePendingPermanentDeletion(
+        {
+          designIds: idsToDelete,
+          previousDesigns,
+          previousTotalCount,
+          previousDeletedCount,
+          count: idsToDelete.length,
+        },
+        {
+          title:
+            idsToDelete.length === 1
+              ? "Deleting permanently..."
+              : `Deleting ${idsToDelete.length} designs permanently...`,
+          description:
+            idsToDelete.length === 1
+              ? "This design will be permanently removed in a few seconds."
+              : "These designs will be permanently removed in a few seconds.",
+        },
+      );
       return;
     } catch (error) {
       setCardActionError(
@@ -975,7 +1097,7 @@ export function LibraryPageClient({
         <div className={styles.viewRow}>
           <SegmentedControl<LibraryCollectionView>
             ariaLabel="Design collection view"
-            className={styles.viewToggle}
+            className={`${styles.viewToggle} ${styles.collectionToggle}`}
             itemClassName={styles.viewToggleItem}
             value={collectionView}
             onChange={(value) => {
@@ -995,12 +1117,6 @@ export function LibraryPageClient({
               },
             ]}
           />
-          <div className={styles.viewSummary}>
-            <span className={styles.viewSummaryLabel}>
-              {collectionView === "deleted" ? "Recently Deleted" : "All Designs"}
-            </span>
-            <span className={styles.viewSummaryCount}>({totalCount})</span>
-          </div>
           <div className={styles.sortControl}>
             <SingleSelectDropdown<SortOption>
               ariaLabel="Sort designs"
@@ -1033,7 +1149,7 @@ export function LibraryPageClient({
           />
           <SegmentedControl<LibraryViewMode>
             ariaLabel="Design library view"
-            className={styles.viewToggle}
+            className={`${styles.viewToggle} ${styles.layoutToggle}`}
             itemClassName={styles.viewToggleItem}
             value={viewMode}
             onChange={setViewMode}
@@ -1609,9 +1725,15 @@ export function LibraryPageClient({
               tone="success"
               title={successNotification.title}
               description={successNotification.description}
-              actionLabel={undoTrashState ? "Undo" : undefined}
-              actionVariant={undoTrashState ? "outlined" : undefined}
-              onAction={undoTrashState ? handleUndoTrash : undefined}
+              actionLabel={undoTrashState || pendingPermanentDeletion ? "Undo" : undefined}
+              actionVariant={undoTrashState || pendingPermanentDeletion ? "outlined" : undefined}
+              onAction={
+                pendingPermanentDeletion
+                  ? handleUndoPendingPermanentDeletion
+                  : undoTrashState
+                    ? handleUndoTrash
+                    : undefined
+              }
               onDismiss={handleDismissSuccessNotification}
             />
           </div>
