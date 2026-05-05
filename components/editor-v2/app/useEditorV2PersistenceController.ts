@@ -31,6 +31,7 @@ const MANUAL_SAVE_BUTTON_SUCCESS_DURATION_MS = 2500;
 export interface EditorV2PersistenceUiState {
   saveButtonState: "idle" | "saving" | "saved";
   saveMessage: string;
+  lastSaveConfirmedAt: number | null;
   recoveredLocalChanges: boolean;
   degradedLocalRecovery: boolean;
   syncStatus: AutosaveSyncStatus;
@@ -76,6 +77,7 @@ export function useEditorV2PersistenceController({
   const [saveMessage, setSaveMessage] = useState<string>(
     initialRecoveredLocalChanges ? "Local recovery active" : "",
   );
+  const [lastSaveConfirmedAt, setLastSaveConfirmedAt] = useState<number | null>(null);
   const [recoveredLocalChanges, setRecoveredLocalChanges] = useState(
     initialRecoveredLocalChanges,
   );
@@ -236,6 +238,8 @@ export function useEditorV2PersistenceController({
       );
 
       if (sequenceId >= latestLocalSequenceIdRef.current) {
+        const confirmationTime = Date.now();
+
         dispatch(
           createApplyProjectServerStateCommand({
             id: result.storageId,
@@ -246,15 +250,9 @@ export function useEditorV2PersistenceController({
         );
         setSaveButtonState("saved");
         setSaveMessage(
-          `${forceVersion
-            ? MANUAL_VERSION_SNAPSHOT_SUCCESS_PREFIX
-            : reason === "autosave"
-              ? AUTOSAVE_SUCCESS_PREFIX
-              : "Saved at "}${new Date(result.updatedAt).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          })}`,
+          buildSaveConfirmationMessage(reason, confirmationTime, forceVersion),
         );
+        setLastSaveConfirmedAt(confirmationTime);
         setRecoveredLocalChanges(false);
         setSyncStatus("saved");
         dirtyChunksRef.current.clear();
@@ -286,10 +284,15 @@ export function useEditorV2PersistenceController({
 
       if (
         !forceSave &&
-        reason === "autosave" &&
+        storageIdRef.current &&
         hash === lastSerializedHashRef.current &&
         sequenceId <= latestSyncAppliedSequenceIdRef.current
       ) {
+        const confirmationTime = Date.now();
+        setSaveButtonState("saved");
+        setSaveMessage(buildSaveConfirmationMessage(reason, confirmationTime, false));
+        setLastSaveConfirmedAt(confirmationTime);
+        setSyncStatus("saved");
         return;
       }
 
@@ -361,7 +364,7 @@ export function useEditorV2PersistenceController({
     }
 
     await flushLocalSnapshot();
-    await performServerSave("manual", { forceSave: true });
+    await performServerSave("manual");
   }, [flushLocalSnapshot, isVersionHistoryMode, isVersionPreview, performServerSave]);
 
   const handleManualVersionSnapshot = useCallback(async () => {
@@ -524,6 +527,7 @@ export function useEditorV2PersistenceController({
     () => ({
       saveButtonState,
       saveMessage,
+      lastSaveConfirmedAt,
       recoveredLocalChanges,
       degradedLocalRecovery,
       syncStatus,
@@ -532,6 +536,7 @@ export function useEditorV2PersistenceController({
     [
       degradedLocalRecovery,
       hasPersistableUnsavedChanges,
+      lastSaveConfirmedAt,
       recoveredLocalChanges,
       saveButtonState,
       saveMessage,
@@ -544,6 +549,21 @@ export function useEditorV2PersistenceController({
     handleManualSave,
     handleManualVersionSnapshot,
   };
+}
+
+function buildSaveConfirmationMessage(
+  reason: "manual" | "autosave",
+  confirmedAt: number,
+  forceVersion: boolean,
+): string {
+  return `${forceVersion
+    ? MANUAL_VERSION_SNAPSHOT_SUCCESS_PREFIX
+    : reason === "autosave"
+      ? AUTOSAVE_SUCCESS_PREFIX
+      : "Saved at "}${new Date(confirmedAt).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 }
 
 function shouldFlushImmediatelyForPatches(patches: DocumentPatch[]): boolean {

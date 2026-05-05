@@ -1610,7 +1610,7 @@ export function EditorV2Shell({
     }
 
     if (value === "save-version") {
-      if (!hasPersistableUnsavedChanges) {
+      if (saveButtonState === "saving") {
         return;
       }
       void onSaveVersionSnapshot();
@@ -2620,8 +2620,7 @@ function HeaderFileMenu({
   function getItemDisabled(item: HeaderFileMenuItem) {
     return (
       item.kind === "divider" ||
-      (item.id === "save-version" &&
-        (saveButtonState === "saving" || !hasPersistableUnsavedChanges)) ||
+      (item.id === "save-version" && saveButtonState === "saving") ||
       (item.id === "version-history" &&
         hasSavedDesignAccess &&
         !currentStorageId) ||
@@ -2885,7 +2884,8 @@ function getSaveStatusState(
 
   if (
     saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
-    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX)
+    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(VERSION_SAVE_SUCCESS_PREFIX)
   ) {
     return "saved";
   }
