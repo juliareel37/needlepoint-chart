@@ -2641,6 +2641,7 @@ export function EditorV2Shell({
                         activeColor={activeColor}
                         activeColorId={activeColorId}
                         activeTool={activeTool}
+                        activeSidebarSection={activeSidebarSection}
                         brushSize={brushSize}
                         canRedo={canRedoFromToolbar}
                         canUndo={canUndoFromToolbar}
@@ -2653,6 +2654,7 @@ export function EditorV2Shell({
                         selectionCommitted={selectionCommitted}
                         selectionMode={state.session.selection.mode}
                         selectionShape={state.session.selection.shape}
+                        sidebarCollapsed={sidebarCollapsed}
                         trace={trace}
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}

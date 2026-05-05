@@ -20,6 +20,7 @@ import {
 } from "@/components/design-system";
 import type {
   ActiveTool,
+  EditorSidebarSection,
   EditorStore,
   GridPoint,
   GridRect,
@@ -287,6 +288,8 @@ interface FloatingToolbarProps {
   selectionCommitted: boolean;
   selectionMode: SelectionState["mode"];
   selectionShape: SelectionState["shape"];
+  activeSidebarSection: EditorSidebarSection;
+  sidebarCollapsed: boolean;
   trace: TraceDocument | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
@@ -311,6 +314,8 @@ export function FloatingToolbar({
   selectionCommitted,
   selectionMode,
   selectionShape,
+  activeSidebarSection,
+  sidebarCollapsed,
   trace,
   mirrorSessionActive,
   isBottomPanelLayout,
@@ -358,6 +363,7 @@ export function FloatingToolbar({
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
+  const traceSidebarOpen = !sidebarCollapsed && activeSidebarSection === "trace";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK && isBottomPanelLayout && (selectionVisible || selectOpen);
@@ -1268,11 +1274,15 @@ export function FloatingToolbar({
               {trace ? (
                 <>
                   <ToolbarButton
-                  labelled
+                    labelled
+                    popoverTrigger
                     type="button"
+                    active={traceSidebarOpen}
+                    inertWhenActive
+                    aria-pressed={traceSidebarOpen}
                     onClick={() => {
                       openSidebarSection("trace");
-                      closeImageMenu();
+                      // closeImageMenu();
                     }}
                   >
                     <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
