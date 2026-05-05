@@ -20,7 +20,7 @@ import {
 } from "@/components/design-system";
 import { TEXT_FONT_OPTIONS } from "@/lib/editor-v2/editor/text/textFontOptions";
 import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
-import { convertTextPlacementToCells } from "@/lib/editor-v2/editor/text/convertTextPlacementToCells";
+import { convertTextPlacementToPaintGroups } from "@/lib/editor-v2/editor/text/convertTextPlacementToCells";
 import type {
   EditorStore,
   GridDocument,
@@ -39,7 +39,7 @@ import {
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
 import {
-  countOverwrittenGridCells,
+  countOverwrittenPaintGroupCells,
   getConversionSubjectLabel,
   shouldShowOverwriteWarning,
   suppressOverwriteWarningForOneDay,
@@ -186,15 +186,22 @@ export function TextPlacementToolbar({
   symbolAssignments,
 }: TextPlacementToolbarProps) {
   const [colorLibraryOpen, setColorLibraryOpen] = useState(false);
-  const [pendingCells, setPendingCells] = useState<Array<{ x: number; y: number }> | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [pendingGroups, setPendingGroups] = useState<Awaited<
+    ReturnType<typeof convertTextPlacementToPaintGroups>
+  > | null>(null);
   const [overwriteCount, setOverwriteCount] = useState(0);
   const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const bold = placement.fontWeight >= 700;
   const italic = placement.fontStyle === "italic";
   const underline = placement.underline;
-  const canConvert = Boolean(activeColorId);
+  const canConvert = !isConverting && palette.length > 0;
   const conversionSubject = getConversionSubjectLabel("text");
+  const paletteById = palette.reduce<Record<string, PaletteColor>>((accumulator, color) => {
+    accumulator[color.id] = color;
+    return accumulator;
+  }, {});
 
   function updatePlacementStyle(next: {
     fontFamily?: string;
@@ -225,34 +232,56 @@ export function TextPlacementToolbar({
     );
   }
 
-  function applyConvertedCells(cells: Array<{ x: number; y: number }>) {
-    if (!activeColorId || cells.length === 0) {
+  function applyConvertedGroups(
+    groups: Awaited<ReturnType<typeof convertTextPlacementToPaintGroups>>,
+  ) {
+    if (groups.length === 0) {
       return;
     }
 
-    dispatch(createPaintCellsCommand(activeColorId, cells));
+    const conversionTransactionKey = `text-convert-${Date.now()}`;
+
+    for (const group of groups) {
+      if (group.cells.length === 0) {
+        continue;
+      }
+
+      dispatch(createPaintCellsCommand(group.colorId, group.cells, conversionTransactionKey));
+    }
+
     dispatch(createCancelTextPlacementCommand());
   }
 
-  function handleConvert() {
-    if (!activeColorId) {
+  async function handleConvert() {
+    if (isConverting || palette.length === 0) {
       return;
     }
 
-    const cells = convertTextPlacementToCells(placement, gridMetrics);
-    if (cells.length === 0) {
-      return;
-    }
+    setIsConverting(true);
+    try {
+      const groups = await convertTextPlacementToPaintGroups(
+        placement,
+        gridMetrics,
+        activeColorId,
+        paletteById,
+        activeColorHex ?? "#111827",
+      );
+      if (groups.length === 0) {
+        return;
+      }
 
-    const nextOverwriteCount = countOverwrittenGridCells(grid, cells);
-    if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
-      setPendingCells(cells);
-      setOverwriteCount(nextOverwriteCount);
-      setSkipWarningForOneDay(false);
-      return;
-    }
+      const nextOverwriteCount = countOverwrittenPaintGroupCells(grid, groups);
+      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+        setPendingGroups(groups);
+        setOverwriteCount(nextOverwriteCount);
+        setSkipWarningForOneDay(false);
+        return;
+      }
 
-    applyConvertedCells(cells);
+      applyConvertedGroups(groups);
+    } finally {
+      setIsConverting(false);
+    }
   }
 
   return (
@@ -394,14 +423,16 @@ export function TextPlacementToolbar({
             iconOnly
             className={styles.selectionToolbarCloseButton}
             disabled={!canConvert}
-            onClick={handleConvert}
+            onClick={() => {
+              void handleConvert();
+            }}
           >
             <ToolbarIcon icon="/icons/lucide/check.svg" />
           </ToolbarButton>
         </Toolbar>
       </div>
       <Modal
-        isOpen={pendingCells !== null}
+        isOpen={pendingGroups !== null}
         title="Heads up!"
         description={(
           <div style={{ display: "grid", gap: 12 }}>
@@ -425,7 +456,7 @@ export function TextPlacementToolbar({
         dismissLabel="Cancel"
         confirmLabel="Apply anyway"
         onDismiss={() => {
-          setPendingCells(null);
+          setPendingGroups(null);
           setOverwriteCount(0);
           setSkipWarningForOneDay(false);
         }}
@@ -433,10 +464,10 @@ export function TextPlacementToolbar({
           if (skipWarningForOneDay) {
             suppressOverwriteWarningForOneDay();
           }
-          if (pendingCells) {
-            applyConvertedCells(pendingCells);
+          if (pendingGroups) {
+            applyConvertedGroups(pendingGroups);
           }
-          setPendingCells(null);
+          setPendingGroups(null);
           setOverwriteCount(0);
           setSkipWarningForOneDay(false);
         }}
