@@ -1275,7 +1275,6 @@ export function FloatingToolbar({
                 <>
                   <ToolbarButton
                     labelled
-                    popoverTrigger
                     type="button"
                     active={traceSidebarOpen}
                     inertWhenActive

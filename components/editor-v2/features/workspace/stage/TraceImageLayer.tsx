@@ -84,6 +84,8 @@ export function TraceImageLayer({
   );
   const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const desktopProxyRef = useRef<HTMLDivElement | null>(null);
+  const mobilePreviewImageRef = useRef<HTMLImageElement | null>(null);
+  const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const snapContainerBounds = useMemo(
     () => ({
       left: 0,
@@ -215,6 +217,7 @@ export function TraceImageLayer({
 
   useEffect(() => {
     setMobilePreviewSize(null);
+    mobilePreviewImageRef.current = null;
   }, [renderTrace.previewUrl]);
 
   useEffect(() => {
@@ -231,6 +234,7 @@ export function TraceImageLayer({
       }
 
       if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+        mobilePreviewImageRef.current = image;
         setMobilePreviewSize({
           width: image.naturalWidth,
           height: image.naturalHeight,
@@ -240,6 +244,7 @@ export function TraceImageLayer({
     image.src = renderTrace.previewUrl;
 
     if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      mobilePreviewImageRef.current = image;
       setMobilePreviewSize({
         width: image.naturalWidth,
         height: image.naturalHeight,
@@ -249,6 +254,9 @@ export function TraceImageLayer({
     return () => {
       cancelled = true;
       image.onload = null;
+      if (mobilePreviewImageRef.current === image) {
+        mobilePreviewImageRef.current = null;
+      }
     };
   }, [renderTrace.previewUrl]);
 
@@ -265,11 +273,30 @@ export function TraceImageLayer({
   useEffect(() => {
     const imageSource = traceAsset?.image;
     const desktopCanvas = desktopCanvasRef.current;
+    const mobileCanvas = mobileCanvasRef.current;
+    const mobilePreviewImage = mobilePreviewImageRef.current;
 
     if (!traceAsset?.ready || !imageSource || traceAsset.width <= 0 || traceAsset.height <= 0) {
       if (desktopCanvas) {
         desktopCanvas.width = 0;
         desktopCanvas.height = 0;
+      }
+      if (
+        coarsePointer &&
+        mobileCanvas &&
+        mobilePreviewImage &&
+        mobilePreviewSize &&
+        mobilePreviewSize.width > 0 &&
+        mobilePreviewSize.height > 0
+      ) {
+        drawTraceSourceToCanvas(mobileCanvas, mobilePreviewImage, {
+          trace: renderTrace,
+          width: mobilePreviewSize.width,
+          height: mobilePreviewSize.height,
+        });
+      } else if (mobileCanvas) {
+        mobileCanvas.width = 0;
+        mobileCanvas.height = 0;
       }
       return;
     }
@@ -279,14 +306,36 @@ export function TraceImageLayer({
         desktopCanvas.width = 0;
         desktopCanvas.height = 0;
       }
-    } else if (desktopCanvas) {
-      drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
-        trace: renderTrace,
-        width: traceAsset.width,
-        height: traceAsset.height,
-      });
+      if (
+        mobileCanvas &&
+        mobilePreviewImage &&
+        mobilePreviewSize &&
+        mobilePreviewSize.width > 0 &&
+        mobilePreviewSize.height > 0
+      ) {
+        drawTraceSourceToCanvas(mobileCanvas, mobilePreviewImage, {
+          trace: renderTrace,
+          width: mobilePreviewSize.width,
+          height: mobilePreviewSize.height,
+        });
+      } else if (mobileCanvas) {
+        mobileCanvas.width = 0;
+        mobileCanvas.height = 0;
+      }
+    } else {
+      if (desktopCanvas) {
+        drawTraceSourceToCanvas(desktopCanvas, imageSource as CanvasImageSource, {
+          trace: renderTrace,
+          width: traceAsset.width,
+          height: traceAsset.height,
+        });
+      }
+      if (mobileCanvas) {
+        mobileCanvas.width = 0;
+        mobileCanvas.height = 0;
+      }
     }
-  }, [coarsePointer, renderTrace, traceAsset]);
+  }, [coarsePointer, mobilePreviewSize, renderTrace, traceAsset]);
 
   const handleDesktopTransformPreview = useCallback((nextTrace: typeof traceTransform) => {
     const clampedTrace = traceBaseRect
@@ -403,29 +452,28 @@ export function TraceImageLayer({
                 WebkitUserSelect: "none",
               }}
             >
-              <img
-                aria-hidden="true"
-                src={renderTrace.previewUrl}
-                alt=""
-                draggable={false}
+              <div
                 style={{
+                  position: "relative",
                   width: "100%",
                   height: "100%",
-                  display: "block",
-                  imageRendering: "auto",
-                  objectFit: "cover",
-                  objectPosition: getObjectPositionPercent(
-                    renderTrace,
-                    mobilePreviewSize?.width ?? trace.imageWidth ?? 1,
-                    mobilePreviewSize?.height ?? trace.imageHeight ?? 1,
-                  ),
-                  pointerEvents: "none",
-                  userSelect: "none",
-                  WebkitUserSelect: "none",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
+                  overflow: "hidden",
                 }}
-              />
+              >
+                <canvas
+                  ref={mobileCanvasRef}
+                  aria-hidden="true"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    imageRendering: "auto",
+                    pointerEvents: "none",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
+                />
+              </div>
             </div>
             <PositioningBoxOverlay
               ariaLabel="Trace image controls"
