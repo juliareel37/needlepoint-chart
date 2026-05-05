@@ -178,7 +178,7 @@ export function CanvasAidsFloatingToolbar({
                   !position || position.transform === "none"
                     ? "translateY(-100%)"
                     : `translateY(-100%) ${position.transform}`,
-                minWidth: "260px",
+                minWidth: "240px",
                 maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
                 visibility: position ? "visible" : "hidden",
               }}

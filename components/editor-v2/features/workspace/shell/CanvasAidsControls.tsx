@@ -39,7 +39,7 @@ export function CanvasAidsControls({
         onChange={(nextChecked) => dispatch(createSetRulerVisibleCommand(nextChecked))}
       />
       <SegmentedBooleanSetting
-        label="Color Symbol Key"
+        label="Color symbols"
         value={showSymbols}
         ariaLabel="Symbols visibility"
         onChange={(nextChecked) => dispatch(createSetSymbolsVisibleCommand(nextChecked))}

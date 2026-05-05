@@ -375,7 +375,8 @@ export function EditorV2Shell({
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const visibleSidebarSection =
-    !isBottomPanelLayout && activeSidebarSection === "document"
+    !isBottomPanelLayout &&
+    (activeSidebarSection === "document" || activeSidebarSection === "settings")
       ? "color"
       : activeSidebarSection;
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -2476,6 +2477,7 @@ export function EditorV2Shell({
             <EditorRail
               activeSection={visibleSidebarSection}
               hideDocumentItem={!isBottomPanelLayout}
+              hideSettingsItem={!isBottomPanelLayout}
               panelCollapsed={sidebarCollapsed}
               onSelectSection={(section) => {
                 if (!sidebarCollapsed && activeSidebarSection === section) {

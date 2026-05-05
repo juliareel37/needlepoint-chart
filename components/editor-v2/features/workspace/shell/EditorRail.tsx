@@ -7,6 +7,7 @@ import styles from "./EditorV2Shell.module.css";
 interface EditorRailProps {
   activeSection: EditorSidebarSection;
   hideDocumentItem?: boolean;
+  hideSettingsItem?: boolean;
   panelCollapsed: boolean;
   onSelectSection: (section: EditorSidebarSection) => void;
 }
@@ -32,10 +33,13 @@ const railItemsWithoutDocument: Array<{ id: EditorSidebarSection; label: string;
 export function EditorRail({
   activeSection,
   hideDocumentItem = false,
+  hideSettingsItem = false,
   panelCollapsed,
   onSelectSection,
 }: EditorRailProps) {
-  const visibleRailItems = hideDocumentItem ? railItemsWithoutDocument : railItems;
+  const visibleRailItems = (hideDocumentItem ? railItemsWithoutDocument : railItems).filter(
+    (item) => !(hideSettingsItem && item.id === "settings"),
+  );
 
   return (
     <aside className={styles.rail} aria-label="Editor sections">

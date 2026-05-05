@@ -98,7 +98,7 @@ export function ViewportToolbar({
             triggerVariant="ghost"
             menuStyle={{ background: "var(--zoom-menu-bg)" }}
             menuPlacement="top-start"
-            menuOffset={0}
+            menuOffset={8}
             minWidth="auto"
             menuWidth={96}
             getItemValue={(item) => item.value}

@@ -1651,7 +1651,7 @@
 
 .stageToolbarBottomRight {
   position: absolute;
-  right: 24px;
+  right: 12px;
   bottom: 24px;
   z-index: var(--z-editor-stage-toolbar);
   display: flex;
