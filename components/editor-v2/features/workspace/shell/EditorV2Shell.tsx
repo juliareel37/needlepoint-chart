@@ -2070,7 +2070,7 @@ export function EditorV2Shell({
         : null}
       <Modal
         isOpen={deleteConfirmationOpen}
-        title={currentStorageId ? "Move this design to Recently Deleted?" : "Discard this design?"}
+        title={currentStorageId ? "Move this design to Trash?" : "Discard this design?"}
         description={
           currentStorageId
             ? "This design can be restored for 30 days from My Designs."
@@ -2084,7 +2084,7 @@ export function EditorV2Shell({
               ? "Moving..."
               : "Discarding..."
             : currentStorageId
-              ? "Move to Recently Deleted"
+              ? "Move to Trash"
               : "Discard design"
         }
         confirmVariant="destructive"

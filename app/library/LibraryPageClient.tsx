@@ -35,7 +35,7 @@ const DESIGN_OPEN_TRANSITION_MS = 70;
 const activeCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
-  { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
+  { id: "delete", label: "Move to Trash", icon: "/icons/lucide/trash.svg" },
 ] as const;
 const deletedCardMenuItems = [
   { id: "restore", label: "Restore", icon: "/icons/lucide/undo.svg" },
@@ -79,10 +79,6 @@ type DeleteConfirmationState =
 type LibrarySuccessNotification = {
   title: string;
   description?: string;
-};
-type UndoTrashState = {
-  designIds: string[];
-  count: number;
 };
 type PendingPermanentDeletion = {
   designIds: string[];
@@ -194,7 +190,6 @@ export function LibraryPageClient({
     useState<DeleteConfirmationState | null>(null);
   const [successNotification, setSuccessNotification] =
     useState<LibrarySuccessNotification | null>(null);
-  const [undoTrashState, setUndoTrashState] = useState<UndoTrashState | null>(null);
   const [pendingPermanentDeletion, setPendingPermanentDeletion] =
     useState<PendingPermanentDeletion | null>(null);
   const [pendingCardAction, setPendingCardAction] = useState<{
@@ -422,7 +417,7 @@ export function LibraryPageClient({
     }
 
     setSuccessNotification({
-      title: "Recently Deleted",
+      title: "Trash",
       description: initialNotice,
     });
   }, [initialNotice]);
@@ -619,7 +614,6 @@ export function LibraryPageClient({
         setTotalCount((current) => Math.max(0, current - 1));
         setDeletedCount((current) => Math.max(0, current - 1));
         setActiveCount((current) => current + 1);
-        setUndoTrashState(null);
         setSuccessNotification({
           title: "Design restored",
           description: `"${design.title}" is back in All Designs.`,
@@ -688,7 +682,6 @@ export function LibraryPageClient({
         ]);
         setTotalCount((current) => current + 1);
         setActiveCount((current) => current + 1);
-        setUndoTrashState(null);
         setSuccessNotification({
           title: "Design duplicated",
           description: `"${saved.title}" was added to All Designs.`,
@@ -810,38 +803,6 @@ export function LibraryPageClient({
     }, 5000);
   }
 
-  async function handleUndoTrash() {
-    if (!undoTrashState) {
-      return;
-    }
-
-    try {
-      await Promise.all(
-        undoTrashState.designIds.map((designId) =>
-          restoreDeletedEditorV2Document(designId),
-        ),
-      );
-      setUndoTrashState(null);
-      setSuccessNotification({
-        title:
-          undoTrashState.count === 1 ? "Delete undone" : `${undoTrashState.count} restores complete`,
-        description:
-          undoTrashState.count === 1
-            ? "The design is back in All Designs."
-            : "The selected designs are back in All Designs.",
-      });
-      if (collectionView === "deleted") {
-        void loadInitialPage();
-      }
-      setActiveCount((current) => current + undoTrashState.count);
-      setDeletedCount((current) => Math.max(0, current - undoTrashState.count));
-    } catch (error) {
-      setCardActionError(
-        error instanceof Error ? error.message : "Couldn't undo delete.",
-      );
-    }
-  }
-
   function handleUndoPendingPermanentDeletion() {
     const currentPendingPermanentDeletion = pendingPermanentDeletionRef.current;
 
@@ -876,7 +837,6 @@ export function LibraryPageClient({
       return;
     }
 
-    setUndoTrashState(null);
     setSuccessNotification(null);
   }
 
@@ -901,16 +861,12 @@ export function LibraryPageClient({
         setTotalCount((current) => Math.max(0, current - idsToDelete.length));
         setActiveCount((current) => Math.max(0, current - idsToDelete.length));
         setDeletedCount((current) => current + idsToDelete.length);
-        setUndoTrashState({
-          designIds: idsToDelete,
-          count: idsToDelete.length,
-        });
         setDeleteConfirmation(null);
         setSuccessNotification({
           title:
             idsToDelete.length === 1
-              ? "Moved to Recently Deleted"
-              : `Moved ${idsToDelete.length} designs to Recently Deleted`,
+              ? "Moved to Trash"
+              : `Moved ${idsToDelete.length} designs to Trash`,
           description:
             deleteConfirmation.kind === "single"
               ? `"${deleteConfirmation.design.title}" can be restored for 30 days.`
@@ -926,7 +882,6 @@ export function LibraryPageClient({
       setSelectedDesignIds(new Set<string>());
       setTotalCount((current) => Math.max(0, current - idsToDelete.length));
       setDeletedCount((current) => Math.max(0, current - idsToDelete.length));
-      setUndoTrashState(null);
       setDeleteConfirmation(null);
       schedulePendingPermanentDeletion(
         {
@@ -1113,7 +1068,7 @@ export function LibraryPageClient({
               },
               {
                 value: "deleted",
-                label: `Recently Deleted (${deletedCount})`,
+                label: `Trash (${deletedCount})`,
               },
             ]}
           />
@@ -1595,7 +1550,7 @@ export function LibraryPageClient({
         ) : (
           <section className={styles.emptyState}>
             <h2 className={styles.emptyStateTitle}>
-              {collectionView === "deleted" ? "Nothing in Recently Deleted" : "No designs yet"}
+              {collectionView === "deleted" ? "Trash is empty" : "No designs yet"}
             </h2>
             <p className={styles.emptyStateBody}>
               {collectionView === "deleted"
@@ -1667,12 +1622,12 @@ export function LibraryPageClient({
             ? deleteConfirmation.mode === "trash"
               ? `Move ${deleteConfirmation.designIds.length} design${
                   deleteConfirmation.designIds.length === 1 ? "" : "s"
-                } to Recently Deleted?`
+                } to Trash?`
               : `Delete ${deleteConfirmation.designIds.length} design${
                   deleteConfirmation.designIds.length === 1 ? "" : "s"
                 } permanently?`
             : deleteConfirmation?.mode === "trash"
-              ? "Move this design to Recently Deleted?"
+              ? "Move this design to Trash?"
               : "Delete this design permanently?"
         }
         description={
@@ -1680,13 +1635,13 @@ export function LibraryPageClient({
             ? deleteConfirmation.mode === "trash"
               ? `The selected design${
                   deleteConfirmation.designIds.length === 1 ? "" : "s"
-                } can be restored for 30 days from Recently Deleted.`
+                } can be restored for 30 days from Trash.`
               : `This will permanently delete ${deleteConfirmation.designIds.length} selected design${
                   deleteConfirmation.designIds.length === 1 ? "" : "s"
-                } from Recently Deleted.`
+                } from Trash.`
             : deleteConfirmation?.mode === "trash"
-              ? "You can restore this design for 30 days from Recently Deleted."
-              : "This permanently removes the selected design from Recently Deleted."
+              ? "You can restore this design for 30 days from Trash."
+              : "This permanently removes the selected design from Trash."
         }
         tone="fail"
         dismissLabel="Cancel"
@@ -1697,8 +1652,8 @@ export function LibraryPageClient({
               : "Deleting..."
             : deleteConfirmation?.mode === "trash"
               ? deleteConfirmation?.kind === "bulk"
-                ? "Move to Recently Deleted"
-                : "Move to Recently Deleted"
+                ? "Move to Trash"
+                : "Move to Trash"
               : deleteConfirmation?.kind === "bulk"
                 ? "Delete permanently"
                 : "Delete permanently"
@@ -1725,15 +1680,9 @@ export function LibraryPageClient({
               tone="success"
               title={successNotification.title}
               description={successNotification.description}
-              actionLabel={undoTrashState || pendingPermanentDeletion ? "Undo" : undefined}
-              actionVariant={undoTrashState || pendingPermanentDeletion ? "outlined" : undefined}
-              onAction={
-                pendingPermanentDeletion
-                  ? handleUndoPendingPermanentDeletion
-                  : undoTrashState
-                    ? handleUndoTrash
-                    : undefined
-              }
+              actionLabel={pendingPermanentDeletion ? "Undo" : undefined}
+              actionVariant={pendingPermanentDeletion ? "secondary" : undefined}
+              onAction={pendingPermanentDeletion ? handleUndoPendingPermanentDeletion : undefined}
               onDismiss={handleDismissSuccessNotification}
             />
           </div>
@@ -1791,7 +1740,7 @@ export function LibraryPageClient({
                     : "Moving..."
                   : collectionView === "deleted"
                     ? "Delete Permanently"
-                    : "Move to Recently Deleted"}
+                    : "Move to Trash"}
               </span>
             </button>
           </div>

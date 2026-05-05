@@ -186,7 +186,7 @@ function formatUpdatedLabel(updatedAt: Date) {
 
 function formatDeletedLabel(deletedAt: Date | null, purgeAfterAt: Date | null) {
   if (!deletedAt || !purgeAfterAt) {
-    return "In Recently Deleted";
+    return "In Trash";
   }
 
   const remainingMs = purgeAfterAt.getTime() - Date.now();

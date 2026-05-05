@@ -931,7 +931,7 @@ export function EditorV2Page({
               existing.filter((record) => record.storageId !== currentStorageId),
             );
             setRestoreSuccessNotification({
-              title: "Moved to Recently Deleted",
+              title: "Moved to Trash",
             });
           }
 

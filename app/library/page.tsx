@@ -20,7 +20,7 @@ export default async function LibraryPage({
   const initialViewMode = requestedView === "deleted" ? "deleted" : "active";
   const initialNotice =
     resolvedSearchParams?.notice === "deleted-design"
-      ? "This design is in Recently Deleted. Restore it to open it again."
+      ? "This design is in Trash. Restore it to open it again."
       : null;
 
   return (

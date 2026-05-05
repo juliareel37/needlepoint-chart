@@ -246,7 +246,7 @@ export function EditorV2Workspace({
           try {
             await onDeleteCurrentDesign(document);
             setSuccessNotification({
-              title: "Moved to Recently Deleted",
+              title: "Moved to Trash",
               description: "The design can be restored for 30 days from My Designs.",
             });
             setErrorNotification(null);
