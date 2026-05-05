@@ -90,6 +90,7 @@ import {
 } from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
+import { CanvasAidsFloatingToolbar } from "./CanvasAidsFloatingToolbar";
 import { ViewportToolbar } from "./ViewportToolbar";
 import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
@@ -2658,13 +2659,23 @@ export function EditorV2Shell({
 
                 {previewMode ? null : (
                   <div className={styles.stageToolbarBottomRight}>
-                    <ViewportToolbar
-                      dispatch={dispatch}
-                      fitZoom={fitZoom}
-                      onFitToGrid={fitToGrid}
-                      zoomAnchor={zoomAnchor}
-                      viewport={viewport}
-                    />
+                    <div className={styles.stageToolbarBottomRightCluster}>
+                      <ViewportToolbar
+                        dispatch={dispatch}
+                        fitZoom={fitZoom}
+                        onFitToGrid={fitToGrid}
+                        zoomAnchor={zoomAnchor}
+                        viewport={viewport}
+                      />
+                      {!isBottomPanelLayout ? (
+                        <CanvasAidsFloatingToolbar
+                          dispatch={dispatch}
+                          showGridlines={showGridlines}
+                          showRuler={showRuler}
+                          showSymbols={showSymbols}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 )}
 

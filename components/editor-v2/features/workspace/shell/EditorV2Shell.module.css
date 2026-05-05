@@ -875,12 +875,16 @@
 
 .settingsControlGroup {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .settingsControlLabel {
   color: var(--text-primary);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .canvasColumn {
@@ -1658,6 +1662,31 @@
 
 .stageToolbarBottomRight > * {
   pointer-events: auto;
+}
+
+.stageToolbarBottomRightCluster {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.canvasAidsToolbar {
+  position: relative;
+}
+
+.canvasAidsPopover {
+  min-width: 320px;
+}
+
+.canvasAidsPopoverCard {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.canvasAidsPopoverTitle {
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 
 .panelRow {
@@ -3154,6 +3183,11 @@
     max-width: none;
   }
 
+  .stageToolbarBottomRightCluster {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .traceFieldGrid {
     grid-template-columns: 1fr;
   }
@@ -3247,6 +3281,10 @@
   } */
 
   .viewportToolbar {
+    display: none;
+  }
+
+  .canvasAidsToolbar {
     display: none;
   }
 

@@ -371,6 +371,7 @@ export function EditorSidebar({
           {activeSection === "settings" ? (
             <SettingsPanelPage
               dispatch={dispatch}
+              isBottomPanelLayout={isBottomPanelLayout}
               previewMode={previewMode}
               previewModeDisabled={previewModeDisabled}
               showGridlines={showGridlines}

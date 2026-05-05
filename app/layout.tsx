@@ -141,7 +141,7 @@ export default function RootLayout({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "0 28px 0 24px",
+                padding: "0 14px 0 14px",
                 background: "var(--surface-primary)",
                 borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
