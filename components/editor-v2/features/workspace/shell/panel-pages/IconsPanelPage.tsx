@@ -5,6 +5,8 @@ import { typographyStyles } from "@/app/design-system/typography";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
+import { DMC_COLOR_LIBRARY_BY_ID } from "@/lib/editor-v2/editor/color-library";
+import { findClosestPaletteColorId, hexToRgb, type Rgb } from "@/lib/editor-v2/editor/color-utils";
 import type { IconColorSlot } from "@/lib/editor-v2/editor/icons/iconColorSlots";
 import {
   buildPrimitiveIconDataUrl,
@@ -466,7 +468,10 @@ function getThemedPrimitiveColorSlots(
       return {
         ...slot,
         sourceHex: strokeColor,
-        paletteColorId: null,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb(strokeColor) as Rgb,
+        ),
       };
     }
 
@@ -474,7 +479,10 @@ function getThemedPrimitiveColorSlots(
       return {
         ...slot,
         sourceHex: shadowColor,
-        paletteColorId: null,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb(shadowColor) as Rgb,
+        ),
       };
     }
 
