@@ -92,6 +92,10 @@ export function TraceControls({
     visible: boolean;
     userOverrode: boolean;
   } | null>(null);
+  const conversionPreviewBlendModeRef = useRef<{
+    previewUrl: string;
+    blendMode: TraceBlendMode;
+  } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
   const [convertMaxColors, setConvertMaxColors] = useState(20);
   const [convertSmoothing, setConvertSmoothing] = useState(0.25);
@@ -392,6 +396,67 @@ export function TraceControls({
       ),
     );
   }, [dispatch, trace, traceEditingPreviewActive]);
+
+  useEffect(() => {
+    if (!dispatch) {
+      return;
+    }
+
+    if (!trace) {
+      conversionPreviewBlendModeRef.current = null;
+      return;
+    }
+
+    if (conversionPreviewActive) {
+      if (conversionPreviewBlendModeRef.current?.previewUrl !== trace.previewUrl) {
+        conversionPreviewBlendModeRef.current = {
+          previewUrl: trace.previewUrl,
+          blendMode: trace.blendMode,
+        };
+      }
+
+      if (trace.blendMode !== "image") {
+        dispatch(
+          createUpdateTraceCommand(
+            {
+              blendMode: "image",
+            },
+            {
+              history: { mode: "skip" },
+              source: "system",
+            },
+          ),
+        );
+      }
+
+      return;
+    }
+
+    const previewSnapshot = conversionPreviewBlendModeRef.current;
+
+    if (!previewSnapshot || previewSnapshot.previewUrl !== trace.previewUrl) {
+      conversionPreviewBlendModeRef.current = null;
+      return;
+    }
+
+    conversionPreviewBlendModeRef.current = null;
+
+    if (trace.blendMode === previewSnapshot.blendMode) {
+      return;
+    }
+
+    dispatch(
+      createUpdateTraceCommand(
+        {
+          blendMode: previewSnapshot.blendMode,
+        },
+        {
+          history: { mode: "skip" },
+          source: "system",
+        },
+      ),
+    );
+  }, [conversionPreviewActive, dispatch, trace]);
 
   if (!dispatch) {
     return trace ? (
