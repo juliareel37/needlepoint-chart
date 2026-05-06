@@ -37,6 +37,7 @@ export type EditorCommandKind =
   | "selection.update"
   | "selection.commit"
   | "selection.move"
+  | "selection.resize"
   | "selection.beginDuplicatePlacement"
   | "selection.beginCutPlacement"
   | "selection.cancelDuplicatePlacement"
@@ -162,6 +163,11 @@ export type CommitSelectionCommand = BaseEditorCommand<
 export type MoveSelectionCommand = BaseEditorCommand<
   "selection.move",
   { deltaX: number; deltaY: number }
+>;
+
+export type ResizeSelectionCommand = BaseEditorCommand<
+  "selection.resize",
+  { anchor: GridPoint; current: GridPoint }
 >;
 
 export type BeginDuplicatePlacementCommand = BaseEditorCommand<
@@ -462,6 +468,7 @@ export type EditorCommand =
   | UpdateSelectionCommand
   | CommitSelectionCommand
   | MoveSelectionCommand
+  | ResizeSelectionCommand
   | BeginDuplicatePlacementCommand
   | BeginCutPlacementCommand
   | CancelDuplicatePlacementCommand

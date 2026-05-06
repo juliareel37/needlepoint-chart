@@ -17,6 +17,8 @@ const SELECTION_OUTER_STROKE = "rgba(8, 47, 73, 0.92)";
 const SELECTION_STROKE_DASH = "5 3";
 const SELECTION_INNER_STROKE_WIDTH = 1.5;
 const SELECTION_OUTER_STROKE_WIDTH = 3;
+const RECT_HANDLE_SIZE = 10;
+const RECT_HANDLE_BORDER_WIDTH = 2;
 
 interface SelectionOverlayProps {
   activeTool: ActiveTool;
@@ -254,6 +256,22 @@ export function SelectionOverlay({
             strokeDasharray={SELECTION_STROKE_DASH}
             vectorEffect="non-scaling-stroke"
           />
+          {!selection.preview ? (
+            <>
+              {buildRectSelectionHandles(selection.rect, projectedCellSize).map((handle) => (
+                <circle
+                  key={handle.id}
+                  cx={handle.cx}
+                  cy={handle.cy}
+                  r={RECT_HANDLE_SIZE / 2}
+                  fill="#ffffff"
+                  stroke="#2563eb"
+                  strokeWidth={RECT_HANDLE_BORDER_WIDTH}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </>
+          ) : null}
         </svg>
       ) : null}
 
@@ -352,6 +370,34 @@ export function SelectionOverlay({
       ) : null}
     </div>
   );
+}
+
+function buildRectSelectionHandles(
+  rect: NonNullable<SelectionState["rect"]>,
+  projectedCellSize: number,
+) {
+  return [
+    {
+      id: "nw",
+      cx: rect.x * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "ne",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "se",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
+      id: "sw",
+      cx: rect.x * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+  ];
 }
 
 function buildRectPath(

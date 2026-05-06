@@ -14,6 +14,7 @@ import type {
   CommitDuplicatePlacementCommand,
   CommitSelectionCommand,
   MoveSelectionCommand,
+  ResizeSelectionCommand,
   SetSelectionShapeCommand,
   StartSelectionCommand,
   UpdateSelectionCommand,
@@ -303,6 +304,38 @@ export const moveSelectionCommandHandler: EditorCommandHandler<MoveSelectionComm
       nextSession: {
         ...state.session,
         selection: translatedSelection,
+      },
+      nextUi: state.ui,
+      patches: [],
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
+export const resizeSelectionCommandHandler: EditorCommandHandler<ResizeSelectionCommand> = {
+  canHandle(command): command is ResizeSelectionCommand {
+    return command.kind === "selection.resize";
+  },
+  handle(state, command) {
+    const resizedSelection = resizeSelection(
+      state.session.selection,
+      command.payload.anchor,
+      command.payload.current,
+    );
+
+    if (resizedSelection === state.session.selection) {
+      return buildSelectionSessionNoop(state, command.id);
+    }
+
+    return {
+      nextSession: {
+        ...state.session,
+        selection: resizedSelection,
       },
       nextUi: state.ui,
       patches: [],
@@ -616,6 +649,35 @@ function buildRectSelectionBounds(
   const height = Math.abs(point.y - anchor.y) + 1;
 
   return { x, y, width, height };
+}
+
+function resizeSelection(
+  selection: SelectionState,
+  anchor: GridPoint,
+  current: GridPoint,
+): SelectionState {
+  if (selection.mode !== "rect" || !selection.rect || selection.preview) {
+    return selection;
+  }
+
+  const rect = buildRectSelectionBounds(anchor, current);
+  const currentPoint = normalizeRectPoint(current);
+
+  if (
+    rect.x === selection.rect.x &&
+    rect.y === selection.rect.y &&
+    rect.width === selection.rect.width &&
+    rect.height === selection.rect.height
+  ) {
+    return selection;
+  }
+
+  return {
+    ...selection,
+    rect,
+    lassoPoints: [anchor, currentPoint],
+    preview: null,
+  };
 }
 
 function translateSelection(

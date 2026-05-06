@@ -184,6 +184,45 @@ describe("selection command handlers", () => {
     });
   });
 
+  it("resizes a committed rectangular selection from its dragged corner", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-1",
+      kind: "selection.resize",
+      payload: {
+        anchor: { x: 5, y: 7 },
+        current: { x: 1, y: 2 },
+      },
+      meta: { source: "canvas", timestamp: 6, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 2, width: 5, height: 6 },
+      lassoPoints: [
+        { x: 5, y: 7 },
+        { x: 1, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
   it("starts duplicate placement from the painted cells inside the selection", () => {
     const initial = createInitialEditorStoreState();
     initial.document.grid.width = 5;

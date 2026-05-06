@@ -242,6 +242,18 @@ export function createMoveSelectionCommand(
   );
 }
 
+export function createResizeSelectionCommand(
+  anchor: GridPoint,
+  current: GridPoint,
+): EditorCommand {
+  return createCommand(
+    "selection.resize",
+    { anchor, current },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
 export function createBeginDuplicatePlacementCommand(): EditorCommand {
   return createCommand(
     "selection.beginDuplicatePlacement",
