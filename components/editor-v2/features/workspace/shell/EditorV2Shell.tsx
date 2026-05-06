@@ -137,6 +137,15 @@ const AUTH_REQUIRED_FILE_MENU_ACTION_IDS = new Set([
   "delete",
 ]);
 
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 function getAspectRatioValueFromId(
   value: TraceCropAspectRatioId,
   assetWidth: number,
@@ -1334,6 +1343,34 @@ export function EditorV2Shell({
   }, [dispatch, isBottomPanelLayout]);
 
   useEffect(() => {
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && key === "z";
+      const isRedoShortcut =
+        ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "z") ||
+        (event.ctrlKey && !event.shiftKey && key === "y");
+
+      if (isUndoShortcut && canUndo) {
+        event.preventDefault();
+        dispatch(createUndoCommand());
+        return;
+      }
+
+      if (isRedoShortcut && canRedo) {
+        event.preventDefault();
+        dispatch(createRedoCommand());
+      }
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [canRedo, canUndo, dispatch]);
+
+  useEffect(() => {
     if (!previewMode) {
       return;
     }
@@ -1443,12 +1480,7 @@ export function EditorV2Shell({
       }
 
       const target = event.target;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) {
+      if (isEditableKeyboardTarget(target)) {
         return;
       }
 
