@@ -376,6 +376,17 @@ export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<Commit
         nextSession: {
           ...state.session,
           duplicatePlacement: null,
+          selection:
+            session.operation === "cut"
+              ? {
+                  mode: "none",
+                  shape: state.session.selection.shape,
+                  rect: null,
+                  lassoPoints: [],
+                  mirrorAxis: null,
+                  preview: null,
+                }
+              : state.session.selection,
         },
         nextUi: state.ui,
         patches: [],
@@ -392,6 +403,17 @@ export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<Commit
       nextSession: {
         ...buildDirtySession(state),
         duplicatePlacement: null,
+        selection:
+          session.operation === "cut"
+            ? {
+                mode: "none",
+                shape: state.session.selection.shape,
+                rect: null,
+                lassoPoints: [],
+                mirrorAxis: null,
+                preview: null,
+              }
+            : state.session.selection,
       },
       nextUi: state.ui,
       patches: [

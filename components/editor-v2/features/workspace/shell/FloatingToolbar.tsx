@@ -31,6 +31,7 @@ import type {
 import {
   createBeginCutPlacementCommand,
   createBeginDuplicatePlacementCommand,
+  createCancelDuplicatePlacementCommand,
   createCancelMirrorCommand,
   createBeginTraceRepositionCommand,
   createBeginMirrorFromSelectionCommand,
@@ -369,8 +370,12 @@ export function FloatingToolbar({
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
-  const canDuplicateSelection = selectionCommitted && !duplicatePlacementActive;
-  const canCutSelection = selectionCommitted && !duplicatePlacementActive;
+  const duplicatePlacementSelected = duplicatePlacementOperation === "duplicate";
+  const cutPlacementSelected = duplicatePlacementOperation === "cut";
+  const canDuplicateSelection =
+    duplicatePlacementSelected || (selectionCommitted && !duplicatePlacementActive);
+  const canCutSelection =
+    cutPlacementSelected || (selectionCommitted && !duplicatePlacementActive);
   const traceSidebarOpen = !sidebarCollapsed && activeSidebarSection === "trace";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked =
@@ -838,7 +843,7 @@ export function FloatingToolbar({
 
         <ToolbarDivider />
 
-        <ToolbarButton
+        {/* <ToolbarButton
           type="button"
           labelled
           active={mirrorSessionActive}
@@ -860,16 +865,21 @@ export function FloatingToolbar({
         >
           <ToolbarIcon icon="/icons/flip.svg" />
           <ToolbarLabel>Mirror</ToolbarLabel>
-        </ToolbarButton>
+        </ToolbarButton> */}
 
         <ToolbarButton
           type="button"
           labelled
-          active={duplicatePlacementOperation === "duplicate"}
+          active={duplicatePlacementSelected}
           aria-pressed={duplicatePlacementActive}
           disabled={!canDuplicateSelection}
           onClick={() => {
             if (!canDuplicateSelection) {
+              return;
+            }
+
+            if (duplicatePlacementSelected) {
+              dispatch(createCancelDuplicatePlacementCommand());
               return;
             }
 
@@ -883,11 +893,16 @@ export function FloatingToolbar({
         <ToolbarButton
           type="button"
           labelled
-          active={duplicatePlacementOperation === "cut"}
+          active={cutPlacementSelected}
           aria-pressed={duplicatePlacementActive}
           disabled={!canCutSelection}
           onClick={() => {
             if (!canCutSelection) {
+              return;
+            }
+
+            if (cutPlacementSelected) {
+              dispatch(createCancelDuplicatePlacementCommand());
               return;
             }
 
@@ -899,7 +914,7 @@ export function FloatingToolbar({
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarDivider />
+      {/* <ToolbarDivider /> */}
 
       <ToolbarButton
         type="button"
