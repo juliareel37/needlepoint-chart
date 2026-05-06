@@ -13,6 +13,7 @@ import {
   getPositionedBounds,
   getResizeSnappedBounds,
   getRotationCss,
+  getSnappedRotationDegrees,
   getTransformFromDrag,
   getTransformFromPinch,
   getCenterSnappedPosition,
@@ -74,6 +75,7 @@ interface DragSession {
   rafId: number | null;
   lastPreviewAt: number;
   moveSnap: PositioningMoveSnapState;
+  rotationSnap: number | null;
 }
 
 interface HandleElements {
@@ -358,6 +360,20 @@ export function PositioningBoxOverlay({
       latestBaseRectRef.current,
     );
 
+    if (session.mode === "rotate") {
+      session.rotationSnap = getRotationSnapTarget(
+        nextTransform.rotation,
+        session.rotationSnap,
+      );
+      nextTransform = {
+        ...nextTransform,
+        rotation: getSnappedRotationDegrees(
+          nextTransform.rotation,
+          session.rotationSnap,
+        ),
+      };
+    }
+
     if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
       const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
       const snappedPosition = getCenterSnappedPosition(
@@ -611,6 +627,10 @@ export function PositioningBoxOverlay({
       rafId: null,
       lastPreviewAt: 0,
       moveSnap: emptyMoveSnap(),
+      rotationSnap:
+        mode === "rotate"
+          ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
+          : null,
     };
 
     if (usePointerCapture) {

@@ -12,6 +12,7 @@ import {
   getHandleLeft,
   getHandleTop,
   getResizeSnappedBounds,
+  getSnappedRotationDegrees,
   getRotationSnapTarget,
   getRotationCss,
   POSITIONING_HANDLES,
@@ -64,6 +65,7 @@ interface DragSession {
   pendingClientY: number;
   rafId: number | null;
   moveSnap: PositioningMoveSnapState;
+  rotationSnap: number | null;
 }
 
 interface HandleElements {
@@ -310,6 +312,20 @@ export function IconPlacementBoxOverlay({
       worldPoint,
       latestBaseRectRef.current,
     );
+
+    if (session.mode === "rotate") {
+      session.rotationSnap = getRotationSnapTarget(
+        nextTransform.rotation,
+        session.rotationSnap,
+      );
+      nextTransform = {
+        ...nextTransform,
+        rotation: getSnappedRotationDegrees(
+          nextTransform.rotation,
+          session.rotationSnap,
+        ),
+      };
+    }
 
     if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
       const rawBounds = getIconPlacementBounds(
@@ -570,6 +586,10 @@ export function IconPlacementBoxOverlay({
       pendingClientY: event.clientY,
       rafId: null,
       moveSnap: emptyMoveSnap(),
+      rotationSnap:
+        mode === "rotate"
+          ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
+          : null,
     };
 
     overlayElement.setPointerCapture(event.pointerId);

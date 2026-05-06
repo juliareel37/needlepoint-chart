@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   getCenterSnappedPosition,
+  getRotationSnapTarget,
+  getSnappedRotationDegrees,
   getResizeSnappedBounds,
   type PositioningMoveSnapState,
   type PositioningRect,
@@ -313,6 +315,20 @@ describe("getResizeSnappedBounds", () => {
         centerY: null,
       },
     });
+  });
+});
+
+describe("rotation snapping", () => {
+  it("snaps rotations that move within the snap tolerance of a quarter turn", () => {
+    const snap = getRotationSnapTarget(88, null);
+
+    expect(snap).toBe(90);
+    expect(getSnappedRotationDegrees(88, snap)).toBe(90);
+  });
+
+  it("keeps a snapped quarter turn latched until leaving the unsnap threshold", () => {
+    expect(getRotationSnapTarget(94, 90)).toBe(90);
+    expect(getRotationSnapTarget(96, 90)).toBeNull();
   });
 });
 
