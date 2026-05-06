@@ -233,6 +233,70 @@
   padding-bottom:28px;
 }
 
+.twoFactorHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.twoFactorSetupCard {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-card) 92%, var(--surface-app));
+}
+
+.twoFactorSetupSection {
+  display: grid;
+  gap: 10px;
+}
+
+.twoFactorSectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.twoFactorDetails {
+  display: grid;
+  gap: 10px;
+}
+
+.twoFactorDetails summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.codeValue {
+  padding: 12px 14px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-app) 52%, var(--surface-card));
+  word-break: break-word;
+  font-family: var(--font-mono, monospace);
+}
+
+.backupCodesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+.backupCode {
+  padding: 12px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-app) 38%, var(--surface-card));
+  font-family: var(--font-mono, monospace);
+  text-align: center;
+}
+
 .accountDetailList {
   display: grid;
   gap: 12px;

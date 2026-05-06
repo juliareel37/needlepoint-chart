@@ -31,6 +31,20 @@ type AuthSessionSummary = {
   userAgent?: string | null;
 };
 
+type TwoFactorSetupState = {
+  backupCodes: string[];
+  totpUri: string | null;
+};
+
+type TwoFactorSessionUser = {
+  twoFactorEnabled?: boolean | null;
+};
+
+type TwoFactorEnableResponse = {
+  backupCodes?: string[];
+  totpURI?: string | null;
+};
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) {
     return error;
@@ -141,6 +155,56 @@ function getSessionLocationLabel(ipAddress: string | null | undefined) {
   return ipAddress?.trim() ? ipAddress : "Unavailable";
 }
 
+function getTotpSecret(totpUri: string | null) {
+  if (!totpUri) {
+    return null;
+  }
+
+  try {
+    const parsedUri = new URL(totpUri);
+    return parsedUri.searchParams.get("secret");
+  } catch {
+    return null;
+  }
+}
+
+async function callAuthEndpoint<TResponse>(
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<TResponse> {
+  const response = await fetch(`/api/auth/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        error?: { message?: string } | string;
+        message?: string;
+      }
+    | TResponse
+    | null;
+
+  if (!response.ok) {
+    const payloadMessage =
+      typeof payload === "object" && payload !== null && "error" in payload
+        ? typeof payload.error === "string"
+          ? payload.error
+          : payload.error?.message
+        : typeof payload === "object" && payload !== null && "message" in payload
+          ? payload.message
+          : undefined;
+
+    throw new Error(payloadMessage ?? "The request could not be completed.");
+  }
+
+  return (payload ?? {}) as TResponse;
+}
+
 export function AuthAccountSettingsPanel({
   onAfterSignOut,
 }: {
@@ -173,6 +237,11 @@ export function AuthAccountSettingsPanel({
   const [sessionsStatus, setSessionsStatus] = useState<StatusState>(null);
   const [revokingSessionToken, setRevokingSessionToken] = useState<string | null>(null);
   const [isRevokingOtherSessions, setIsRevokingOtherSessions] = useState(false);
+  const [twoFactorPasswordValue, setTwoFactorPasswordValue] = useState("");
+  const [twoFactorVerificationCode, setTwoFactorVerificationCode] = useState("");
+  const [twoFactorStatus, setTwoFactorStatus] = useState<StatusState>(null);
+  const [isTwoFactorSubmitting, setIsTwoFactorSubmitting] = useState(false);
+  const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetupState | null>(null);
 
   const currentName = user?.name ?? "";
   const currentEmail = user?.email ?? "";
@@ -193,6 +262,10 @@ export function AuthAccountSettingsPanel({
     : nextName !== currentName || nextEmail !== currentEmail;
   const deleteConfirmationMatches = deleteConfirmationValue.trim().toLowerCase() === "delete";
   const isBusy = isSubmitting || isDeletingAccount;
+  const isTwoFactorEnabled = Boolean((user as TwoFactorSessionUser | null)?.twoFactorEnabled);
+  const requiresPasswordBeforeTwoFactor = !hasEmailPassword;
+  const isTwoFactorSetupPending = Boolean(twoFactorSetup && !isTwoFactorEnabled);
+  const twoFactorSecret = getTotpSecret(twoFactorSetup?.totpUri ?? null);
 
   useEffect(() => {
     setNameValue(currentName);
@@ -247,6 +320,13 @@ export function AuthAccountSettingsPanel({
       isCancelled = true;
     };
   }, [isLoaded, isSignedIn, user?.id]);
+
+  useEffect(() => {
+    setTwoFactorPasswordValue("");
+    setTwoFactorVerificationCode("");
+    setTwoFactorStatus(null);
+    setTwoFactorSetup(null);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
@@ -678,6 +758,135 @@ export function AuthAccountSettingsPanel({
     }
   }
 
+  async function handleEnableTwoFactor() {
+    if (!twoFactorPasswordValue.trim()) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: "Enter your current password to start two-factor setup.",
+      });
+      return;
+    }
+
+    setIsTwoFactorSubmitting(true);
+    setTwoFactorStatus(null);
+
+    try {
+      const result = await callAuthEndpoint<TwoFactorEnableResponse>("two-factor/enable", {
+        password: twoFactorPasswordValue,
+      });
+
+      setTwoFactorSetup({
+        backupCodes: result.backupCodes ?? [],
+        totpUri: result.totpURI ?? null,
+      });
+      setTwoFactorPasswordValue("");
+      setTwoFactorVerificationCode("");
+      setTwoFactorStatus({
+        tone: "success",
+        message:
+          "Two-factor setup started. Save your backup codes, then enter the 6-digit code from your authenticator app to finish.",
+      });
+    } catch (error) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't start two-factor setup."),
+      });
+    } finally {
+      setIsTwoFactorSubmitting(false);
+    }
+  }
+
+  async function handleVerifyTwoFactor() {
+    if (!twoFactorVerificationCode.trim()) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: "Enter the 6-digit code from your authenticator app.",
+      });
+      return;
+    }
+
+    setIsTwoFactorSubmitting(true);
+    setTwoFactorStatus(null);
+
+    try {
+      await callAuthEndpoint("two-factor/verify-totp", {
+        code: twoFactorVerificationCode.trim(),
+      });
+
+      setTwoFactorSetup(null);
+      setTwoFactorPasswordValue("");
+      setTwoFactorVerificationCode("");
+      await refetch();
+      router.refresh();
+      setTwoFactorStatus({
+        tone: "success",
+        message: "Two-factor authentication is now enabled for your account.",
+      });
+    } catch (error) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't verify that code."),
+      });
+    } finally {
+      setIsTwoFactorSubmitting(false);
+    }
+  }
+
+  async function handleDisableTwoFactor() {
+    if (!twoFactorPasswordValue.trim()) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: "Enter your current password to turn off two-factor authentication.",
+      });
+      return;
+    }
+
+    setIsTwoFactorSubmitting(true);
+    setTwoFactorStatus(null);
+
+    try {
+      await callAuthEndpoint("two-factor/disable", {
+        password: twoFactorPasswordValue,
+      });
+
+      setTwoFactorSetup(null);
+      setTwoFactorPasswordValue("");
+      setTwoFactorVerificationCode("");
+      await refetch();
+      router.refresh();
+      setTwoFactorStatus({
+        tone: "success",
+        message: "Two-factor authentication has been turned off.",
+      });
+    } catch (error) {
+      setTwoFactorStatus({
+        tone: "error",
+        message: getErrorMessage(error, "We couldn't disable two-factor authentication."),
+      });
+    } finally {
+      setIsTwoFactorSubmitting(false);
+    }
+  }
+
+  async function handleCopyBackupCodes() {
+    if (!twoFactorSetup?.backupCodes.length || typeof navigator === "undefined") {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(twoFactorSetup.backupCodes.join("\n"));
+      setTwoFactorStatus({
+        tone: "success",
+        message: "Backup codes copied. Store them somewhere safe before you close this page.",
+      });
+    } catch {
+      setTwoFactorStatus({
+        tone: "error",
+        message: "We couldn't copy your backup codes. Please save them manually.",
+      });
+    }
+  }
+
   const sortedSessions = [...sessions].sort((left, right) => {
     const leftIsCurrent = left.token === currentSessionToken;
     const rightIsCurrent = right.token === currentSessionToken;
@@ -691,6 +900,7 @@ export function AuthAccountSettingsPanel({
   const otherSessions = sortedSessions.filter(
     (sessionEntry) => sessionEntry.token !== currentSessionToken,
   );
+  const pendingTwoFactorSetup = isTwoFactorSetupPending ? twoFactorSetup : null;
 
   return (
     <div className={styles.accountGrid}>
@@ -826,6 +1036,175 @@ export function AuthAccountSettingsPanel({
               {/* <Button type="button" variant="secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </Button> */}
+            </div>
+          </Panel>
+
+          <Panel className={styles.mainPanel} title="Two-factor authentication">
+            <div className={styles.form}>
+              {twoFactorStatus ? (
+                <div
+                  className={[
+                    styles.status,
+                    twoFactorStatus.tone === "error"
+                      ? styles.statusError
+                      : styles.statusSuccess,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={typographyStyles.p2}
+                >
+                  {twoFactorStatus.message}
+                </div>
+              ) : null}
+
+              <div className={styles.twoFactorHeader}>
+                <strong style={typographyStyles.p2}>
+                  {isTwoFactorEnabled ? "2FA is on" : "2FA is off"}
+                </strong>
+                <span className={styles.sessionCurrentValue} style={typographyStyles.s}>
+                  {isTwoFactorEnabled ? "Protected with authenticator codes" : "Recommended"}
+                </span>
+              </div>
+
+              <p style={panelMutedTextStyle}>
+                Add an authenticator app code requirement when you sign in. You&apos;ll also get
+                backup codes you can store offline.
+              </p>
+
+              {requiresPasswordBeforeTwoFactor ? (
+                <>
+                  <p style={panelMutedTextStyle}>
+                    This account needs a password before 2FA can be enabled. Add a password first,
+                    then come back here to finish setup.
+                  </p>
+                  <div className={styles.buttonRow}>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => void handleSetPassword()}
+                      disabled={isBusy || isTwoFactorSubmitting || isAccountSettingsContextLoading}
+                    >
+                      {isSubmitting ? "Sending..." : "Add password first"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Field
+                    label={
+                      isTwoFactorEnabled
+                        ? "Current password"
+                        : "Current password to start setup"
+                    }
+                  >
+                    <FieldInput
+                      type="password"
+                      autoComplete="current-password"
+                      value={twoFactorPasswordValue}
+                      onChange={(event) => setTwoFactorPasswordValue(event.currentTarget.value)}
+                      placeholder="Enter your password"
+                      disabled={isTwoFactorSubmitting}
+                    />
+                  </Field>
+
+                  {pendingTwoFactorSetup ? (
+                    <div className={styles.twoFactorSetupCard}>
+                      <div className={styles.twoFactorSetupSection}>
+                        <strong style={typographyStyles.p2}>1. Add this secret to your authenticator app</strong>
+                        <p style={panelMutedTextStyle}>
+                          Most authenticator apps let you add an account manually with a setup key.
+                        </p>
+                        <div className={styles.codeValue} style={typographyStyles.p2}>
+                          {twoFactorSecret ?? "Setup key unavailable. Use the raw setup URI below."}
+                        </div>
+                        {pendingTwoFactorSetup.totpUri ? (
+                          <details className={styles.twoFactorDetails}>
+                            <summary style={typographyStyles.s}>Show raw setup URI</summary>
+                            <div className={styles.codeValue} style={typographyStyles.s}>
+                              {pendingTwoFactorSetup.totpUri}
+                            </div>
+                          </details>
+                        ) : null}
+                      </div>
+
+                      {pendingTwoFactorSetup.backupCodes.length > 0 ? (
+                        <div className={styles.twoFactorSetupSection}>
+                          <div className={styles.twoFactorSectionHeader}>
+                            <strong style={typographyStyles.p2}>2. Save your backup codes</strong>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => void handleCopyBackupCodes()}
+                              disabled={isTwoFactorSubmitting}
+                            >
+                              Copy codes
+                            </Button>
+                          </div>
+                          <div className={styles.backupCodesGrid}>
+                            {pendingTwoFactorSetup.backupCodes.map((code) => (
+                              <div
+                                key={code}
+                                className={styles.backupCode}
+                                style={typographyStyles.p2}
+                              >
+                                {code}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <Field label="3. Enter the 6-digit code from your authenticator app">
+                        <FieldInput
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={twoFactorVerificationCode}
+                          onChange={(event) =>
+                            setTwoFactorVerificationCode(
+                              event.currentTarget.value.replace(/[^\d]/g, "").slice(0, 6),
+                            )
+                          }
+                          placeholder="123456"
+                          disabled={isTwoFactorSubmitting}
+                        />
+                      </Field>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.buttonRow}>
+                    {isTwoFactorEnabled ? (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => void handleDisableTwoFactor()}
+                        disabled={isTwoFactorSubmitting}
+                      >
+                        {isTwoFactorSubmitting ? "Turning off..." : "Turn off 2FA"}
+                      </Button>
+                    ) : isTwoFactorSetupPending ? (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => void handleVerifyTwoFactor()}
+                        disabled={isTwoFactorSubmitting || twoFactorVerificationCode.length !== 6}
+                      >
+                        {isTwoFactorSubmitting ? "Verifying..." : "Verify and enable 2FA"}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => void handleEnableTwoFactor()}
+                        disabled={isTwoFactorSubmitting || !twoFactorPasswordValue.trim()}
+                      >
+                        {isTwoFactorSubmitting ? "Starting..." : "Turn on 2FA"}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </Panel>
 
