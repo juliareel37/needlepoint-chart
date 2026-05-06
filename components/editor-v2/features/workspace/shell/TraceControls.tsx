@@ -231,7 +231,11 @@ export function TraceControls({
         mode,
       };
 
-      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+      if (
+        mode === "apply" &&
+        nextOverwriteCount > 0 &&
+        shouldShowOverwriteWarning()
+      ) {
         setOverwriteCount(nextOverwriteCount);
         setPendingConversion(conversion);
         return;
