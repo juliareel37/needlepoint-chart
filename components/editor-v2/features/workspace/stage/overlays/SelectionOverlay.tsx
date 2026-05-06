@@ -310,6 +310,22 @@ export function SelectionOverlay({
             strokeDasharray={SELECTION_STROKE_DASH}
             vectorEffect="non-scaling-stroke"
           />
+          {!selection.preview ? (
+            <>
+              {buildRectSelectionHandles(selection.rect, projectedCellSize).map((handle) => (
+                <circle
+                  key={handle.id}
+                  cx={handle.cx}
+                  cy={handle.cy}
+                  r={RECT_HANDLE_SIZE / 2}
+                  fill="#ffffff"
+                  stroke="#2563eb"
+                  strokeWidth={RECT_HANDLE_BORDER_WIDTH}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </>
+          ) : null}
         </svg>
       ) : null}
 

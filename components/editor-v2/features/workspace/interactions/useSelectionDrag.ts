@@ -336,7 +336,7 @@ function getSelectionResizeHandleAtPoint(
   const selection = state.session.selection;
 
   if (
-    selection.mode !== "rect" ||
+    (selection.mode !== "rect" && selection.mode !== "circle") ||
     !selection.rect ||
     selection.preview ||
     state.session.duplicatePlacement

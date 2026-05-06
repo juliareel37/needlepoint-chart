@@ -656,7 +656,11 @@ function resizeSelection(
   handle: ResizeSelectionCommand["payload"]["handle"],
   current: GridPoint,
 ): SelectionState {
-  if (selection.mode !== "rect" || !selection.rect || selection.preview) {
+  if (
+    (selection.mode !== "rect" && selection.mode !== "circle") ||
+    !selection.rect ||
+    selection.preview
+  ) {
     return selection;
   }
 

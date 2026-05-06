@@ -262,6 +262,45 @@ describe("selection command handlers", () => {
     });
   });
 
+  it("resizes a committed elliptical selection from a side handle without locking aspect ratio", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "circle",
+      shape: "circle",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-3",
+      kind: "selection.resize",
+      payload: {
+        handle: "n",
+        current: { x: 4, y: 1 },
+      },
+      meta: { source: "canvas", timestamp: 8, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "circle",
+      shape: "circle",
+      rect: { x: 2, y: 1, width: 4, height: 7 },
+      lassoPoints: [
+        { x: 2, y: 1 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
   it("starts duplicate placement from the painted cells inside the selection", () => {
     const initial = createInitialEditorStoreState();
     initial.document.grid.width = 5;
