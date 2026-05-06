@@ -887,7 +887,7 @@ export function FloatingToolbar({
           }}
         >
           <ToolbarIcon icon="/icons/lucide/copy.svg" />
-          <ToolbarLabel>Duplicate</ToolbarLabel>
+          <ToolbarLabel>Copy</ToolbarLabel>
         </ToolbarButton>
 
         <ToolbarButton
