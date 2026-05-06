@@ -18,7 +18,7 @@ import {
   createSelectionUpdateCommand,
 } from "../workspaceCommands";
 
-type SelectionResizeHandle = "nw" | "ne" | "se" | "sw";
+type SelectionResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
 interface UseSelectionDragOptions {
   activeTool: ActiveTool;
@@ -129,17 +129,8 @@ export function useSelectionDrag({
       }
 
       if (activeResizeHandle) {
-        const resizeAnchor = getResizeAnchorForHandle(
-          state.session.selection,
-          activeResizeHandle,
-        );
-
-        if (!resizeAnchor) {
-          return;
-        }
-
         dispatch(
-          createResizeSelectionCommand(resizeAnchor, {
+          createResizeSelectionCommand(activeResizeHandle, {
             x: Math.floor(point.x),
             y: Math.floor(point.y),
           }),
@@ -301,6 +292,14 @@ function getSelectionCursor(args: {
     return "nesw-resize";
   }
 
+  if (resizeHandle === "n" || resizeHandle === "s") {
+    return "ns-resize";
+  }
+
+  if (resizeHandle === "e" || resizeHandle === "w") {
+    return "ew-resize";
+  }
+
   if (args.hoveringMovableSelection) {
     return "grab";
   }
@@ -341,8 +340,22 @@ function getSelectionResizeHandleAtPoint(
   const corners: Array<{ handle: SelectionResizeHandle; point: SelectionPoint }> = [
     { handle: "nw", point: { x: selection.rect.x, y: selection.rect.y } },
     {
+      handle: "n",
+      point: {
+        x: selection.rect.x + selection.rect.width / 2,
+        y: selection.rect.y,
+      },
+    },
+    {
       handle: "ne",
       point: { x: selection.rect.x + selection.rect.width, y: selection.rect.y },
+    },
+    {
+      handle: "e",
+      point: {
+        x: selection.rect.x + selection.rect.width,
+        y: selection.rect.y + selection.rect.height / 2,
+      },
     },
     {
       handle: "se",
@@ -352,8 +365,22 @@ function getSelectionResizeHandleAtPoint(
       },
     },
     {
+      handle: "s",
+      point: {
+        x: selection.rect.x + selection.rect.width / 2,
+        y: selection.rect.y + selection.rect.height,
+      },
+    },
+    {
       handle: "sw",
       point: { x: selection.rect.x, y: selection.rect.y + selection.rect.height },
+    },
+    {
+      handle: "w",
+      point: {
+        x: selection.rect.x,
+        y: selection.rect.y + selection.rect.height / 2,
+      },
     },
   ];
 
@@ -367,29 +394,4 @@ function getSelectionResizeHandleAtPoint(
   }
 
   return null;
-}
-
-function getResizeAnchorForHandle(
-  selection: SelectionState,
-  handle: SelectionResizeHandle,
-): GridPoint | null {
-  if (selection.mode !== "rect" || !selection.rect) {
-    return null;
-  }
-
-  const maxX = selection.rect.x + selection.rect.width - 1;
-  const maxY = selection.rect.y + selection.rect.height - 1;
-
-  switch (handle) {
-    case "nw":
-      return { x: maxX, y: maxY };
-    case "ne":
-      return { x: selection.rect.x, y: maxY };
-    case "se":
-      return { x: selection.rect.x, y: selection.rect.y };
-    case "sw":
-      return { x: maxX, y: selection.rect.y };
-    default:
-      return null;
-  }
 }

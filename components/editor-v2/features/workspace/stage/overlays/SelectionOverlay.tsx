@@ -383,9 +383,19 @@ function buildRectSelectionHandles(
       cy: rect.y * projectedCellSize,
     },
     {
+      id: "n",
+      cx: (rect.x + rect.width / 2) * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
       id: "ne",
       cx: (rect.x + rect.width) * projectedCellSize,
       cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "e",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: (rect.y + rect.height / 2) * projectedCellSize,
     },
     {
       id: "se",
@@ -393,9 +403,19 @@ function buildRectSelectionHandles(
       cy: (rect.y + rect.height) * projectedCellSize,
     },
     {
+      id: "s",
+      cx: (rect.x + rect.width / 2) * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
       id: "sw",
       cx: rect.x * projectedCellSize,
       cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
+      id: "w",
+      cx: rect.x * projectedCellSize,
+      cy: (rect.y + rect.height / 2) * projectedCellSize,
     },
   ];
 }

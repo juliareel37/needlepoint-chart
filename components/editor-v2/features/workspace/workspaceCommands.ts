@@ -243,12 +243,12 @@ export function createMoveSelectionCommand(
 }
 
 export function createResizeSelectionCommand(
-  anchor: GridPoint,
+  handle: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w",
   current: GridPoint,
 ): EditorCommand {
   return createCommand(
     "selection.resize",
-    { anchor, current },
+    { handle, current },
     "canvas",
     { mode: "skip" },
   );

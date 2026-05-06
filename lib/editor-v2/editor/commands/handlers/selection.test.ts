@@ -204,7 +204,7 @@ describe("selection command handlers", () => {
       id: "cmd-resize-1",
       kind: "selection.resize",
       payload: {
-        anchor: { x: 5, y: 7 },
+        handle: "nw",
         current: { x: 1, y: 2 },
       },
       meta: { source: "canvas", timestamp: 6, history: { mode: "skip" } },
@@ -213,10 +213,49 @@ describe("selection command handlers", () => {
     expect(store.getState().session.selection).toEqual({
       mode: "rect",
       shape: "rect",
-      rect: { x: 1, y: 2, width: 5, height: 6 },
+      rect: { x: 2, y: 2, width: 4, height: 5 },
       lassoPoints: [
+        { x: 2, y: 2 },
+        { x: 5, y: 6 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("resizes a committed rectangular selection from a side handle without locking aspect ratio", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
         { x: 5, y: 7 },
-        { x: 1, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-2",
+      kind: "selection.resize",
+      payload: {
+        handle: "e",
+        current: { x: 8, y: 4 },
+      },
+      meta: { source: "canvas", timestamp: 7, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 7, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 8, y: 7 },
       ],
       mirrorAxis: null,
       preview: null,

@@ -167,7 +167,10 @@ export type MoveSelectionCommand = BaseEditorCommand<
 
 export type ResizeSelectionCommand = BaseEditorCommand<
   "selection.resize",
-  { anchor: GridPoint; current: GridPoint }
+  {
+    handle: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+    current: GridPoint;
+  }
 >;
 
 export type BeginDuplicatePlacementCommand = BaseEditorCommand<

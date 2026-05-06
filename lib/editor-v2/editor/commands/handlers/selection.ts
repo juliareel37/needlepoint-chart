@@ -324,7 +324,7 @@ export const resizeSelectionCommandHandler: EditorCommandHandler<ResizeSelection
   handle(state, command) {
     const resizedSelection = resizeSelection(
       state.session.selection,
-      command.payload.anchor,
+      command.payload.handle,
       command.payload.current,
     );
 
@@ -653,30 +653,161 @@ function buildRectSelectionBounds(
 
 function resizeSelection(
   selection: SelectionState,
-  anchor: GridPoint,
+  handle: ResizeSelectionCommand["payload"]["handle"],
   current: GridPoint,
 ): SelectionState {
   if (selection.mode !== "rect" || !selection.rect || selection.preview) {
     return selection;
   }
 
-  const rect = buildRectSelectionBounds(anchor, current);
-  const currentPoint = normalizeRectPoint(current);
+  const rect = buildResizedRect(selection.rect, handle, normalizeRectPoint(current));
 
-  if (
-    rect.x === selection.rect.x &&
-    rect.y === selection.rect.y &&
-    rect.width === selection.rect.width &&
-    rect.height === selection.rect.height
-  ) {
+  if (!rect) {
     return selection;
   }
 
   return {
     ...selection,
     rect,
-    lassoPoints: [anchor, currentPoint],
+    lassoPoints: [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.width - 1, y: rect.y + rect.height - 1 },
+    ],
     preview: null,
+  };
+}
+
+function buildResizedRect(
+  rect: NonNullable<SelectionState["rect"]>,
+  handle: ResizeSelectionCommand["payload"]["handle"],
+  current: GridPoint,
+) {
+  const left = rect.x;
+  const top = rect.y;
+  const right = rect.x + rect.width - 1;
+  const bottom = rect.y + rect.height - 1;
+
+  switch (handle) {
+    case "n":
+      return buildEdgeResizedRect({
+        fixedLeft: left,
+        fixedRight: right,
+        fixedBottom: bottom,
+        nextTop: current.y,
+      });
+    case "e":
+      return buildEdgeResizedRect({
+        fixedTop: top,
+        fixedBottom: bottom,
+        fixedLeft: left,
+        nextRight: current.x,
+      });
+    case "s":
+      return buildEdgeResizedRect({
+        fixedLeft: left,
+        fixedRight: right,
+        fixedTop: top,
+        nextBottom: current.y,
+      });
+    case "w":
+      return buildEdgeResizedRect({
+        fixedTop: top,
+        fixedBottom: bottom,
+        fixedRight: right,
+        nextLeft: current.x,
+      });
+    case "nw":
+      return buildCornerAspectLockedRect({
+        anchorX: right,
+        anchorY: bottom,
+        current,
+        sourceWidth: rect.width,
+        sourceHeight: rect.height,
+      });
+    case "ne":
+      return buildCornerAspectLockedRect({
+        anchorX: left,
+        anchorY: bottom,
+        current,
+        sourceWidth: rect.width,
+        sourceHeight: rect.height,
+      });
+    case "se":
+      return buildCornerAspectLockedRect({
+        anchorX: left,
+        anchorY: top,
+        current,
+        sourceWidth: rect.width,
+        sourceHeight: rect.height,
+      });
+    case "sw":
+      return buildCornerAspectLockedRect({
+        anchorX: right,
+        anchorY: top,
+        current,
+        sourceWidth: rect.width,
+        sourceHeight: rect.height,
+      });
+    default:
+      return null;
+  }
+}
+
+function buildEdgeResizedRect(args: {
+  fixedTop?: number;
+  fixedRight?: number;
+  fixedBottom?: number;
+  fixedLeft?: number;
+  nextTop?: number;
+  nextRight?: number;
+  nextBottom?: number;
+  nextLeft?: number;
+}) {
+  const left = args.nextLeft ?? args.fixedLeft ?? 0;
+  const right = args.nextRight ?? args.fixedRight ?? left;
+  const top = args.nextTop ?? args.fixedTop ?? 0;
+  const bottom = args.nextBottom ?? args.fixedBottom ?? top;
+
+  return {
+    x: Math.min(left, right),
+    y: Math.min(top, bottom),
+    width: Math.abs(right - left) + 1,
+    height: Math.abs(bottom - top) + 1,
+  };
+}
+
+function buildCornerAspectLockedRect(args: {
+  anchorX: number;
+  anchorY: number;
+  current: GridPoint;
+  sourceWidth: number;
+  sourceHeight: number;
+}) {
+  const { anchorX, anchorY, current, sourceWidth, sourceHeight } = args;
+  const ratio = sourceWidth / sourceHeight;
+  const deltaX = current.x - anchorX;
+  const deltaY = current.y - anchorY;
+  const signX = deltaX === 0 ? -1 : Math.sign(deltaX);
+  const signY = deltaY === 0 ? -1 : Math.sign(deltaY);
+  const absX = Math.abs(deltaX) + 1;
+  const absY = Math.abs(deltaY) + 1;
+  let width = absX;
+  let height = absY;
+
+  if (absX / absY > ratio) {
+    height = Math.max(1, Math.round(width / ratio));
+  } else {
+    width = Math.max(1, Math.round(height * ratio));
+  }
+
+  const nextX = anchorX + signX * (width - 1);
+  const nextY = anchorY + signY * (height - 1);
+
+  return {
+    x: Math.min(anchorX, nextX),
+    y: Math.min(anchorY, nextY),
+    width: Math.abs(nextX - anchorX) + 1,
+    height: Math.abs(nextY - anchorY) + 1,
   };
 }
 
