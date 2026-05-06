@@ -286,7 +286,7 @@ export function TextPlacementToolbar({
 
   return (
     <div className={styles.selectionToolbarCluster}>
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -298,7 +298,7 @@ export function TextPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
 
       <div className={styles.selectionToolbarMainViewport}>
         <Toolbar className={styles.floatingToolbar}>
@@ -411,11 +411,39 @@ export function TextPlacementToolbar({
             >
               <ToolbarIcon icon="/icons/lucide/underline.svg" />
             </ToolbarButton>
+
+            
+            <ToolbarDivider />
+
+            <ToolbarButton
+              type="button"
+              variant="secondary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              onClick={() => dispatch(createCancelTextPlacementCommand())}
+            >
+              {/* <ToolbarIcon icon="/icons/lucide/x.svg" /> */}
+              Cancel
+            </ToolbarButton>
+              <ToolbarButton
+              type="button"
+              variant="primary"
+              textOnly
+              // className={styles.selectionToolbarCloseButton}
+              disabled={!canConvert}
+              onClick={() => {
+                void handleConvert();
+              }}
+            >
+              {/* <ToolbarIcon icon="/icons/lucide/check.svg" /> */}
+              Apply
+            </ToolbarButton>
+
           </ToolbarGroup>
         </Toolbar>
       </div>
 
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -430,7 +458,7 @@ export function TextPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/check.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
       <Modal
         isOpen={pendingGroups !== null}
         title="Heads up!"

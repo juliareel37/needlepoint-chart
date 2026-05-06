@@ -446,7 +446,7 @@ export function IconPlacementToolbar({
 
   return (
     <div className={styles.selectionToolbarCluster}>
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -458,7 +458,7 @@ export function IconPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
 
       <div className={styles.selectionToolbarMainViewport}>
         <Toolbar className={styles.floatingToolbar}>
@@ -813,10 +813,37 @@ export function IconPlacementToolbar({
               </ToolbarGroup>
             </>
           ) : null}
+
+
+                      
+          <ToolbarDivider />
+
+          <ToolbarButton
+            type="button"
+            variant="secondary"
+            textOnly
+            onClick={() => dispatch(createCancelIconPlacementCommand())}
+          >
+            Cancel
+          </ToolbarButton>
+          
+            <ToolbarButton
+            type="button"
+            variant="primary"
+            textOnly
+            // className={styles.selectionToolbarCloseButton}
+            disabled={!canConvert}
+            onClick={() => {
+              void handleConvert();
+            }}
+          >
+            Apply
+          </ToolbarButton>
+          
         </Toolbar>
       </div>
 
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -831,7 +858,7 @@ export function IconPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/check.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
       <Modal
         isOpen={pendingGroups !== null}
         title="Heads up!"
