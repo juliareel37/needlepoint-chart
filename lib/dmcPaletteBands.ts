@@ -100,7 +100,6 @@ export const DMC_PALETTE_BANDS = [
       ],
       [
         304,
-        776,
         894,
         321,
         3354,

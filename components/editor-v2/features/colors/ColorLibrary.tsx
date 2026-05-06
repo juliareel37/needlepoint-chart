@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FieldInput } from "@/components/design-system";
 import { Button } from "@/components/design-system";
+import { getDmcColorFamilySections } from "@/lib/editor-v2/editor/color-library";
 import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import styles from "./ColorLibrary.module.css";
@@ -78,6 +79,7 @@ export function ColorLibrary({
           .includes(normalizedSearchQuery);
   const filteredColors = colors.filter(matchesSearch);
   const featuredColors = filteredColors.filter((color) => featuredColorIdSet.has(color.id));
+  const familySections = getDmcColorFamilySections(filteredColors);
   const hasSearchQuery = normalizedSearchQuery.length > 0;
 
   function renderTransparentButton() {
@@ -134,8 +136,10 @@ export function ColorLibrary({
         active={selected}
         inertWhenActive
         className={styles.colorButton}
+        data-tooltip={color.code}
         aria-label={`${color.name} (${color.code})`}
         aria-pressed={selected}
+        title={color.code}
       >
         <span
           aria-hidden="true"
@@ -205,11 +209,18 @@ export function ColorLibrary({
           {showAllSectionHeader ? (
             <h3 className={styles.sectionHeader}>All colors</h3>
           ) : null}
-          {filteredColors.length > 0 ? (
-            <div className={styles.sectionGrid}>
-              {filteredColors.map((color) =>
-                renderColorButton(color, { showSymbol: showAllSymbols }),
-              )}
+          {familySections.length > 0 ? (
+            <div className={styles.familySections}>
+              {familySections.map((section) => (
+                <div key={section.family} className={styles.familySection}>
+                  <h4 className={styles.familySectionHeader}>{section.label}</h4>
+                  <div className={styles.sectionGrid}>
+                    {section.colors.map((color) =>
+                      renderColorButton(color, { showSymbol: showAllSymbols }),
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <p className={styles.emptyState}>

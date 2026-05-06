@@ -63,6 +63,27 @@
   align-items: start;
 }
 
+.familySections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.familySection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.familySectionHeader {
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .emptyState {
   margin: 0;
   color: var(--text-secondary);
@@ -71,10 +92,57 @@
 }
 
 .colorButton {
+  position: relative;
   justify-content: center;
   width: 100%;
   min-width: 0;
   padding: 4px !important;
+}
+
+.colorButton[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: var(--z-editor-tooltip);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-tooltip-shadow);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.colorButton[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  z-index: var(--z-editor-tooltip);
+  width: 8px;
+  height: 8px;
+  background: var(--surface-card);
+  border-right: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-reg);
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px) rotate(45deg);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .colorButton[data-active="true"] {
@@ -125,6 +193,19 @@
   font-weight: 700;
 }
 
+.colorButton:focus-visible::after,
+.colorButton:focus-visible::before {
+  opacity: 1;
+}
+
+.colorButton:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
+.colorButton:focus-visible::before {
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .colorButton:hover:not(:disabled),
   .colorButton[data-active="true"]:hover:not(:disabled),
@@ -138,5 +219,18 @@
     box-shadow:
       0 0 0 1px var(--swatch-ring-inner),
       0 0 0 3px var(--swatch-ring-outer);
+  }
+
+  .colorButton:hover:not(:disabled)::after,
+  .colorButton:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+
+  .colorButton:hover:not(:disabled)::after {
+    transform: translate(-50%, 0);
+  }
+
+  .colorButton:hover:not(:disabled)::before {
+    transform: translate(-50%, 0) rotate(45deg);
   }
 }
