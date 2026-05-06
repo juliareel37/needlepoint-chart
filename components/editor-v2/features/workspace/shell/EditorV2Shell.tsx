@@ -81,6 +81,7 @@ import {
 } from "../workspaceCommands";
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
+import type { ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
@@ -1444,6 +1445,9 @@ export function EditorV2Shell({
   ]);
 
   const [selectionRequestKey, setSelectionRequestKey] = useState(0);
+  const [requestedColorPanelView, setRequestedColorPanelView] =
+    useState<ColorPanelView | null>(null);
+  const [requestedColorPanelViewKey, setRequestedColorPanelViewKey] = useState(0);
 
   const handleUsedColorsScopeModeChange = useCallback(
     (mode: "full-canvas" | "selection") => {
@@ -1468,6 +1472,13 @@ export function EditorV2Shell({
     },
     [dispatch, isBottomPanelLayout, sidebarCollapsed],
   );
+
+  const handleOpenSelectionColorsPanel = useCallback(() => {
+    setRequestedColorPanelView("design-colors");
+    setRequestedColorPanelViewKey((current) => current + 1);
+    dispatch(createSetActiveSidebarSectionCommand("color"));
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch]);
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -2647,6 +2658,8 @@ export function EditorV2Shell({
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
                     recoveredLocalChanges={recoveredLocalChanges}
+                    requestedColorPanelView={requestedColorPanelView}
+                    requestedColorPanelViewKey={requestedColorPanelViewKey}
                     saveMessage={saveMessage}
                     saveMode={saveMode}
                     onHighlightColorChange={setHighlightedColorId}
@@ -2741,6 +2754,7 @@ export function EditorV2Shell({
                         }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
+                        onOpenSelectionColorsPanel={handleOpenSelectionColorsPanel}
                         selectionRequestKey={selectionRequestKey}
                         showSymbols={showSymbols}
                         symbolAssignments={document.palette.symbolAssignments}

@@ -80,6 +80,8 @@ interface EditorSidebarProps {
   textPlacement: TextPlacementSession | null;
   iconPlacement: IconPlacementSession | null;
   isBottomPanelLayout: boolean;
+  requestedColorPanelView: ColorPanelView | null;
+  requestedColorPanelViewKey: number;
   onHighlightColorChange: (colorId: string | null) => void;
   textViewportCenter: WorldPoint | null;
   textViewportWidth: number | null;
@@ -145,6 +147,8 @@ export function EditorSidebar({
   textPlacement,
   iconPlacement,
   isBottomPanelLayout,
+  requestedColorPanelView,
+  requestedColorPanelViewKey,
   onHighlightColorChange,
   textViewportCenter,
   textViewportWidth,
@@ -164,6 +168,14 @@ export function EditorSidebar({
       setColorPanelView("overview");
     }
   }, [activeSection]);
+
+  useEffect(() => {
+    if (!requestedColorPanelView) {
+      return;
+    }
+
+    setColorPanelView(requestedColorPanelView);
+  }, [requestedColorPanelView, requestedColorPanelViewKey]);
 
   useEffect(() => {
     if (activeSection !== "icons") {

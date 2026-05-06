@@ -298,6 +298,7 @@ interface FloatingToolbarProps {
   duplicatePlacementOperation: "duplicate" | "cut" | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
+  onOpenSelectionColorsPanel: () => void;
   selectionRequestKey: number;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -326,6 +327,7 @@ export function FloatingToolbar({
   duplicatePlacementOperation,
   mirrorSessionActive,
   isBottomPanelLayout,
+  onOpenSelectionColorsPanel,
   selectionRequestKey,
   showSymbols,
   symbolAssignments,
@@ -934,6 +936,24 @@ export function FloatingToolbar({
       >
         <ToolbarIcon icon="/icons/lucide/eraser.svg" />
         <ToolbarLabel>Erase</ToolbarLabel>
+      </ToolbarButton>
+
+      <ToolbarDivider />
+
+      <ToolbarButton
+        type="button"
+        labelled
+        disabled={!canEraseSelection || duplicatePlacementActive}
+        onClick={() => {
+          if (!canEraseSelection || duplicatePlacementActive) {
+            return;
+          }
+
+          onOpenSelectionColorsPanel();
+        }}
+      >
+        <ToolbarIcon icon="/icons/lucide/palette.svg" />
+        <ToolbarLabel>Edit</ToolbarLabel>
       </ToolbarButton>
 
       {selectionDrawTool && !duplicatePlacementActive ? (
