@@ -164,6 +164,37 @@ export function createApplyTraceConversionCommand(payload: {
   );
 }
 
+export function createPreviewTraceConversionCommand(payload: {
+  replacements: Array<{ index: number; value: string | null }>;
+  extractedColorIds: string[];
+  activeColorId: string | null;
+}): EditorCommand {
+  return createCommand(
+    "grid.previewTraceConversion",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitTraceConversionPreviewCommand(): EditorCommand {
+  return createCommand(
+    "grid.commitTraceConversionPreview",
+    {},
+    "toolbar",
+    { mode: "push", label: "Convert Image to Pattern" },
+  );
+}
+
+export function createCancelTraceConversionPreviewCommand(): EditorCommand {
+  return createCommand(
+    "grid.cancelTraceConversionPreview",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createSwapPaletteColorCommand(
   fromColorId: string,
   toColorId: string,

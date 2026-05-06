@@ -55,6 +55,74 @@ describe("gridApplyTraceConversionCommandHandler", () => {
     ]);
     expect(store.getState().document.palette.extractedPaletteIds).toEqual(["dmc-310", "dmc-666"]);
   });
+
+  it("supports a temporary preview that can be canceled without history", () => {
+    const store = createEditorStore({ initialState: createTestState() });
+
+    store.dispatch(
+      createPreviewCommand({
+        replacements: [{ index: 0, value: "dmc-321" }],
+        extractedColorIds: ["dmc-321"],
+        activeColorId: "dmc-321",
+      }),
+    );
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc-321",
+      null,
+      "dmc-666",
+      null,
+    ]);
+    expect(store.getState().session.traceInteraction.conversionPreview).not.toBeNull();
+    expect(store.getState().session.history.past).toHaveLength(0);
+
+    store.dispatch(createCancelPreviewCommand());
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc-310",
+      null,
+      "dmc-666",
+      null,
+    ]);
+    expect(store.getState().document.palette.extractedPaletteIds).toEqual([
+      "dmc-310",
+      "dmc-666",
+    ]);
+    expect(store.getState().session.activeTool.colorId).toBe("dmc-310");
+    expect(store.getState().session.traceInteraction.conversionPreview).toBeNull();
+    expect(store.getState().session.history.past).toHaveLength(0);
+  });
+
+  it("commits a preview into history when applied", () => {
+    const store = createEditorStore({ initialState: createTestState() });
+
+    store.dispatch(
+      createPreviewCommand({
+        replacements: [{ index: 0, value: "dmc-321" }],
+        extractedColorIds: ["dmc-321"],
+        activeColorId: "dmc-321",
+      }),
+    );
+    store.dispatch(createCommitPreviewCommand());
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc-321",
+      null,
+      "dmc-666",
+      null,
+    ]);
+    expect(store.getState().session.traceInteraction.conversionPreview).toBeNull();
+    expect(store.getState().session.history.past).toHaveLength(1);
+
+    store.dispatch(createUndoCommand());
+
+    expect(store.getState().document.grid.cells).toEqual([
+      "dmc-310",
+      null,
+      "dmc-666",
+      null,
+    ]);
+  });
 });
 
 function createTestState(): EditorStoreState {
@@ -166,6 +234,7 @@ function createTestState(): EditorStoreState {
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",
@@ -245,6 +314,47 @@ function createUndoCommand(): EditorCommand {
   return {
     id: "undo",
     kind: "history.undo",
+    payload: {},
+    meta: {
+      source: "toolbar",
+      timestamp: 2,
+      history: { mode: "skip" },
+    },
+  };
+}
+
+function createPreviewCommand(
+  payload: Extract<EditorCommand, { kind: "grid.previewTraceConversion" }>["payload"],
+): EditorCommand {
+  return {
+    id: "preview-convert-trace",
+    kind: "grid.previewTraceConversion",
+    payload,
+    meta: {
+      source: "toolbar",
+      timestamp: 1,
+      history: { mode: "skip" },
+    },
+  };
+}
+
+function createCommitPreviewCommand(): EditorCommand {
+  return {
+    id: "commit-preview-convert-trace",
+    kind: "grid.commitTraceConversionPreview",
+    payload: {},
+    meta: {
+      source: "toolbar",
+      timestamp: 2,
+      history: { mode: "push", label: "Convert Image to Pattern" },
+    },
+  };
+}
+
+function createCancelPreviewCommand(): EditorCommand {
+  return {
+    id: "cancel-preview-convert-trace",
+    kind: "grid.cancelTraceConversionPreview",
     payload: {},
     meta: {
       source: "toolbar",

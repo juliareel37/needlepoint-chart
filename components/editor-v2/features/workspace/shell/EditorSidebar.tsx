@@ -10,6 +10,7 @@ import type {
   IconPlacementSession,
   PaletteColor,
   TextPlacementSession,
+  TraceConversionPreviewState,
   TraceDocument,
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
@@ -65,6 +66,7 @@ interface EditorSidebarProps {
   showRuler: boolean;
   showSymbols: boolean;
   trace: TraceDocument | null;
+  traceConversionPreview: TraceConversionPreviewState | null;
   traceRepositionActive: boolean;
   traceRepositionOrigin: TraceRepositionOrigin | null;
   usedColors: Array<{ colorId: string; count: number }>;
@@ -129,6 +131,7 @@ export function EditorSidebar({
   showRuler,
   showSymbols,
   trace,
+  traceConversionPreview,
   traceRepositionActive,
   traceRepositionOrigin,
   usedColors,
@@ -337,9 +340,10 @@ export function EditorSidebar({
                 onCommitCrop={onCommitTraceCrop}
                 onResetCrop={onResetTraceCrop}
                 palette={palette}
+                previewState={traceConversionPreview}
                 repositionActive={traceRepositionActive}
                 repositionOrigin={traceRepositionOrigin}
-              trace={trace}
+                trace={trace}
             />
           ) : null}
 

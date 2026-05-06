@@ -252,6 +252,14 @@ export interface TraceInteractionState {
   replacedTrace: TraceDocument | null;
   repositionSnapshot: TraceRepositionSnapshot | null;
   runtimeImageRefId: string | null;
+  conversionPreview: TraceConversionPreviewState | null;
+}
+
+export interface TraceConversionPreviewState {
+  forwardPatches: DocumentPatch[];
+  inversePatches: DocumentPatch[];
+  previousActiveColorId: string | null;
+  previewActiveColorId: string | null;
 }
 
 export type TraceRepositionOrigin =
@@ -482,6 +490,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",

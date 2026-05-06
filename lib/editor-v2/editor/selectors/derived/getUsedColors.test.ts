@@ -115,6 +115,7 @@ function createSelectorTestState(): EditorStoreState {
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",

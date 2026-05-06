@@ -4,6 +4,7 @@ import type {
   EditorStore,
   GridDocument,
   PaletteColor,
+  TraceConversionPreviewState,
   TraceDocument,
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
@@ -23,6 +24,7 @@ interface TracePanelPageProps {
   onCommitCrop?: () => void;
   onResetCrop?: () => void;
   palette: PaletteColor[];
+  previewState: TraceConversionPreviewState | null;
   repositionActive: boolean;
   repositionOrigin: TraceRepositionOrigin | null;
   trace: TraceDocument | null;
@@ -39,6 +41,7 @@ export function TracePanelPage({
   onCommitCrop,
   onResetCrop,
   palette,
+  previewState,
   repositionActive,
   repositionOrigin,
   trace,
@@ -57,6 +60,7 @@ export function TracePanelPage({
           onCommitCrop={onCommitCrop}
           onResetCrop={onResetCrop}
           palette={palette}
+          previewState={previewState}
           repositionActive={repositionActive}
           repositionOrigin={repositionOrigin}
           trace={trace}

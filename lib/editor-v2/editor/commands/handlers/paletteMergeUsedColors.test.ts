@@ -176,6 +176,7 @@ function createMergeTestState(
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",

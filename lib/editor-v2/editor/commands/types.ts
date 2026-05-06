@@ -30,6 +30,9 @@ export type EditorCommandKind =
   | "grid.erase"
   | "grid.clear"
   | "grid.applyTraceConversion"
+  | "grid.previewTraceConversion"
+  | "grid.commitTraceConversionPreview"
+  | "grid.cancelTraceConversionPreview"
   | "palette.swapColor"
   | "palette.deleteUsedColors"
   | "palette.mergeUsedColors"
@@ -128,6 +131,25 @@ export type ApplyTraceConversionCommand = BaseEditorCommand<
     extractedColorIds: string[];
     activeColorId: string | null;
   }
+>;
+
+export type PreviewTraceConversionCommand = BaseEditorCommand<
+  "grid.previewTraceConversion",
+  {
+    replacements: Array<{ index: number; value: string | null }>;
+    extractedColorIds: string[];
+    activeColorId: string | null;
+  }
+>;
+
+export type CommitTraceConversionPreviewCommand = BaseEditorCommand<
+  "grid.commitTraceConversionPreview",
+  object
+>;
+
+export type CancelTraceConversionPreviewCommand = BaseEditorCommand<
+  "grid.cancelTraceConversionPreview",
+  object
 >;
 
 export type SwapPaletteColorCommand = BaseEditorCommand<
@@ -464,6 +486,9 @@ export type EditorCommand =
   | EraseCellsCommand
   | ClearCanvasCommand
   | ApplyTraceConversionCommand
+  | PreviewTraceConversionCommand
+  | CommitTraceConversionPreviewCommand
+  | CancelTraceConversionPreviewCommand
   | SwapPaletteColorCommand
   | DeleteUsedColorsCommand
   | MergeUsedColorsCommand

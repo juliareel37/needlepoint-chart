@@ -1,5 +1,10 @@
 import type { EditorCommandHandler } from "./handlers/types";
-import { gridApplyTraceConversionCommandHandler } from "./handlers/gridApplyTraceConversion";
+import {
+  cancelTraceConversionPreviewCommandHandler,
+  commitTraceConversionPreviewCommandHandler,
+  gridApplyTraceConversionCommandHandler,
+  previewTraceConversionCommandHandler,
+} from "./handlers/gridApplyTraceConversion";
 import { gridClearCommandHandler } from "./handlers/gridClear";
 import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
@@ -73,6 +78,9 @@ export const commandHandlers: EditorCommandHandler[] = [
   gridEraseCommandHandler,
   gridClearCommandHandler,
   gridApplyTraceConversionCommandHandler,
+  previewTraceConversionCommandHandler,
+  commitTraceConversionPreviewCommandHandler,
+  cancelTraceConversionPreviewCommandHandler,
   setProjectTitleCommandHandler,
   startSelectionCommandHandler,
   updateSelectionCommandHandler,

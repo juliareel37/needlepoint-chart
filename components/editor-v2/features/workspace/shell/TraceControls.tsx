@@ -19,6 +19,7 @@ import type {
   EditorStore,
   GridDocument,
   PaletteColor,
+  TraceConversionPreviewState,
   TraceBlendMode,
   TraceDocument,
   TraceRepositionOrigin,
@@ -33,8 +34,11 @@ import {
   createApplyTraceConversionCommand,
   createAttachTraceCommand,
   createBeginTraceRepositionCommand,
+  createCancelTraceConversionPreviewCommand,
+  createCommitTraceConversionPreviewCommand,
   createCancelTraceRepositionCommand,
   createCommitTraceRepositionCommand,
+  createPreviewTraceConversionCommand,
   createRemoveTraceCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
@@ -50,6 +54,7 @@ interface TraceControlsProps {
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
+  previewState?: TraceConversionPreviewState | null;
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
   cropDraft?: TraceCropRect | null;
@@ -66,6 +71,7 @@ export function TraceControls({
   grid,
   gridMetrics,
   palette,
+  previewState = null,
   trace,
   dispatch,
   cropDraft = null,
@@ -94,6 +100,7 @@ export function TraceControls({
   const [pendingConversion, setPendingConversion] = useState<{
     replacements: Array<{ index: number; value: string | null }>;
     extractedColorIds: string[];
+    mode: "apply" | "preview";
   } | null>(null);
   const [overwriteCount, setOverwriteCount] = useState(0);
   const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
@@ -106,13 +113,16 @@ export function TraceControls({
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
   const traceEditingPreviewActive = positioningEnabled || cropEditing;
+  const conversionPreviewActive = previewState !== null;
   const preservePositioningSectionLayout =
     repositionOrigin === "upload" || repositionOrigin === "replace";
   const traceFileName = trace ? getTraceDisplayName(trace) : null;
   const traceFileNameParts = traceFileName
     ? splitFileNameForDisplay(traceFileName)
     : null;
-  const canConvert = Boolean(trace && !repositionActive && !cropEditing);
+  const canConvert = Boolean(
+    trace && !repositionActive && !cropEditing && !conversionPreviewActive,
+  );
   const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -160,16 +170,20 @@ export function TraceControls({
       return;
     }
 
+    const payload = {
+      replacements: conversion.replacements,
+      extractedColorIds: conversion.extractedColorIds,
+      activeColorId: conversion.extractedColorIds[0] ?? null,
+    };
+
     dispatch(
-      createApplyTraceConversionCommand({
-        replacements: conversion.replacements,
-        extractedColorIds: conversion.extractedColorIds,
-        activeColorId: conversion.extractedColorIds[0] ?? null,
-      }),
+      conversion.mode === "preview"
+        ? createPreviewTraceConversionCommand(payload)
+        : createApplyTraceConversionCommand(payload),
     );
   };
 
-  const handleConvertToPattern = async () => {
+  const runConversion = async (mode: "apply" | "preview") => {
     if (!dispatch || !trace || convertingImage) {
       return;
     }
@@ -214,6 +228,7 @@ export function TraceControls({
       const conversion = {
         replacements,
         extractedColorIds: result.usedColorIds,
+        mode,
       };
 
       if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
@@ -234,6 +249,9 @@ export function TraceControls({
       setConvertingImage(false);
     }
   };
+
+  const handlePreviewConversion = () => void runConversion("preview");
+  const handleConvertToPattern = () => void runConversion("apply");
 
   useEffect(() => {
     if (!opacityTooltipVisible) {
@@ -589,7 +607,7 @@ export function TraceControls({
         )}
         tone="warning"
         dismissLabel="Cancel"
-        confirmLabel="Convert"
+        confirmLabel={pendingConversion?.mode === "preview" ? "Preview" : "Convert"}
         onDismiss={() => {
           setPendingConversion(null);
           setOverwriteCount(0);
@@ -920,21 +938,67 @@ export function TraceControls({
               </div>
             </Field>
 
-            <Button
-              type="button"
-              variant="primary"
-              disabled={!canConvert || convertingImage}
-              onClick={handleConvertToPattern}
-            >
-              {convertingImage ? (
-                <>
-                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                  Converting...
-                </>
-              ) : (
-                "Convert image"
-              )}
-            </Button>
+            {conversionPreviewActive ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  Preview active. Apply to keep it, or exit to restore the previous stitches.
+                </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
+                  >
+                    Apply preview
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => dispatch(createCancelTraceConversionPreviewCommand())}
+                  >
+                    Exit preview
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canConvert || convertingImage}
+                    onClick={handlePreviewConversion}
+                  >
+                    {convertingImage ? (
+                      <>
+                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                        Converting...
+                      </>
+                    ) : (
+                      "Preview conversion"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={!canConvert || convertingImage}
+                    onClick={handleConvertToPattern}
+                  >
+                    {convertingImage ? (
+                      <>
+                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                        Converting...
+                      </>
+                    ) : (
+                      "Convert image"
+                    )}
+                  </Button>
+                </div>
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  Preview is temporary and won&apos;t stick until you apply it.
+                </p>
+              </div>
+            )}
           </TraceSection>
         </>
       ) : (

@@ -353,6 +353,7 @@ export function EditorV2Shell({
   const hasCompletedSave = state.session.persistence.lastSavedAt !== null;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
+  const traceConversionPreview = state.session.traceInteraction.conversionPreview;
   const mirrorSession = state.session.mirrorInteraction.session;
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
@@ -2573,6 +2574,7 @@ export function EditorV2Shell({
                     onCommitTraceCrop={handleCommitTraceCrop}
                     onResetTraceCrop={handleResetTraceCrop}
                     trace={trace}
+                    traceConversionPreview={traceConversionPreview}
                     traceRepositionActive={traceRepositionActive}
                     traceRepositionOrigin={traceRepositionOrigin}
                     textPlacement={textPlacement}

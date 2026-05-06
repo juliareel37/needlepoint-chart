@@ -185,6 +185,7 @@ function createDeleteTestState(
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",
