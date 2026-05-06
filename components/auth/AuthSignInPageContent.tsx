@@ -471,7 +471,8 @@ export function AuthSignInPageContent({
                 <span className={styles.fieldError}>{resetPasswordError}</span>
               ) : !token ? (
                 "This reset link looks incomplete. Try requesting a fresh one."
-              ) : (
+              ) 
+              : (
                 "Use at least 8 characters and avoid common passwords."
               )
             }
@@ -579,13 +580,13 @@ export function AuthSignInPageContent({
               Password
             </span>
           }
-          hint={
-            signUpPasswordError ? (
-              <span className={styles.fieldError}>{signUpPasswordError}</span>
-            ) : isSignUp ? (
-              "Use at least 8 characters and avoid common passwords."
-            ) : undefined
-          }
+          // hint={
+          //   signUpPasswordError ? (
+          //     <span className={styles.fieldError}>{signUpPasswordError}</span>
+          //   ) : isSignUp ? (
+          //     "Use at least 8 characters and avoid common passwords."
+          //   ) : undefined
+          // }
         >
           <FieldInput
             type="password"
