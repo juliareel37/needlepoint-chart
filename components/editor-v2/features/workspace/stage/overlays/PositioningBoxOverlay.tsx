@@ -76,6 +76,7 @@ interface DragSession {
   lastPreviewAt: number;
   moveSnap: PositioningMoveSnapState;
   rotationSnap: number | null;
+  rotationSnapDisabled: boolean;
 }
 
 interface HandleElements {
@@ -269,6 +270,7 @@ export function PositioningBoxOverlay({
 
       session.pendingClientX = event.clientX;
       session.pendingClientY = event.clientY;
+      session.rotationSnapDisabled = isRotationSnapModifierPressed(event);
 
       const hasLivePreview =
         previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
@@ -361,17 +363,21 @@ export function PositioningBoxOverlay({
     );
 
     if (session.mode === "rotate") {
-      session.rotationSnap = getRotationSnapTarget(
-        nextTransform.rotation,
-        session.rotationSnap,
-      );
-      nextTransform = {
-        ...nextTransform,
-        rotation: getSnappedRotationDegrees(
+      if (session.rotationSnapDisabled) {
+        session.rotationSnap = null;
+      } else {
+        session.rotationSnap = getRotationSnapTarget(
           nextTransform.rotation,
           session.rotationSnap,
-        ),
-      };
+        );
+        nextTransform = {
+          ...nextTransform,
+          rotation: getSnappedRotationDegrees(
+            nextTransform.rotation,
+            session.rotationSnap,
+          ),
+        };
+      }
     }
 
     if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
@@ -631,6 +637,7 @@ export function PositioningBoxOverlay({
         mode === "rotate"
           ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
           : null,
+      rotationSnapDisabled: isRotationSnapModifierPressed(event.nativeEvent),
     };
 
     if (usePointerCapture) {
@@ -907,6 +914,12 @@ function emptyMoveSnap(): PositioningMoveSnapState {
     centerX: null,
     centerY: null,
   };
+}
+
+function isRotationSnapModifierPressed(
+  event: Pick<PointerEvent, "metaKey" | "ctrlKey">,
+): boolean {
+  return event.metaKey || event.ctrlKey;
 }
 
 function getHorizontalGuideTop(

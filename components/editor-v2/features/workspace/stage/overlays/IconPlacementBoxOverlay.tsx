@@ -66,6 +66,7 @@ interface DragSession {
   rafId: number | null;
   moveSnap: PositioningMoveSnapState;
   rotationSnap: number | null;
+  rotationSnapDisabled: boolean;
 }
 
 interface HandleElements {
@@ -235,6 +236,7 @@ export function IconPlacementBoxOverlay({
 
       session.pendingClientX = event.clientX;
       session.pendingClientY = event.clientY;
+      session.rotationSnapDisabled = isRotationSnapModifierPressed(event);
       scheduleFrame();
     };
 
@@ -314,17 +316,21 @@ export function IconPlacementBoxOverlay({
     );
 
     if (session.mode === "rotate") {
-      session.rotationSnap = getRotationSnapTarget(
-        nextTransform.rotation,
-        session.rotationSnap,
-      );
-      nextTransform = {
-        ...nextTransform,
-        rotation: getSnappedRotationDegrees(
+      if (session.rotationSnapDisabled) {
+        session.rotationSnap = null;
+      } else {
+        session.rotationSnap = getRotationSnapTarget(
           nextTransform.rotation,
           session.rotationSnap,
-        ),
-      };
+        );
+        nextTransform = {
+          ...nextTransform,
+          rotation: getSnappedRotationDegrees(
+            nextTransform.rotation,
+            session.rotationSnap,
+          ),
+        };
+      }
     }
 
     if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
@@ -590,6 +596,7 @@ export function IconPlacementBoxOverlay({
         mode === "rotate"
           ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
           : null,
+      rotationSnapDisabled: isRotationSnapModifierPressed(event.nativeEvent),
     };
 
     overlayElement.setPointerCapture(event.pointerId);
@@ -844,6 +851,12 @@ function emptyMoveSnap(): PositioningMoveSnapState {
     centerX: null,
     centerY: null,
   };
+}
+
+function isRotationSnapModifierPressed(
+  event: Pick<PointerEvent, "metaKey" | "ctrlKey">,
+): boolean {
+  return event.metaKey || event.ctrlKey;
 }
 
 function getHorizontalGuideTop(
