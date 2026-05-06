@@ -85,6 +85,7 @@ import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
+import { ConversionPreviewToolbar } from "./ConversionPreviewToolbar";
 import {
   type TraceCropAspectRatioId,
 } from "./TraceRepositionToolbar";
@@ -2607,7 +2608,11 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {(traceRepositionActive || traceCropEditing) && trace ? (
+                    {traceConversionPreview ? (
+                      <ConversionPreviewToolbar
+                        dispatch={dispatch}
+                      />
+                    ) : (traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
                         cropEditing={traceCropEditing}
                         cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}

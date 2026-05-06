@@ -35,8 +35,8 @@ import {
   createAttachTraceCommand,
   createBeginTraceRepositionCommand,
   createCancelTraceConversionPreviewCommand,
-  createCommitTraceConversionPreviewCommand,
   createCancelTraceRepositionCommand,
+  createCommitTraceConversionPreviewCommand,
   createCommitTraceRepositionCommand,
   createPreviewTraceConversionCommand,
   createRemoveTraceCommand,
@@ -1009,23 +1009,23 @@ export function TraceControls({
 
             {conversionPreviewActive ? (
               <div style={{ display: "grid", gap: 8 }}>
-                <p className={styles.emptyMessage} style={typographyStyles.p2}>
-                  Preview active. Apply to keep it, or exit to restore the previous stitches.
-                </p>
+                {/* <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  Preview active. Use the toolbar to apply the conversion or exit preview.
+                </p> */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
-                  >
-                    Apply preview
-                  </Button>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={() => dispatch(createCancelTraceConversionPreviewCommand())}
                   >
                     Exit preview
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
+                  >
+                    Apply to canvas
                   </Button>
                 </div>
               </div>
@@ -1038,14 +1038,15 @@ export function TraceControls({
                     disabled={!canConvert || convertingImage}
                     onClick={handlePreviewConversion}
                   >
-                    {convertingImage ? (
+                    {/* {convertingImage ? (
                       <>
                         <span className={styles.saveButtonSpinner} aria-hidden="true" />
                         Converting...
                       </>
                     ) : (
-                      "Preview conversion"
-                    )}
+                      "Preview"
+                    )} */}
+                    Preview
                   </Button>
                   <Button
                     type="button"
@@ -1053,19 +1054,21 @@ export function TraceControls({
                     disabled={!canConvert || convertingImage}
                     onClick={handleConvertToPattern}
                   >
-                    {convertingImage ? (
+                    {/* {convertingImage ? (
                       <>
                         <span className={styles.saveButtonSpinner} aria-hidden="true" />
                         Converting...
                       </>
                     ) : (
-                      "Convert image"
-                    )}
+                      "Apply"
+                    )} */}
+                    Apply to canvas
                   </Button>
+                  
                 </div>
-                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                {/* <p className={styles.emptyMessage} style={typographyStyles.p2}>
                   Preview is temporary and won&apos;t stick until you apply it.
-                </p>
+                </p> */}
               </div>
             )}
           </TraceSection>
