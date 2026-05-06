@@ -136,6 +136,8 @@ interface TraceRepositionToolbarProps {
   cropEditing?: boolean;
   cropAspectRatioId?: TraceCropAspectRatioId;
   dispatch: EditorStore["dispatch"];
+  onFitHeight?: () => void;
+  onFitWidth?: () => void;
   onBeginCrop?: () => void;
   onCancelCrop?: () => void;
   onCommitCrop?: () => void;
@@ -266,6 +268,8 @@ export function TraceRepositionToolbar({
   cropEditing = false,
   cropAspectRatioId,
   dispatch,
+  onFitHeight,
+  onFitWidth,
   onBeginCrop,
   onCancelCrop,
   onCommitCrop,
@@ -293,6 +297,22 @@ export function TraceRepositionToolbar({
           <ToolbarGroup>
             {onBeginCrop ? (
               <>
+                {!cropEditing && onFitHeight && onFitWidth ? (
+                  <>
+                    <ToolbarButton type="button" labelled onClick={onFitHeight}>
+                      <ToolbarIcon icon="/icons/lucide/fold-vertical.svg" />
+                      Fit height
+                    </ToolbarButton>
+
+                    <ToolbarButton type="button" labelled onClick={onFitWidth}>
+                      <ToolbarIcon icon="/icons/lucide/fold-horizontal.svg" />
+                      Fit width
+                    </ToolbarButton>
+
+                    <ToolbarDivider />
+                  </>
+                ) : null}
+
                 {cropEditing ? (
                   <>
                     {cropAspectRatioId && onCropAspectRatioChange ? (

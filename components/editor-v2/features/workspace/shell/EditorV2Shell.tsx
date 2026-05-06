@@ -592,6 +592,52 @@ export function EditorV2Shell({
     },
     [trace, tracePreviewCrop],
   );
+  const handleFitTraceToSurface = useCallback(
+    (dimension: "width" | "height") => {
+      if (!trace) {
+        return;
+      }
+
+      const traceGridMetrics = createGridWorldMetrics(
+        state.document.grid.width,
+        state.document.grid.height,
+        DEFAULT_CELL_SIZE,
+        0,
+      );
+      const normalizedCrop = getNormalizedTraceCrop(trace);
+      const baseRect = getContainedRect(
+        normalizedCrop.cropWidth,
+        normalizedCrop.cropHeight,
+        traceGridMetrics.surfaceWidth,
+        traceGridMetrics.surfaceHeight,
+      );
+      const baseDimension =
+        dimension === "width" ? baseRect.width : baseRect.height;
+
+      if (baseDimension <= 0) {
+        return;
+      }
+
+      const nextScale =
+        (dimension === "width"
+          ? traceGridMetrics.surfaceWidth
+          : traceGridMetrics.surfaceHeight) / baseDimension;
+      const nextWidth = baseRect.width * nextScale;
+      const nextHeight = baseRect.height * nextScale;
+
+      dispatch(
+        createUpdateTraceCommand(
+          {
+            offsetX: (traceGridMetrics.surfaceWidth - nextWidth) / 2 - baseRect.left,
+            offsetY: (traceGridMetrics.surfaceHeight - nextHeight) / 2 - baseRect.top,
+            scale: nextScale,
+          },
+          { history: { mode: "skip" }, source: "toolbar" },
+        ),
+      );
+    },
+    [dispatch, state.document.grid.height, state.document.grid.width, trace],
+  );
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -2692,6 +2738,8 @@ export function EditorV2Shell({
                         cropEditing={traceCropEditing}
                         cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         dispatch={dispatch}
+                        onFitHeight={() => handleFitTraceToSurface("height")}
+                        onFitWidth={() => handleFitTraceToSurface("width")}
                         onBeginCrop={handleBeginTraceCrop}
                         onCancelCrop={handleCancelTraceCrop}
                         onCommitCrop={handleCommitTraceCrop}
