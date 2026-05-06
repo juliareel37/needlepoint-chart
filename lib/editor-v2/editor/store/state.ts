@@ -51,6 +51,8 @@ export interface PaletteColor {
   code: string;
   name: string;
   hex: string;
+  family?: string;
+  searchAliases?: string[];
 }
 
 export interface CustomPalette {

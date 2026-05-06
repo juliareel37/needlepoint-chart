@@ -1,7 +1,11 @@
 import type { Color } from "./grid";
 import { DMC_COLORS } from "./dmcColors.generated";
 
-export type DmcColor = Color & { code: string };
+export type DmcColor = Color & {
+  code: string;
+  family: string;
+  nameMaxx: string;
+};
 
 export const DMC_MATRIX_COLUMNS = [
   "red",

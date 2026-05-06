@@ -73,7 +73,7 @@ export function ColorLibrary({
   const matchesSearch = (color: PaletteColor) =>
     normalizedSearchQuery.length === 0
       ? true
-      : [color.name, color.code, color.hex, color.brand]
+      : [color.name, color.code, color.hex, color.brand, ...(color.searchAliases ?? [])]
           .join(" ")
           .toLowerCase()
           .includes(normalizedSearchQuery);

@@ -107,6 +107,8 @@ function toPaletteColor(color: DmcColor): PaletteColor {
     code: color.code,
     name: color.name,
     hex: color.hex,
+    family: color.family,
+    searchAliases: color.nameMaxx ? [color.nameMaxx] : [],
   };
 }
 

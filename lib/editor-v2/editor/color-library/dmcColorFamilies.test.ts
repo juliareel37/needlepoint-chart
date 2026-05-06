@@ -3,15 +3,15 @@ import type { PaletteColor } from "../store/state";
 import { getDmcColorFamily, getDmcColorFamilySections } from "./dmcColorFamilies";
 
 describe("getDmcColorFamily", () => {
-  it("uses the provided DMC family assignments", () => {
-    expect(getDmcColorFamily(createColor("dmc-321", "321"))).toBe("red");
-    expect(getDmcColorFamily(createColor("dmc-602", "602"))).toBe("pink");
-    expect(getDmcColorFamily(createColor("dmc-blanc", "BLANC"))).toBe("white");
-    expect(getDmcColorFamily(createColor("dmc-310", "310"))).toBe("black");
+  it("uses the family attached to the dmc color metadata", () => {
+    expect(getDmcColorFamily(createColor("dmc-321", "321", "red"))).toBe("red");
+    expect(getDmcColorFamily(createColor("dmc-602", "602", "pink"))).toBe("pink");
+    expect(getDmcColorFamily(createColor("dmc-blanc", "BLANC", "white"))).toBe("white");
+    expect(getDmcColorFamily(createColor("dmc-310", "310", "black"))).toBe("black");
   });
 
-  it("falls back to other for unmapped or non-dmc colors", () => {
-    expect(getDmcColorFamily(createColor("dmc-151", "151"))).toBe("other");
+  it("falls back to other for unknown family values or non-dmc colors", () => {
+    expect(getDmcColorFamily(createColor("dmc-151", "151", "magenta"))).toBe("other");
     expect(
       getDmcColorFamily({
         id: "custom-1",
@@ -19,6 +19,7 @@ describe("getDmcColorFamily", () => {
         code: "custom",
         name: "Custom blue",
         hex: "#123456",
+        family: "blue",
       }),
     ).toBe("other");
   });
@@ -27,10 +28,10 @@ describe("getDmcColorFamily", () => {
 describe("getDmcColorFamilySections", () => {
   it("groups colors by family in the configured section order", () => {
     const sections = getDmcColorFamilySections([
-      createColor("dmc-602", "602"),
-      createColor("dmc-310", "310"),
-      createColor("dmc-321", "321"),
-      createColor("dmc-151", "151"),
+      createColor("dmc-602", "602", "pink"),
+      createColor("dmc-310", "310", "black"),
+      createColor("dmc-321", "321", "red"),
+      createColor("dmc-151", "151", "mystery"),
     ]);
 
     expect(sections.map((section) => section.label)).toEqual([
@@ -46,12 +47,13 @@ describe("getDmcColorFamilySections", () => {
   });
 });
 
-function createColor(id: string, code: string): PaletteColor {
+function createColor(id: string, code: string, family: string): PaletteColor {
   return {
     id,
     brand: "dmc",
     code,
     name: code,
     hex: "#000000",
+    family,
   };
 }
