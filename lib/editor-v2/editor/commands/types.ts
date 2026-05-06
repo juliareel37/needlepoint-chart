@@ -38,6 +38,7 @@ export type EditorCommandKind =
   | "selection.commit"
   | "selection.move"
   | "selection.beginDuplicatePlacement"
+  | "selection.beginCutPlacement"
   | "selection.cancelDuplicatePlacement"
   | "selection.commitDuplicatePlacement"
   | "selection.clear"
@@ -165,6 +166,11 @@ export type MoveSelectionCommand = BaseEditorCommand<
 
 export type BeginDuplicatePlacementCommand = BaseEditorCommand<
   "selection.beginDuplicatePlacement",
+  object
+>;
+
+export type BeginCutPlacementCommand = BaseEditorCommand<
+  "selection.beginCutPlacement",
   object
 >;
 
@@ -457,6 +463,7 @@ export type EditorCommand =
   | CommitSelectionCommand
   | MoveSelectionCommand
   | BeginDuplicatePlacementCommand
+  | BeginCutPlacementCommand
   | CancelDuplicatePlacementCommand
   | CommitDuplicatePlacementCommand
   | ClearSelectionCommand

@@ -2667,6 +2667,9 @@ export function EditorV2Shell({
                         sidebarCollapsed={sidebarCollapsed}
                         trace={trace}
                         duplicatePlacementActive={Boolean(state.session.duplicatePlacement)}
+                        duplicatePlacementOperation={
+                          state.session.duplicatePlacement?.operation ?? null
+                        }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
                         selectionRequestKey={selectionRequestKey}

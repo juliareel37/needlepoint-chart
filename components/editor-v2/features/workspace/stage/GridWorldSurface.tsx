@@ -213,8 +213,21 @@ export function GridWorldSurface({
   }, []);
 
   useEffect(() => {
-    setDuplicatePlacementOffset({ x: 0, y: 0 });
-  }, [duplicatePlacement]);
+    if (!duplicatePlacement) {
+      setDuplicatePlacementOffset({ x: 0, y: 0 });
+      return;
+    }
+
+    setDuplicatePlacementOffset(
+      duplicatePlacement.operation === "cut"
+        ? { x: 0, y: 0 }
+        : getDefaultDuplicatePlacementOffset(
+            duplicatePlacement.sourceRect,
+            grid.width,
+            grid.height,
+          ),
+    );
+  }, [duplicatePlacement, grid.height, grid.width]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -693,4 +706,50 @@ function getGridOverlayStep(renderedCellSize: number): number {
   }
 
   return Math.max(100, Math.ceil(rawStep / 100) * 100);
+}
+
+function getDefaultDuplicatePlacementOffset(
+  rect: { x: number; y: number; width: number; height: number },
+  gridWidth: number,
+  gridHeight: number,
+): { x: number; y: number } {
+  void gridHeight;
+  const gapCells = 1;
+  const roomRight = Math.max(0, gridWidth - (rect.x + rect.width));
+  const roomLeft = Math.max(0, rect.x);
+
+  const candidates = [
+    {
+      direction: "right",
+      room: roomRight,
+      fits: roomRight >= rect.width + gapCells,
+      offset: {
+        x: Math.min(rect.width + gapCells, roomRight),
+        y: 0,
+      },
+    },
+    {
+      direction: "left",
+      room: roomLeft,
+      fits: roomLeft >= rect.width + gapCells,
+      offset: {
+        x: -Math.min(rect.width + gapCells, roomLeft),
+        y: 0,
+      },
+    },
+  ];
+
+  candidates.sort((a, b) => {
+    if (a.fits !== b.fits) {
+      return a.fits ? -1 : 1;
+    }
+
+    if (a.room !== b.room) {
+      return b.room - a.room;
+    }
+
+    return 0;
+  });
+
+  return candidates[0]?.offset ?? { x: 0, y: 0 };
 }

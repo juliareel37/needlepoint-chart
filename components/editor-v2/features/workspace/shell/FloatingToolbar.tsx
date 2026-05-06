@@ -29,6 +29,7 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createBeginCutPlacementCommand,
   createBeginDuplicatePlacementCommand,
   createCancelMirrorCommand,
   createBeginTraceRepositionCommand,
@@ -293,6 +294,7 @@ interface FloatingToolbarProps {
   sidebarCollapsed: boolean;
   trace: TraceDocument | null;
   duplicatePlacementActive: boolean;
+  duplicatePlacementOperation: "duplicate" | "cut" | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
   selectionRequestKey: number;
@@ -320,6 +322,7 @@ export function FloatingToolbar({
   sidebarCollapsed,
   trace,
   duplicatePlacementActive,
+  duplicatePlacementOperation,
   mirrorSessionActive,
   isBottomPanelLayout,
   selectionRequestKey,
@@ -367,6 +370,7 @@ export function FloatingToolbar({
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
   const canDuplicateSelection = selectionCommitted && !duplicatePlacementActive;
+  const canCutSelection = selectionCommitted && !duplicatePlacementActive;
   const traceSidebarOpen = !sidebarCollapsed && activeSidebarSection === "trace";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked =
@@ -861,7 +865,7 @@ export function FloatingToolbar({
         <ToolbarButton
           type="button"
           labelled
-          active={duplicatePlacementActive}
+          active={duplicatePlacementOperation === "duplicate"}
           aria-pressed={duplicatePlacementActive}
           disabled={!canDuplicateSelection}
           onClick={() => {
@@ -874,6 +878,24 @@ export function FloatingToolbar({
         >
           <ToolbarIcon icon="/icons/lucide/copy.svg" />
           <ToolbarLabel>Duplicate</ToolbarLabel>
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          labelled
+          active={duplicatePlacementOperation === "cut"}
+          aria-pressed={duplicatePlacementActive}
+          disabled={!canCutSelection}
+          onClick={() => {
+            if (!canCutSelection) {
+              return;
+            }
+
+            dispatch(createBeginCutPlacementCommand());
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/cut.svg" />
+          <ToolbarLabel>Cut</ToolbarLabel>
         </ToolbarButton>
       </ToolbarGroup>
 

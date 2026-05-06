@@ -38,6 +38,7 @@ export function SelectionOverlay({
   selection,
   viewport,
 }: SelectionOverlayProps) {
+  const cutPlacementActive = duplicatePlacement?.session.operation === "cut";
   const mirrorSession = mirrorInteraction.session;
   const mirrorSourceRect = mirrorSession?.sourceRect ?? null;
   const projectedCellSize = metrics.cellSize * viewport.zoom;
@@ -87,9 +88,9 @@ export function SelectionOverlay({
     ? buildRectPath(mirrorSourceRect, projectedCellSize)
     : null;
   const dimmedCanvasCutoutPaths = [
-    hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
-    hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
-    hasCommittedCircleSelection && selection.rect
+    !cutPlacementActive && hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
+    !cutPlacementActive && hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
+    !cutPlacementActive && hasCommittedCircleSelection && selection.rect
       ? buildEllipsePath(selection.rect, projectedCellSize)
       : null,
     duplicateCutout,
@@ -155,7 +156,7 @@ export function SelectionOverlay({
         )
       ) : null}
 
-      {selection.mode === "lasso" && selection.lassoPoints.length > 0 ? (
+      {!cutPlacementActive && selection.mode === "lasso" && selection.lassoPoints.length > 0 ? (
         <svg
           aria-hidden="true"
           style={{
@@ -218,7 +219,7 @@ export function SelectionOverlay({
         </svg>
       ) : null}
 
-      {selection.mode === "rect" && selection.rect ? (
+      {!cutPlacementActive && selection.mode === "rect" && selection.rect ? (
         <svg
           aria-hidden="true"
           style={{
@@ -256,7 +257,7 @@ export function SelectionOverlay({
         </svg>
       ) : null}
 
-      {selection.mode === "circle" && selection.rect ? (
+      {!cutPlacementActive && selection.mode === "circle" && selection.rect ? (
         <svg
           aria-hidden="true"
           style={{

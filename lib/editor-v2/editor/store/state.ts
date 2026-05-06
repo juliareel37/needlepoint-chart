@@ -194,6 +194,7 @@ export interface SelectionPreviewState {
 }
 
 export interface DuplicatePlacementSession {
+  operation: "duplicate" | "cut";
   sourceRect: GridRect;
   selectionMode: Extract<SelectionState["mode"], "rect" | "circle" | "lasso">;
   outlinePoints: SelectionPoint[];

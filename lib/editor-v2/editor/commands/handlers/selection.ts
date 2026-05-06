@@ -1,12 +1,14 @@
 import type {
   DuplicatePlacementCell,
   EditorStoreState,
+  GridPoint,
   SelectionState,
 } from "../../store/state";
 import { getLassoBounds, isCellInSelection } from "../../selection/lassoGeometry";
 import type { EditorCommandHandler } from "./types";
 import type {
   BeginDuplicatePlacementCommand,
+  BeginCutPlacementCommand,
   CancelDuplicatePlacementCommand,
   ClearSelectionCommand,
   CommitDuplicatePlacementCommand,
@@ -169,6 +171,7 @@ export const beginDuplicatePlacementCommandHandler: EditorCommandHandler<BeginDu
       nextSession: {
         ...state.session,
         duplicatePlacement: {
+          operation: "duplicate",
           sourceRect: state.session.selection.rect,
           selectionMode,
           outlinePoints: buildDuplicatePlacementOutlinePoints(state),
@@ -187,12 +190,61 @@ export const beginDuplicatePlacementCommandHandler: EditorCommandHandler<BeginDu
   },
 };
 
+export const beginCutPlacementCommandHandler: EditorCommandHandler<BeginCutPlacementCommand> = {
+  canHandle(command): command is BeginCutPlacementCommand {
+    return command.kind === "selection.beginCutPlacement";
+  },
+  handle(state, command) {
+    const selectionMode = state.session.selection.mode;
+
+    if (
+      (selectionMode !== "rect" &&
+        selectionMode !== "circle" &&
+        selectionMode !== "lasso") ||
+      !state.session.selection.rect ||
+      state.session.selection.preview ||
+      state.session.duplicatePlacement
+    ) {
+      return buildSelectionSessionNoop(state, command.id);
+    }
+
+    const placementCells = buildDuplicatePlacementCells(state);
+    const sourceGridPoints = buildPlacementSourceGridPoints(
+      state.session.selection.rect,
+      placementCells,
+    );
+
+    return {
+      nextSession: {
+        ...state.session,
+        duplicatePlacement: {
+          operation: "cut",
+          sourceRect: state.session.selection.rect,
+          selectionMode,
+          outlinePoints: buildDuplicatePlacementOutlinePoints(state),
+          cells: placementCells,
+        },
+      },
+      nextUi: state.ui,
+      patches: buildGridReplacementPatch(state, sourceGridPoints, null),
+      inversePatches: [],
+      effects: [],
+      event: {
+        type: "session",
+        commandId: command.id,
+      },
+    };
+  },
+};
+
 export const cancelDuplicatePlacementCommandHandler: EditorCommandHandler<CancelDuplicatePlacementCommand> = {
   canHandle(command): command is CancelDuplicatePlacementCommand {
     return command.kind === "selection.cancelDuplicatePlacement";
   },
   handle(state, command) {
-    if (!state.session.duplicatePlacement) {
+    const session = state.session.duplicatePlacement;
+
+    if (!session) {
       return buildSelectionSessionNoop(state, command.id);
     }
 
@@ -202,7 +254,14 @@ export const cancelDuplicatePlacementCommandHandler: EditorCommandHandler<Cancel
         duplicatePlacement: null,
       },
       nextUi: state.ui,
-      patches: [],
+      patches:
+        session.operation === "cut"
+          ? buildGridReplacementPatch(
+              state,
+              buildPlacementSourceGridPoints(session.sourceRect, session.cells),
+              session,
+            )
+          : [],
       inversePatches: [],
       effects: [],
       event: {
@@ -301,7 +360,16 @@ export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<Commit
     const colorIds = Array.from(new Set(replacements.map((replacement) => replacement.value)))
       .filter((value): value is string => Boolean(value));
     const symbolPatches = buildAssignSymbolsPatch(state, colorIds);
-    const hasGridChanges = replacements.length > 0;
+    const sourceGridPoints = buildPlacementSourceGridPoints(session.sourceRect, session.cells);
+    const sourceClearPatches =
+      session.operation === "cut"
+        ? buildGridReplacementPatch(state, sourceGridPoints, null)
+        : [];
+    const sourceRestorePatches =
+      session.operation === "cut"
+        ? buildGridReplacementPatch(state, sourceGridPoints, session)
+        : [];
+    const hasGridChanges = replacements.length > 0 || session.operation === "cut";
 
     if (!hasGridChanges) {
       return {
@@ -327,6 +395,7 @@ export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<Commit
       },
       nextUi: state.ui,
       patches: [
+        ...sourceClearPatches,
         {
           type: "grid.replaceCells",
           cells: replacements,
@@ -334,6 +403,7 @@ export const commitDuplicatePlacementCommandHandler: EditorCommandHandler<Commit
         ...symbolPatches,
       ],
       inversePatches: [
+        ...sourceRestorePatches,
         ...buildInverseReplaceCellsPatch(state, changedDestinations),
         ...buildAppendOnlyInverseSymbolPatches(symbolPatches),
       ],
@@ -617,6 +687,41 @@ function buildDuplicatePlacementOutlinePoints(state: EditorStoreState) {
     x: point.x - selectionBounds.x,
     y: point.y - selectionBounds.y,
   }));
+}
+
+function buildPlacementSourceGridPoints(
+  sourceRect: { x: number; y: number },
+  cells: DuplicatePlacementCell[],
+): GridPoint[] {
+  return cells.map((cell) => ({
+    x: sourceRect.x + cell.x,
+    y: sourceRect.y + cell.y,
+  }));
+}
+
+function buildGridReplacementPatch(
+  state: EditorStoreState,
+  cells: GridPoint[],
+  value: null | { cells: DuplicatePlacementCell[]; sourceRect: { x: number; y: number } },
+) {
+  const replacements = cells
+    .map((cell, index) => ({
+      index: cell.y * state.document.grid.width + cell.x,
+      value:
+        value === null
+          ? null
+          : value.cells[index]?.colorId ?? null,
+    }))
+    .filter((replacement) => replacement.value !== undefined);
+
+  return replacements.length > 0
+    ? [
+        {
+          type: "grid.replaceCells" as const,
+          cells: replacements,
+        },
+      ]
+    : [];
 }
 
 function clampSelectionDeltaX(

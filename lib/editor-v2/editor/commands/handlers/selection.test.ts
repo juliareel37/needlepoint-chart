@@ -219,6 +219,7 @@ describe("selection command handlers", () => {
     });
 
     expect(store.getState().session.duplicatePlacement).toEqual({
+      operation: "duplicate",
       sourceRect: { x: 1, y: 1, width: 2, height: 2 },
       selectionMode: "lasso",
       outlinePoints: [
@@ -276,5 +277,141 @@ describe("selection command handlers", () => {
     expect(store.getState().document.grid.cells[2 * 6 + 4]).toBe("dmc:321");
     expect(store.getState().document.grid.cells[3 * 6 + 4]).toBe("dmc:666");
     expect(store.getState().document.grid.cells[1 * 6 + 1]).toBe("dmc:310");
+  });
+
+  it("begins cut placement by lifting painted cells from the source region", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+    initial.document.grid.cells = [
+      null, null, null, null, null,
+      null, "dmc:310", "dmc:321", null, null,
+      null, null, "dmc:666", null, null,
+      null, null, null, null, null,
+      null, null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-9",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 9, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toEqual({
+      operation: "cut",
+      sourceRect: { x: 1, y: 1, width: 2, height: 2 },
+      selectionMode: "rect",
+      outlinePoints: [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      cells: [
+        { x: 0, y: 0, colorId: "dmc:310" },
+        { x: 1, y: 0, colorId: "dmc:321" },
+        { x: 1, y: 1, colorId: "dmc:666" },
+      ],
+    });
+    expect(store.getState().document.grid.cells[1 * 5 + 1]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 5 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 5 + 2]).toBeNull();
+  });
+
+  it("cancels cut placement by restoring the lifted cells", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 4;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = [
+      null, null, null, null,
+      null, "dmc:310", "dmc:321", null,
+      null, null, "dmc:666", null,
+      null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-10",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 10, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-11",
+      kind: "selection.cancelDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 11, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 4 + 1]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 4 + 2]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 4 + 2]).toBe("dmc:666");
+  });
+
+  it("commits cut placement by moving the lifted cells to the new location", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 6;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = new Array(24).fill(null);
+    initial.document.grid.cells[1 * 6 + 1] = "dmc:310";
+    initial.document.grid.cells[1 * 6 + 2] = "dmc:321";
+    initial.document.grid.cells[2 * 6 + 2] = "dmc:666";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-12",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 12, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-13",
+      kind: "selection.commitDuplicatePlacement",
+      payload: { deltaX: 2, deltaY: 0 },
+      meta: { source: "toolbar", timestamp: 13, history: { mode: "push", label: "Duplicate Selection" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 1]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 6 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 3]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 6 + 4]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 6 + 4]).toBe("dmc:666");
   });
 });

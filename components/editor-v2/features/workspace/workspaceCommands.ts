@@ -251,6 +251,15 @@ export function createBeginDuplicatePlacementCommand(): EditorCommand {
   );
 }
 
+export function createBeginCutPlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.beginCutPlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createCancelDuplicatePlacementCommand(): EditorCommand {
   return createCommand(
     "selection.cancelDuplicatePlacement",
