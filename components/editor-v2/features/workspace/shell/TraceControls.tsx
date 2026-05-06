@@ -954,7 +954,10 @@ export function TraceControls({
                   Max colors
                 </span>
                 <div className={styles.traceSliderControl}>
-                  <div className={styles.traceSliderRow}>
+                  <div
+                    className={styles.traceSliderRow}
+                    data-disabled={conversionPreviewActive ? "true" : "false"}
+                  >
                     <Slider
                       className={styles.traceSliderFullWidth}
                       min="2"
@@ -984,7 +987,10 @@ export function TraceControls({
                   Smoothing
                 </span>
                 <div className={styles.traceSliderControl}>
-                  <div className={styles.traceSliderRow}>
+                  <div
+                    className={styles.traceSliderRow}
+                    data-disabled={conversionPreviewActive ? "true" : "false"}
+                  >
                     <Slider
                       className={styles.traceSliderFullWidth}
                       min="0"
@@ -1012,10 +1018,11 @@ export function TraceControls({
                 {/* <p className={styles.emptyMessage} style={typographyStyles.p2}>
                   Preview active. Use the toolbar to apply the conversion or exit preview.
                 </p> */}
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className={styles.traceConversionActionRow}>
                   <Button
                     type="button"
                     variant="secondary"
+                    className={styles.traceConversionActionButton}
                     onClick={() => dispatch(createCancelTraceConversionPreviewCommand())}
                   >
                     Exit preview
@@ -1023,6 +1030,7 @@ export function TraceControls({
                   <Button
                     type="button"
                     variant="primary"
+                    className={styles.traceConversionActionButton}
                     onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
                   >
                     Apply to canvas
@@ -1031,10 +1039,11 @@ export function TraceControls({
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className={styles.traceConversionActionRow}>
                   <Button
                     type="button"
                     variant="secondary"
+                    className={styles.traceConversionActionButton}
                     disabled={!canConvert || convertingImage}
                     onClick={handlePreviewConversion}
                   >
@@ -1051,6 +1060,7 @@ export function TraceControls({
                   <Button
                     type="button"
                     variant="primary"
+                    className={styles.traceConversionActionButton}
                     disabled={!canConvert || convertingImage}
                     onClick={handleConvertToPattern}
                   >

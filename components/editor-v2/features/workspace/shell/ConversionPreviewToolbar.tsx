@@ -3,28 +3,33 @@
 import { Toolbar, ToolbarButton, ToolbarGroup, ToolbarLabel } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
-  createCancelTraceConversionPreviewCommand,
   createCommitTraceConversionPreviewCommand,
 } from "../workspaceCommands";
+import styles from "./EditorV2Shell.module.css";
 
 interface ConversionPreviewToolbarProps {
   dispatch: EditorStore["dispatch"];
+  onExitPreview: () => void;
 }
 
 export function ConversionPreviewToolbar({
   dispatch,
+  onExitPreview,
 }: ConversionPreviewToolbarProps) {
   return (
-    <Toolbar aria-label="Conversion preview toolbar">
+    <Toolbar
+      aria-label="Conversion preview toolbar"
+      className={styles.conversionPreviewToolbar}
+    >
       <ToolbarGroup>
-        <ToolbarLabel>Previewing image conversion.</ToolbarLabel>
+        <ToolbarLabel>Exit preview to adjust conversion settings, and apply when ready. </ToolbarLabel>
       </ToolbarGroup>
       <ToolbarGroup actions>
         <ToolbarButton
           textOnly
           type="button"
           variant="secondary"
-          onClick={() => dispatch(createCancelTraceConversionPreviewCommand())}
+          onClick={onExitPreview}
         >
           Exit preview
         </ToolbarButton>
@@ -34,7 +39,7 @@ export function ConversionPreviewToolbar({
           variant="primary"
           onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
         >
-          Apply to canvas
+          Apply
         </ToolbarButton>
       </ToolbarGroup>
     </Toolbar>

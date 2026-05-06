@@ -65,6 +65,7 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createCancelTraceConversionPreviewCommand,
   createCancelTraceRepositionCommand,
   createCommitTraceRepositionCommand,
   createCancelIconPlacementCommand,
@@ -365,6 +366,7 @@ export function EditorV2Shell({
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
+  const mobileTraceConversionPreviewWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
   const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
   const bottomPanelCanvasFocusSnapshotRef =
@@ -1303,6 +1305,33 @@ export function EditorV2Shell({
 
     mobileTextPlacementWasActiveRef.current = true;
   }, [dispatch, isBottomPanelLayout, sidebarCollapsed, textPlacement]);
+
+  useEffect(() => {
+    if (!traceConversionPreview) {
+      mobileTraceConversionPreviewWasActiveRef.current = false;
+      return;
+    }
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    if (!mobileTraceConversionPreviewWasActiveRef.current && !sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+
+    mobileTraceConversionPreviewWasActiveRef.current = true;
+  }, [dispatch, isBottomPanelLayout, sidebarCollapsed, traceConversionPreview]);
+
+  const handleExitTraceConversionPreviewFromToolbar = useCallback(() => {
+    dispatch(createCancelTraceConversionPreviewCommand());
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch, isBottomPanelLayout]);
 
   useEffect(() => {
     if (!previewMode) {
@@ -2611,6 +2640,7 @@ export function EditorV2Shell({
                     {traceConversionPreview ? (
                       <ConversionPreviewToolbar
                         dispatch={dispatch}
+                        onExitPreview={handleExitTraceConversionPreviewFromToolbar}
                       />
                     ) : (traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar

@@ -1532,6 +1532,10 @@
   min-width: 0;
 }
 
+.conversionPreviewToolbar {
+  padding: 10px 12px;
+}
+
 .selectionToolbarPopover {
   width: fit-content;
   max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
@@ -2942,6 +2946,10 @@
   gap: 12px;
 }
 
+.traceSliderRow[data-disabled="true"] {
+  opacity: 0.45;
+}
+
 .traceInlineFieldRow {
   display: grid;
   grid-template-columns: auto minmax(0, 180px);
@@ -3023,6 +3031,16 @@
   text-align: right;
   color: var(--text-primary);
   font-size: 12px;
+}
+
+.traceConversionActionRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.traceConversionActionButton {
+  width: 100%;
 }
 
 .traceFieldGrid {
