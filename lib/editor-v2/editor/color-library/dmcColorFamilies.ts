@@ -23,6 +23,8 @@ export type DmcColorFamilySection = {
   colors: PaletteColor[];
 };
 
+const COMBINED_GREYSCALE_FAMILIES: DmcColorFamily[] = ["grey", "white", "black"];
+
 const DMC_COLOR_FAMILY_LABELS: Record<DmcColorFamily, string> = {
   red: "Red",
   pink: "Pink",
@@ -69,8 +71,15 @@ export function getDmcColorFamilySections(colors: PaletteColor[]): DmcColorFamil
   }
 
   const sections: DmcColorFamilySection[] = [];
+  const combinedGreyscaleColors = COMBINED_GREYSCALE_FAMILIES.flatMap(
+    (family) => colorsByFamily.get(family) ?? [],
+  );
 
   for (const family of DMC_COLOR_FAMILY_ORDER) {
+    if (COMBINED_GREYSCALE_FAMILIES.includes(family)) {
+      continue;
+    }
+
     const familyColors = colorsByFamily.get(family);
 
     if (!familyColors || familyColors.length === 0) {
@@ -81,6 +90,14 @@ export function getDmcColorFamilySections(colors: PaletteColor[]): DmcColorFamil
       family,
       label: DMC_COLOR_FAMILY_LABELS[family],
       colors: familyColors,
+    });
+  }
+
+  if (combinedGreyscaleColors.length > 0) {
+    sections.push({
+      family: "grey",
+      label: "Grey / B&W",
+      colors: combinedGreyscaleColors,
     });
   }
 

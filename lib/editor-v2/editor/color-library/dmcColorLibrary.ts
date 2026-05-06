@@ -39,13 +39,11 @@ export function addDmcColorLibraryToPalette(
   palette: PaletteDocument,
 ): PaletteDocument {
   const sanitizedPalette = removeDiscontinuedDmcColorsFromPalette(palette);
+  const colorsById = mergeDmcColorLibraryMetadata(sanitizedPalette.colorsById);
 
   return {
     ...sanitizedPalette,
-    colorsById: {
-      ...DMC_COLOR_LIBRARY_BY_ID,
-      ...sanitizedPalette.colorsById,
-    },
+    colorsById,
   };
 }
 
@@ -149,6 +147,27 @@ function removeDiscontinuedDmcColorsFromPalette(
       ),
     ),
   };
+}
+
+function mergeDmcColorLibraryMetadata(
+  colorsById: PaletteDocument["colorsById"],
+): PaletteDocument["colorsById"] {
+  const mergedColorsById: PaletteDocument["colorsById"] = {
+    ...DMC_COLOR_LIBRARY_BY_ID,
+  };
+
+  for (const [colorId, color] of Object.entries(colorsById)) {
+    const libraryColor = DMC_COLOR_LIBRARY_BY_ID[colorId];
+
+    if (libraryColor && color.brand === "dmc") {
+      mergedColorsById[colorId] = libraryColor;
+      continue;
+    }
+
+    mergedColorsById[colorId] = color;
+  }
+
+  return mergedColorsById;
 }
 
 function getMatrixPlacement(color: DmcColor): MatrixPlacement {

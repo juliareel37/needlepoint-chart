@@ -33,4 +33,31 @@ describe("addDmcColorLibraryToPalette", () => {
     expect(palette.extractedPaletteIds).toEqual(["dmc-321"]);
     expect(palette.symbolAssignments).toEqual({ "dmc-321": "B" });
   });
+
+  it("refreshes persisted dmc colors with current library metadata", () => {
+    const palette = addDmcColorLibraryToPalette({
+      colorsById: {
+        "dmc-321": {
+          id: "dmc-321",
+          brand: "dmc",
+          code: "321",
+          name: "Old saved name",
+          hex: "#000000",
+        },
+      },
+      customPalettesById: {},
+      extractedPaletteIds: [],
+      symbolAssignments: {},
+    } satisfies PaletteDocument);
+
+    expect(palette.colorsById["dmc-321"]).toMatchObject({
+      id: "dmc-321",
+      brand: "dmc",
+      code: "321",
+      family: "red",
+      searchAliases: ["Red"],
+    });
+    expect(palette.colorsById["dmc-321"]?.name).not.toBe("Old saved name");
+    expect(palette.colorsById["dmc-321"]?.hex).not.toBe("#000000");
+  });
 });

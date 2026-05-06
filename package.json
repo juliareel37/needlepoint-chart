@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dmc:generate": "node scripts/generate-dmc-colors.mjs",
-    "dev": "next dev",
-    "predev": "npm run dmc:generate",
+    "dev": "node scripts/dev-with-dmc-watch.mjs",
+    "next-dev-raw": "next dev",
     "build": "prisma generate && next build",
     "prebuild": "npm run dmc:generate",
     "auth:audit-app-users": "node scripts/audit-app-user-migration.mjs",
