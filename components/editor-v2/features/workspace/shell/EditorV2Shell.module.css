@@ -1536,6 +1536,10 @@
   padding: 10px 12px;
 }
 
+.conversionPreviewToolbarHint {
+  display: inline-flex;
+}
+
 .selectionToolbarPopover {
   width: fit-content;
   max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
@@ -3515,11 +3519,18 @@
     display: inline-flex;
     gap: 6px;
   }
-    .toolbarHistoryControl,
+  .toolbarHistoryControl,
   .toolbarHistoryDivider {
     display: none;
   }
-  
+
+  .conversionPreviewToolbarHintGroup {
+    display: none;
+  }
+  .conversionPreviewToolbar {
+    padding: 8px;
+  }
+
 
   .versionHistoryPanelHeader {
     padding: 16px 24px;

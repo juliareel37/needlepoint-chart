@@ -21,8 +21,10 @@ export function ConversionPreviewToolbar({
       aria-label="Conversion preview toolbar"
       className={styles.conversionPreviewToolbar}
     >
-      <ToolbarGroup>
-        <ToolbarLabel>Exit preview to adjust conversion settings, and apply when ready. </ToolbarLabel>
+      <ToolbarGroup className={styles.conversionPreviewToolbarHintGroup}>
+        <ToolbarLabel className={styles.conversionPreviewToolbarHint}>
+          Exit preview to adjust conversion settings, and apply when ready.
+        </ToolbarLabel>
       </ToolbarGroup>
       <ToolbarGroup actions>
         <ToolbarButton
