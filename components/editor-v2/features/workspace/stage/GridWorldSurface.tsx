@@ -331,6 +331,7 @@ export function GridWorldSurface({
     activeColorId,
     activeTool,
     brushSize,
+    coarsePointer,
     dispatch,
     getClampedSelectionPointFromClient,
     getSelectionPointFromClient,

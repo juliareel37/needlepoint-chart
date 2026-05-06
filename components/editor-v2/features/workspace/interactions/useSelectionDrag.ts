@@ -22,6 +22,7 @@ type SelectionResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
 interface UseSelectionDragOptions {
   activeTool: ActiveTool;
+  coarsePointer?: boolean;
   dispatch: EditorStore["dispatch"];
   getClampedSelectionPointFromClient: (
     clientX: number,
@@ -33,6 +34,7 @@ interface UseSelectionDragOptions {
 
 export function useSelectionDrag({
   activeTool,
+  coarsePointer = false,
   dispatch,
   getClampedSelectionPointFromClient,
   state,
@@ -86,7 +88,9 @@ export function useSelectionDrag({
           event.clientX,
           event.clientY,
         );
-        const nextHoveredHandle = point ? getSelectionResizeHandleAtPoint(state, point) : null;
+        const nextHoveredHandle = point
+          ? getSelectionResizeHandleAtPoint(state, point, coarsePointer)
+          : null;
         setHoveredResizeHandle(nextHoveredHandle);
         setHoveringMovableSelection(
           Boolean(point && !nextHoveredHandle && isSelectionMovableAtPoint(state, point)),
@@ -192,6 +196,7 @@ export function useSelectionDrag({
     isMovingSelection,
     selectionShape,
     state,
+    coarsePointer,
   ]);
 
   return {
@@ -221,7 +226,7 @@ export function useSelectionDrag({
       return false;
     }
 
-    const resizeHandle = getSelectionResizeHandleAtPoint(state, point);
+    const resizeHandle = getSelectionResizeHandleAtPoint(state, point, coarsePointer);
 
     if (resizeHandle) {
       setActiveResizeHandle(resizeHandle);
@@ -264,7 +269,9 @@ export function useSelectionDrag({
       return;
     }
 
-    const resizeHandle = point ? getSelectionResizeHandleAtPoint(state, point) : null;
+    const resizeHandle = point
+      ? getSelectionResizeHandleAtPoint(state, point, coarsePointer)
+      : null;
     setHoveredResizeHandle(resizeHandle);
     setHoveringMovableSelection(
       Boolean(point && !resizeHandle && isSelectionMovableAtPoint(state, point)),
@@ -324,6 +331,7 @@ function isSelectionMovableAtPoint(
 function getSelectionResizeHandleAtPoint(
   state: EditorStoreState,
   point: SelectionPoint,
+  coarsePointer: boolean,
 ): SelectionResizeHandle | null {
   const selection = state.session.selection;
 
@@ -336,7 +344,7 @@ function getSelectionResizeHandleAtPoint(
     return null;
   }
 
-  const tolerance = 0.45;
+  const tolerance = coarsePointer ? 1.1 : 0.75;
   const corners: Array<{ handle: SelectionResizeHandle; point: SelectionPoint }> = [
     { handle: "nw", point: { x: selection.rect.x, y: selection.rect.y } },
     {

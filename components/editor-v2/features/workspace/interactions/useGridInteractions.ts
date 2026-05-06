@@ -28,6 +28,7 @@ interface UseGridInteractionsOptions {
   activeColorId: string | null;
   activeTool: ActiveTool;
   brushSize: number;
+  coarsePointer?: boolean;
   dispatch: EditorStore["dispatch"];
   getClampedSelectionPointFromClient: (
     clientX: number,
@@ -44,6 +45,7 @@ export function useGridInteractions({
   activeColorId,
   activeTool,
   brushSize,
+  coarsePointer = false,
   dispatch,
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
@@ -61,6 +63,7 @@ export function useGridInteractions({
   });
   const selectionDrag = useSelectionDrag({
     activeTool,
+    coarsePointer,
     dispatch,
     getClampedSelectionPointFromClient,
     state,
