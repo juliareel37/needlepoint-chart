@@ -29,6 +29,29 @@ type StatusState =
   | { tone: "success"; message: string }
   | null;
 
+const COMMON_WEAK_PASSWORDS = new Set([
+  "12345678",
+  "123456789",
+  "admin123",
+  "password",
+  "password123",
+  "qwerty123",
+]);
+
+function getPasswordValidationMessage(password: string) {
+  const normalizedPassword = password.trim().toLowerCase();
+
+  if (password.length < 8) {
+    return "Password must be at least 8 characters.";
+  }
+
+  if (COMMON_WEAK_PASSWORDS.has(normalizedPassword)) {
+    return "Choose a less common password.";
+  }
+
+  return null;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) {
     return error;
@@ -116,6 +139,14 @@ export function AuthSignInPageContent({
   const resetMode = searchParams.get("mode");
   const isSetPasswordFlow = pathname === "reset-password" && resetMode === "set-password";
   const oauthError = searchParams.get("error") ?? searchParams.get("error_description");
+  const signUpPasswordError =
+    pathname === "sign-up" && password.length > 0
+      ? getPasswordValidationMessage(password)
+      : null;
+  const resetPasswordError =
+    pathname === "reset-password" && resetPasswordValue.length > 0
+      ? getPasswordValidationMessage(resetPasswordValue)
+      : null;
   const titles = useMemo(() => {
     if (isSetPasswordFlow) {
       return {
@@ -205,6 +236,14 @@ export function AuthSignInPageContent({
 
   async function handleEmailSignUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (signUpPasswordError) {
+      setStatus({
+        tone: "error",
+        message: signUpPasswordError,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus(null);
 
@@ -326,6 +365,14 @@ export function AuthSignInPageContent({
 
   async function handleResetPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (resetPasswordError) {
+      setStatus({
+        tone: "error",
+        message: resetPasswordError,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus(null);
 
@@ -414,12 +461,26 @@ export function AuthSignInPageContent({
       return (
         <form className={styles.form} onSubmit={handleResetPassword}>
           <Field
-            label={isSetPasswordFlow ? "Password" : "New password"}
-            hint={!token ? "This reset link looks incomplete. Try requesting a fresh one." : undefined}
+            label={
+              <span className={resetPasswordError ? styles.errorText : undefined}>
+                {isSetPasswordFlow ? "Password" : "New password"}
+              </span>
+            }
+            hint={
+              resetPasswordError ? (
+                <span className={styles.fieldError}>{resetPasswordError}</span>
+              ) : !token ? (
+                "This reset link looks incomplete. Try requesting a fresh one."
+              ) : (
+                "Use at least 8 characters and avoid common passwords."
+              )
+            }
           >
             <FieldInput
               type="password"
               autoComplete="new-password"
+              aria-invalid={resetPasswordError ? "true" : undefined}
+              className={resetPasswordError ? styles.invalidInput : undefined}
               value={resetPasswordValue}
               onChange={(event) => setResetPasswordValue(event.currentTarget.value)}
               placeholder={isSetPasswordFlow ? "Create a password" : "Choose a new password"}
@@ -512,10 +573,25 @@ export function AuthSignInPageContent({
             required
           />
         </Field>
-        <Field label="Password">
+        <Field
+          label={
+            <span className={signUpPasswordError ? styles.errorText : undefined}>
+              Password
+            </span>
+          }
+          hint={
+            signUpPasswordError ? (
+              <span className={styles.fieldError}>{signUpPasswordError}</span>
+            ) : isSignUp ? (
+              "Use at least 8 characters and avoid common passwords."
+            ) : undefined
+          }
+        >
           <FieldInput
             type="password"
             autoComplete={isSignUp ? "new-password" : "current-password"}
+            aria-invalid={isSignUp && signUpPasswordError ? "true" : undefined}
+            className={isSignUp && signUpPasswordError ? styles.invalidInput : undefined}
             value={password}
             onChange={(event) => setPassword(event.currentTarget.value)}
             placeholder={isSignUp ? "Create a password" : "Enter your password"}
