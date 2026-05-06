@@ -78,6 +78,7 @@ export type EditorCommandKind =
   | "ui.setGridlinesVisible"
   | "ui.setRulerVisible"
   | "ui.setSymbolsVisible"
+  | "ui.setTouchSnappingEnabled"
   | "ui.setPreviewMode"
   | "ui.openPanel"
   | "history.undo"
@@ -471,6 +472,11 @@ export type SetSymbolsVisibleCommand = BaseEditorCommand<
   { visible: boolean }
 >;
 
+export type SetTouchSnappingEnabledCommand = BaseEditorCommand<
+  "ui.setTouchSnappingEnabled",
+  { enabled: boolean }
+>;
+
 export type SetPreviewModeCommand = BaseEditorCommand<
   "ui.setPreviewMode",
   { visible: boolean }
@@ -534,6 +540,7 @@ export type EditorCommand =
   | SetGridlinesVisibleCommand
   | SetRulerVisibleCommand
   | SetSymbolsVisibleCommand
+  | SetTouchSnappingEnabledCommand
   | SetPreviewModeCommand
   | OpenPanelCommand
   | UndoCommand

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { SegmentedControl } from "@/components/design-system";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
@@ -8,6 +8,7 @@ import {
   createSetGridlinesVisibleCommand,
   createSetRulerVisibleCommand,
   createSetSymbolsVisibleCommand,
+  createSetTouchSnappingEnabledCommand,
 } from "../workspaceCommands";
 import styles from "./EditorV2Shell.module.css";
 
@@ -16,6 +17,7 @@ interface CanvasAidsControlsProps {
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
 }
 
 export function CanvasAidsControls({
@@ -23,7 +25,45 @@ export function CanvasAidsControls({
   showGridlines,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
 }: CanvasAidsControlsProps) {
+  const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(any-pointer: coarse)");
+    const primaryCoarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      const hasTouchPoints =
+        typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) > 0;
+      setTouchPrimaryInput(
+        coarsePointerQuery.matches || primaryCoarsePointerQuery.matches || hasTouchPoints,
+      );
+    };
+
+    update();
+
+    const attach = (query: MediaQueryList) => {
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+      }
+
+      query.addListener(update);
+      return () => query.removeListener(update);
+    };
+
+    const detachAny = attach(coarsePointerQuery);
+    const detachPrimary = attach(primaryCoarsePointerQuery);
+    return () => {
+      detachAny();
+      detachPrimary();
+    };
+  }, []);
+
   return (
     <>
       <SegmentedBooleanSetting
@@ -44,6 +84,17 @@ export function CanvasAidsControls({
         ariaLabel="Symbols visibility"
         onChange={(nextChecked) => dispatch(createSetSymbolsVisibleCommand(nextChecked))}
       />
+      {touchPrimaryInput ? (
+        <SegmentedBooleanSetting
+          label="Snapping"
+          value={touchSnappingEnabled}
+          ariaLabel="Touch snapping"
+          options={{ hide: "Off", show: "On" }}
+          onChange={(nextChecked) =>
+            dispatch(createSetTouchSnappingEnabledCommand(nextChecked))
+          }
+        />
+      ) : null}
     </>
   );
 }

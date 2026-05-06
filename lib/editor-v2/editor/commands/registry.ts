@@ -27,6 +27,7 @@ import { setGridlinesVisibleCommandHandler } from "./handlers/setGridlinesVisibl
 import { setPreviewModeCommandHandler } from "./handlers/setPreviewMode";
 import { setRulerVisibleCommandHandler } from "./handlers/setRulerVisible";
 import { setSymbolsVisibleCommandHandler } from "./handlers/setSymbolsVisible";
+import { setTouchSnappingEnabledCommandHandler } from "./handlers/setTouchSnappingEnabled";
 import {
   setActiveSidebarSectionCommandHandler,
   setSidebarCollapsedCommandHandler,
@@ -127,6 +128,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   setGridlinesVisibleCommandHandler,
   setRulerVisibleCommandHandler,
   setSymbolsVisibleCommandHandler,
+  setTouchSnappingEnabledCommandHandler,
   setPreviewModeCommandHandler,
   openPanelCommandHandler,
 ];

@@ -358,6 +358,7 @@ export function EditorV2Shell({
   const showGridlines = state.ui.preferences.showGridlines;
   const showRuler = state.ui.preferences.showRuler;
   const showSymbols = state.ui.preferences.showSymbols;
+  const touchSnappingEnabled = state.ui.preferences.touchSnappingEnabled;
   const previewMode = state.ui.preferences.previewMode;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
@@ -2513,6 +2514,7 @@ export function EditorV2Shell({
                     showGridlines={false}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     state={versionHistoryDisplayState}
                     zoomAnchor={zoomAnchor}
                   />
@@ -2711,6 +2713,7 @@ export function EditorV2Shell({
                     onHighlightColorChange={setHighlightedColorId}
                     showGridlines={showGridlines}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     textViewportCenter={textViewportCenter}
                     textViewportWidth={textViewportWidth}
                     textViewportHeight={textViewportHeight}
@@ -2827,6 +2830,7 @@ export function EditorV2Shell({
                           showGridlines={showGridlines}
                           showRuler={showRuler}
                           showSymbols={showSymbols}
+                          touchSnappingEnabled={touchSnappingEnabled}
                         />
                       ) : null}
                     </div>
@@ -2850,6 +2854,7 @@ export function EditorV2Shell({
                     showGridlines={showGridlines}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     state={state}
                     traceCropBase={traceCropSnapshot}
                     traceCropAspectRatio={traceCropAspectRatio}

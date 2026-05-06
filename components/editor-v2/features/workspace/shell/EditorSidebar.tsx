@@ -65,6 +65,7 @@ interface EditorSidebarProps {
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
   trace: TraceDocument | null;
   traceConversionPreview: TraceConversionPreviewState | null;
   traceRepositionActive: boolean;
@@ -132,6 +133,7 @@ export function EditorSidebar({
   showGridlines,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
   trace,
   traceConversionPreview,
   traceRepositionActive,
@@ -393,6 +395,7 @@ export function EditorSidebar({
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}
+              touchSnappingEnabled={touchSnappingEnabled}
             />
           ) : null}
         </div>

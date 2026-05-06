@@ -47,6 +47,7 @@ interface IconPlacementBoxOverlayProps {
     transform: IconPlacementTransform,
     baseRect: PositioningRect,
   ) => PositioningRect;
+  touchSnappingEnabled?: boolean;
   transform: IconPlacementTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -65,8 +66,9 @@ interface DragSession {
   pendingClientY: number;
   rafId: number | null;
   moveSnap: PositioningMoveSnapState;
+  isTouchInteraction: boolean;
   rotationSnap: number | null;
-  rotationSnapDisabled: boolean;
+  snappingModifierPressed: boolean;
 }
 
 interface HandleElements {
@@ -77,6 +79,7 @@ interface HandleElements {
 interface PinchSession {
   pinch: PositioningPinchState;
   pointerIds: [number, number];
+  snappingEnabled: boolean;
   startTransform: IconPlacementTransform;
 }
 
@@ -98,6 +101,7 @@ export function IconPlacementBoxOverlay({
   snapGuideZoom = 1,
   snapZoom,
   projectBoundsForPreview,
+  touchSnappingEnabled = true,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -119,6 +123,7 @@ export function IconPlacementBoxOverlay({
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
+  const latestTouchSnappingEnabledRef = useRef(touchSnappingEnabled);
   const resolvedSnapZoom = snapZoom ?? zoom;
   const latestSnapZoomRef = useRef(resolvedSnapZoom);
   const [activeMoveSnap, setActiveMoveSnap] = useState<PositioningMoveSnapState>({
@@ -203,6 +208,10 @@ export function IconPlacementBoxOverlay({
   }, [snapContainerBounds]);
 
   useEffect(() => {
+    latestTouchSnappingEnabledRef.current = touchSnappingEnabled;
+  }, [touchSnappingEnabled]);
+
+  useEffect(() => {
     latestSnapZoomRef.current = resolvedSnapZoom;
   }, [resolvedSnapZoom]);
 
@@ -236,7 +245,7 @@ export function IconPlacementBoxOverlay({
 
       session.pendingClientX = event.clientX;
       session.pendingClientY = event.clientY;
-      session.rotationSnapDisabled = isRotationSnapModifierPressed(event);
+      session.snappingModifierPressed = isSnappingModifierPressed(event);
       scheduleFrame();
     };
 
@@ -315,8 +324,14 @@ export function IconPlacementBoxOverlay({
       latestBaseRectRef.current,
     );
 
+    const snappingEnabled = isDragSnappingEnabled(
+      session,
+      session.mode,
+      latestTouchSnappingEnabledRef.current,
+    );
+
     if (session.mode === "rotate") {
-      if (session.rotationSnapDisabled) {
+      if (!snappingEnabled) {
         session.rotationSnap = null;
       } else {
         session.rotationSnap = getRotationSnapTarget(
@@ -333,7 +348,11 @@ export function IconPlacementBoxOverlay({
       }
     }
 
-    if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
+    if (
+      session.mode === "move" &&
+      latestSnapContainerBoundsRef.current &&
+      snappingEnabled
+    ) {
       const rawBounds = getIconPlacementBounds(
         latestBaseRectRef.current,
         nextTransform,
@@ -356,7 +375,8 @@ export function IconPlacementBoxOverlay({
       session.dragged &&
       session.mode !== "move" &&
       session.mode !== "rotate" &&
-      latestSnapContainerBoundsRef.current
+      latestSnapContainerBoundsRef.current &&
+      snappingEnabled
     ) {
       const rawBounds = getIconPlacementBounds(
         latestBaseRectRef.current,
@@ -380,7 +400,7 @@ export function IconPlacementBoxOverlay({
       };
       session.moveSnap = snappedBounds.snap;
       setActiveMoveSnap(snappedBounds.snap);
-    } else if (session.mode !== "move") {
+    } else {
       session.moveSnap = emptyMoveSnap();
       setActiveMoveSnap(emptyMoveSnap());
     }
@@ -441,10 +461,9 @@ export function IconPlacementBoxOverlay({
     const rawRotation =
       pinchSession.pinch.startTransform.rotation +
       ((nextAngle - pinchSession.pinch.startAngle) * 180) / Math.PI;
-    pinchSession.pinch.snapRotation = getRotationSnapTarget(
-      rawRotation,
-      pinchSession.pinch.snapRotation,
-    );
+    pinchSession.pinch.snapRotation = pinchSession.snappingEnabled
+      ? getRotationSnapTarget(rawRotation, pinchSession.pinch.snapRotation)
+      : null;
     const nextTransform = getIconPlacementTransformFromPinch(
       pinchSession.pinch,
       worldCenter,
@@ -510,10 +529,9 @@ export function IconPlacementBoxOverlay({
           secondTouch.clientY - firstTouch.clientY,
           secondTouch.clientX - firstTouch.clientX,
         ),
-        snapRotation: getRotationSnapTarget(
-          latestTransformRef.current.rotation,
-          null,
-        ),
+        snapRotation: latestTouchSnappingEnabledRef.current
+          ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
+          : null,
         startTransform: {
           offsetX: latestTransformRef.current.offsetX,
           offsetY: latestTransformRef.current.offsetY,
@@ -522,6 +540,7 @@ export function IconPlacementBoxOverlay({
         },
       },
       pointerIds: [firstPointerId, secondPointerId],
+      snappingEnabled: latestTouchSnappingEnabledRef.current,
       startTransform: latestTransformRef.current,
     };
 
@@ -592,11 +611,12 @@ export function IconPlacementBoxOverlay({
       pendingClientY: event.clientY,
       rafId: null,
       moveSnap: emptyMoveSnap(),
+      isTouchInteraction: event.pointerType === "touch",
       rotationSnap:
-        mode === "rotate"
+        mode === "rotate" && event.pointerType !== "touch"
           ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
           : null,
-      rotationSnapDisabled: isRotationSnapModifierPressed(event.nativeEvent),
+      snappingModifierPressed: isSnappingModifierPressed(event.nativeEvent),
     };
 
     overlayElement.setPointerCapture(event.pointerId);
@@ -853,10 +873,22 @@ function emptyMoveSnap(): PositioningMoveSnapState {
   };
 }
 
-function isRotationSnapModifierPressed(
+function isSnappingModifierPressed(
   event: Pick<PointerEvent, "metaKey" | "ctrlKey">,
 ): boolean {
   return event.metaKey || event.ctrlKey;
+}
+
+function isDragSnappingEnabled(
+  session: DragSession,
+  mode: PositioningDragMode,
+  touchSnappingEnabled: boolean,
+): boolean {
+  if (session.isTouchInteraction) {
+    return mode === "rotate" ? false : touchSnappingEnabled;
+  }
+
+  return !session.snappingModifierPressed;
 }
 
 function getHorizontalGuideTop(

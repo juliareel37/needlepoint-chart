@@ -52,6 +52,7 @@ interface TraceImageLayerProps {
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
   traceDisplayOverride?: TraceDisplayOverride;
+  touchSnappingEnabled: boolean;
   viewport: ViewportState;
   worldBounds: { left: number; top: number; width: number; height: number };
   zIndex?: number;
@@ -73,6 +74,7 @@ export function TraceImageLayer({
   trace,
   traceAsset,
   traceDisplayOverride = null,
+  touchSnappingEnabled,
   viewport,
   worldBounds,
   zIndex = 3,
@@ -490,6 +492,7 @@ export function TraceImageLayer({
               snapGuideContainerBounds={mobileSnapGuideContainerBounds}
               snapGuideZoom={1}
               snapZoom={viewport.zoom}
+              touchSnappingEnabled={touchSnappingEnabled}
               showOutline
               showHandles
               transactionKeyPrefix="trace-drag-mobile"
@@ -598,6 +601,7 @@ export function TraceImageLayer({
               snapGuideContainerBounds={snapContainerBounds}
               snapGuideZoom={zoom}
               snapZoom={viewport.zoom}
+              touchSnappingEnabled={touchSnappingEnabled}
               showOutline
               showHandles
               transactionKeyPrefix="trace-drag"

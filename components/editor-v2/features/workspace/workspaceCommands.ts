@@ -738,6 +738,15 @@ export function createSetSymbolsVisibleCommand(visible: boolean): EditorCommand 
   );
 }
 
+export function createSetTouchSnappingEnabledCommand(enabled: boolean): EditorCommand {
+  return createCommand(
+    "ui.setTouchSnappingEnabled",
+    { enabled },
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createSetPreviewModeCommand(visible: boolean): EditorCommand {
   return createCommand(
     "ui.setPreviewMode",

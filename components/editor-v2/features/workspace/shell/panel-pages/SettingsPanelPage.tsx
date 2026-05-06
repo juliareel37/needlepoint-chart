@@ -20,6 +20,7 @@ interface SettingsPanelPageProps {
   isBottomPanelLayout: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
 }
 
 export function SettingsPanelPage({
@@ -30,6 +31,7 @@ export function SettingsPanelPage({
   isBottomPanelLayout,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
 }: SettingsPanelPageProps) {
   const { isSignedIn } = useAuthStatus();
   const { themeMode, setThemeMode } = useThemeMode();
@@ -85,6 +87,7 @@ export function SettingsPanelPage({
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}
+              touchSnappingEnabled={touchSnappingEnabled}
             />
           ) : (
             <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>

@@ -36,6 +36,7 @@ interface IconPlacementLayerProps {
   portalHost?: HTMLElement | null;
   previewColor: string;
   stageBounds: { left: number; top: number; width: number; height: number };
+  touchSnappingEnabled: boolean;
   viewport: ViewportState;
   worldBounds: { left: number; top: number; width: number; height: number };
   zoom: number;
@@ -50,6 +51,7 @@ export function IconPlacementLayer({
   portalHost = null,
   previewColor,
   stageBounds,
+  touchSnappingEnabled,
   viewport,
   worldBounds,
   zoom,
@@ -450,6 +452,7 @@ export function IconPlacementLayer({
             snapGuideContainerBounds={mobileSnapGuideContainerBounds}
             snapGuideZoom={1}
             snapZoom={viewport.zoom}
+            touchSnappingEnabled={touchSnappingEnabled}
             transactionKeyPrefix="icon-drag"
             transform={transform}
             zoom={1}
@@ -534,6 +537,7 @@ export function IconPlacementLayer({
             snapGuideContainerBounds={snapContainerBounds}
             snapGuideZoom={zoom}
             snapZoom={viewport.zoom}
+            touchSnappingEnabled={touchSnappingEnabled}
             transactionKeyPrefix="icon-drag"
             transform={transform}
             zoom={zoom}

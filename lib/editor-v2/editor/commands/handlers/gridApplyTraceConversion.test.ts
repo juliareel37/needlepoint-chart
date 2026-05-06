@@ -286,6 +286,7 @@ function createTestState(): EditorStoreState {
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: true,
+        touchSnappingEnabled: true,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

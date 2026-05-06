@@ -228,6 +228,7 @@ function createMergeTestState(
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: false,
+        touchSnappingEnabled: true,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

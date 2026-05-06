@@ -23,6 +23,7 @@ interface CanvasAidsFloatingToolbarProps {
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
 }
 
 export function CanvasAidsFloatingToolbar({
@@ -30,6 +31,7 @@ export function CanvasAidsFloatingToolbar({
   showGridlines,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
 }: CanvasAidsFloatingToolbarProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -189,6 +191,7 @@ export function CanvasAidsFloatingToolbar({
                   showGridlines={showGridlines}
                   showRuler={showRuler}
                   showSymbols={showSymbols}
+                  touchSnappingEnabled={touchSnappingEnabled}
                 />
               </div>
             </ToolbarPopover>,

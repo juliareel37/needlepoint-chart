@@ -42,6 +42,7 @@ interface GridWorldSurfaceProps {
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
   state: EditorStoreState;
   traceCropAspectRatio?: number | null;
   traceCropEditing?: boolean;
@@ -64,6 +65,7 @@ export function GridWorldSurface({
   showGridlines,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
   state,
   traceCropAspectRatio = null,
   traceCropEditing = false,
@@ -585,6 +587,7 @@ export function GridWorldSurface({
               cropBase={traceCropBase}
               onCropPreviewChange={onTraceCropPreviewChange}
               traceDisplayOverride={traceDisplayOverride}
+              touchSnappingEnabled={touchSnappingEnabled}
               viewport={viewport as ViewportState}
               worldBounds={worldBounds}
               zIndex={3}
@@ -646,6 +649,7 @@ export function GridWorldSurface({
               portalHost={stageRef.current}
               previewColor={textPreviewColor}
               stageBounds={stageBounds}
+              touchSnappingEnabled={touchSnappingEnabled}
               viewport={viewport}
               worldBounds={worldBounds}
               zoom={viewport.zoom}
@@ -662,6 +666,7 @@ export function GridWorldSurface({
               portalHost={stageRef.current}
               previewColor={textPreviewColor}
               stageBounds={stageBounds}
+              touchSnappingEnabled={touchSnappingEnabled}
               viewport={viewport}
               worldBounds={worldBounds}
               zoom={viewport.zoom}
