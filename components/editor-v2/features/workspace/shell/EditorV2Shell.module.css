@@ -109,6 +109,7 @@
   padding: 24px;
   background: var(--surface-primary);
   overflow-y: auto;
+  overscroll-behavior-y: none;
 }
 
 .sidebarPanelHeader {
@@ -1221,6 +1222,7 @@
 .toolbarColorLibrary.toolbarColorLibrary {
   width: min(260px, calc(100vw - 40px));
   height: min(340px, calc(100vh - 160px));
+  overscroll-behavior-y: none;
 }
 
 .sidebarColorLibrary.sidebarColorLibrary {
@@ -3497,6 +3499,7 @@
   .sidebarPanelBody {
     flex: 1 1 auto;
     overflow-y: auto;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
     padding: 20px 20px 24px;
   }

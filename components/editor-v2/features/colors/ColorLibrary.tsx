@@ -9,7 +9,6 @@ import { SegmentedControl } from "@/components/design-system";
 import { getDmcColorFamilySections } from "@/lib/editor-v2/editor/color-library";
 import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
-import { createPortal } from "react-dom";
 import styles from "./ColorLibrary.module.css";
 
 type ColorLibraryView = "featured" | "all";
@@ -82,9 +81,6 @@ export function ColorLibrary({
   const [view, setView] = useState<ColorLibraryView>("featured");
   const [layoutMode, setLayoutMode] = useState<ColorLibraryLayoutMode>("grid");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsPosition, setSettingsPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
@@ -112,20 +108,6 @@ export function ColorLibrary({
       return;
     }
 
-    const updateSettingsPosition = () => {
-      const trigger = settingsTriggerRef.current;
-
-      if (!trigger) {
-        return;
-      }
-
-      const rect = trigger.getBoundingClientRect();
-      setSettingsPosition({
-        top: rect.bottom + 8,
-        left: rect.right,
-      });
-    };
-
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
 
@@ -145,15 +127,10 @@ export function ColorLibrary({
       }
     };
 
-    updateSettingsPosition();
-    window.addEventListener("resize", updateSettingsPosition);
-    window.addEventListener("scroll", updateSettingsPosition, true);
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener("resize", updateSettingsPosition);
-      window.removeEventListener("scroll", updateSettingsPosition, true);
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
@@ -309,23 +286,13 @@ export function ColorLibrary({
               className={styles.searchSettingsTriggerIcon}
             />
           </button>
-        </div>
-      </div>
 
-      {settingsOpen && settingsPosition
-        ? createPortal(
+          {settingsOpen ? (
             <MenuSurface
               ref={settingsMenuRef}
               role="dialog"
               aria-label="Color library settings"
               className={styles.settingsMenu}
-              style={{
-                position: "fixed",
-                top: settingsPosition.top,
-                left: settingsPosition.left,
-                transform: "translateX(-100%)",
-                zIndex: "var(--z-editor-popover-high)",
-              }}
             >
               <div className={styles.settingsMenuSection}>
                 <p className={styles.settingsMenuLabel}>View</p>
@@ -357,10 +324,10 @@ export function ColorLibrary({
                   onChange={setLayoutMode}
                 />
               </div>
-            </MenuSurface>,
-            document.body,
-          )
-        : null}
+            </MenuSurface>
+          ) : null}
+        </div>
+      </div>
 
       <div className={styles.libraryBody}>
         {includeTransparentSwatch ? (
