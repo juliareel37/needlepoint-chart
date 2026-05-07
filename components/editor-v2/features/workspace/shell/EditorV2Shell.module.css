@@ -1737,11 +1737,11 @@
 }
 
 .canvasAidsToolbar:hover {
-  background: var(--ui-hover-soft);
+  background: var(--button-ghost2-hover);
 }
 
 .canvasAidsToolbar[data-open="true"] {
-  background: var(--ui-hover-soft);
+  background: var(--button-ghost2-hover);
   box-shadow: var(--ui-shadow-md), 0 1px 3px var(--ui-border-subtle);
   color: inherit;
 }
