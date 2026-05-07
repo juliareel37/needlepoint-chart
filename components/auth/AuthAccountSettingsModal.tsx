@@ -16,6 +16,7 @@ export function AuthAccountSettingsModal({
 }) {
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const modalShellRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -55,6 +56,43 @@ export function AuthAccountSettingsModal({
       return;
     }
 
+    const overlay = overlayRef.current;
+
+    if (!overlay) {
+      return;
+    }
+
+    const siblings = Array.from(document.body.children).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement && element !== overlay,
+    );
+    const previousStates = siblings.map((element) => ({
+      element,
+      ariaHidden: element.getAttribute("aria-hidden"),
+      inert: element.inert,
+    }));
+
+    previousStates.forEach(({ element }) => {
+      element.inert = true;
+      element.setAttribute("aria-hidden", "true");
+    });
+
+    return () => {
+      previousStates.forEach(({ element, ariaHidden, inert }) => {
+        element.inert = inert;
+        if (ariaHidden === null) {
+          element.removeAttribute("aria-hidden");
+        } else {
+          element.setAttribute("aria-hidden", ariaHidden);
+        }
+      });
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -84,7 +122,7 @@ export function AuthAccountSettingsModal({
   }
 
   return createPortal(
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div ref={overlayRef} className={styles.modalOverlay} onClick={onClose}>
       <div
         ref={modalShellRef}
         role="dialog"

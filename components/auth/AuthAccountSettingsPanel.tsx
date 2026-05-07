@@ -961,7 +961,35 @@ export function AuthAccountSettingsPanel({
             //   "Update the account details used to identify you in the app."
             // }
           >
-            <form className={styles.form} onSubmit={handleAccountUpdate}>
+            <form className={styles.form} autoComplete="off" onSubmit={handleAccountUpdate}>
+              <input
+                type="text"
+                name="account-settings-decoy-username"
+                autoComplete="username"
+                tabIndex={-1}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="password"
+                name="account-settings-decoy-password"
+                autoComplete="current-password"
+                tabIndex={-1}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                  pointerEvents: "none",
+                }}
+              />
               {renderStatus()}
               <Field
                 label="Name"
@@ -1039,7 +1067,7 @@ export function AuthAccountSettingsPanel({
             </div>
           </Panel>
 
-          <Panel className={styles.mainPanel} title="Two-factor authentication">
+          {/* <Panel className={styles.mainPanel} title="Two-factor authentication">
             <div className={styles.form}>
               {twoFactorStatus ? (
                 <div
@@ -1206,7 +1234,7 @@ export function AuthAccountSettingsPanel({
                 </>
               )}
             </div>
-          </Panel>
+          </Panel> */}
 
           <Panel className={styles.mainPanel} title="Sessions">
             <div className={styles.form}>
