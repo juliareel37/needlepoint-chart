@@ -63,6 +63,11 @@ export interface PositioningResizeSnapResult {
   snap: PositioningMoveSnapState;
 }
 
+export interface PositioningPinchSnapResult {
+  bounds: PositioningRect;
+  snap: PositioningMoveSnapState;
+}
+
 export const ROTATION_SNAP_DEGREES = 3;
 export const ROTATION_UNSNAP_DEGREES = 5;
 export const MOVE_CENTER_SNAP_PX = 8;
@@ -386,6 +391,29 @@ export function getResizeSnappedBounds(
       bottom: verticalSnap?.key === "bottom" ? verticalSnap.target : null,
       centerY: verticalSnap?.key === "centerY" ? verticalSnap.target : null,
     },
+  };
+}
+
+export function getPinchSnappedBounds(
+  bounds: PositioningRect,
+  containerBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  zoom: number,
+): PositioningPinchSnapResult {
+  const snappedPosition = getCenterSnappedPosition(
+    bounds,
+    containerBounds,
+    currentSnap,
+    zoom,
+  );
+
+  return {
+    bounds: {
+      ...bounds,
+      left: bounds.left + snappedPosition.offsetX,
+      top: bounds.top + snappedPosition.offsetY,
+    },
+    snap: snappedPosition.snap,
   };
 }
 

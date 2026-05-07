@@ -11,6 +11,7 @@ import {
   getCenterSnappedPosition,
   getHandleLeft,
   getHandleTop,
+  getPinchSnappedBounds,
   getResizeSnappedBounds,
   getSnappedRotationDegrees,
   getRotationSnapTarget,
@@ -81,6 +82,7 @@ interface PinchSession {
   pointerIds: [number, number];
   snappingEnabled: boolean;
   startTransform: IconPlacementTransform;
+  moveSnap: PositioningMoveSnapState;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -464,7 +466,7 @@ export function IconPlacementBoxOverlay({
     pinchSession.pinch.snapRotation = pinchSession.snappingEnabled
       ? getRotationSnapTarget(rawRotation, pinchSession.pinch.snapRotation)
       : null;
-    const nextTransform = getIconPlacementTransformFromPinch(
+    let nextTransform = getIconPlacementTransformFromPinch(
       pinchSession.pinch,
       worldCenter,
       nextDistance,
@@ -472,6 +474,30 @@ export function IconPlacementBoxOverlay({
       latestBaseRectRef.current,
       pinchSession.startTransform,
     );
+    if (pinchSession.snappingEnabled && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getIconPlacementBounds(
+        latestBaseRectRef.current,
+        nextTransform,
+      );
+      const snappedBounds = getPinchSnappedBounds(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        pinchSession.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: snappedBounds.bounds.left - latestBaseRectRef.current.left,
+        offsetY: snappedBounds.bounds.top - latestBaseRectRef.current.top,
+      };
+      pinchSession.moveSnap = snappedBounds.snap;
+      setActiveMoveSnap(snappedBounds.snap);
+    } else {
+      pinchSession.moveSnap = emptyMoveSnap();
+      setActiveMoveSnap(emptyMoveSnap());
+    }
+
     const nextInteractionBounds = getIconPlacementBounds(
       latestBaseRectRef.current,
       nextTransform,
@@ -542,6 +568,7 @@ export function IconPlacementBoxOverlay({
       pointerIds: [firstPointerId, secondPointerId],
       snappingEnabled: latestTouchSnappingEnabledRef.current,
       startTransform: latestTransformRef.current,
+      moveSnap: emptyMoveSnap(),
     };
 
     const activeDragSession = dragSessionRef.current;

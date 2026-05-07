@@ -10,6 +10,7 @@ import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getHandleLeft,
   getHandleTop,
+  getPinchSnappedBounds,
   getPositionedBounds,
   getResizeSnappedBounds,
   getRotationCss,
@@ -90,6 +91,7 @@ interface PinchSession {
   pinch: PositioningPinchState;
   pointerIds: [number, number];
   snappingEnabled: boolean;
+  moveSnap: PositioningMoveSnapState;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -506,13 +508,34 @@ export function PositioningBoxOverlay({
     pinchSession.pinch.snapRotation = pinchSession.snappingEnabled
       ? getRotationSnapTarget(rawRotation, pinchSession.pinch.snapRotation)
       : null;
-    const nextTransform = getTransformFromPinch(
+    let nextTransform = getTransformFromPinch(
       pinchSession.pinch,
       worldCenter,
       nextDistance,
       nextAngle,
       latestBaseRectRef.current,
     );
+
+    if (pinchSession.snappingEnabled && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      const snappedBounds = getPinchSnappedBounds(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        pinchSession.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: snappedBounds.bounds.left - latestBaseRectRef.current.left,
+        offsetY: snappedBounds.bounds.top - latestBaseRectRef.current.top,
+      };
+      pinchSession.moveSnap = snappedBounds.snap;
+      setActiveMoveSnap(snappedBounds.snap);
+    } else {
+      pinchSession.moveSnap = emptyMoveSnap();
+      setActiveMoveSnap(emptyMoveSnap());
+    }
 
     latestTransformRef.current = nextTransform;
     const nextInteractionBounds = getPositionedBounds(
@@ -579,6 +602,7 @@ export function PositioningBoxOverlay({
       },
       pointerIds: [firstPointerId, secondPointerId],
       snappingEnabled: latestTouchSnappingEnabledRef.current,
+      moveSnap: emptyMoveSnap(),
     };
 
     const activeDragSession = dragSessionRef.current;
