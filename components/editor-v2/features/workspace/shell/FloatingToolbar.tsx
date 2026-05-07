@@ -396,6 +396,11 @@ export function FloatingToolbar({
       return;
     }
 
+    if (!toolbarRef.current?.contains(target)) {
+      setActiveTooltip(null);
+      return;
+    }
+
     const label = target.dataset.tooltip;
 
     if (!label) {
@@ -985,6 +990,10 @@ export function FloatingToolbar({
             return;
           }
 
+          if (!event.currentTarget.contains(target)) {
+            return;
+          }
+
           updateTooltipPosition(target);
         }}
         onMouseOut={(event) => {
@@ -1013,6 +1022,10 @@ export function FloatingToolbar({
             : null;
 
           if (!(target instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          if (!event.currentTarget.contains(target)) {
             return;
           }
 

@@ -93,6 +93,7 @@ export function ColorLibrary({
         active={transparentSelected}
         inertWhenActive
         className={styles.colorButton}
+        data-tooltip="Transparent"
         aria-label="Transparent"
         aria-pressed={transparentSelected}
       >
@@ -139,7 +140,6 @@ export function ColorLibrary({
         data-tooltip={color.code}
         aria-label={`${color.name} (${color.code})`}
         aria-pressed={selected}
-        title={color.code}
       >
         <span
           aria-hidden="true"
