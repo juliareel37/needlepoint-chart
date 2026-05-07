@@ -212,7 +212,6 @@ export function AuthAccountSettingsPanel({
 }) {
   const router = useRouter();
   const {
-    changeEmail,
     listSessions,
     requestPasswordReset,
     revokeOtherSessions,
@@ -247,19 +246,14 @@ export function AuthAccountSettingsPanel({
   const currentEmail = user?.email ?? "";
   const currentSessionToken = session?.token ?? null;
   const nextName = nameValue.trim();
-  const nextEmail = emailValue.trim();
-  const hasGoogleOAuth = accountSettingsContext?.hasGoogleOAuth ?? false;
   const hasEmailPassword = accountSettingsContext?.hasEmailPassword ?? false;
-  const isGoogleOAuthUser = hasGoogleOAuth;
   const hasLoadedPasswordState = Boolean(accountSettingsContext);
   const passwordCardTitle = hasEmailPassword ? "Reset password" : "Set password";
   const passwordCardDescription = hasEmailPassword
     ? "Need to reset your password? We'll send you an email with a secure link to set a new one."
     : "Want to be able to log in with password? We'll email you a secure link with the steps to add a password to your account.";
   const passwordActionLabel = hasEmailPassword ? "Send reset link" : "Add password";
-  const hasChanges = isGoogleOAuthUser
-    ? nextName !== currentName
-    : nextName !== currentName || nextEmail !== currentEmail;
+  const hasChanges = nextName !== currentName;
   const deleteConfirmationMatches = deleteConfirmationValue.trim().toLowerCase() === "delete";
   const isBusy = isSubmitting || isDeletingAccount;
   const isTwoFactorEnabled = Boolean((user as TwoFactorSessionUser | null)?.twoFactorEnabled);
@@ -508,14 +502,6 @@ export function AuthAccountSettingsPanel({
       return;
     }
 
-    if (!isGoogleOAuthUser && !nextEmail) {
-      setStatus({
-        tone: "error",
-        message: "Please enter a valid email address.",
-      });
-      return;
-    }
-
     if (!hasChanges) {
       setStatus({
         tone: "success",
@@ -528,9 +514,7 @@ export function AuthAccountSettingsPanel({
     setStatus(null);
 
     let nameUpdated = false;
-    let emailChangeStarted = false;
     let nameError: string | null = null;
-    let emailError: string | null = null;
 
     if (nextName !== currentName) {
       try {
@@ -545,22 +529,6 @@ export function AuthAccountSettingsPanel({
       }
     }
 
-    if (!isGoogleOAuthUser && nextEmail !== currentEmail) {
-      try {
-        const result = await changeEmail({
-          newEmail: nextEmail,
-          callbackURL: typeof window === "undefined" ? undefined : window.location.href,
-        });
-        if (result.error) {
-          emailError = result.error.message ?? "We couldn't start the email change flow.";
-        } else {
-          emailChangeStarted = true;
-        }
-      } catch (error) {
-        emailError = getErrorMessage(error, "We couldn't start the email change flow.");
-      }
-    }
-
     if (nameUpdated) {
       await refetch();
       router.refresh();
@@ -568,37 +536,19 @@ export function AuthAccountSettingsPanel({
 
     setIsSubmitting(false);
 
-    if (nameError || emailError) {
-      const partialSuccess = [
-        nameUpdated ? "Your display name was updated." : null,
-        emailChangeStarted
-          ? `We also sent a confirmation email to ${nextEmail} so you can finish changing your sign-in email.`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const failures = [nameError, emailError].filter(Boolean).join(" ");
-
+    if (nameError) {
       setStatus({
         tone: "error",
-        message: [partialSuccess, failures].filter(Boolean).join(" "),
-      });
-      return;
-    }
-
-    if (emailChangeStarted) {
-      setStatus({
-        tone: "success",
-        message: `We sent a confirmation email to ${nextEmail}. Open that link to finish updating your sign-in email.`,
+        message: [nameUpdated ? "Your display name was updated." : null, nameError]
+          .filter(Boolean)
+          .join(" "),
       });
       return;
     }
 
     setStatus({
       tone: "success",
-      message: isGoogleOAuthUser
-        ? "Your profile details were updated."
-        : "Your account settings were updated.",
+      message: "Your account settings were updated.",
     });
   }
 
@@ -1016,10 +966,9 @@ export function AuthAccountSettingsPanel({
                   type="email"
                   autoComplete="email"
                   value={emailValue}
-                  onChange={(event) => setEmailValue(event.currentTarget.value)}
                   placeholder="you@example.com"
-                  readOnly={isGoogleOAuthUser}
-                  disabled={isGoogleOAuthUser}
+                  readOnly
+                  disabled
                   required
                 />
               </Field>
