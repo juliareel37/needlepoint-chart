@@ -141,11 +141,9 @@
   color: var(--status-destructive-strong);
 }
 
-.invalidInput:hover,
 .invalidInput:focus-visible,
 .invalidInput:focus-within {
   border-color: var(--status-destructive-strong);
-  box-shadow: 0 0 0 2px var(--status-destructive-soft);
 }
 
 .status {

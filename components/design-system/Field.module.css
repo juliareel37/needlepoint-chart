@@ -47,7 +47,6 @@
 .control:focus-visible,
 .control:focus-within {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px var(--brand-200);
 }
 
 .inputWithSuffix {
@@ -72,10 +71,4 @@
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .control:hover {
-    border-color: var(--brand-primary);
-  }
 }

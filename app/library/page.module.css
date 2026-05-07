@@ -334,10 +334,6 @@
   padding-left: 38px;
 }
 
-.searchInput:hover {
-  border-color: var(--brand-primary);
-}
-
 .grid {
   display: grid;
   /* grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); */
