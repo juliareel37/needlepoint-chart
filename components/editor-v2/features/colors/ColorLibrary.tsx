@@ -81,6 +81,7 @@ export function ColorLibrary({
   const [view, setView] = useState<ColorLibraryView>("featured");
   const [layoutMode, setLayoutMode] = useState<ColorLibraryLayoutMode>("grid");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchInputInteractive, setSearchInputInteractive] = useState(false);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
@@ -266,8 +267,35 @@ export function ColorLibrary({
           <span aria-hidden="true" className={styles.searchIcon} />
           <FieldInput
             type="search"
+            name="search-query"
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            inputMode="search"
+            enterKeyHint="search"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+            aria-autocomplete="none"
+            readOnly={!searchInputInteractive}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            onPointerDown={() => {
+              if (!searchInputInteractive) {
+                setSearchInputInteractive(true);
+              }
+            }}
+            onFocus={() => {
+              if (!searchInputInteractive) {
+                setSearchInputInteractive(true);
+              }
+            }}
+            onBlur={() => {
+              if (searchQuery.length === 0) {
+                setSearchInputInteractive(false);
+              }
+            }}
             placeholder="Search"
             aria-label="Search colors"
             className={styles.searchInput}

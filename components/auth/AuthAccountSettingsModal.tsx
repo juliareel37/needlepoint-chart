@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { Button, ButtonIcon } from "@/components/design-system";
@@ -16,10 +16,39 @@ export function AuthAccountSettingsModal({
 }) {
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
+  const modalShellRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const activeElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    activeElement?.blur();
+
+    const frameId = window.requestAnimationFrame(() => {
+      const modalShell = modalShellRef.current;
+
+      if (!modalShell) {
+        return;
+      }
+
+      const firstFocusable = modalShell.querySelector<HTMLElement>(
+        'input:not([type="hidden"]):not([disabled]), button:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+
+      (firstFocusable ?? modalShell).focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,9 +86,11 @@ export function AuthAccountSettingsModal({
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div
+        ref={modalShellRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         className={styles.modalShell}
         onClick={(event) => event.stopPropagation()}
       >
