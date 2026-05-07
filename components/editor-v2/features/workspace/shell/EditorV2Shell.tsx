@@ -83,7 +83,10 @@ import {
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
 import type { ColorPanelView } from "./panel-pages/ColorPanelPage";
-import { FloatingToolbar } from "./FloatingToolbar";
+import {
+  FloatingToolbar,
+  type ColorLibraryDismissGesture,
+} from "./FloatingToolbar";
 import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
@@ -376,6 +379,7 @@ export function EditorV2Shell({
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
+  const colorLibraryDismissGestureRef = useRef<ColorLibraryDismissGesture | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
@@ -2553,6 +2557,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
+                    colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
@@ -2853,6 +2858,9 @@ export function EditorV2Shell({
                         }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
+                        onColorLibraryDismissPointerDown={(gesture) => {
+                          colorLibraryDismissGestureRef.current = gesture;
+                        }}
                         onOpenSelectionColorsPanel={handleOpenSelectionColorsPanel}
                         selectionRequestKey={selectionRequestKey}
                         showSymbols={showSymbols}
@@ -2894,6 +2902,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
+                    colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}

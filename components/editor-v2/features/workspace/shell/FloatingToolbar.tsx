@@ -56,6 +56,13 @@ import {
 } from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
+export interface ColorLibraryDismissGesture {
+  clientX: number;
+  clientY: number;
+  pointerType: string;
+  timeStamp: number;
+}
+
 const selectionShapeOptions: Array<{
   shape: SelectionState["shape"];
   label: string;
@@ -88,6 +95,7 @@ function FloatingToolbarPortalPopover({
   dockedToBottom = false,
   ignoreRefs = [],
   matchAnchorMinWidth = false,
+  onInteractOutsidePointerDown,
   onRequestClose,
   subtoolbar = false,
   verticalPlacement = "bottom",
@@ -99,6 +107,7 @@ function FloatingToolbarPortalPopover({
   dockedToBottom?: boolean;
   ignoreRefs?: Array<React.RefObject<HTMLElement | null>>;
   matchAnchorMinWidth?: boolean;
+  onInteractOutsidePointerDown?: (event: PointerEvent) => void;
   onRequestClose?: () => void;
   verticalPlacement?: "bottom" | "top";
 }) {
@@ -227,12 +236,13 @@ function FloatingToolbarPortalPopover({
         return;
       }
 
+      onInteractOutsidePointerDown?.(event);
       onRequestClose?.();
     }
 
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [anchorRef, ignoreRefs, mounted, onRequestClose]);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    return () => window.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [anchorRef, ignoreRefs, mounted, onInteractOutsidePointerDown, onRequestClose]);
 
   if (!mounted) {
     return null;
@@ -299,6 +309,7 @@ interface FloatingToolbarProps {
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
   onOpenSelectionColorsPanel: () => void;
+  onColorLibraryDismissPointerDown?: (gesture: ColorLibraryDismissGesture) => void;
   selectionRequestKey: number;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -328,6 +339,7 @@ export function FloatingToolbar({
   mirrorSessionActive,
   isBottomPanelLayout,
   onOpenSelectionColorsPanel,
+  onColorLibraryDismissPointerDown,
   selectionRequestKey,
   showSymbols,
   symbolAssignments,
@@ -1075,6 +1087,14 @@ export function FloatingToolbar({
           {colorLibraryOpen ? (
             <FloatingToolbarPortalPopover
               anchorRef={colorAnchorRef}
+              onInteractOutsidePointerDown={(event) => {
+                onColorLibraryDismissPointerDown?.({
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  pointerType: event.pointerType,
+                  timeStamp: event.timeStamp,
+                });
+              }}
               onRequestClose={closeColorLibrary}
               role="dialog"
               aria-label="Color library"

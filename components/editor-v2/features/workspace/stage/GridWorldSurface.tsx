@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import type { ColorLibraryDismissGesture } from "../shell/FloatingToolbar";
 import type {
   ActiveTool,
   EditorStore,
@@ -33,6 +34,7 @@ interface GridWorldSurfaceProps {
   activeColorId: string | null;
   activeTool: ActiveTool;
   brushSize: number;
+  colorLibraryDismissGestureRef?: RefObject<ColorLibraryDismissGesture | null>;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
@@ -56,6 +58,7 @@ export function GridWorldSurface({
   activeColorId,
   activeTool,
   brushSize,
+  colorLibraryDismissGestureRef,
   colorsById,
   dispatch,
   highlightedColorId,
@@ -606,6 +609,7 @@ export function GridWorldSurface({
           >
             <GridCanvasStage
               cells={grid.cells}
+              colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}

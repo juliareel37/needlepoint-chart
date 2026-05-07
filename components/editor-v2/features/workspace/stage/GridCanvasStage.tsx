@@ -1,7 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
+import type { ColorLibraryDismissGesture } from "../shell/FloatingToolbar";
 import type {
   GridPoint,
   GridCellValue,
@@ -29,6 +37,7 @@ import {
 interface GridCanvasStageProps {
   cancelPaintStroke: () => void;
   cells: GridCellValue[];
+  colorLibraryDismissGestureRef?: RefObject<ColorLibraryDismissGesture | null>;
   colorsById: Record<string, PaletteColor>;
   deferPaintUntilTraceReady?: boolean;
   displayHost: HTMLElement | null;
@@ -61,6 +70,7 @@ interface GridCanvasStageProps {
 export function GridCanvasStage({
   cancelPaintStroke,
   cells,
+  colorLibraryDismissGestureRef,
   colorsById,
   deferPaintUntilTraceReady = false,
   displayHost,
@@ -89,6 +99,10 @@ export function GridCanvasStage({
   viewport,
   isZoomInteractionActive,
 }: GridCanvasStageProps) {
+  const DISMISS_CLICK_HOLD_TO_PAINT_MS = 140;
+  const DISMISS_CLICK_MOVE_TO_PAINT_PX = 6;
+  const DISMISS_GESTURE_MATCH_WINDOW_MS = 48;
+  const DISMISS_GESTURE_MATCH_DISTANCE_PX = 4;
   const TOUCH_PAINT_ACTIVATION_DISTANCE_PX = 8;
   const sourceThreadStyleVersion = previewMode && threadView ? 2 : 1;
   const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -113,6 +127,14 @@ export function GridCanvasStage({
     point: GridPoint;
     pointerId: number;
     selectionPoint: SelectionPoint;
+  } | null>(null);
+  const pendingDismissedMousePaintRef = useRef<{
+    clientX: number;
+    clientY: number;
+    point: GridPoint;
+    pointerId: number;
+    selectionPoint: SelectionPoint;
+    timeoutId: number;
   } | null>(null);
   const touchFallbackResetTimeoutRef = useRef<number | null>(null);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
@@ -396,6 +418,17 @@ export function GridCanvasStage({
     pendingTouchPaintRef.current = null;
   }, []);
 
+  const clearPendingDismissedMousePaint = useCallback(() => {
+    const pendingDismissedMousePaint = pendingDismissedMousePaintRef.current;
+
+    if (!pendingDismissedMousePaint) {
+      return;
+    }
+
+    window.clearTimeout(pendingDismissedMousePaint.timeoutId);
+    pendingDismissedMousePaintRef.current = null;
+  }, []);
+
   const clearTouchFallbackResetTimeout = useCallback(() => {
     if (touchFallbackResetTimeoutRef.current === null) {
       return;
@@ -411,8 +444,14 @@ export function GridCanvasStage({
     touchGestureLockedRef.current = false;
     activePointerIdRef.current = null;
     clearPendingTouchPaint();
+    clearPendingDismissedMousePaint();
     cancelPaintStroke();
-  }, [cancelPaintStroke, clearPendingTouchPaint, clearTouchFallbackResetTimeout]);
+  }, [
+    cancelPaintStroke,
+    clearPendingDismissedMousePaint,
+    clearPendingTouchPaint,
+    clearTouchFallbackResetTimeout,
+  ]);
 
   const activatePendingTouchPaint = useCallback(() => {
     const pendingTouchPaint = pendingTouchPaintRef.current;
@@ -426,8 +465,52 @@ export function GridCanvasStage({
     return true;
   }, [handlePointerDown]);
 
+  const activatePendingDismissedMousePaint = useCallback(() => {
+    const pendingDismissedMousePaint = pendingDismissedMousePaintRef.current;
+
+    if (!pendingDismissedMousePaint) {
+      return false;
+    }
+
+    window.clearTimeout(pendingDismissedMousePaint.timeoutId);
+    pendingDismissedMousePaintRef.current = null;
+    handlePointerDown(
+      pendingDismissedMousePaint.point,
+      pendingDismissedMousePaint.selectionPoint,
+    );
+    return true;
+  }, [handlePointerDown]);
+
+  const shouldDeferPaintForDismissClick = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const dismissGesture = colorLibraryDismissGestureRef?.current;
+
+      if (!dismissGesture) {
+        return false;
+      }
+
+      const matchesPointerType = dismissGesture.pointerType === event.pointerType;
+      const matchesTime =
+        Math.abs(dismissGesture.timeStamp - event.timeStamp) <=
+        DISMISS_GESTURE_MATCH_WINDOW_MS;
+      const matchesDistance =
+        Math.hypot(
+          dismissGesture.clientX - event.clientX,
+          dismissGesture.clientY - event.clientY,
+        ) <= DISMISS_GESTURE_MATCH_DISTANCE_PX;
+
+      colorLibraryDismissGestureRef.current = null;
+      return matchesPointerType && matchesTime && matchesDistance;
+    },
+    [colorLibraryDismissGestureRef],
+  );
+
   useEffect(() => {
     function handleWindowPointerEnd(event: PointerEvent) {
+      if (pendingDismissedMousePaintRef.current?.pointerId === event.pointerId) {
+        clearPendingDismissedMousePaint();
+      }
+
       if (event.pointerType !== "touch") {
         return;
       }
@@ -493,10 +576,17 @@ export function GridCanvasStage({
   }, [
     activatePendingTouchPaint,
     cancelPaintStroke,
+    clearPendingDismissedMousePaint,
     clearPendingTouchPaint,
     clearTouchFallbackResetTimeout,
     clearTouchInteractionState,
   ]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingDismissedMousePaint();
+    };
+  }, [clearPendingDismissedMousePaint]);
 
   return (
     <>
@@ -578,6 +668,21 @@ export function GridCanvasStage({
             return;
           }
 
+          if (shouldDeferPaintForDismissClick(event)) {
+            clearPendingDismissedMousePaint();
+            pendingDismissedMousePaintRef.current = {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              point,
+              pointerId: event.pointerId,
+              selectionPoint,
+              timeoutId: window.setTimeout(() => {
+                activatePendingDismissedMousePaint();
+              }, DISMISS_CLICK_HOLD_TO_PAINT_MS),
+            };
+            return;
+          }
+
           handlePointerDown(point, selectionPoint);
         }}
         onPointerMove={(event) => {
@@ -605,6 +710,20 @@ export function GridCanvasStage({
 
           if (!isPressed) {
             return;
+          }
+
+          const pendingDismissedMousePaint = pendingDismissedMousePaintRef.current;
+          if (pendingDismissedMousePaint?.pointerId === event.pointerId) {
+            const distance = Math.hypot(
+              event.clientX - pendingDismissedMousePaint.clientX,
+              event.clientY - pendingDismissedMousePaint.clientY,
+            );
+
+            if (distance < DISMISS_CLICK_MOVE_TO_PAINT_PX) {
+              return;
+            }
+
+            activatePendingDismissedMousePaint();
           }
 
           const point = getGridPointFromClient(event.clientX, event.clientY);
@@ -657,6 +776,10 @@ export function GridCanvasStage({
             activatePendingTouchPaint();
           }
 
+          if (pendingDismissedMousePaintRef.current?.pointerId === event.pointerId) {
+            clearPendingDismissedMousePaint();
+          }
+
           if (activePointerIdRef.current !== event.pointerId) {
             return;
           }
@@ -682,6 +805,10 @@ export function GridCanvasStage({
 
           if (pendingTouchPaintRef.current?.pointerId === event.pointerId) {
             clearPendingTouchPaint();
+          }
+
+          if (pendingDismissedMousePaintRef.current?.pointerId === event.pointerId) {
+            clearPendingDismissedMousePaint();
           }
 
           if (activePointerIdRef.current !== event.pointerId) {
