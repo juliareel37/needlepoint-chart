@@ -111,7 +111,7 @@ export function ColorPanelPage({
   const openDesignColorsView = () => onViewChange("design-colors");
 
   return (
-    <section ref={pageRef} className={styles.sidebarSection}>
+    <section ref={pageRef} className={[styles.sidebarSection, styles.colorPanelPageSection].join(" ")}>
       <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
@@ -208,7 +208,7 @@ export function ColorPanelPage({
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
 
-            <div className={styles.sidebarSubsection}>
+            <div className={[styles.sidebarSubsection, styles.sidebarColorLibrarySection].join(" ")}>
               
               <h3 style={typographyStyles.h5}>All colors</h3>
 

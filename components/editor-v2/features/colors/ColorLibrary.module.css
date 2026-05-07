@@ -1,6 +1,14 @@
 .library {
   --color-library-track-size: 33px;
   --color-library-grid-gap: 6px;
+  --color-library-header-padding-top: 10px;
+  --color-library-header-padding-right: 16px;
+  --color-library-header-padding-bottom: 14px;
+  --color-library-header-padding-left: 16px;
+  --color-library-body-padding-top: 14px;
+  --color-library-body-padding-right: 16px;
+  --color-library-body-padding-bottom: 16px;
+  --color-library-body-padding-left: 16px;
   display: flex;
   flex-direction: column;
   overflow: auto;
@@ -17,7 +25,11 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 10px 16px 14px;
+  padding:
+    var(--color-library-header-padding-top)
+    var(--color-library-header-padding-right)
+    var(--color-library-header-padding-bottom)
+    var(--color-library-header-padding-left);
   background: var(--surface-primary);
   box-shadow: 0 1px 0 var(--ui-border-subtle);
 }
@@ -28,7 +40,11 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 14px 16px 16px;
+  padding:
+    var(--color-library-body-padding-top)
+    var(--color-library-body-padding-right)
+    var(--color-library-body-padding-bottom)
+    var(--color-library-body-padding-left);
 }
 
 .searchField {

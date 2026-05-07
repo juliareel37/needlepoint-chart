@@ -108,7 +108,7 @@
   max-height: 100%;
   padding: 24px;
   background: var(--surface-primary);
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior-y: none;
 }
 
@@ -128,9 +128,13 @@
 .sidebarPanelBody {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 24px;
   min-height: 0;
   min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebarPanelBackRow {
@@ -240,7 +244,14 @@
 .colorPanelPageBody {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 18px;
+  min-height: 0;
+}
+
+.colorPanelPageSection {
+  flex: 1 1 auto;
+  min-height: 100%;
 }
 
 .iconsPanelPageBody {
@@ -593,9 +604,18 @@
 }
 
 .sidebarColorLibraryCard {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   /* border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;
   background: var(--surface-card); */
+}
+
+.sidebarColorLibrarySection {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .sidebarColorPreviewSwatch {
@@ -1226,10 +1246,17 @@
 }
 
 .sidebarColorLibrary.sidebarColorLibrary {
+  --color-library-header-padding-right: 0px;
+  --color-library-header-padding-left: 0px;
+  --color-library-body-padding-right: 0px;
+  --color-library-body-padding-left: 0px;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   padding: 0px;
   border-radius: 0;
   /* height: 370px; */
+  overscroll-behavior: none;
 }
 
 .libraryPopoverSwatchTrigger {
