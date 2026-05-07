@@ -317,6 +317,9 @@
   --text-secondary: var(--neutral-700);
 
   --control-secondary-bg: #f1f3f6;
+  --control-disabled-bg: color-mix(in srgb, var(--surface-card) 30%, var(--neutral-300));
+  --control-disabled-text: var(--neutral-500);
+  --control-disabled-border: color-mix(in srgb, var(--ui-border-subtle) 75%, var(--neutral-400));
   --canvas-surround-bg: #e2e2e2;
   --panel-border: #d08de3;
 
@@ -470,6 +473,9 @@
   --text-primary: var(--neutral-0);
   --text-secondary: var(--neutral-200);
   --text-tertiary: var(--neutral-400);
+  --control-disabled-bg: color-mix(in srgb, var(--surface-card) 72%, var(--neutral-700));
+  --control-disabled-text: var(--neutral-400);
+  --control-disabled-border: color-mix(in srgb, var(--ui-border-subtle) 45%, var(--neutral-600));
 
   --ui-border-subtle: var(--neutral-800);
   --ui-border-reg: var(--neutral-700);
