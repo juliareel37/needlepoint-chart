@@ -328,7 +328,7 @@
   border-radius: 16px;
   display: grid;
   place-items: center;
-  background: var(--neutral-200);
+  background: var(--surface-primary);
   color: var(--text-primary);
   border: 1px solid var(--ui-border-reg);
   box-shadow: var(--ui-shadow-md);
