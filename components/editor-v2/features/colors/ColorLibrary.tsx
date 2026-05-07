@@ -101,13 +101,22 @@ export function ColorLibrary({
     key: string;
     label: string;
     detail?: string;
+    anchorLeft: number;
+    anchorTop: number;
     placement: "top" | "bottom";
     target: HTMLButtonElement;
   } | null>(null);
+  const [tooltipLayout, setTooltipLayout] = useState<{
+    left: number;
+    top: number;
+    arrowLeft: number;
+  } | null>(null);
+  const libraryShellRef = useRef<HTMLDivElement | null>(null);
   const libraryRef = useRef<HTMLDivElement | null>(null);
   const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLSpanElement | null>(null);
   const viewRef = useRef<ColorLibraryView>(view);
   const scrollToActiveFrameRef = useRef<number | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
@@ -240,14 +249,21 @@ export function ColorLibrary({
     }
 
     const targetRect = target.getBoundingClientRect();
+    const shellRect = libraryShellRef.current?.getBoundingClientRect();
+    if (!shellRect) {
+      setActiveTooltip(null);
+      return;
+    }
+
     const stickyBottom = stickyHeaderRef.current?.getBoundingClientRect().bottom ?? 0;
     const tooltipHeightEstimate = 50;
     const headerGap = 8;
     const obscuredByHeader = targetRect.top < stickyBottom + 4;
+    const obscuredByBottom = targetRect.bottom > shellRect.bottom - 4;
     const shouldPlaceBelow =
       targetRect.top - tooltipHeightEstimate < stickyBottom + headerGap;
 
-    if (obscuredByHeader) {
+    if (obscuredByHeader || obscuredByBottom) {
       setActiveTooltip(null);
       return;
     }
@@ -256,6 +272,10 @@ export function ColorLibrary({
       key,
       label,
       detail,
+      anchorLeft: targetRect.left - shellRect.left + targetRect.width / 2,
+      anchorTop: shouldPlaceBelow
+        ? targetRect.bottom - shellRect.top
+        : targetRect.top - shellRect.top,
       placement: shouldPlaceBelow ? "bottom" : "top",
       target,
     });
@@ -282,6 +302,52 @@ export function ColorLibrary({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
+  }, [activeTooltip]);
+
+  useLayoutEffect(() => {
+    if (!activeTooltip || !libraryShellRef.current || !tooltipRef.current) {
+      setTooltipLayout(null);
+      return;
+    }
+
+    const shellWidth = libraryShellRef.current.clientWidth;
+    const shellHeight = libraryShellRef.current.clientHeight;
+    const tooltipWidth = tooltipRef.current.offsetWidth;
+    const tooltipHeight = tooltipRef.current.offsetHeight;
+    const sidePadding = 8;
+    const arrowInset = 10;
+    const arrowHalfWidth = 4;
+    const tooltipGap = 10;
+    const minLeft = sidePadding;
+    const maxLeft = Math.max(sidePadding, shellWidth - sidePadding - tooltipWidth);
+    const minTop = sidePadding;
+    const maxTop = Math.max(sidePadding, shellHeight - sidePadding - tooltipHeight);
+    const left = Math.min(
+      Math.max(activeTooltip.anchorLeft - tooltipWidth / 2, minLeft),
+      maxLeft,
+    );
+    const unclampedTop =
+      activeTooltip.placement === "top"
+        ? activeTooltip.anchorTop - tooltipHeight - tooltipGap
+        : activeTooltip.anchorTop + tooltipGap;
+    const top = Math.min(Math.max(unclampedTop, minTop), maxTop);
+    const arrowLeft = Math.min(
+      Math.max(activeTooltip.anchorLeft, left + arrowInset),
+      left + tooltipWidth - arrowInset,
+    );
+
+    setTooltipLayout((current) =>
+      current &&
+      current.left === left &&
+      current.top === top &&
+      current.arrowLeft === arrowLeft - arrowHalfWidth
+        ? current
+        : {
+            left,
+            top,
+            arrowLeft: arrowLeft - arrowHalfWidth,
+          },
+    );
   }, [activeTooltip]);
 
   function renderSwatch(
@@ -331,8 +397,6 @@ export function ColorLibrary({
   }
 
   function renderTransparentButton() {
-    const tooltipVisible = activeTooltip?.key === "transparent-swatch";
-
     return (
       <Button
         key="transparent-swatch"
@@ -350,22 +414,6 @@ export function ColorLibrary({
         aria-pressed={transparentSelected}
       >
         {renderSwatch(null, { selected: transparentSelected, transparent: true })}
-        {tooltipVisible ? (
-          <>
-            <span
-              aria-hidden="true"
-              className={styles.tooltip}
-              data-placement={activeTooltip.placement}
-            >
-              {activeTooltip.label}
-            </span>
-            <span
-              aria-hidden="true"
-              className={styles.tooltipArrow}
-              data-placement={activeTooltip.placement}
-            />
-          </>
-        ) : null}
       </Button>
     );
   }
@@ -374,7 +422,6 @@ export function ColorLibrary({
     const selected = color.id === activeColorId;
     const showSymbol = options?.showSymbol ?? false;
     const symbol = showSymbol ? symbolAssignments[color.id] : null;
-    const tooltipVisible = activeTooltip?.key === color.id;
     const colorCodeLabel = formatColorCodeLabel(color);
     const colorLabel = `${color.name} (${colorCodeLabel})`;
 
@@ -396,25 +443,6 @@ export function ColorLibrary({
         aria-pressed={selected}
       >
         {renderSwatch(color, { selected, showSymbol })}
-        {tooltipVisible ? (
-          <>
-            <span
-              aria-hidden="true"
-              className={styles.tooltip}
-              data-placement={activeTooltip.placement}
-            >
-              <span className={styles.tooltipTitle}>{activeTooltip.label}</span>
-              {activeTooltip.detail ? (
-                <span className={styles.tooltipDetail}>{activeTooltip.detail}</span>
-              ) : null}
-            </span>
-            <span
-              aria-hidden="true"
-              className={styles.tooltipArrow}
-              data-placement={activeTooltip.placement}
-            />
-          </>
-        ) : null}
       </Button>
     );
   }
@@ -443,8 +471,8 @@ export function ColorLibrary({
 
   return (
     <div
-      ref={libraryRef}
-      className={[styles.library, className].filter(Boolean).join(" ")}
+      ref={libraryShellRef}
+      className={[styles.libraryShell, className].filter(Boolean).join(" ")}
       onMouseOver={(event) => {
         const target = event.target instanceof Element
           ? event.target.closest("button[data-tooltip]")
@@ -486,7 +514,11 @@ export function ColorLibrary({
         setActiveTooltip(null);
       }}
     >
-      <div ref={stickyHeaderRef} className={styles.stickyHeader}>
+      <div
+        ref={libraryRef}
+        className={[styles.library, className].filter(Boolean).join(" ")}
+      >
+        <div ref={stickyHeaderRef} className={styles.stickyHeader}>
         {canShowFeaturedView ? (
           <SegmentedControl<ColorLibraryView>
             ariaLabel="Color library view"
@@ -590,9 +622,9 @@ export function ColorLibrary({
             </MenuSurface>
           ) : null}
         </div>
-      </div>
+        </div>
 
-      <div className={styles.libraryBody}>
+        <div className={styles.libraryBody}>
         {includeTransparentSwatch ? (
           <section className={styles.section} aria-label="Transparent">
             <div className={styles.sectionContent}>
@@ -664,7 +696,42 @@ export function ColorLibrary({
             </div>
           </section>
         ) : null}
+        </div>
       </div>
+      {activeTooltip ? (
+        <div aria-hidden="true" className={styles.tooltipLayer}>
+          <span
+            ref={tooltipRef}
+            className={styles.tooltip}
+            data-placement={activeTooltip.placement}
+            style={{
+              left: `${tooltipLayout?.left ?? activeTooltip.anchorLeft}px`,
+              top: `${
+                tooltipLayout?.top ??
+                (activeTooltip.placement === "top"
+                  ? activeTooltip.anchorTop
+                  : activeTooltip.anchorTop + 10)
+              }px`,
+            }}
+          >
+            <span className={styles.tooltipTitle}>{activeTooltip.label}</span>
+            {activeTooltip.detail ? (
+              <span className={styles.tooltipDetail}>{activeTooltip.detail}</span>
+            ) : null}
+          </span>
+          <span
+            className={styles.tooltipArrow}
+            data-placement={activeTooltip.placement}
+            style={{
+              left: `${tooltipLayout?.arrowLeft ?? activeTooltip.anchorLeft - 4}px`,
+              top:
+                activeTooltip.placement === "top"
+                  ? `${activeTooltip.anchorTop - 14}px`
+                  : `${activeTooltip.anchorTop + 6}px`,
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

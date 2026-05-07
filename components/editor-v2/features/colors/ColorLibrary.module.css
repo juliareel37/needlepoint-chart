@@ -1,3 +1,10 @@
+.libraryShell {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  min-height: 0;
+}
+
 .library {
   --color-library-track-size: 33px;
   --color-library-grid-gap: 6px;
@@ -12,10 +19,11 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
-  isolation: isolate;
   padding: 0;
   gap: 0;
   border-radius: 16px;
+  width: 100%;
+  height: 100%;
 }
 
 .stickyHeader {
@@ -290,9 +298,16 @@
   padding: 4px !important;
 }
 
+.tooltipLayer {
+  position: absolute;
+  inset: 0;
+  z-index: calc(var(--z-editor-popover-high) - 1);
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .tooltip {
   position: absolute;
-  left: 50%;
   z-index: var(--z-editor-tooltip);
   display: inline-flex;
   flex-direction: column;
@@ -305,7 +320,6 @@
   box-shadow: var(--ui-tooltip-shadow);
   white-space: nowrap;
   pointer-events: none;
-  transform: translateX(-50%);
 }
 
 .tooltipTitle {
@@ -322,17 +336,8 @@
   font-weight: 500;
 }
 
-.tooltip[data-placement="top"] {
-  bottom: calc(100% + 10px);
-}
-
-.tooltip[data-placement="bottom"] {
-  top: calc(100% + 10px);
-}
-
 .tooltipArrow {
   position: absolute;
-  left: 50%;
   z-index: var(--z-editor-tooltip);
   width: 8px;
   height: 8px;
@@ -344,13 +349,11 @@
 }
 
 .tooltipArrow[data-placement="top"] {
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%) rotate(45deg);
+  transform: rotate(45deg);
 }
 
 .tooltipArrow[data-placement="bottom"] {
-  top: calc(100% + 6px);
-  transform: translateX(-50%) rotate(225deg);
+  transform: rotate(225deg);
 }
 
 .colorButton[data-active="true"] {
