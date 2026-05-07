@@ -100,6 +100,7 @@ export function ColorLibrary({
   const [activeTooltip, setActiveTooltip] = useState<{
     key: string;
     label: string;
+    detail?: string;
     placement: "top" | "bottom";
     target: HTMLButtonElement;
   } | null>(null);
@@ -230,6 +231,7 @@ export function ColorLibrary({
     }
 
     const label = target.dataset.tooltip;
+    const detail = target.dataset.tooltipDetail;
     const key = target.dataset.tooltipKey;
 
     if (!label || !key) {
@@ -239,7 +241,7 @@ export function ColorLibrary({
 
     const targetRect = target.getBoundingClientRect();
     const stickyBottom = stickyHeaderRef.current?.getBoundingClientRect().bottom ?? 0;
-    const tooltipHeightEstimate = 34;
+    const tooltipHeightEstimate = 50;
     const headerGap = 8;
     const obscuredByHeader = targetRect.top < stickyBottom + 4;
     const shouldPlaceBelow =
@@ -253,6 +255,7 @@ export function ColorLibrary({
     setActiveTooltip({
       key,
       label,
+      detail,
       placement: shouldPlaceBelow ? "bottom" : "top",
       target,
     });
@@ -372,6 +375,8 @@ export function ColorLibrary({
     const showSymbol = options?.showSymbol ?? false;
     const symbol = showSymbol ? symbolAssignments[color.id] : null;
     const tooltipVisible = activeTooltip?.key === color.id;
+    const colorCodeLabel = formatColorCodeLabel(color);
+    const colorLabel = `${color.name} (${colorCodeLabel})`;
 
     return (
       <Button
@@ -384,9 +389,10 @@ export function ColorLibrary({
         inertWhenActive
         className={styles.colorButton}
         data-color-library-id={color.id}
-        data-tooltip={color.code}
+        data-tooltip={color.name}
+        data-tooltip-detail={colorCodeLabel}
         data-tooltip-key={color.id}
-        aria-label={`${color.name} (${color.code})`}
+        aria-label={colorLabel}
         aria-pressed={selected}
       >
         {renderSwatch(color, { selected, showSymbol })}
@@ -397,7 +403,10 @@ export function ColorLibrary({
               className={styles.tooltip}
               data-placement={activeTooltip.placement}
             >
-              {activeTooltip.label}
+              <span className={styles.tooltipTitle}>{activeTooltip.label}</span>
+              {activeTooltip.detail ? (
+                <span className={styles.tooltipDetail}>{activeTooltip.detail}</span>
+              ) : null}
             </span>
             <span
               aria-hidden="true"

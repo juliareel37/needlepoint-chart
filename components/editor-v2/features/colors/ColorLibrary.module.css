@@ -295,6 +295,7 @@
   left: 50%;
   z-index: var(--z-editor-tooltip);
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 4px 8px;
@@ -302,12 +303,23 @@
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
   transform: translateX(-50%);
+}
+
+.tooltipTitle {
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.tooltipDetail {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
 }
 
 .tooltip[data-placement="top"] {
