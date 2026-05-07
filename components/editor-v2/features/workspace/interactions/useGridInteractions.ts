@@ -37,6 +37,7 @@ interface UseGridInteractionsOptions {
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
   metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
   paintDisabled?: boolean;
+  previewMode: boolean;
   state: EditorStoreState;
   trace: TraceDocument | null;
 }
@@ -51,6 +52,7 @@ export function useGridInteractions({
   getSelectionPointFromClient,
   metrics,
   paintDisabled = false,
+  previewMode,
   state,
   trace,
 }: UseGridInteractionsOptions) {
@@ -78,6 +80,12 @@ export function useGridInteractions({
 
   useClearSelectionOnEscape({
     clearLocalSelection: selectionDrag.clearDragSelection,
+    disabled:
+      previewMode ||
+      Boolean(state.session.traceInteraction.repositionSnapshot) ||
+      Boolean(state.session.traceInteraction.conversionPreview) ||
+      Boolean(state.session.textInteraction.placement) ||
+      Boolean(state.session.iconInteraction.placement),
     dispatch,
     duplicatePlacementActive: Boolean(state.session.duplicatePlacement),
     hasSelection:

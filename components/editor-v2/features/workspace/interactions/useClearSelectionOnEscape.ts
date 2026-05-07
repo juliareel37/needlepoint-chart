@@ -10,6 +10,7 @@ import {
 
 interface UseClearSelectionOnEscapeOptions {
   duplicatePlacementActive?: boolean;
+  disabled?: boolean;
   clearLocalSelection: () => void;
   dispatch: EditorStore["dispatch"];
   hasSelection: boolean;
@@ -17,15 +18,31 @@ interface UseClearSelectionOnEscapeOptions {
 
 export function useClearSelectionOnEscape({
   duplicatePlacementActive = false,
+  disabled = false,
   clearLocalSelection,
   dispatch,
   hasSelection,
 }: UseClearSelectionOnEscapeOptions) {
   useEffect(() => {
     function handleWindowKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !hasSelection) {
+      const target = event.target;
+      const editableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        editableTarget ||
+        disabled ||
+        !hasSelection
+      ) {
         return;
       }
+
+      event.preventDefault();
 
       if (duplicatePlacementActive) {
         dispatch(createCancelDuplicatePlacementCommand());
@@ -39,5 +56,5 @@ export function useClearSelectionOnEscape({
 
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [clearLocalSelection, dispatch, duplicatePlacementActive, hasSelection]);
+  }, [clearLocalSelection, disabled, dispatch, duplicatePlacementActive, hasSelection]);
 }

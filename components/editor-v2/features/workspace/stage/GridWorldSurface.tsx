@@ -339,6 +339,7 @@ export function GridWorldSurface({
     getSelectionPointFromClient,
     metrics,
     paintDisabled,
+    previewMode,
     state,
     trace,
   });

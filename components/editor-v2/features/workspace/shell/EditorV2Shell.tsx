@@ -69,6 +69,7 @@ import {
   createCancelTraceRepositionCommand,
   createCommitTraceRepositionCommand,
   createCancelIconPlacementCommand,
+  createCancelTextPlacementCommand,
   createClearSelectionCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
@@ -97,6 +98,7 @@ import { CanvasAidsFloatingToolbar } from "./CanvasAidsFloatingToolbar";
 import { ViewportToolbar } from "./ViewportToolbar";
 import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
+import { getWorkspaceEscapeAction } from "./escapeKeyBehavior";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
@@ -1419,22 +1421,68 @@ export function EditorV2Shell({
   }, [canRedo, canUndo, dispatch]);
 
   useEffect(() => {
-    if (!previewMode) {
+    const escapeAction = getWorkspaceEscapeAction({
+      iconPlacementActive: Boolean(iconPlacement),
+      previewMode,
+      textPlacementActive: Boolean(textPlacement),
+      traceConversionPreviewActive: Boolean(traceConversionPreview),
+      traceCropEditing,
+      traceRepositionActive,
+    });
+
+    if (!escapeAction) {
       return;
     }
 
     function handleWindowKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || event.defaultPrevented || isEditableKeyboardTarget(event.target)) {
         return;
       }
 
       event.preventDefault();
+
+      if (escapeAction === "exit-trace-conversion-preview") {
+        handleExitTraceConversionPreviewFromToolbar();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-crop") {
+        handleCancelTraceCrop();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-reposition") {
+        dispatch(createCancelTraceRepositionCommand());
+        return;
+      }
+
+      if (escapeAction === "cancel-text-placement") {
+        dispatch(createCancelTextPlacementCommand());
+        return;
+      }
+
+      if (escapeAction === "cancel-icon-placement") {
+        dispatch(createCancelIconPlacementCommand());
+        return;
+      }
+
       exitPreviewMode();
     }
 
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [exitPreviewMode, previewMode]);
+  }, [
+    dispatch,
+    exitPreviewMode,
+    handleCancelTraceCrop,
+    handleExitTraceConversionPreviewFromToolbar,
+    iconPlacement,
+    previewMode,
+    textPlacement,
+    traceConversionPreview,
+    traceCropEditing,
+    traceRepositionActive,
+  ]);
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -2957,7 +3005,8 @@ function HeaderFileMenu({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
         setOpen(false);
         setRecentOpen(false);
       }
