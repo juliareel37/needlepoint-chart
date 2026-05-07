@@ -274,11 +274,9 @@
   padding: 4px !important;
 }
 
-.colorButton[data-tooltip]::after {
-  content: attr(data-tooltip);
+.tooltip {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 10px);
   z-index: var(--z-editor-tooltip);
   display: inline-flex;
   align-items: center;
@@ -293,18 +291,20 @@
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, 4px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
+  transform: translateX(-50%);
 }
 
-.colorButton[data-tooltip]::before {
-  content: "";
+.tooltip[data-placement="top"] {
+  bottom: calc(100% + 10px);
+}
+
+.tooltip[data-placement="bottom"] {
+  top: calc(100% + 10px);
+}
+
+.tooltipArrow {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
   z-index: var(--z-editor-tooltip);
   width: 8px;
   height: 8px;
@@ -313,11 +313,16 @@
   border-bottom: 1px solid var(--ui-border-reg);
   border-radius: 2px;
   pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, 4px) rotate(45deg);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
+}
+
+.tooltipArrow[data-placement="top"] {
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.tooltipArrow[data-placement="bottom"] {
+  top: calc(100% + 6px);
+  transform: translateX(-50%) rotate(225deg);
 }
 
 .colorButton[data-active="true"] {
@@ -368,19 +373,6 @@
   font-weight: 700;
 }
 
-.colorButton:focus-visible::after,
-.colorButton:focus-visible::before {
-  opacity: 1;
-}
-
-.colorButton:focus-visible::after {
-  transform: translate(-50%, 0);
-}
-
-.colorButton:focus-visible::before {
-  transform: translate(-50%, 0) rotate(45deg);
-}
-
 @media (hover: hover) and (pointer: fine) {
   .searchSettingsTrigger:hover {
     background: var(--button-ghost2-hover);
@@ -405,18 +397,5 @@
     box-shadow:
       0 0 0 1px var(--swatch-ring-inner),
       0 0 0 3px var(--swatch-ring-outer);
-  }
-
-  .colorButton:hover:not(:disabled)::after,
-  .colorButton:hover:not(:disabled)::before {
-    opacity: 1;
-  }
-
-  .colorButton:hover:not(:disabled)::after {
-    transform: translate(-50%, 0);
-  }
-
-  .colorButton:hover:not(:disabled)::before {
-    transform: translate(-50%, 0) rotate(45deg);
   }
 }

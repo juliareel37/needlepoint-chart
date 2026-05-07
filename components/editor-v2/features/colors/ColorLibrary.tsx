@@ -82,6 +82,14 @@ export function ColorLibrary({
   const [layoutMode, setLayoutMode] = useState<ColorLibraryLayoutMode>("grid");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchInputInteractive, setSearchInputInteractive] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState<{
+    key: string;
+    label: string;
+    placement: "top" | "bottom";
+    target: HTMLButtonElement;
+  } | null>(null);
+  const libraryRef = useRef<HTMLDivElement | null>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
@@ -137,6 +145,64 @@ export function ColorLibrary({
     };
   }, [settingsOpen]);
 
+  function updateTooltip(target: HTMLButtonElement | null) {
+    if (!target || !libraryRef.current?.contains(target)) {
+      setActiveTooltip(null);
+      return;
+    }
+
+    const label = target.dataset.tooltip;
+    const key = target.dataset.tooltipKey;
+
+    if (!label || !key) {
+      setActiveTooltip(null);
+      return;
+    }
+
+    const targetRect = target.getBoundingClientRect();
+    const stickyBottom = stickyHeaderRef.current?.getBoundingClientRect().bottom ?? 0;
+    const tooltipHeightEstimate = 34;
+    const headerGap = 8;
+    const obscuredByHeader = targetRect.top < stickyBottom + 4;
+    const shouldPlaceBelow =
+      targetRect.top - tooltipHeightEstimate < stickyBottom + headerGap;
+
+    if (obscuredByHeader) {
+      setActiveTooltip(null);
+      return;
+    }
+
+    setActiveTooltip({
+      key,
+      label,
+      placement: shouldPlaceBelow ? "bottom" : "top",
+      target,
+    });
+  }
+
+  useEffect(() => {
+    if (!activeTooltip) {
+      return;
+    }
+
+    const update = () => {
+      if (!document.body.contains(activeTooltip.target)) {
+        setActiveTooltip(null);
+        return;
+      }
+
+      updateTooltip(activeTooltip.target);
+    };
+
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [activeTooltip]);
+
   function renderSwatch(
     color: PaletteColor | null,
     options?: { selected?: boolean; showSymbol?: boolean; transparent?: boolean },
@@ -184,6 +250,8 @@ export function ColorLibrary({
   }
 
   function renderTransparentButton() {
+    const tooltipVisible = activeTooltip?.key === "transparent-swatch";
+
     return (
       <Button
         key="transparent-swatch"
@@ -195,10 +263,27 @@ export function ColorLibrary({
         inertWhenActive
         className={styles.colorButton}
         data-tooltip="Transparent"
+        data-tooltip-key="transparent-swatch"
         aria-label="Transparent"
         aria-pressed={transparentSelected}
       >
         {renderSwatch(null, { selected: transparentSelected, transparent: true })}
+        {tooltipVisible ? (
+          <>
+            <span
+              aria-hidden="true"
+              className={styles.tooltip}
+              data-placement={activeTooltip.placement}
+            >
+              {activeTooltip.label}
+            </span>
+            <span
+              aria-hidden="true"
+              className={styles.tooltipArrow}
+              data-placement={activeTooltip.placement}
+            />
+          </>
+        ) : null}
       </Button>
     );
   }
@@ -207,6 +292,7 @@ export function ColorLibrary({
     const selected = color.id === activeColorId;
     const showSymbol = options?.showSymbol ?? false;
     const symbol = showSymbol ? symbolAssignments[color.id] : null;
+    const tooltipVisible = activeTooltip?.key === color.id;
 
     return (
       <Button
@@ -219,10 +305,27 @@ export function ColorLibrary({
         inertWhenActive
         className={styles.colorButton}
         data-tooltip={color.code}
+        data-tooltip-key={color.id}
         aria-label={`${color.name} (${color.code})`}
         aria-pressed={selected}
       >
         {renderSwatch(color, { selected, showSymbol })}
+        {tooltipVisible ? (
+          <>
+            <span
+              aria-hidden="true"
+              className={styles.tooltip}
+              data-placement={activeTooltip.placement}
+            >
+              {activeTooltip.label}
+            </span>
+            <span
+              aria-hidden="true"
+              className={styles.tooltipArrow}
+              data-placement={activeTooltip.placement}
+            />
+          </>
+        ) : null}
       </Button>
     );
   }
@@ -250,8 +353,51 @@ export function ColorLibrary({
   }
 
   return (
-    <div className={[styles.library, className].filter(Boolean).join(" ")}>
-      <div className={styles.stickyHeader}>
+    <div
+      ref={libraryRef}
+      className={[styles.library, className].filter(Boolean).join(" ")}
+      onMouseOver={(event) => {
+        const target = event.target instanceof Element
+          ? event.target.closest("button[data-tooltip]")
+          : null;
+
+        if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+          return;
+        }
+
+        updateTooltip(target);
+      }}
+      onMouseOut={(event) => {
+        const relatedTarget = event.relatedTarget;
+
+        if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+          return;
+        }
+
+        setActiveTooltip((current) => (current?.target.matches(":focus-visible") ? current : null));
+      }}
+      onFocusCapture={(event) => {
+        const target = event.target instanceof Element
+          ? event.target.closest("button[data-tooltip]")
+          : null;
+
+        if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+          return;
+        }
+
+        updateTooltip(target);
+      }}
+      onBlurCapture={(event) => {
+        const relatedTarget = event.relatedTarget;
+
+        if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+          return;
+        }
+
+        setActiveTooltip(null);
+      }}
+    >
+      <div ref={stickyHeaderRef} className={styles.stickyHeader}>
         {canShowFeaturedView ? (
           <SegmentedControl<ColorLibraryView>
             ariaLabel="Color library view"
