@@ -1862,8 +1862,8 @@
 }
 
 .activeColorSwatch {
-  width: 32px !important;
-  height: 32px !important;
+  width: 24px !important;
+  height: 24px !important;
 }
 
 .swatch {

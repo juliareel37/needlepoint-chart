@@ -126,7 +126,7 @@ export function ColorLibrary({
   const activeView = canShowFeaturedView ? view : "all";
   const segmentedOptions = [
     { label: "Design colors", value: "featured" },
-    { label: "All colors", value: "all" },
+    { label: "Library", value: "all" },
   ] as const;
 
   function writePersistence(nextView: ColorLibraryView) {
@@ -522,7 +522,7 @@ export function ColorLibrary({
                 setSearchInputInteractive(false);
               }
             }}
-            placeholder="Search"
+            placeholder="Search by name or code"
             aria-label="Search colors"
             className={styles.searchInput}
           />

@@ -151,24 +151,18 @@ export function ColorPanelPage({
               <div className={styles.sidebarSubsectionHeaderRow}>
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
-                    <h3 style={typographyStyles.h5}>Design colors</h3>
-                  </div>
-                  <div className={styles.sidebarColorPreviewMetaRow}>
-                    <p className={styles.sidebarColorPreviewScopeLabel} style={typographyStyles.p2}>
-                      {selectionScopeActive ? "Selection" : "Full canvas"}
-                    </p>
-                    {usedColors.length > 0 ? (
-                      <span
+                    <h3 style={typographyStyles.h5}>
+                      {/* Design colors */}
+                      {selectionScopeActive ? "Selection colors" : "Design colors"}
+                      </h3>
+                       <span
                         className={styles.sidebarColorPreviewCountBadge}
                         style={typographyStyles.p2}
                       >
                         {usedColors.length}
                       </span>
-                    ) : null}
                   </div>
-                  {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                    Review, replace, merge, or delete the colors used in this design.
-                  </p> */}
+
                 </div>
                 <span className={styles.sidebarHeaderAction} aria-hidden="true">
                   <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
@@ -197,7 +191,7 @@ export function ColorPanelPage({
                       className={styles.sidebarColorPreviewMoreBadge}
                       style={{ gridColumn: `span ${hiddenBadgeSpan}` }}
                     >
-                      + {hiddenCount} more
+                      + {hiddenCount}
                     </span>
                   ) : null}
                   </span>
@@ -210,7 +204,7 @@ export function ColorPanelPage({
 
             <div className={[styles.sidebarSubsection, styles.sidebarColorLibrarySection].join(" ")}>
               
-              <h3 style={typographyStyles.h5}>All colors</h3>
+              <h3 style={typographyStyles.h5}>Library</h3>
 
               <div className={styles.sidebarColorLibraryCard}>
                 <ColorLibrary
