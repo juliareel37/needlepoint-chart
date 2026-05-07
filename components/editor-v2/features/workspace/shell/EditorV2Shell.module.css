@@ -881,9 +881,21 @@
   gap: 12px;
 }
 
+.settingsControlLabelBlock {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .settingsControlLabel {
   color: var(--text-primary);
-  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settingsControlHelper {
+  color: var(--text-secondary);
   min-width: 0;
 }
 

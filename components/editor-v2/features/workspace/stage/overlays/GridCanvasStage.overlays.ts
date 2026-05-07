@@ -136,8 +136,9 @@ export function drawSymbolsOverlay(
     zoom,
   } = options;
   const renderedCellSize = cellSize * zoom;
+  const minSymbolCellSize = 8;
 
-  if (renderedCellSize < 10) {
+  if (renderedCellSize < minSymbolCellSize) {
     return;
   }
 

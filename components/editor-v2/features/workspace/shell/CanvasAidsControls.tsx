@@ -80,6 +80,7 @@ export function CanvasAidsControls({
       />
       <SegmentedBooleanSetting
         label="Color symbols"
+        helperText="Hidden at low zoom."
         value={showSymbols}
         ariaLabel="Symbols visibility"
         onChange={(nextChecked) => dispatch(createSetSymbolsVisibleCommand(nextChecked))}
@@ -101,12 +102,14 @@ export function CanvasAidsControls({
 
 function SegmentedBooleanSetting({
   ariaLabel,
+  helperText,
   label,
   onChange,
   options,
   value,
 }: {
   ariaLabel: string;
+  helperText?: ReactNode;
   label: string;
   onChange: (next: boolean) => void;
   options?: {
@@ -117,6 +120,7 @@ function SegmentedBooleanSetting({
 }) {
   return (
     <SegmentedChoiceSetting
+      helperText={helperText}
       label={label}
       value={value ? "show" : "hide"}
       ariaLabel={ariaLabel}
@@ -132,6 +136,7 @@ function SegmentedBooleanSetting({
 export function SegmentedChoiceSetting<T extends string>({
   ariaLabel,
   disabled = false,
+  helperText,
   label,
   onChange,
   options,
@@ -139,6 +144,7 @@ export function SegmentedChoiceSetting<T extends string>({
 }: {
   ariaLabel: string;
   disabled?: boolean;
+  helperText?: ReactNode;
   label: ReactNode;
   onChange: (next: T) => void;
   options: { label: ReactNode; value: T }[];
@@ -146,9 +152,16 @@ export function SegmentedChoiceSetting<T extends string>({
 }) {
   return (
     <div className={styles.settingsControlGroup}>
-      <span className={styles.settingsControlLabel} style={typographyStyles.p2}>
-        {label}
-      </span>
+      <div className={styles.settingsControlLabelBlock}>
+        <span className={styles.settingsControlLabel} style={typographyStyles.p2}>
+          {label}
+        </span>
+        {helperText ? (
+          <span className={styles.settingsControlHelper} style={typographyStyles.s}>
+            {helperText}
+          </span>
+        ) : null}
+      </div>
       <SegmentedControl
         ariaLabel={ariaLabel}
         disabled={disabled}
