@@ -1215,12 +1215,12 @@
 }
 
 .colorLibraryPopover {
-  padding-top: 4px;
+  padding: 0;
 }
 
 .toolbarColorLibrary.toolbarColorLibrary {
   width: min(260px, calc(100vw - 40px));
-  height: min(250px, calc(100vh - 180px));
+  height: min(340px, calc(100vh - 160px));
 }
 
 .sidebarColorLibrary.sidebarColorLibrary {
