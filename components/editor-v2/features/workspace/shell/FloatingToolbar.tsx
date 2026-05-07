@@ -1106,6 +1106,8 @@ export function FloatingToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 featuredColorIds={featuredColorIds}
+                persistenceKey="floating-toolbar-color-library"
+                scrollActiveColorIntoView
                 showFeaturedSymbols={showSymbols}
                 symbolAssignments={symbolAssignments}
                 onColorSelect={(colorId) => {

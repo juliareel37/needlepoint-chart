@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/design-system";
 import { ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system";
@@ -13,6 +13,12 @@ import styles from "./ColorLibrary.module.css";
 
 type ColorLibraryView = "featured" | "all";
 type ColorLibraryLayoutMode = "list" | "grid";
+
+type ColorLibraryPersistenceState = {
+  view: ColorLibraryView;
+};
+
+const colorLibraryPersistence = new Map<string, ColorLibraryPersistenceState>();
 
 function getSwatchCheckColor(hex: string) {
   const rgb = hexToRgb(hex);
@@ -54,6 +60,8 @@ interface ColorLibraryProps {
   includeTransparentSwatch?: boolean;
   onColorSelect: (colorId: string) => void;
   onTransparentSelect?: () => void;
+  persistenceKey?: string;
+  scrollActiveColorIntoView?: boolean;
   showAllSectionHeader?: boolean;
   showAllSymbols?: boolean;
   showFeaturedSection?: boolean;
@@ -70,6 +78,8 @@ export function ColorLibrary({
   includeTransparentSwatch = false,
   onColorSelect,
   onTransparentSelect,
+  persistenceKey,
+  scrollActiveColorIntoView = false,
   showAllSectionHeader = true,
   showAllSymbols = false,
   showFeaturedSection = true,
@@ -77,8 +87,13 @@ export function ColorLibrary({
   symbolAssignments = {},
   transparentSelected = false,
 }: ColorLibraryProps) {
+  const initialPersistenceState = persistenceKey
+    ? colorLibraryPersistence.get(persistenceKey)
+    : undefined;
   const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<ColorLibraryView>("featured");
+  const [view, setViewState] = useState<ColorLibraryView>(() =>
+    initialPersistenceState?.view ?? "featured",
+  );
   const [layoutMode, setLayoutMode] = useState<ColorLibraryLayoutMode>("grid");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchInputInteractive, setSearchInputInteractive] = useState(false);
@@ -92,6 +107,8 @@ export function ColorLibrary({
   const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
+  const viewRef = useRef<ColorLibraryView>(view);
+  const scrollToActiveFrameRef = useRef<number | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const matchesSearch = (color: PaletteColor) =>
@@ -111,6 +128,32 @@ export function ColorLibrary({
     { label: "Design colors", value: "featured" },
     { label: "All colors", value: "all" },
   ] as const;
+
+  function writePersistence(nextView: ColorLibraryView) {
+    if (!persistenceKey) {
+      return;
+    }
+
+    colorLibraryPersistence.set(persistenceKey, {
+      view: nextView,
+    });
+  }
+
+  function setView(nextView: ColorLibraryView) {
+    if (nextView === viewRef.current) {
+      return;
+    }
+
+    if (persistenceKey) {
+      writePersistence(nextView);
+    }
+
+    setViewState(nextView);
+  }
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -144,6 +187,41 @@ export function ColorLibrary({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [settingsOpen]);
+
+  useLayoutEffect(() => {
+    if (!scrollActiveColorIntoView || !activeColorId) {
+      return;
+    }
+
+    const target = libraryRef.current?.querySelector<HTMLButtonElement>(
+      `[data-color-library-id="${activeColorId}"]`,
+    );
+
+    if (!target) {
+      return;
+    }
+
+    if (scrollToActiveFrameRef.current !== null) {
+      cancelAnimationFrame(scrollToActiveFrameRef.current);
+    }
+
+    scrollToActiveFrameRef.current = window.requestAnimationFrame(() => {
+      scrollToActiveFrameRef.current = window.requestAnimationFrame(() => {
+        target.scrollIntoView({
+          block: "center",
+          inline: "nearest",
+        });
+        scrollToActiveFrameRef.current = null;
+      });
+    });
+
+    return () => {
+      if (scrollToActiveFrameRef.current !== null) {
+        cancelAnimationFrame(scrollToActiveFrameRef.current);
+        scrollToActiveFrameRef.current = null;
+      }
+    };
+  }, [activeColorId, layoutMode, scrollActiveColorIntoView, view, searchQuery]);
 
   function updateTooltip(target: HTMLButtonElement | null) {
     if (!target || !libraryRef.current?.contains(target)) {
@@ -262,6 +340,7 @@ export function ColorLibrary({
         active={transparentSelected}
         inertWhenActive
         className={styles.colorButton}
+        data-color-library-id="transparent-swatch"
         data-tooltip="Transparent"
         data-tooltip-key="transparent-swatch"
         aria-label="Transparent"
@@ -304,6 +383,7 @@ export function ColorLibrary({
         active={selected}
         inertWhenActive
         className={styles.colorButton}
+        data-color-library-id={color.id}
         data-tooltip={color.code}
         data-tooltip-key={color.id}
         aria-label={`${color.name} (${color.code})`}
