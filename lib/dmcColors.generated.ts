@@ -29,7 +29,7 @@ export const DMC_COLORS: DmcColor[] = [
   { id: 600, name: "Radish", hex: "#cd2f63", code: "600", family: "pink", nameMaxx: "Cranberry Very Dark" },
   { id: 606, name: "Bright Red", hex: "#fa3203", code: "606", family: "orange", nameMaxx: "Orange Red Bright" },
   { id: 608, name: "Poppy", hex: "#fd5d35", code: "608", family: "orange", nameMaxx: "Burnt Orange Bright" },
-  { id: 666, name: "Scarlet", hex: "#e31d42", code: "666", family: "pink", nameMaxx: "Bright Red" },
+  { id: 666, name: "Scarlet", hex: "#e31d42", code: "666", family: "red", nameMaxx: "Bright Red" },
   { id: 720, name: "Rust", hex: "#e55c1f", code: "720", family: "orange", nameMaxx: "Orange Spice Dark" },
   { id: 777, name: "Wine", hex: "#913546", code: "777", family: "red", nameMaxx: "Raspberry Very Dark" },
   { id: 814, name: "Vin Rouge", hex: "#7b001b", code: "814", family: "red", nameMaxx: "Garnet Dark" },

@@ -1215,7 +1215,7 @@
   width: 100%;
   padding: 0px;
   border-radius: 0;
-  height: 370px;
+  /* height: 370px; */
 }
 
 .libraryPopoverSwatchTrigger {
