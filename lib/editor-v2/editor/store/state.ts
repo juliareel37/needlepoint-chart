@@ -17,6 +17,7 @@ export interface EditorDocumentState {
   palette: PaletteDocument;
   trace: TraceDocument | null;
   text: TextDocument;
+  canvasPreferences: CanvasPreferencesDocument;
   metadata: DocumentMetadata;
 }
 
@@ -313,6 +314,13 @@ export interface TextPlacementSession {
   rotation: number;
 }
 
+export interface CanvasPreferencesDocument {
+  showGridlines: boolean;
+  showRuler: boolean;
+  showSymbols: boolean;
+  touchSnappingEnabled: boolean;
+}
+
 export interface IconPlacementSession {
   iconId: string;
   name: string;
@@ -408,6 +416,13 @@ export interface UiPreferenceState {
   gridMajorInterval: number;
 }
 
+export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferencesDocument = {
+  showGridlines: true,
+  showRuler: true,
+  showSymbols: true,
+  touchSnappingEnabled: true,
+};
+
 export function createInitialEditorStoreState(): EditorStoreState {
   return {
     document: {
@@ -437,6 +452,9 @@ export function createInitialEditorStoreState(): EditorStoreState {
       text: {
         mode: "destructive-grid",
         entities: [],
+      },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
       },
       metadata: {
         legacyDraftId: null,
@@ -541,11 +559,11 @@ export function createInitialEditorStoreState(): EditorStoreState {
       },
       preferences: {
         darkMode: false,
-        showGridlines: true,
+        showGridlines: DEFAULT_CANVAS_PREFERENCES.showGridlines,
         showMajorGridlines: true,
-        showRuler: true,
-        showSymbols: true,
-        touchSnappingEnabled: true,
+        showRuler: DEFAULT_CANVAS_PREFERENCES.showRuler,
+        showSymbols: DEFAULT_CANVAS_PREFERENCES.showSymbols,
+        touchSnappingEnabled: DEFAULT_CANVAS_PREFERENCES.touchSnappingEnabled,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

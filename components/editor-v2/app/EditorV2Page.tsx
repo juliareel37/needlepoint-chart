@@ -9,6 +9,7 @@ import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesi
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { EDITOR_V2_SAVE_MODE } from "@/lib/editor-v2/config";
 import { EditorV2Providers } from "./EditorV2Providers";
+import { readStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import {
   EditorV2SetupModal,
   type EditorV2DesignConfig,
@@ -590,6 +591,7 @@ export function EditorV2Page({
     }
 
     return createNewDesignState(designConfig.width, designConfig.height, {
+      canvasPreferences: readStickyCanvasPreferences(),
       projectId: designConfig.draftId,
       sizingMode: designConfig.sizingMode,
       meshCount: designConfig.meshCount,
@@ -1082,6 +1084,7 @@ function createPersistedDraftDocument(
   config: EditorV2DesignConfigNew,
 ): EditorDocumentState {
   return createNewDesignState(config.width, config.height, {
+    canvasPreferences: readStickyCanvasPreferences(),
     projectId: config.draftId,
     sizingMode: config.sizingMode,
     meshCount: config.meshCount,

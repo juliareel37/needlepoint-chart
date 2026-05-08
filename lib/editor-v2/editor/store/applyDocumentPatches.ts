@@ -93,6 +93,14 @@ function applyDocumentPatch(
           ...patch.changes,
         },
       };
+    case "canvasPreferences.update":
+      return {
+        ...document,
+        canvasPreferences: {
+          ...document.canvasPreferences,
+          ...patch.changes,
+        },
+      };
     case "text.upsertEntity":
       return {
         ...document,

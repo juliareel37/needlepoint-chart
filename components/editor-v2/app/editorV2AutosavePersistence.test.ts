@@ -27,6 +27,21 @@ describe("editor v2 autosave persistence helpers", () => {
     ]);
   });
 
+  it("tracks canvas preference updates as persistable document changes", () => {
+    const patches: DocumentPatch[] = [
+      {
+        type: "canvasPreferences.update",
+        changes: {
+          showGridlines: false,
+        },
+      },
+    ];
+
+    expect(Array.from(getDirtyChunksFromPatches(patches, 64))).toEqual([
+      "canvasPreferences",
+    ]);
+  });
+
   it("produces a stable serialized hash for the same document", () => {
     const state = createNewDesignState(2, 2);
     state.document.grid.cells = ["dmc:310", null, null, "dmc:321"];

@@ -7,8 +7,31 @@ export const setTouchSnappingEnabledCommandHandler: EditorCommandHandler<SetTouc
       return command.kind === "ui.setTouchSnappingEnabled";
     },
     handle(state, command) {
+      if (
+        state.document.canvasPreferences.touchSnappingEnabled ===
+        command.payload.enabled
+      ) {
+        return {
+          nextSession: state.session,
+          nextUi: state.ui,
+          patches: [],
+          inversePatches: [],
+          effects: [],
+          event: {
+            type: "ui",
+            commandId: command.id,
+          },
+        };
+      }
+
       return {
-        nextSession: state.session,
+        nextSession: {
+          ...state.session,
+          persistence: {
+            ...state.session.persistence,
+            dirty: true,
+          },
+        },
         nextUi: {
           ...state.ui,
           preferences: {
@@ -16,8 +39,23 @@ export const setTouchSnappingEnabledCommandHandler: EditorCommandHandler<SetTouc
             touchSnappingEnabled: command.payload.enabled,
           },
         },
-        patches: [],
-        inversePatches: [],
+        patches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              touchSnappingEnabled: command.payload.enabled,
+            },
+          },
+        ],
+        inversePatches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              touchSnappingEnabled:
+                state.document.canvasPreferences.touchSnappingEnabled,
+            },
+          },
+        ],
         effects: [],
         event: {
           type: "ui",

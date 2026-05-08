@@ -7,8 +7,28 @@ export const setGridlinesVisibleCommandHandler: EditorCommandHandler<SetGridline
       return command.kind === "ui.setGridlinesVisible";
     },
     handle(state, command) {
+      if (state.document.canvasPreferences.showGridlines === command.payload.visible) {
+        return {
+          nextSession: state.session,
+          nextUi: state.ui,
+          patches: [],
+          inversePatches: [],
+          effects: [],
+          event: {
+            type: "ui",
+            commandId: command.id,
+          },
+        };
+      }
+
       return {
-        nextSession: state.session,
+        nextSession: {
+          ...state.session,
+          persistence: {
+            ...state.session.persistence,
+            dirty: true,
+          },
+        },
         nextUi: {
           ...state.ui,
           preferences: {
@@ -16,8 +36,22 @@ export const setGridlinesVisibleCommandHandler: EditorCommandHandler<SetGridline
             showGridlines: command.payload.visible,
           },
         },
-        patches: [],
-        inversePatches: [],
+        patches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              showGridlines: command.payload.visible,
+            },
+          },
+        ],
+        inversePatches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              showGridlines: state.document.canvasPreferences.showGridlines,
+            },
+          },
+        ],
         effects: [],
         event: {
           type: "ui",

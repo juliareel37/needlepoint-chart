@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
+import { useEditorStoreSelector } from "./editorStoreContext";
+import { writeStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import type {
   EditorDesignVersionListItem,
   LoadEditorV2VersionResult,
@@ -125,6 +127,9 @@ export function EditorV2Workspace({
   setupModalMode: "full" | "new-only";
   setupModalOpen: boolean;
 }) {
+  const canvasPreferences = useEditorStoreSelector(
+    (state) => state.document.canvasPreferences,
+  );
   const [exportButtonState, setExportButtonState] =
     useState<ExportButtonState>("idle");
   const [deleteButtonState, setDeleteButtonState] =
@@ -148,6 +153,10 @@ export function EditorV2Workspace({
     saveMode,
     onSaveDocument,
   });
+
+  useEffect(() => {
+    writeStickyCanvasPreferences(canvasPreferences);
+  }, [canvasPreferences]);
 
   return (
     <div>

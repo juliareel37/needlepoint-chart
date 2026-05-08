@@ -24,6 +24,7 @@ import {
   type SavedEditorV2DocumentView,
 } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
+import { readStickyCanvasPreferences } from "@/components/editor-v2/app/stickyCanvasPreferences";
 import type { LibraryDesignRecord } from "@/lib/library/designs";
 import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { StitchThumbnailCanvas } from "./StitchThumbnailCanvas";
@@ -610,6 +611,7 @@ export function LibraryPageClient({
 
     try {
       const document = createNewDesignState(config.width, config.height, {
+        canvasPreferences: readStickyCanvasPreferences(),
         projectId: config.draftId,
         sizingMode: config.sizingMode,
         meshCount: config.meshCount,

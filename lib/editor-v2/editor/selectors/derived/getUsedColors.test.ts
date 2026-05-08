@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EditorStoreState } from "../../store/state";
+import { DEFAULT_CANVAS_PREFERENCES, type EditorStoreState } from "../../store/state";
 import { getUsedColors } from "./getUsedColors";
 
 describe("getUsedColors", () => {
@@ -59,6 +59,9 @@ function createSelectorTestState(): EditorStoreState {
       text: {
         mode: "destructive-grid",
         entities: [],
+      },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
       },
       metadata: {
         legacyDraftId: null,

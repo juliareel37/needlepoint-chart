@@ -29,6 +29,12 @@ describe("editor-v2 persisted designs", () => {
       "dmc:310": "!",
       "custom:red": "@",
     };
+    state.document.canvasPreferences = {
+      showGridlines: false,
+      showRuler: false,
+      showSymbols: true,
+      touchSnappingEnabled: false,
+    };
     state.document.trace = {
       previewUrl: "https://blob.example.com/trace-preview.webp",
       thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
@@ -69,6 +75,12 @@ describe("editor-v2 persisted designs", () => {
         name: "Favorites",
         colorIds: ["custom:red"],
       },
+    });
+    expect(persisted.canvasPreferences).toEqual({
+      showGridlines: false,
+      showRuler: false,
+      showSymbols: true,
+      touchSnappingEnabled: false,
     });
     expect(persisted.trace).toEqual({
       previewUrl: "https://blob.example.com/trace-preview.webp",
@@ -157,6 +169,12 @@ describe("editor-v2 persisted designs", () => {
     expect(hydrated.project.id).toBe("design_123");
     expect(hydrated.project.createdAt).toBe("2026-04-16T12:00:00.000Z");
     expect(hydrated.project.updatedAt).toBe("2026-04-16T12:15:00.000Z");
+    expect(hydrated.canvasPreferences).toEqual({
+      showGridlines: true,
+      showRuler: true,
+      showSymbols: true,
+      touchSnappingEnabled: true,
+    });
     expect(hydrated.trace).toMatchObject({
       previewUrl: "https://blob.example.com/trace-preview.webp",
       thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
@@ -206,6 +224,12 @@ describe("editor-v2 persisted designs", () => {
           extractedPaletteIds: [],
           symbolAssignments: {},
         },
+        canvasPreferences: {
+          showGridlines: false,
+          showRuler: true,
+          showSymbols: false,
+          touchSnappingEnabled: true,
+        },
         trace: {
           assetUrl: "https://blob.example.com/legacy.png",
           fileName: "legacy.png",
@@ -225,6 +249,12 @@ describe("editor-v2 persisted designs", () => {
       },
     });
 
+    expect(hydrated.canvasPreferences).toEqual({
+      showGridlines: false,
+      showRuler: true,
+      showSymbols: false,
+      touchSnappingEnabled: true,
+    });
     expect(hydrated.trace).toMatchObject({
       previewUrl: "https://blob.example.com/legacy.png",
       thumbnailUrl: "https://blob.example.com/legacy.png",

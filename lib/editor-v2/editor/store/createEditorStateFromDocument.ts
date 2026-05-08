@@ -1,5 +1,6 @@
 import {
   createInitialEditorStoreState,
+  DEFAULT_CANVAS_PREFERENCES,
   type EditorDocumentState,
   type EditorStoreState,
 } from "./state";
@@ -14,6 +15,10 @@ export function createEditorStateFromDocument(
   const now = Date.now();
   const normalizedDocument: EditorDocumentState = {
     ...document,
+    canvasPreferences: {
+      ...DEFAULT_CANVAS_PREFERENCES,
+      ...(document.canvasPreferences ?? {}),
+    },
     palette: (() => {
       const palette = addDmcColorLibraryToPalette(document.palette);
 
@@ -75,6 +80,16 @@ export function createEditorStateFromDocument(
             ? "server"
             : "none",
         versionPreview: null,
+      },
+    },
+    ui: {
+      ...state.ui,
+      preferences: {
+        ...state.ui.preferences,
+        showGridlines: normalizedDocument.canvasPreferences.showGridlines,
+        showRuler: normalizedDocument.canvasPreferences.showRuler,
+        showSymbols: normalizedDocument.canvasPreferences.showSymbols,
+        touchSnappingEnabled: normalizedDocument.canvasPreferences.touchSnappingEnabled,
       },
     },
   };

@@ -1,5 +1,7 @@
 import {
   createInitialEditorStoreState,
+  DEFAULT_CANVAS_PREFERENCES,
+  type CanvasPreferencesDocument,
   type EditorStoreState,
 } from "./state";
 import {
@@ -10,6 +12,7 @@ import {
 const DEFAULT_TITLE = "Untitled Design";
 
 interface NewDesignSizingOptions {
+  canvasPreferences?: CanvasPreferencesDocument | null;
   sizingMode?: "stitches" | "inches";
   meshCount?: number | null;
   widthInches?: number | null;
@@ -25,11 +28,16 @@ export function createNewDesignState(
   const state = createInitialEditorStoreState();
   const localProjectId = options.projectId ?? createLocalProjectId();
   const {
+    canvasPreferences = null,
     sizingMode = "stitches",
     meshCount = null,
     widthInches = null,
     heightInches = null,
   } = options;
+  const resolvedCanvasPreferences = {
+    ...DEFAULT_CANVAS_PREFERENCES,
+    ...(canvasPreferences ?? {}),
+  };
 
   return {
     ...state,
@@ -53,6 +61,7 @@ export function createNewDesignState(
       palette: {
         ...addDmcColorLibraryToPalette(state.document.palette),
       },
+      canvasPreferences: resolvedCanvasPreferences,
     },
     session: {
       ...state.session,
@@ -65,6 +74,16 @@ export function createNewDesignState(
       persistence: {
         ...state.session.persistence,
         currentDraftId: localProjectId,
+      },
+    },
+    ui: {
+      ...state.ui,
+      preferences: {
+        ...state.ui.preferences,
+        showGridlines: resolvedCanvasPreferences.showGridlines,
+        showRuler: resolvedCanvasPreferences.showRuler,
+        showSymbols: resolvedCanvasPreferences.showSymbols,
+        touchSnappingEnabled: resolvedCanvasPreferences.touchSnappingEnabled,
       },
     },
   };

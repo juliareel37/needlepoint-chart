@@ -7,8 +7,28 @@ export const setRulerVisibleCommandHandler: EditorCommandHandler<SetRulerVisible
       return command.kind === "ui.setRulerVisible";
     },
     handle(state, command) {
+      if (state.document.canvasPreferences.showRuler === command.payload.visible) {
+        return {
+          nextSession: state.session,
+          nextUi: state.ui,
+          patches: [],
+          inversePatches: [],
+          effects: [],
+          event: {
+            type: "ui",
+            commandId: command.id,
+          },
+        };
+      }
+
       return {
-        nextSession: state.session,
+        nextSession: {
+          ...state.session,
+          persistence: {
+            ...state.session.persistence,
+            dirty: true,
+          },
+        },
         nextUi: {
           ...state.ui,
           preferences: {
@@ -16,8 +36,22 @@ export const setRulerVisibleCommandHandler: EditorCommandHandler<SetRulerVisible
             showRuler: command.payload.visible,
           },
         },
-        patches: [],
-        inversePatches: [],
+        patches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              showRuler: command.payload.visible,
+            },
+          },
+        ],
+        inversePatches: [
+          {
+            type: "canvasPreferences.update",
+            changes: {
+              showRuler: state.document.canvasPreferences.showRuler,
+            },
+          },
+        ],
         effects: [],
         event: {
           type: "ui",

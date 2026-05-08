@@ -114,6 +114,9 @@ export function getDirtyChunksFromPatches(
       case "project.metadata.update":
         chunks.add("project");
         break;
+      case "canvasPreferences.update":
+        chunks.add("canvasPreferences");
+        break;
       case "text.upsertEntity":
       case "text.removeEntity":
         chunks.add("text");

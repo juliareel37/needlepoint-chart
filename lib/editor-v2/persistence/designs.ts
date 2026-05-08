@@ -1,4 +1,5 @@
 import type {
+  CanvasPreferencesDocument,
   EditorDocumentState,
   GridDocument,
   PaletteDocument,
@@ -44,6 +45,13 @@ export interface PersistedEditorV2Trace {
   rotation: number;
 }
 
+export interface PersistedEditorV2CanvasPreferences {
+  showGridlines: CanvasPreferencesDocument["showGridlines"];
+  showRuler: CanvasPreferencesDocument["showRuler"];
+  showSymbols: CanvasPreferencesDocument["showSymbols"];
+  touchSnappingEnabled: CanvasPreferencesDocument["touchSnappingEnabled"];
+}
+
 export interface PersistedEditorV2Design {
   schemaVersion: number;
   project: {
@@ -51,6 +59,7 @@ export interface PersistedEditorV2Design {
   };
   grid: PersistedEditorV2Grid;
   palette: PersistedEditorV2Palette;
+  canvasPreferences?: PersistedEditorV2CanvasPreferences;
   trace: PersistedEditorV2Trace | null;
   text: TextDocument;
 }
@@ -92,6 +101,12 @@ export function serializeEditorV2Document(
       customPalettesById: document.palette.customPalettesById,
       extractedPaletteIds: [...document.palette.extractedPaletteIds],
       symbolAssignments: document.palette.symbolAssignments,
+    },
+    canvasPreferences: {
+      showGridlines: document.canvasPreferences.showGridlines,
+      showRuler: document.canvasPreferences.showRuler,
+      showSymbols: document.canvasPreferences.showSymbols,
+      touchSnappingEnabled: document.canvasPreferences.touchSnappingEnabled,
     },
     trace: document.trace
       ? (() => {
@@ -147,6 +162,7 @@ export function hydrateEditorV2Document(
       extractedPaletteIds: [...record.data.palette.extractedPaletteIds],
       symbolAssignments: record.data.palette.symbolAssignments,
     },
+    canvasPreferences: normalizePersistedCanvasPreferences(record.data.canvasPreferences),
     trace: record.data.trace
       ? (() => {
           const normalizedTrace = normalizePersistedTrace(record.data.trace);
@@ -221,8 +237,16 @@ export function parsePersistedEditorV2Design(
     return null;
   }
 
+  if (
+    candidate.canvasPreferences !== undefined &&
+    !isPersistedCanvasPreferences(candidate.canvasPreferences)
+  ) {
+    return null;
+  }
+
   return {
     ...candidate,
+    canvasPreferences: normalizePersistedCanvasPreferences(candidate.canvasPreferences),
     trace: candidate.trace ? normalizePersistedTrace(candidate.trace) : null,
   } as PersistedEditorV2Design;
 }
@@ -275,6 +299,34 @@ function normalizePersistedTrace(
     offsetY: trace.offsetY ?? 0,
     scale: trace.scale ?? 1,
     rotation: trace.rotation ?? 0,
+  };
+}
+
+function isPersistedCanvasPreferences(
+  value: unknown,
+): value is PersistedEditorV2CanvasPreferences {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PersistedEditorV2CanvasPreferences>;
+
+  return (
+    typeof candidate.showGridlines === "boolean" &&
+    typeof candidate.showRuler === "boolean" &&
+    typeof candidate.showSymbols === "boolean" &&
+    typeof candidate.touchSnappingEnabled === "boolean"
+  );
+}
+
+function normalizePersistedCanvasPreferences(
+  value: PersistedEditorV2CanvasPreferences | undefined,
+): PersistedEditorV2CanvasPreferences {
+  return {
+    showGridlines: value?.showGridlines ?? true,
+    showRuler: value?.showRuler ?? true,
+    showSymbols: value?.showSymbols ?? true,
+    touchSnappingEnabled: value?.touchSnappingEnabled ?? true,
   };
 }
 

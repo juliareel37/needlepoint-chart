@@ -1,4 +1,5 @@
 import type {
+  CanvasPreferencesDocument,
   GridCellValue,
   ProjectDocument,
   TextEntity,
@@ -15,6 +16,7 @@ export type DocumentPatch =
   | UpdateTracePatch
   | RemoveTracePatch
   | UpdateProjectMetadataPatch
+  | UpdateCanvasPreferencesPatch
   | UpsertTextEntityPatch
   | RemoveTextEntityPatch;
 
@@ -81,6 +83,13 @@ export interface RemoveTracePatch {
 export interface UpdateProjectMetadataPatch {
   type: "project.metadata.update";
   changes: Partial<ProjectDocument>;
+}
+
+export type CanvasPreferencesChanges = Partial<CanvasPreferencesDocument>;
+
+export interface UpdateCanvasPreferencesPatch {
+  type: "canvasPreferences.update";
+  changes: CanvasPreferencesChanges;
 }
 
 export interface UpsertTextEntityPatch {

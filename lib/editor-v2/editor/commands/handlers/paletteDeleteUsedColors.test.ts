@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEditorStore } from "../../store/createEditorStore";
-import type { EditorStoreState } from "../../store/state";
+import { DEFAULT_CANVAS_PREFERENCES, type EditorStoreState } from "../../store/state";
 import type { EditorCommand } from "../types";
 
 describe("paletteDeleteUsedColorsCommandHandler", () => {
@@ -129,6 +129,9 @@ function createDeleteTestState(
       text: {
         mode: "destructive-grid",
         entities: [],
+      },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
       },
       metadata: {
         legacyDraftId: null,
