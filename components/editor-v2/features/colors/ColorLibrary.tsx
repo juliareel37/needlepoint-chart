@@ -19,6 +19,7 @@ type ColorLibraryPersistenceState = {
 };
 
 const colorLibraryPersistence = new Map<string, ColorLibraryPersistenceState>();
+const TOOLTIP_OVERFLOW_PADDING = 16;
 
 function getSwatchCheckColor(hex: string) {
   const rgb = hexToRgb(hex);
@@ -705,12 +706,14 @@ export function ColorLibrary({
             className={styles.tooltip}
             data-placement={activeTooltip.placement}
             style={{
-              left: `${tooltipLayout?.left ?? activeTooltip.anchorLeft}px`,
+              left: `${
+                (tooltipLayout?.left ?? activeTooltip.anchorLeft) + TOOLTIP_OVERFLOW_PADDING
+              }px`,
               top: `${
-                tooltipLayout?.top ??
-                (activeTooltip.placement === "top"
-                  ? activeTooltip.anchorTop
-                  : activeTooltip.anchorTop + 10)
+                (tooltipLayout?.top ??
+                  (activeTooltip.placement === "top"
+                    ? activeTooltip.anchorTop
+                    : activeTooltip.anchorTop + 10)) + TOOLTIP_OVERFLOW_PADDING
               }px`,
             }}
           >
@@ -723,11 +726,14 @@ export function ColorLibrary({
             className={styles.tooltipArrow}
             data-placement={activeTooltip.placement}
             style={{
-              left: `${tooltipLayout?.arrowLeft ?? activeTooltip.anchorLeft - 4}px`,
+              left: `${
+                (tooltipLayout?.arrowLeft ?? activeTooltip.anchorLeft - 4) +
+                TOOLTIP_OVERFLOW_PADDING
+              }px`,
               top:
                 activeTooltip.placement === "top"
-                  ? `${activeTooltip.anchorTop - 14}px`
-                  : `${activeTooltip.anchorTop + 6}px`,
+                  ? `${activeTooltip.anchorTop - 14 + TOOLTIP_OVERFLOW_PADDING}px`
+                  : `${activeTooltip.anchorTop + 6 + TOOLTIP_OVERFLOW_PADDING}px`,
             }}
           />
         </div>

@@ -247,11 +247,13 @@
   flex: 1 1 auto;
   gap: 18px;
   min-height: 0;
+  overflow: visible;
 }
 
 .colorPanelPageSection {
   flex: 1 1 auto;
   min-height: 100%;
+  overflow: visible;
 }
 
 .iconsPanelPageBody {
@@ -607,6 +609,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: visible;
   /* border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;
   background: var(--surface-card); */
@@ -616,6 +619,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: visible;
 }
 
 .sidebarColorPreviewSwatch {
@@ -1253,7 +1257,7 @@
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  padding: 0px;
+  padding: 0 2px;
   border-radius: 0;
   /* height: 370px; */
   overscroll-behavior: none;
