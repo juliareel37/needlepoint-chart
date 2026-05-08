@@ -515,10 +515,7 @@ export function ColorLibrary({
         setActiveTooltip(null);
       }}
     >
-      <div
-        ref={libraryRef}
-        className={[styles.library, className].filter(Boolean).join(" ")}
-      >
+      <div className={[styles.library, className].filter(Boolean).join(" ")}>
         <div ref={stickyHeaderRef} className={styles.stickyHeader}>
         {canShowFeaturedView ? (
           <SegmentedControl<ColorLibraryView>
@@ -625,7 +622,7 @@ export function ColorLibrary({
         </div>
         </div>
 
-        <div className={styles.libraryBody}>
+        <div ref={libraryRef} className={styles.libraryBody}>
         {includeTransparentSwatch ? (
           <section className={styles.section} aria-label="Transparent">
             <div className={styles.sectionContent}>
