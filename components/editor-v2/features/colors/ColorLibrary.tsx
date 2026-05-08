@@ -143,7 +143,7 @@ export function ColorLibrary({
   const familySections = getDmcColorFamilySections(filteredLibraryColors);
   const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
   const hasSearchQuery = normalizedSearchQuery.length > 0;
-  const canShowFeaturedView = showFeaturedSection && featuredColorIds.length > 0;
+  const canShowFeaturedView = showFeaturedSection;
   const activeView = canShowFeaturedView ? view : "all";
   const segmentedOptions = [
     { label: "Design colors", value: "featured" },
@@ -480,8 +480,12 @@ export function ColorLibrary({
         <span className={styles.colorListRowSwatch}>
           {renderSwatch(color, { selected, showSymbol: options?.showSymbol })}
         </span>
-        <span className={styles.colorListRowCode}>{formatColorCodeLabel(color)}</span>
         <span className={styles.colorListRowName}>{color.name}</span>
+        <span
+          aria-hidden="true"
+          className={styles.colorListRowDivider}
+        />
+        <span className={styles.colorListRowCode}>{formatColorCodeLabel(color)}</span>
       </button>
     );
   }
@@ -713,7 +717,7 @@ export function ColorLibrary({
                   <p className={styles.emptyState}>
                     {hasSearchQuery
                       ? `No design colors found for "${searchQuery.trim()}".`
-                      : "No design colors found."}
+                      : "None yet."}
                   </p>
                 )}
               </div>

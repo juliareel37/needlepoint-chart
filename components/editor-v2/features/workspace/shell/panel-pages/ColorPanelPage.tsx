@@ -214,7 +214,6 @@ export function ColorPanelPage({
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
                   showAllSectionHeader={false}
-                  showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
                   symbolAssignments={symbolAssignments}
                 />
