@@ -393,6 +393,8 @@ export function EditorV2Shell({
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
   const reopenColorPanelAfterSelectionRef = useRef(false);
   const usedColorsSelectionPromptStartedRef = useRef(false);
+  const previousActiveSidebarSectionRef = useRef(activeSidebarSection);
+  const selectionScopeOwnerRef = useRef<"panel" | "toolbar" | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const visibleSidebarSection =
@@ -1559,6 +1561,14 @@ export function EditorV2Shell({
     usedColorsSelectionPromptVisible,
   ]);
 
+  useEffect(() => {
+    if (selectionControlActive || usedColorsSelectionPromptVisible) {
+      return;
+    }
+
+    selectionScopeOwnerRef.current = null;
+  }, [selectionControlActive, usedColorsSelectionPromptVisible]);
+
   const [selectionRequestKey, setSelectionRequestKey] = useState(0);
   const [requestedColorPanelView, setRequestedColorPanelView] =
     useState<ColorPanelView | null>(null);
@@ -1567,6 +1577,7 @@ export function EditorV2Shell({
   const handleUsedColorsScopeModeChange = useCallback(
     (mode: "full-canvas" | "selection") => {
       if (mode === "selection") {
+        selectionScopeOwnerRef.current = "panel";
         if (isBottomPanelLayout) {
           if (!sidebarCollapsed) {
             dispatch(createSetSidebarCollapsedCommand(true));
@@ -1581,6 +1592,7 @@ export function EditorV2Shell({
         return;
       }
 
+      selectionScopeOwnerRef.current = null;
       reopenColorPanelAfterSelectionRef.current = false;
       setUsedColorsSelectionPromptVisible(false);
       dispatch(createClearSelectionCommand());
@@ -1594,6 +1606,29 @@ export function EditorV2Shell({
     dispatch(createSetActiveSidebarSectionCommand("color"));
     dispatch(createSetSidebarCollapsedCommand(false));
   }, [dispatch]);
+
+  const handleToolbarSelectionIntent = useCallback(() => {
+    selectionScopeOwnerRef.current = "toolbar";
+    reopenColorPanelAfterSelectionRef.current = false;
+    setUsedColorsSelectionPromptVisible(false);
+  }, []);
+
+  useEffect(() => {
+    const previousActiveSidebarSection = previousActiveSidebarSectionRef.current;
+
+    if (
+      previousActiveSidebarSection === "color" &&
+      activeSidebarSection !== "color" &&
+      selectionScopeOwnerRef.current === "panel"
+    ) {
+      selectionScopeOwnerRef.current = null;
+      reopenColorPanelAfterSelectionRef.current = false;
+      setUsedColorsSelectionPromptVisible(false);
+      dispatch(createClearSelectionCommand());
+    }
+
+    previousActiveSidebarSectionRef.current = activeSidebarSection;
+  }, [activeSidebarSection, dispatch]);
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -2874,6 +2909,7 @@ export function EditorV2Shell({
                         }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
+                        onToolbarSelectionIntent={handleToolbarSelectionIntent}
                         onColorLibraryDismissPointerDown={(gesture) => {
                           colorLibraryDismissGestureRef.current = gesture;
                         }}

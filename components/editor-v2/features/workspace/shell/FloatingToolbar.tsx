@@ -318,6 +318,7 @@ interface FloatingToolbarProps {
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
   onOpenSelectionColorsPanel: () => void;
+  onToolbarSelectionIntent: () => void;
   onColorLibraryDismissPointerDown?: (gesture: ColorLibraryDismissGesture) => void;
   selectionRequestKey: number;
   showSymbols: boolean;
@@ -348,6 +349,7 @@ export function FloatingToolbar({
   mirrorSessionActive,
   isBottomPanelLayout,
   onOpenSelectionColorsPanel,
+  onToolbarSelectionIntent,
   onColorLibraryDismissPointerDown,
   selectionRequestKey,
   showSymbols,
@@ -683,6 +685,7 @@ export function FloatingToolbar({
       return;
     }
 
+    onToolbarSelectionIntent();
     closeColorLibrary();
     closeDrawMenu();
     closeImageMenu();
@@ -721,6 +724,7 @@ export function FloatingToolbar({
   }
 
   function handleNewSelection() {
+    onToolbarSelectionIntent();
     dispatch(createClearSelectionCommand());
     dispatch(createSetToolCommand("lasso"));
     setSelectOpen(true);

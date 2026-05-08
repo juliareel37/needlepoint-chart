@@ -166,12 +166,6 @@ export function EditorSidebar({
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
 
   useEffect(() => {
-    if (activeSection !== "color") {
-      setColorPanelView("overview");
-    }
-  }, [activeSection]);
-
-  useEffect(() => {
     if (!requestedColorPanelView) {
       return;
     }
