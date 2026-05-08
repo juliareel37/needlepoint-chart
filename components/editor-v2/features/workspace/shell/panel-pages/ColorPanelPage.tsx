@@ -227,6 +227,8 @@ export function ColorPanelPage({
                   colors={palette}
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  persistScrollPosition
+                  persistenceKey="sidebar-color-panel-library"
                   showAllSectionHeader={false}
                   showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
