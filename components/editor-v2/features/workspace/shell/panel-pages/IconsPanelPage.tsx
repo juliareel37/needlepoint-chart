@@ -32,6 +32,10 @@ const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
 const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
 const ICON_INITIAL_MIN_SCALE = 0.005;
 const ICON_INITIAL_MAX_SCALE = 64;
+const ICON_SKELETON_MIN_DURATION_MS = 220;
+const ICON_SKELETON_CATEGORY_COUNT = 4;
+const ICON_SKELETON_OVERVIEW_CARD_COUNT = ICON_PREVIEW_LIMIT;
+const ICON_SKELETON_CATEGORY_CARD_COUNT = 12;
 const CATEGORY_ORDER_PRIORITY: Record<string, number> = {
   Shapes: 0,
   Frames: 1,
@@ -76,15 +80,13 @@ export function IconsPanelPage({
   const [searchIcons, setSearchIcons] = useState<ShapeIconLibraryItem[] | null>(
     () => iconFullLibraryCache,
   );
-  const [loadedCategoryIcons, setLoadedCategoryIcons] = useState<ShapeIconLibraryItem[]>(
-    () => {
-      if (view.type !== "category") {
-        return [];
-      }
-
-      return iconCategoryCache.get(view.category) ?? [];
-    },
-  );
+  const [loadedCategoryState, setLoadedCategoryState] = useState<{
+    category: string | null;
+    icons: ShapeIconLibraryItem[];
+  }>(() => ({
+    category: view.type === "category" ? view.category : null,
+    icons: view.type === "category" ? iconCategoryCache.get(view.category) ?? [] : [],
+  }));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,6 +101,7 @@ export function IconsPanelPage({
     let cancelled = false;
 
     async function loadIconsForCurrentView() {
+      const loadStartedAt = performance.now();
       setLoading(true);
       setLoadError(null);
 
@@ -118,7 +121,10 @@ export function IconsPanelPage({
         } else {
           const icons = await loadIconCategory(view.category);
           if (!cancelled) {
-            setLoadedCategoryIcons(icons);
+            setLoadedCategoryState({
+              category: view.category,
+              icons,
+            });
           }
         }
       } catch (error) {
@@ -129,11 +135,21 @@ export function IconsPanelPage({
               setSearchIcons([]);
             }
           } else {
-            setLoadedCategoryIcons([]);
+            setLoadedCategoryState({
+              category: view.category,
+              icons: [],
+            });
           }
           setLoadError(error instanceof Error ? error.message : "Unable to load icons.");
         }
       } finally {
+        const elapsed = performance.now() - loadStartedAt;
+        const remainingDelay = Math.max(ICON_SKELETON_MIN_DURATION_MS - elapsed, 0);
+
+        if (remainingDelay > 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, remainingDelay));
+        }
+
         if (!cancelled) {
           setLoading(false);
         }
@@ -204,21 +220,23 @@ export function IconsPanelPage({
   const visibleCategoryIcons = useMemo(
     () =>
       normalizedSearchQuery
-        ? loadedCategoryIcons.filter((icon) => {
+        ? loadedCategoryState.icons.filter((icon) => {
             if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
               return true;
             }
 
             return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
           })
-        : loadedCategoryIcons,
-    [loadedCategoryIcons, normalizedSearchQuery],
+        : loadedCategoryState.icons,
+    [loadedCategoryState.icons, normalizedSearchQuery],
   );
+  const categoryContentReady =
+    view.type === "category" && loadedCategoryState.category === view.category;
   const placementActive = Boolean(placement);
   const hasSearchResults = iconGroups.length > 0;
-  const hasCategorySearchResults = visibleCategoryIcons.length > 0;
+  const hasCategorySearchResults = categoryContentReady && visibleCategoryIcons.length > 0;
   const iconItemsForPreview = useMemo(() => {
-    if (view.type === "category") {
+    if (view.type === "category" && categoryContentReady) {
       return visibleCategoryIcons;
     }
 
@@ -227,7 +245,14 @@ export function IconsPanelPage({
     }
 
     return overviewGroups.flatMap((group) => group.previewItems);
-  }, [filteredIcons, normalizedSearchQuery, overviewGroups, view, visibleCategoryIcons]);
+  }, [
+    filteredIcons,
+    normalizedSearchQuery,
+    overviewGroups,
+    view,
+    categoryContentReady,
+    visibleCategoryIcons,
+  ]);
   const iconPreviewSrcById = useMemo(
     () =>
       iconItemsForPreview.reduce<Record<string, string>>((accumulator, icon) => {
@@ -345,10 +370,51 @@ export function IconsPanelPage({
     );
   }
 
+  function renderIconSkeletonCard(key: string) {
+    return (
+      <div
+        key={key}
+        className={[styles.iconLibraryCard, styles.iconLibraryCardSkeleton].join(" ")}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  function renderOverviewSkeleton() {
+    return Array.from({ length: ICON_SKELETON_CATEGORY_COUNT }, (_, sectionIndex) => (
+      <div key={`overview-skeleton-${sectionIndex}`} className={styles.sidebarSubsection}>
+        <div className={styles.sidebarSubsectionHeaderRow} aria-hidden="true">
+          <div className={styles.sidebarSubsectionHeader}>
+            <span className={styles.iconLibrarySkeletonHeading} />
+            <span className={styles.iconLibrarySkeletonMeta} />
+          </div>
+          <span className={styles.iconLibrarySkeletonAction} />
+        </div>
+
+        <div className={styles.iconLibraryGrid} aria-hidden="true">
+          {Array.from({ length: ICON_SKELETON_OVERVIEW_CARD_COUNT }, (_, cardIndex) =>
+            renderIconSkeletonCard(`overview-skeleton-${sectionIndex}-${cardIndex}`),
+          )}
+        </div>
+      </div>
+    ));
+  }
+
+  function renderCategorySkeleton() {
+    return (
+      <div className={styles.sidebarSubsection}>
+        <div className={styles.iconLibraryGrid} aria-hidden="true">
+          {Array.from({ length: ICON_SKELETON_CATEGORY_CARD_COUNT }, (_, cardIndex) =>
+            renderIconSkeletonCard(`category-skeleton-${cardIndex}`),
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.iconsPanelPageBody}>
-
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>
             <span aria-hidden="true" className={styles.sidebarSearchIcon} />
@@ -363,100 +429,119 @@ export function IconsPanelPage({
           </div>
         </div>
 
-        {view.type === "category" ? (
-          <>
-            {!loading && !loadError && !hasCategorySearchResults ? (
+        <div
+          key={
+            view.type === "category"
+              ? `icons-category-${selectedCategory ?? "none"}`
+              : `icons-overview-${normalizedSearchQuery.length > 0 ? "search" : "default"}`
+          }
+          className={[styles.iconsPanelPageContent, !loading ? styles.panelContentFadeIn : null]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {view.type === "category" ? (
+            <>
+            {loading ? renderCategorySkeleton() : null}
+
+            {!loading && !loadError && categoryContentReady && !hasCategorySearchResults ? (
               <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
                 No icons found in {selectedCategory} for "{searchQuery.trim()}".
               </p>
             ) : null}
 
-            {!loading && !loadError && hasCategorySearchResults ? (
+            {!loading && !loadError && categoryContentReady && hasCategorySearchResults ? (
               <div className={styles.sidebarSubsection}>
                 <div className={styles.iconLibraryGrid}>
                   {visibleCategoryIcons.map((item) => renderIconButton(item))}
                 </div>
               </div>
             ) : null}
-          </>
-        ) : null}
+            </>
+          ) : null}
 
-        {loading ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            Loading icons...
-          </p>
-        ) : null}
+          {view.type === "overview" ? (
+            <>
+            {loading ? renderOverviewSkeleton() : null}
 
-        {!loading && loadError ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            {loadError}
-          </p>
-        ) : null}
+            {!loading && loadError ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                {loadError}
+              </p>
+            ) : null}
 
-        {!loading && !loadError && view.type === "overview" && !hasSearchResults ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            No icons found for "{searchQuery.trim()}".
-          </p>
-        ) : null}
+            {!loading && !loadError && !hasSearchResults ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                No icons found for "{searchQuery.trim()}".
+              </p>
+            ) : null}
 
-        {view.type === "overview"
-          ? iconGroups.map((group) => {
-              const previewItems = normalizedSearchQuery
-                ? group.previewItems
-                : group.previewItems.slice(
-                    0,
-                    group.count > ICON_PREVIEW_VISIBLE_ICONS
-                      ? ICON_PREVIEW_VISIBLE_ICONS
-                      : ICON_PREVIEW_LIMIT,
-                  );
-              const hiddenCount = normalizedSearchQuery
-                ? 0
-                : Math.max(group.count - ICON_PREVIEW_VISIBLE_ICONS, 0);
+            {!loading && !loadError
+              ? iconGroups.map((group) => {
+                  const previewItems = normalizedSearchQuery
+                    ? group.previewItems
+                    : group.previewItems.slice(
+                        0,
+                        group.count > ICON_PREVIEW_VISIBLE_ICONS
+                          ? ICON_PREVIEW_VISIBLE_ICONS
+                          : ICON_PREVIEW_LIMIT,
+                      );
+                  const hiddenCount = normalizedSearchQuery
+                    ? 0
+                    : Math.max(group.count - ICON_PREVIEW_VISIBLE_ICONS, 0);
 
-              return (
-                <div key={group.category} className={styles.sidebarSubsection}>
-                  <div className={styles.sidebarSubsectionHeaderRow}>
-                    <div className={styles.sidebarSubsectionHeader}>
-                      <h3 style={typographyStyles.h5}>{group.category}</h3>
-                      {!normalizedSearchQuery && hiddenCount > 0 ? (
-                        <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                          {group.count} icons
-                        </p>
-                      ) : null}
+                  return (
+                    <div key={group.category} className={styles.sidebarSubsection}>
+                      <div className={styles.sidebarSubsectionHeaderRow}>
+                        <div className={styles.sidebarSubsectionHeader}>
+                          <h3 style={typographyStyles.h5}>{group.category}</h3>
+                          {!normalizedSearchQuery && hiddenCount > 0 ? (
+                            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                              {group.count} icons
+                            </p>
+                          ) : null}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghostV2"
+                          size="sm"
+                          className={styles.sidebarHeaderAction}
+                          aria-label={`View all icons in ${group.category}`}
+                          title={`View all icons in ${group.category}`}
+                          onClick={() => onViewChange({ type: "category", category: group.category })}
+                        >
+                          <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                        </Button>
+                      </div>
+
+                      <div className={styles.iconLibraryGrid}>
+                        {previewItems.map((item) => renderIconButton(item))}
+                        {!normalizedSearchQuery && hiddenCount > 0 ? (
+                          <Button
+                            type="button"
+                            variant="ghostV2"
+                            size="sm"
+                            className={styles.iconLibraryMoreButton}
+                            aria-label={`View ${hiddenCount} more icons in ${group.category}`}
+                            title={`View ${hiddenCount} more icons in ${group.category}`}
+                            onClick={() => onViewChange({ type: "category", category: group.category })}
+                          >
+                            + {hiddenCount} more
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghostV2"
-                      size="sm"
-                      className={styles.sidebarHeaderAction}
-                      aria-label={`View all icons in ${group.category}`}
-                      title={`View all icons in ${group.category}`}
-                      onClick={() => onViewChange({ type: "category", category: group.category })}
-                    >
-                      <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                    </Button>
-                  </div>
+                  );
+                })
+              : null}
+            </>
+          ) : null}
 
-                  <div className={styles.iconLibraryGrid}>
-                    {previewItems.map((item) => renderIconButton(item))}
-                    {!normalizedSearchQuery && hiddenCount > 0 ? (
-                      <Button
-                        type="button"
-                        variant="ghostV2"
-                        size="sm"
-                        className={styles.iconLibraryMoreButton}
-                        aria-label={`View ${hiddenCount} more icons in ${group.category}`}
-                        title={`View ${hiddenCount} more icons in ${group.category}`}
-                        onClick={() => onViewChange({ type: "category", category: group.category })}
-                      >
-                        + {hiddenCount} more
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })
-          : null}
+          {view.type === "category" && !loading && loadError ? (
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              {loadError}
+            </p>
+          ) : null}
+        </div>
       </div>
     </section>
   );
