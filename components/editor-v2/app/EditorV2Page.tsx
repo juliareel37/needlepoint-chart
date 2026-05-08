@@ -134,6 +134,7 @@ export function EditorV2Page({
       ? designConfig.draftId
       : designConfig.document.project.id;
   const hasSavedDesignAccess = mounted && isLoaded && isSignedIn;
+  const stickyCanvasPreferences = isSignedIn ? readStickyCanvasPreferences() : null;
 
   useEffect(() => {
     setMounted(true);
@@ -591,14 +592,14 @@ export function EditorV2Page({
     }
 
     return createNewDesignState(designConfig.width, designConfig.height, {
-      canvasPreferences: readStickyCanvasPreferences(),
+      canvasPreferences: stickyCanvasPreferences,
       projectId: designConfig.draftId,
       sizingMode: designConfig.sizingMode,
       meshCount: designConfig.meshCount,
       widthInches: designConfig.widthInches,
       heightInches: designConfig.heightInches,
     });
-  }, [designConfig]);
+  }, [designConfig, stickyCanvasPreferences]);
 
   const loadDesignIntoWorkspace = useCallback(async (storageId: string) => {
     const instanceKey = `loaded_${storageId}_${Date.now()}`;
@@ -997,7 +998,10 @@ export function EditorV2Page({
                 setSetupErrorMessage(null);
 
                 try {
-                  const persistedDraft = createPersistedDraftDocument(config);
+                  const persistedDraft = createPersistedDraftDocument(
+                    config,
+                    stickyCanvasPreferences,
+                  );
                   const savedRecord = await saveEditorV2Document(
                     persistedDraft,
                     undefined,
@@ -1082,9 +1086,10 @@ function parseDuplicatedDocument(rawPayload: string): EditorDocumentState | null
 
 function createPersistedDraftDocument(
   config: EditorV2DesignConfigNew,
+  canvasPreferences: EditorDocumentState["canvasPreferences"] | null,
 ): EditorDocumentState {
   return createNewDesignState(config.width, config.height, {
-    canvasPreferences: readStickyCanvasPreferences(),
+    canvasPreferences,
     projectId: config.draftId,
     sizingMode: config.sizingMode,
     meshCount: config.meshCount,

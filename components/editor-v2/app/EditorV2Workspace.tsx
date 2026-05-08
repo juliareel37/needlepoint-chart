@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
+import { useAuthStatus } from "@/lib/auth/client";
 import { useEditorStoreSelector } from "./editorStoreContext";
 import { writeStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import type {
@@ -127,6 +128,7 @@ export function EditorV2Workspace({
   setupModalMode: "full" | "new-only";
   setupModalOpen: boolean;
 }) {
+  const { isSignedIn } = useAuthStatus();
   const canvasPreferences = useEditorStoreSelector(
     (state) => state.document.canvasPreferences,
   );
@@ -155,8 +157,12 @@ export function EditorV2Workspace({
   });
 
   useEffect(() => {
+    if (!isSignedIn) {
+      return;
+    }
+
     writeStickyCanvasPreferences(canvasPreferences);
-  }, [canvasPreferences]);
+  }, [canvasPreferences, isSignedIn]);
 
   return (
     <div>
