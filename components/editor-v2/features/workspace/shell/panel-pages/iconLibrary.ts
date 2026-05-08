@@ -14,3 +14,9 @@ export interface ShapeIconLibraryItem {
   supportsStrokeWidth: boolean;
   searchKeywords: string[];
 }
+
+export interface ShapeIconLibraryOverviewGroup {
+  category: string;
+  count: number;
+  previewItems: ShapeIconLibraryItem[];
+}

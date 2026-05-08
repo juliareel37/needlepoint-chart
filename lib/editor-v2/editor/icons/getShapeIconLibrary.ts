@@ -1,6 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { ShapeIconLibraryItem } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
+import type {
+  ShapeIconLibraryItem,
+  ShapeIconLibraryOverviewGroup,
+} from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
 import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
 import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
 import { getPrimitiveDefaultColorSlots, getPrimitiveIconKind } from "./primitiveIcon";
@@ -16,56 +19,138 @@ const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
   Triangle: 2,
 };
 
-export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
-  const files = await collectIconFiles(SHAPES_ROOT);
-  const items = await Promise.all(
-    files.map(async (absolutePath) => {
-      const relativePath = path.relative(SHAPES_ROOT, absolutePath);
-      const extension = path.extname(relativePath).toLowerCase();
-      const fileContents = await fs.readFile(absolutePath);
-      const normalizedRelativePath = relativePath.split(path.sep).join("/");
-      const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } = buildIconAsset(
-        fileContents,
-        absolutePath,
-        extension,
-        normalizedRelativePath,
-      );
-      const fileName = path.basename(relativePath, extension);
-      const categoryPath = path.dirname(relativePath);
+type ShapeIconLibraryDescriptor = {
+  absolutePath: string;
+  extension: string;
+  normalizedRelativePath: string;
+  id: string;
+  name: string;
+  category: string;
+  searchKeywords: string[];
+};
 
-      return {
-        id: normalizedRelativePath.replace(/\.[^.]+$/i, "").replace(/[\\/]+/g, "-"),
-        name: humanizeIconName(fileName),
-        category: humanizeCategory(categoryPath),
-        src,
-        intrinsicWidth: width,
-        intrinsicHeight: height,
-        colorSlots,
-        primitiveKind,
-        lockAspectRatio,
-        supportsStrokeWidth,
-        searchKeywords: normalizeSearchKeywords(iconSearchKeywordMap[path.basename(relativePath)]),
-      };
-    }),
+export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
+  const descriptors = await getSortedShapeIconDescriptors();
+  return Promise.all(descriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+}
+
+export async function getShapeIconLibraryOverview(
+  previewLimit: number,
+): Promise<ShapeIconLibraryOverviewGroup[]> {
+  const descriptors = await getSortedShapeIconDescriptors();
+  const descriptorsByCategory = groupDescriptorsByCategory(descriptors);
+  const groups = await Promise.all(
+    Array.from(descriptorsByCategory.entries()).map(async ([category, categoryDescriptors]) => ({
+      category,
+      count: categoryDescriptors.length,
+      previewItems: await Promise.all(
+        categoryDescriptors
+          .slice(0, Math.max(previewLimit, 0))
+          .map((descriptor) => buildShapeIconLibraryItem(descriptor)),
+      ),
+    })),
   );
 
-  return items.sort((left, right) => {
-    const categorySort = compareCategories(left.category, right.category);
-    if (categorySort !== 0) {
-      return categorySort;
+  return groups.sort((left, right) => compareCategories(left.category, right.category));
+}
+
+export async function getShapeIconLibraryByCategory(
+  category: string,
+): Promise<ShapeIconLibraryItem[]> {
+  const descriptors = await getSortedShapeIconDescriptors();
+  const matchingDescriptors = descriptors.filter((descriptor) => descriptor.category === category);
+  return Promise.all(matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+}
+
+async function getSortedShapeIconDescriptors(): Promise<ShapeIconLibraryDescriptor[]> {
+  const files = await collectIconFiles(SHAPES_ROOT);
+  return files
+    .map((absolutePath) => buildShapeIconDescriptor(absolutePath))
+    .sort(compareShapeIconDescriptors);
+}
+
+function buildShapeIconDescriptor(absolutePath: string): ShapeIconLibraryDescriptor {
+  const relativePath = path.relative(SHAPES_ROOT, absolutePath);
+  const extension = path.extname(relativePath).toLowerCase();
+  const normalizedRelativePath = relativePath.split(path.sep).join("/");
+  const fileName = path.basename(relativePath, extension);
+  const categoryPath = path.dirname(relativePath);
+
+  return {
+    absolutePath,
+    extension,
+    normalizedRelativePath,
+    id: normalizedRelativePath.replace(/\.[^.]+$/i, "").replace(/[\\/]+/g, "-"),
+    name: humanizeIconName(fileName),
+    category: humanizeCategory(categoryPath),
+    searchKeywords: normalizeSearchKeywords(iconSearchKeywordMap[path.basename(relativePath)]),
+  };
+}
+
+function compareShapeIconDescriptors(
+  left: ShapeIconLibraryDescriptor,
+  right: ShapeIconLibraryDescriptor,
+): number {
+  const categorySort = compareCategories(left.category, right.category);
+  if (categorySort !== 0) {
+    return categorySort;
+  }
+
+  if (left.category === SHAPES_CATEGORY && right.category === SHAPES_CATEGORY) {
+    const leftPriority = SHAPES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
+    const rightPriority = SHAPES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+  }
+
+  return left.name.localeCompare(right.name);
+}
+
+function groupDescriptorsByCategory(
+  descriptors: ShapeIconLibraryDescriptor[],
+): Map<string, ShapeIconLibraryDescriptor[]> {
+  const descriptorsByCategory = new Map<string, ShapeIconLibraryDescriptor[]>();
+
+  for (const descriptor of descriptors) {
+    const existing = descriptorsByCategory.get(descriptor.category);
+    if (existing) {
+      existing.push(descriptor);
+      continue;
     }
 
-    if (left.category === SHAPES_CATEGORY && right.category === SHAPES_CATEGORY) {
-      const leftPriority = SHAPES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
-      const rightPriority = SHAPES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
+    descriptorsByCategory.set(descriptor.category, [descriptor]);
+  }
 
-      if (leftPriority !== rightPriority) {
-        return leftPriority - rightPriority;
-      }
-    }
+  return descriptorsByCategory;
+}
 
-    return left.name.localeCompare(right.name);
-  });
+async function buildShapeIconLibraryItem(
+  descriptor: ShapeIconLibraryDescriptor,
+): Promise<ShapeIconLibraryItem> {
+  const fileContents = await fs.readFile(descriptor.absolutePath);
+  const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } =
+    buildIconAsset(
+      fileContents,
+      descriptor.absolutePath,
+      descriptor.extension,
+      descriptor.normalizedRelativePath,
+    );
+
+  return {
+    id: descriptor.id,
+    name: descriptor.name,
+    category: descriptor.category,
+    src,
+    intrinsicWidth: width,
+    intrinsicHeight: height,
+    colorSlots,
+    primitiveKind,
+    lockAspectRatio,
+    supportsStrokeWidth,
+    searchKeywords: descriptor.searchKeywords,
+  };
 }
 
 async function collectIconFiles(directory: string): Promise<string[]> {

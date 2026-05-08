@@ -19,7 +19,7 @@ import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { createBeginIconPlacementCommand } from "../../workspaceCommands";
 import { getInitialPlacementTransform } from "./getInitialPlacementTransform";
-import type { ShapeIconLibraryItem } from "./iconLibrary";
+import type { ShapeIconLibraryItem, ShapeIconLibraryOverviewGroup } from "./iconLibrary";
 import styles from "../EditorV2Shell.module.css";
 
 const DEFAULT_INITIAL_WIDTH_RATIO = 0.42;
@@ -36,6 +36,13 @@ const CATEGORY_ORDER_PRIORITY: Record<string, number> = {
   Shapes: 0,
   Frames: 1,
 };
+
+let iconOverviewCache: ShapeIconLibraryOverviewGroup[] | null = null;
+let iconOverviewPromise: Promise<ShapeIconLibraryOverviewGroup[]> | null = null;
+let iconFullLibraryCache: ShapeIconLibraryItem[] | null = null;
+let iconFullLibraryPromise: Promise<ShapeIconLibraryItem[]> | null = null;
+const iconCategoryCache = new Map<string, ShapeIconLibraryItem[]>();
+const iconCategoryPromises = new Map<string, Promise<ShapeIconLibraryItem[]>>();
 
 export type IconsPanelView =
   | { type: "overview" }
@@ -63,7 +70,21 @@ export function IconsPanelPage({
   viewportHeight,
 }: IconsPanelPageProps) {
   const { resolvedThemeMode } = useThemeMode();
-  const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
+  const [overviewGroups, setOverviewGroups] = useState<ShapeIconLibraryOverviewGroup[]>(
+    () => iconOverviewCache ?? [],
+  );
+  const [searchIcons, setSearchIcons] = useState<ShapeIconLibraryItem[] | null>(
+    () => iconFullLibraryCache,
+  );
+  const [loadedCategoryIcons, setLoadedCategoryIcons] = useState<ShapeIconLibraryItem[]>(
+    () => {
+      if (view.type !== "category") {
+        return [];
+      }
+
+      return iconCategoryCache.get(view.category) ?? [];
+    },
+  );
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,27 +92,45 @@ export function IconsPanelPage({
     () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
     [resolvedThemeMode],
   );
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const selectedCategory = view.type === "category" ? view.category : null;
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadLibrary() {
+    async function loadIconsForCurrentView() {
       setLoading(true);
       setLoadError(null);
 
       try {
-        const response = await fetch("/api/editor-v2/icon-library");
-        if (!response.ok) {
-          throw new Error(`Icon library request failed with ${response.status}`);
-        }
+        if (view.type === "overview") {
+          const groups = await loadIconOverview();
+          if (!cancelled) {
+            setOverviewGroups(groups);
+          }
 
-        const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
-        if (!cancelled) {
-          setIcons(Array.isArray(payload.icons) ? payload.icons : []);
+          if (normalizedSearchQuery.length > 0) {
+            const icons = await loadFullIconLibrary();
+            if (!cancelled) {
+              setSearchIcons(icons);
+            }
+          }
+        } else {
+          const icons = await loadIconCategory(view.category);
+          if (!cancelled) {
+            setLoadedCategoryIcons(icons);
+          }
         }
       } catch (error) {
         if (!cancelled) {
-          setIcons([]);
+          if (view.type === "overview") {
+            setOverviewGroups([]);
+            if (normalizedSearchQuery.length > 0) {
+              setSearchIcons([]);
+            }
+          } else {
+            setLoadedCategoryIcons([]);
+          }
           setLoadError(error instanceof Error ? error.message : "Unable to load icons.");
         }
       } finally {
@@ -101,15 +140,12 @@ export function IconsPanelPage({
       }
     }
 
-    void loadLibrary();
+    void loadIconsForCurrentView();
 
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const selectedCategory = view.type === "category" ? view.category : null;
+  }, [normalizedSearchQuery, view]);
 
   useEffect(() => {
     setSearchQuery("");
@@ -118,19 +154,23 @@ export function IconsPanelPage({
   const filteredIcons = useMemo(
     () =>
       normalizedSearchQuery
-        ? icons.filter((icon) => {
+        ? (searchIcons ?? []).filter((icon) => {
             if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
               return true;
             }
 
             return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
           })
-        : icons,
-    [icons, normalizedSearchQuery],
+        : searchIcons ?? [],
+    [normalizedSearchQuery, searchIcons],
   );
 
   const iconGroups = useMemo(
     () => {
+      if (normalizedSearchQuery.length === 0) {
+        return overviewGroups;
+      }
+
       const groups = new Map<string, ShapeIconLibraryItem[]>();
 
       for (const icon of filteredIcons) {
@@ -145,7 +185,8 @@ export function IconsPanelPage({
       return Array.from(groups.entries())
         .map(([category, items]) => ({
           category,
-          items,
+          count: items.length,
+          previewItems: items,
         }))
         .sort((left, right) => {
           const leftPriority = CATEGORY_ORDER_PRIORITY[left.category] ?? Number.POSITIVE_INFINITY;
@@ -158,34 +199,38 @@ export function IconsPanelPage({
           return left.category.localeCompare(right.category);
         });
     },
-    [filteredIcons],
+    [filteredIcons, normalizedSearchQuery, overviewGroups],
   );
-  const categoryIcons = useMemo(
-    () =>
-      selectedCategory
-        ? icons.filter((icon) => icon.category === selectedCategory)
-        : [],
-    [icons, selectedCategory],
-  );
-  const filteredCategoryIcons = useMemo(
+  const visibleCategoryIcons = useMemo(
     () =>
       normalizedSearchQuery
-        ? categoryIcons.filter((icon) => {
+        ? loadedCategoryIcons.filter((icon) => {
             if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
               return true;
             }
 
             return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
           })
-        : categoryIcons,
-    [categoryIcons, normalizedSearchQuery],
+        : loadedCategoryIcons,
+    [loadedCategoryIcons, normalizedSearchQuery],
   );
   const placementActive = Boolean(placement);
   const hasSearchResults = iconGroups.length > 0;
-  const hasCategorySearchResults = filteredCategoryIcons.length > 0;
+  const hasCategorySearchResults = visibleCategoryIcons.length > 0;
+  const iconItemsForPreview = useMemo(() => {
+    if (view.type === "category") {
+      return visibleCategoryIcons;
+    }
+
+    if (normalizedSearchQuery.length > 0) {
+      return filteredIcons;
+    }
+
+    return overviewGroups.flatMap((group) => group.previewItems);
+  }, [filteredIcons, normalizedSearchQuery, overviewGroups, view, visibleCategoryIcons]);
   const iconPreviewSrcById = useMemo(
     () =>
-      icons.reduce<Record<string, string>>((accumulator, icon) => {
+      iconItemsForPreview.reduce<Record<string, string>>((accumulator, icon) => {
         const themedPrimitiveColorSlots = icon.primitiveKind
           ? getThemedPrimitiveColorSlots(icon.colorSlots, resolvedThemeMode)
           : icon.colorSlots;
@@ -208,7 +253,7 @@ export function IconsPanelPage({
           : icon.src;
         return accumulator;
       }, {}),
-    [icons, primitivePreviewStrokeColor, resolvedThemeMode],
+    [iconItemsForPreview, primitivePreviewStrokeColor, resolvedThemeMode],
   );
 
   function renderIconButton(item: ShapeIconLibraryItem) {
@@ -329,7 +374,7 @@ export function IconsPanelPage({
             {!loading && !loadError && hasCategorySearchResults ? (
               <div className={styles.sidebarSubsection}>
                 <div className={styles.iconLibraryGrid}>
-                  {filteredCategoryIcons.map((item) => renderIconButton(item))}
+                  {visibleCategoryIcons.map((item) => renderIconButton(item))}
                 </div>
               </div>
             ) : null}
@@ -357,16 +402,16 @@ export function IconsPanelPage({
         {view.type === "overview"
           ? iconGroups.map((group) => {
               const previewItems = normalizedSearchQuery
-                ? group.items
-                : group.items.slice(
+                ? group.previewItems
+                : group.previewItems.slice(
                     0,
-                    group.items.length > ICON_PREVIEW_VISIBLE_ICONS
+                    group.count > ICON_PREVIEW_VISIBLE_ICONS
                       ? ICON_PREVIEW_VISIBLE_ICONS
                       : ICON_PREVIEW_LIMIT,
                   );
               const hiddenCount = normalizedSearchQuery
                 ? 0
-                : Math.max(group.items.length - ICON_PREVIEW_VISIBLE_ICONS, 0);
+                : Math.max(group.count - ICON_PREVIEW_VISIBLE_ICONS, 0);
 
               return (
                 <div key={group.category} className={styles.sidebarSubsection}>
@@ -375,7 +420,7 @@ export function IconsPanelPage({
                       <h3 style={typographyStyles.h5}>{group.category}</h3>
                       {!normalizedSearchQuery && hiddenCount > 0 ? (
                         <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                          {group.items.length} icons
+                          {group.count} icons
                         </p>
                       ) : null}
                     </div>
@@ -415,6 +460,111 @@ export function IconsPanelPage({
       </div>
     </section>
   );
+}
+
+async function loadIconOverview(): Promise<ShapeIconLibraryOverviewGroup[]> {
+  if (iconOverviewCache) {
+    return iconOverviewCache;
+  }
+
+  if (iconOverviewPromise) {
+    return iconOverviewPromise;
+  }
+
+  iconOverviewPromise = fetch("/api/editor-v2/icon-library?mode=overview&previewLimit=6")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { groups?: ShapeIconLibraryOverviewGroup[] };
+      iconOverviewCache = Array.isArray(payload.groups) ? payload.groups : [];
+      return iconOverviewCache;
+    })
+    .finally(() => {
+      iconOverviewPromise = null;
+    });
+
+  return iconOverviewPromise;
+}
+
+async function loadIconCategory(category: string): Promise<ShapeIconLibraryItem[]> {
+  if (iconCategoryCache.has(category)) {
+    return iconCategoryCache.get(category) ?? [];
+  }
+
+  if (iconFullLibraryCache) {
+    const icons = iconFullLibraryCache.filter((icon) => icon.category === category);
+    iconCategoryCache.set(category, icons);
+    return icons;
+  }
+
+  const pendingPromise = iconCategoryPromises.get(category);
+  if (pendingPromise) {
+    return pendingPromise;
+  }
+
+  const requestPromise = fetch(
+    `/api/editor-v2/icon-library?mode=category&category=${encodeURIComponent(category)}`,
+  )
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
+      const icons = Array.isArray(payload.icons) ? payload.icons : [];
+      iconCategoryCache.set(category, icons);
+      return icons;
+    })
+    .finally(() => {
+      iconCategoryPromises.delete(category);
+    });
+
+  iconCategoryPromises.set(category, requestPromise);
+  return requestPromise;
+}
+
+async function loadFullIconLibrary(): Promise<ShapeIconLibraryItem[]> {
+  if (iconFullLibraryCache) {
+    return iconFullLibraryCache;
+  }
+
+  if (iconFullLibraryPromise) {
+    return iconFullLibraryPromise;
+  }
+
+  iconFullLibraryPromise = fetch("/api/editor-v2/icon-library")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
+      const icons = Array.isArray(payload.icons) ? payload.icons : [];
+      iconFullLibraryCache = icons;
+
+      const iconsByCategory = new Map<string, ShapeIconLibraryItem[]>();
+      for (const icon of icons) {
+        const existing = iconsByCategory.get(icon.category);
+        if (existing) {
+          existing.push(icon);
+        } else {
+          iconsByCategory.set(icon.category, [icon]);
+        }
+      }
+
+      for (const [category, categoryIcons] of iconsByCategory.entries()) {
+        iconCategoryCache.set(category, categoryIcons);
+      }
+
+      return icons;
+    })
+    .finally(() => {
+      iconFullLibraryPromise = null;
+    });
+
+  return iconFullLibraryPromise;
 }
 
 function getInitialFramePlacementTransform(options: {
