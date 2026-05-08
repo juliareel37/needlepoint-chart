@@ -1023,6 +1023,14 @@ export function EditorV2Shell({
     isBottomPanelCanvasFocusActive,
   ]);
 
+  const clearHighlightedColor = useCallback(() => {
+    setHighlightedColorId(null);
+
+    if (isBottomPanelCanvasFocusActive) {
+      exitBottomPanelCanvasFocus();
+    }
+  }, [exitBottomPanelCanvasFocus, isBottomPanelCanvasFocusActive]);
+
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       setLayoutModeResolved(true);
@@ -1426,6 +1434,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     const escapeAction = getWorkspaceEscapeAction({
+      highlightedColorActive: highlightedColorId !== null,
       iconPlacementActive: Boolean(iconPlacement),
       previewMode,
       textPlacementActive: Boolean(textPlacement),
@@ -1470,6 +1479,11 @@ export function EditorV2Shell({
         return;
       }
 
+      if (escapeAction === "clear-highlight") {
+        clearHighlightedColor();
+        return;
+      }
+
       exitPreviewMode();
     }
 
@@ -1477,9 +1491,11 @@ export function EditorV2Shell({
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [
     dispatch,
+    clearHighlightedColor,
     exitPreviewMode,
     handleCancelTraceCrop,
     handleExitTraceConversionPreviewFromToolbar,
+    highlightedColorId,
     iconPlacement,
     previewMode,
     textPlacement,

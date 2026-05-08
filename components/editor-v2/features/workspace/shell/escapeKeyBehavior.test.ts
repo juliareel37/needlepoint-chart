@@ -5,6 +5,7 @@ describe("getWorkspaceEscapeAction", () => {
   it("returns null when no escapable flow is active", () => {
     expect(
       getWorkspaceEscapeAction({
+        highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: false,
         textPlacementActive: false,
@@ -18,6 +19,7 @@ describe("getWorkspaceEscapeAction", () => {
   it("prioritizes text editing flow over preview mode", () => {
     expect(
       getWorkspaceEscapeAction({
+        highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: true,
         textPlacementActive: true,
@@ -31,6 +33,7 @@ describe("getWorkspaceEscapeAction", () => {
   it("prioritizes trace conversion preview over every other flow", () => {
     expect(
       getWorkspaceEscapeAction({
+        highlightedColorActive: false,
         iconPlacementActive: true,
         previewMode: true,
         textPlacementActive: true,
@@ -44,6 +47,7 @@ describe("getWorkspaceEscapeAction", () => {
   it("prefers crop cancellation over trace reposition cancellation", () => {
     expect(
       getWorkspaceEscapeAction({
+        highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: false,
         textPlacementActive: false,
@@ -52,5 +56,19 @@ describe("getWorkspaceEscapeAction", () => {
         traceRepositionActive: true,
       }),
     ).toBe("cancel-trace-crop");
+  });
+
+  it("clears an active highlight before exiting preview mode", () => {
+    expect(
+      getWorkspaceEscapeAction({
+        highlightedColorActive: true,
+        iconPlacementActive: false,
+        previewMode: true,
+        textPlacementActive: false,
+        traceConversionPreviewActive: false,
+        traceCropEditing: false,
+        traceRepositionActive: false,
+      }),
+    ).toBe("clear-highlight");
   });
 });

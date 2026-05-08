@@ -1,6 +1,7 @@
 "use client";
 
 export interface WorkspaceEscapeState {
+  highlightedColorActive: boolean;
   iconPlacementActive: boolean;
   previewMode: boolean;
   textPlacementActive: boolean;
@@ -15,6 +16,7 @@ export type WorkspaceEscapeAction =
   | "cancel-trace-reposition"
   | "cancel-text-placement"
   | "cancel-icon-placement"
+  | "clear-highlight"
   | "exit-preview";
 
 export function getWorkspaceEscapeAction(
@@ -38,6 +40,10 @@ export function getWorkspaceEscapeAction(
 
   if (state.iconPlacementActive) {
     return "cancel-icon-placement";
+  }
+
+  if (state.highlightedColorActive) {
+    return "clear-highlight";
   }
 
   if (state.previewMode) {

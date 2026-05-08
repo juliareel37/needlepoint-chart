@@ -535,6 +535,33 @@ export function UsedColorsSummary({
     () => sortUsedColorsForDisplay(usedColors, colorsById, sortMode),
     [colorsById, sortMode, usedColors],
   );
+  const deactivateHighlight = useCallback((options?: { blurTrigger?: boolean }) => {
+    if (!highlightedColorId) {
+      return;
+    }
+
+    onHighlightColorChange(null);
+
+    if (isBottomPanelLayout && isBottomPanelCanvasFocusActive) {
+      onExitBottomPanelCanvasFocus();
+    }
+
+    if (options?.blurTrigger) {
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        activeElement.closest(`.${styles.usedColorsHighlightButton}`)
+      ) {
+        activeElement.blur();
+      }
+    }
+  }, [
+    highlightedColorId,
+    isBottomPanelCanvasFocusActive,
+    isBottomPanelLayout,
+    onExitBottomPanelCanvasFocus,
+    onHighlightColorChange,
+  ]);
 
   useEffect(() => {
     setSelectedColorIds((current) =>
@@ -547,6 +574,31 @@ export function UsedColorsSummary({
       onHighlightColorChange(null);
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
+
+  useEffect(() => {
+    if (!highlightedColorId) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      const editableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (event.key !== "Escape" || editableTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      deactivateHighlight({ blurTrigger: true });
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleWindowKeyDown, { capture: true });
+  }, [deactivateHighlight, highlightedColorId]);
 
   useEffect(() => {
     highlightColorChangeRef.current = onHighlightColorChange;
@@ -1072,20 +1124,18 @@ export function UsedColorsSummary({
                     const nextHighlightedColorId =
                       highlightedColorId === entry.colorId ? null : entry.colorId;
 
-                    onHighlightColorChange(nextHighlightedColorId);
-
-                    if (!isBottomPanelLayout) {
-                      return;
-                    }
-
                     if (nextHighlightedColorId) {
+                      onHighlightColorChange(nextHighlightedColorId);
+
+                      if (!isBottomPanelLayout) {
+                        return;
+                      }
+
                       onEnterBottomPanelCanvasFocus();
                       return;
                     }
 
-                    if (isBottomPanelCanvasFocusActive) {
-                      onExitBottomPanelCanvasFocus();
-                    }
+                    deactivateHighlight();
                   }}
                   onKeyDown={(event) => {
                     event.stopPropagation();
