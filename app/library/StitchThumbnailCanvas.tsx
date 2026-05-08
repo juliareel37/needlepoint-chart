@@ -254,30 +254,6 @@ export function StitchThumbnailCanvas({
           );
           context.restore();
 
-          if (compactPreviewContext) {
-            const compactScale = 1 / EDITOR_TRACE_POSITION_CELL_SIZE;
-            compactPreviewContext.save();
-            compactPreviewContext.globalAlpha = 0.35;
-            compactPreviewContext.translate(
-              (traceBounds.left + traceBounds.width / 2) * compactScale,
-              (traceBounds.top + traceBounds.height / 2) * compactScale,
-            );
-            compactPreviewContext.rotate(
-              ((tracePlacement?.rotation ?? 0) * Math.PI) / 180,
-            );
-            compactPreviewContext.drawImage(
-              cachedTraceImage,
-              cropRect.cropX,
-              cropRect.cropY,
-              cropRect.cropWidth,
-              cropRect.cropHeight,
-              (-traceBounds.width / 2) * compactScale,
-              (-traceBounds.height / 2) * compactScale,
-              traceBounds.width * compactScale,
-              traceBounds.height * compactScale,
-            );
-            compactPreviewContext.restore();
-          }
         } else if (!traceImageCacheRef.current.has(traceThumbnailUrl)) {
           traceImageCacheRef.current.set(traceThumbnailUrl, null);
           const traceImage = new Image();
