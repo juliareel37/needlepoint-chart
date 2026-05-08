@@ -18,6 +18,13 @@ export interface IconPlacementPaintGroup {
   cells: GridPoint[];
 }
 
+export interface CellSampledPreviewCell {
+  alpha: number;
+  color: { r: number; g: number; b: number };
+  x: number;
+  y: number;
+}
+
 export async function renderCellSampledPlacementPreview(options: {
   bounds: { left: number; top: number; width: number; height: number };
   metrics: GridWorldMetrics;
@@ -46,8 +53,45 @@ export async function renderCellSampledPlacementPreview(options: {
   sourceContext.drawImage(image, 0, 0, canvasWidth, canvasHeight);
   previewContext.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  const sampledCells = sampleCellSampledPlacementPreview({
+    bounds: options.bounds,
+    metrics: options.metrics,
+    sourceContext,
+  });
+
+  for (const cell of sampledCells) {
+    const cellLeft = cell.x * (options.metrics.cellSize + options.metrics.cellGap) - options.bounds.left;
+    const cellTop = cell.y * (options.metrics.cellSize + options.metrics.cellGap) - options.bounds.top;
+    const paintLeft = Math.max(0, cellLeft - Math.max(0, options.metrics.cellGap / 2));
+    const paintTop = Math.max(0, cellTop - Math.max(0, options.metrics.cellGap / 2));
+    const paintRight = Math.min(
+      canvasWidth,
+      cellLeft + options.metrics.cellSize + Math.max(0, options.metrics.cellGap / 2),
+    );
+    const paintBottom = Math.min(
+      canvasHeight,
+      cellTop + options.metrics.cellSize + Math.max(0, options.metrics.cellGap / 2),
+    );
+    previewContext.fillStyle = `rgba(${cell.color.r}, ${cell.color.g}, ${cell.color.b}, ${cell.alpha})`;
+    previewContext.fillRect(
+      paintLeft,
+      paintTop,
+      Math.max(1, paintRight - paintLeft),
+      Math.max(1, paintBottom - paintTop),
+    );
+  }
+
+  return previewCanvas.toDataURL();
+}
+
+export function sampleCellSampledPlacementPreview(options: {
+  bounds: { left: number; top: number; width: number; height: number };
+  metrics: GridWorldMetrics;
+  sourceContext: CanvasRenderingContext2D;
+}): CellSampledPreviewCell[] {
+  const canvasWidth = options.sourceContext.canvas.width;
+  const canvasHeight = options.sourceContext.canvas.height;
   const pitch = options.metrics.cellSize + options.metrics.cellGap;
-  const gapOverlap = Math.max(0, options.metrics.cellGap / 2);
   const minCellX = Math.max(0, Math.floor(options.bounds.left / pitch));
   const minCellY = Math.max(0, Math.floor(options.bounds.top / pitch));
   const maxCellX = Math.min(
@@ -58,6 +102,7 @@ export async function renderCellSampledPlacementPreview(options: {
     options.metrics.height - 1,
     Math.ceil((options.bounds.top + options.bounds.height) / pitch),
   );
+  const sampledCells: CellSampledPreviewCell[] = [];
 
   for (let y = minCellY; y <= maxCellY; y += 1) {
     for (let x = minCellX; x <= maxCellX; x += 1) {
@@ -79,37 +124,26 @@ export async function renderCellSampledPlacementPreview(options: {
         continue;
       }
 
-      const pixel = sourceContext.getImageData(sampleX, sampleY, 1, 1).data;
+      const pixel = options.sourceContext.getImageData(sampleX, sampleY, 1, 1).data;
       const alpha = pixel[3] ?? 0;
       if (alpha <= 1) {
         continue;
       }
 
-      const cellLeft = x * pitch - options.bounds.left;
-      const cellTop = y * pitch - options.bounds.top;
-      const paintLeft = Math.max(0, cellLeft - gapOverlap);
-      const paintTop = Math.max(0, cellTop - gapOverlap);
-      const paintRight = Math.min(
-        canvasWidth,
-        cellLeft + options.metrics.cellSize + gapOverlap,
-      );
-      const paintBottom = Math.min(
-        canvasHeight,
-        cellTop + options.metrics.cellSize + gapOverlap,
-      );
-      previewContext.fillStyle = `rgba(${pixel[0] ?? 0}, ${pixel[1] ?? 0}, ${pixel[2] ?? 0}, ${
-        alpha / 255
-      })`;
-      previewContext.fillRect(
-        paintLeft,
-        paintTop,
-        Math.max(1, paintRight - paintLeft),
-        Math.max(1, paintBottom - paintTop),
-      );
+      sampledCells.push({
+        alpha: alpha / 255,
+        color: {
+          r: pixel[0] ?? 0,
+          g: pixel[1] ?? 0,
+          b: pixel[2] ?? 0,
+        },
+        x,
+        y,
+      });
     }
   }
 
-  return previewCanvas.toDataURL();
+  return sampledCells;
 }
 
 export async function convertIconPlacementToPaintGroups(

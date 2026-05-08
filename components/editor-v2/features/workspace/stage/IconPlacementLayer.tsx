@@ -11,7 +11,10 @@ import {
   renderFlatColorIconPreview,
   renderIconPlacementPreview,
 } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
-import { renderCellSampledPlacementPreview } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
+import {
+  sampleCellSampledPlacementPreview,
+  type CellSampledPreviewCell,
+} from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import type { EditorStore, IconPlacementSession, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { ViewportState } from "@/lib/editor-v2/editor/store";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
@@ -131,15 +134,20 @@ export function IconPlacementLayer({
     () => getIconPlacementBounds(baseRect, displayTransform),
     [baseRect, displayTransform],
   );
-  const displayStageBounds = useMemo(
-    () => ({
-      left: worldBounds.left + displayBounds.left * viewport.zoom,
-      top: worldBounds.top + displayBounds.top * viewport.zoom,
-      width: displayBounds.width * viewport.zoom,
-      height: displayBounds.height * viewport.zoom,
-    }),
-    [displayBounds, viewport.zoom, worldBounds.left, worldBounds.top],
-  );
+  const displayStageBounds = useMemo(() => {
+    const devicePixelRatio =
+      typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+
+    return snapRectToDevicePixels(
+      {
+        left: worldBounds.left + displayBounds.left * viewport.zoom,
+        top: worldBounds.top + displayBounds.top * viewport.zoom,
+        width: displayBounds.width * viewport.zoom,
+        height: displayBounds.height * viewport.zoom,
+      },
+      devicePixelRatio,
+    );
+  }, [displayBounds, viewport.zoom, worldBounds.left, worldBounds.top]);
   const overlayBounds = useMemo(
     () => ({
       left: displayStageBounds.left - stageBounds.left,
@@ -150,6 +158,7 @@ export function IconPlacementLayer({
     [displayStageBounds, stageBounds.left, stageBounds.top],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const primitiveColors = useMemo(
     () =>
       placement.primitiveKind
@@ -191,13 +200,18 @@ export function IconPlacementLayer({
       nextBaseRect: typeof baseRect,
     ) => {
       const nextBounds = getIconPlacementBounds(nextBaseRect, nextTransform);
+      const devicePixelRatio =
+        typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
 
-      return {
-        left: worldBounds.left - stageBounds.left + nextBounds.left * viewport.zoom,
-        top: worldBounds.top - stageBounds.top + nextBounds.top * viewport.zoom,
-        width: nextBounds.width * viewport.zoom,
-        height: nextBounds.height * viewport.zoom,
-      };
+      return snapRectToDevicePixels(
+        {
+          left: worldBounds.left - stageBounds.left + nextBounds.left * viewport.zoom,
+          top: worldBounds.top - stageBounds.top + nextBounds.top * viewport.zoom,
+          width: nextBounds.width * viewport.zoom,
+          height: nextBounds.height * viewport.zoom,
+        },
+        devicePixelRatio,
+      );
     },
     [
       stageBounds.left,
@@ -210,6 +224,7 @@ export function IconPlacementLayer({
   const [previewSrc, setPreviewSrc] = useState<string | null>(
     placement.primitiveKind ? null : placement.src,
   );
+  const [sampledPreviewCells, setSampledPreviewCells] = useState<CellSampledPreviewCell[] | null>(null);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (portalHost) {
       setPreviewTransform(nextTransform);
@@ -299,6 +314,7 @@ export function IconPlacementLayer({
 
       if (!basePreviewSrc) {
         if (!cancelled) {
+          setSampledPreviewCells(null);
           setPreviewSrc(null);
         }
         return;
@@ -306,6 +322,7 @@ export function IconPlacementLayer({
 
       if (!useCellSampledPreview) {
         if (!cancelled) {
+          setSampledPreviewCells(null);
           setPreviewSrc(basePreviewSrc);
         }
         return;
@@ -313,22 +330,35 @@ export function IconPlacementLayer({
 
       if (!shouldUseCellSampledIconPreview(displayBounds, metrics)) {
         if (!cancelled) {
+          setSampledPreviewCells(null);
           setPreviewSrc(basePreviewSrc);
         }
         return;
       }
 
       try {
-        const nextPreviewSrc = await renderCellSampledPlacementPreview({
-          src: basePreviewSrc,
+        const image = await loadPreviewImage(basePreviewSrc);
+        const sourceCanvas = document.createElement("canvas");
+        sourceCanvas.width = Math.max(1, Math.ceil(displayBounds.width));
+        sourceCanvas.height = Math.max(1, Math.ceil(displayBounds.height));
+        const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+        if (!sourceContext) {
+          throw new Error("Unable to get icon preview context");
+        }
+        sourceContext.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+        sourceContext.drawImage(image, 0, 0, sourceCanvas.width, sourceCanvas.height);
+        const nextSampledCells = sampleCellSampledPlacementPreview({
           bounds: displayBounds,
           metrics,
+          sourceContext,
         });
         if (!cancelled) {
-          setPreviewSrc(nextPreviewSrc);
+          setSampledPreviewCells(nextSampledCells);
+          setPreviewSrc(basePreviewSrc);
         }
       } catch {
         if (!cancelled) {
+          setSampledPreviewCells(null);
           setPreviewSrc(basePreviewSrc);
         }
       }
@@ -366,6 +396,71 @@ export function IconPlacementLayer({
     setPreviewTransform(null);
   }, [transform]);
 
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas || !sampledPreviewCells) {
+      return;
+    }
+
+    const devicePixelRatio =
+      typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+    const renderBounds = portalHost ? overlayBounds : displayBounds;
+    const cssWidth = Math.max(1, renderBounds.width);
+    const cssHeight = Math.max(1, renderBounds.height);
+    const backingWidth = Math.max(1, Math.round(cssWidth * devicePixelRatio));
+    const backingHeight = Math.max(1, Math.round(cssHeight * devicePixelRatio));
+
+    if (canvas.width !== backingWidth || canvas.height !== backingHeight) {
+      canvas.width = backingWidth;
+      canvas.height = backingHeight;
+    }
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    context.imageSmoothingEnabled = false;
+    context.clearRect(0, 0, cssWidth, cssHeight);
+
+    const pitch = metrics.cellSize + metrics.cellGap;
+    const gapOverlap = Math.max(0, metrics.cellGap / 2);
+
+    for (const cell of sampledPreviewCells) {
+      const cellRect = snapRectToDevicePixels(
+        {
+          left: (cell.x * pitch - displayBounds.left - gapOverlap) * viewport.zoom,
+          top: (cell.y * pitch - displayBounds.top - gapOverlap) * viewport.zoom,
+          width: (metrics.cellSize + gapOverlap * 2) * viewport.zoom,
+          height: (metrics.cellSize + gapOverlap * 2) * viewport.zoom,
+        },
+        devicePixelRatio,
+      );
+
+      if (cellRect.width <= 0 || cellRect.height <= 0) {
+        continue;
+      }
+
+      context.fillStyle = `rgba(${cell.color.r}, ${cell.color.g}, ${cell.color.b}, ${cell.alpha})`;
+      context.fillRect(cellRect.left, cellRect.top, cellRect.width, cellRect.height);
+    }
+  }, [
+    displayBounds.left,
+    displayBounds.top,
+    displayBounds.width,
+    displayBounds.height,
+    metrics.cellGap,
+    metrics.cellSize,
+    overlayBounds.height,
+    overlayBounds.width,
+    portalHost,
+    sampledPreviewCells,
+    viewport.zoom,
+  ]);
+
   const portalOverlay = portalHost
     ? createPortal(
         <div
@@ -394,7 +489,17 @@ export function IconPlacementLayer({
               transformOrigin: "center center",
             }}
           >
-            {previewSrc ? (
+            {sampledPreviewCells ? (
+              <canvas
+                ref={previewCanvasRef}
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  imageRendering: "pixelated",
+                }}
+              />
+            ) : previewSrc ? (
               <img
                 src={previewSrc ?? undefined}
                 alt=""
@@ -481,7 +586,17 @@ export function IconPlacementLayer({
               filter: `drop-shadow(0 1px 0 rgba(255,255,255,0.55))`,
             }}
           >
-            {previewSrc ? (
+            {sampledPreviewCells ? (
+              <canvas
+                ref={previewCanvasRef}
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  imageRendering: "pixelated",
+                }}
+              />
+            ) : previewSrc ? (
               <img
                 src={previewSrc ?? undefined}
                 alt=""
@@ -563,6 +678,37 @@ function shouldUseCellSampledIconPreview(
   }
 
   return bounds.width * bounds.height <= MAX_CELL_SAMPLED_PREVIEW_PIXELS;
+}
+
+function loadPreviewImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Unable to load preview image: ${src}`));
+    image.src = src;
+  });
+}
+
+function snapRectToDevicePixels(
+  rect: { left: number; top: number; width: number; height: number },
+  devicePixelRatio: number,
+) {
+  const left = snapToDevicePixel(rect.left, devicePixelRatio);
+  const top = snapToDevicePixel(rect.top, devicePixelRatio);
+  const right = snapToDevicePixel(rect.left + rect.width, devicePixelRatio);
+  const bottom = snapToDevicePixel(rect.top + rect.height, devicePixelRatio);
+
+  return {
+    left,
+    top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+  };
+}
+
+function snapToDevicePixel(value: number, devicePixelRatio: number): number {
+  return Math.round(value * devicePixelRatio) / devicePixelRatio;
 }
 
 function applyPreviewIconBox(
