@@ -109,6 +109,11 @@ export function ColorPanelPage({
   const hiddenCount = Math.max(usedColors.length - visiblePreviewCount, 0);
   const showMoreButton = hiddenCount > 0;
   const openDesignColorsView = () => onViewChange("design-colors");
+  const activeColorCodeLabel = activeColor
+    ? activeColor.brand === "dmc"
+      ? `DMC ${activeColor.code}`
+      : activeColor.code
+    : null;
 
   return (
     <section ref={pageRef} className={[styles.sidebarSection, styles.colorPanelPageSection].join(" ")}>
@@ -124,9 +129,18 @@ export function ColorPanelPage({
                   className={[styles.swatch, styles.activeColorSwatch].join(" ")}
                   style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
                 />
-                <strong className={styles.activeColorValue}>
-                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
-                </strong>
+                {activeColor ? (
+                  <>
+                    <strong className={styles.activeColorName}>{activeColor.name}</strong>
+                    <span
+                      aria-hidden="true"
+                      className={styles.activeColorDivider}
+                    />
+                    <span className={styles.activeColorCode}>{activeColorCodeLabel}</span>
+                  </>
+                ) : (
+                  <strong className={styles.activeColorValue}>None selected</strong>
+                )}
               </div>
 
 
@@ -214,6 +228,7 @@ export function ColorPanelPage({
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
                   showAllSectionHeader={false}
+                  showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
                   symbolAssignments={symbolAssignments}
                 />

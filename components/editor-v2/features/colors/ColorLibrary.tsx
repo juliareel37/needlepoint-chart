@@ -136,11 +136,11 @@ export function ColorLibrary({
           .toLowerCase()
           .includes(normalizedSearchQuery);
   const filteredColors = colors.filter(matchesSearch);
-  const featuredColors = filteredColors.filter((color) => featuredColorIdSet.has(color.id));
-  const filteredLibraryColors = filteredColors.filter(
+  const familyFilteredColors = filteredColors.filter(
     (color) => familyFilter === "all" || getDmcColorFamily(color) === familyFilter,
   );
-  const familySections = getDmcColorFamilySections(filteredLibraryColors);
+  const featuredColors = familyFilteredColors.filter((color) => featuredColorIdSet.has(color.id));
+  const familySections = getDmcColorFamilySections(familyFilteredColors);
   const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
   const hasSearchQuery = normalizedSearchQuery.length > 0;
   const canShowFeaturedView = showFeaturedSection;
@@ -653,7 +653,7 @@ export function ColorLibrary({
               className={styles.settingsPanel}
             >
               <div className={styles.settingsPanelContent}>
-                {activeView === "all" ? (
+                {familyFilterOptions.length > 0 ? (
                   <div className={styles.settingsMenuSection}>
                     {/* <p className={styles.settingsMenuLabel}>Family</p> */}
                     <div className={styles.familyFilterRow} role="group" aria-label="Color family">
@@ -717,7 +717,9 @@ export function ColorLibrary({
                   <p className={styles.emptyState}>
                     {hasSearchQuery
                       ? `No design colors found for "${searchQuery.trim()}".`
-                      : "None yet."}
+                      : familyFilter === "all"
+                        ? "None yet."
+                        : "No design colors found in this family."}
                   </p>
                 )}
               </div>

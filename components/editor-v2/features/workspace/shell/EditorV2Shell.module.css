@@ -1858,11 +1858,38 @@
 }
 
 .activeColorRow {
-  /* margin-bottom: 16px; */
+  gap: 10px;
 }
 
 .activeColorValue {
   color: var(--text-primary);
+}
+
+.activeColorName {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeColorDivider {
+  width: 1px;
+  height: 14px;
+  flex: 0 0 1px;
+  border-radius: 999px;
+  background: var(--ui-border-reg);
+}
+
+.activeColorCode {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .activeColorSwatch {
@@ -2331,12 +2358,11 @@
 .usedColorsItemButton {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   align-self: stretch;
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
-  gap: 10px;
+  gap: 8px;
   color: inherit;
   margin: 0;
   padding: 6px 8px;
@@ -2365,6 +2391,44 @@
 .usedColorsItemButton:focus-visible {
   outline: 2px solid var(--button-secondary-active);
   outline-offset: 2px;
+}
+
+.usedColorsItemText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 1px;
+}
+
+.usedColorsItemName {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usedColorsItemCode {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.usedColorsItemCountBadge {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+  box-shadow: none;
 }
 
 .usedColorsRow[data-active-color="true"] .usedColorsItemButton {
@@ -2469,7 +2533,7 @@
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  margin-left: 14px;
+  /* margin-left: 14px; */
   margin-right: 6px;
 }
 
@@ -2833,6 +2897,9 @@
 }
 
 .traceSectionDivider {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
   width: 100%;
   height: 1px;
   background: var(--ui-border-reg);

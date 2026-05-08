@@ -43,6 +43,10 @@ function getSwatchIconColor(hex: string) {
   return luminance > 0.75 ? "#111111" : "#ffffff";
 }
 
+function formatColorCodeLabel(color: PaletteColor) {
+  return color.brand === "dmc" ? `DMC ${color.code}` : color.code;
+}
+
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge" | "delete";
 type UsedColorsSortMode = "usage" | "color";
@@ -863,6 +867,9 @@ export function UsedColorsSummary({
             {displayedUsedColors.map((entry) => (
               (() => {
                 const isActiveColor = !isSelecting && activeColorId === entry.colorId;
+                const rowColor = colorsById[entry.colorId];
+                const rowColorName = rowColor?.name ?? entry.colorId;
+                const rowColorCode = rowColor ? formatColorCodeLabel(rowColor) : entry.colorId;
 
                 return (
               <li
@@ -922,8 +929,8 @@ export function UsedColorsSummary({
                       className={styles.usedColorSwatchButton}
                       aria-label={
                         isSelecting
-                          ? `${colorsById[entry.colorId]?.name ?? entry.colorId} color`
-                          : `Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`
+                          ? `${rowColorName} color`
+                          : `Replace ${rowColorName}`
                       }
                       aria-haspopup={isSelecting ? undefined : "dialog"}
                       aria-expanded={
@@ -956,14 +963,6 @@ export function UsedColorsSummary({
                           backgroundColor: swatchColor,
                         }}
                       >
-                        <span
-                          className={[
-                            styles.sidebarColorPreviewCountBadge,
-                            styles.usedColorSwatchCountBadge,
-                          ].join(" ")}
-                        >
-                          {entry.count}
-                        </span>
                         {swatchSymbol ? (
                           <span
                             className={styles.usedColorSwatchSymbol}
@@ -990,7 +989,7 @@ export function UsedColorsSummary({
                         anchorRef={swapSourceAnchorRef}
                         onRequestClose={() => setSwapSourceColorId(null)}
                         role="dialog"
-                        aria-label={`Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`}
+                        aria-label={`Replace ${rowColorName}`}
                         className={styles.usedColorsMergePopover}
                         style={{ whiteSpace: "normal" }}
                       >
@@ -1030,8 +1029,8 @@ export function UsedColorsSummary({
                     }}
                     aria-label={
                       isSelecting
-                        ? `Select ${colorsById[entry.colorId]?.name ?? entry.colorId}`
-                        : `Set ${colorsById[entry.colorId]?.name ?? entry.colorId} as active color`
+                        ? `Select ${rowColorName}`
+                        : `Set ${rowColorName} as active color`
                     }
                     aria-pressed={
                       isSelecting
@@ -1039,7 +1038,18 @@ export function UsedColorsSummary({
                         : isActiveColor
                     }
                   >
-                    <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
+                    <span className={styles.usedColorsItemText}>
+                      <span className={styles.usedColorsItemName}>{rowColorName}</span>
+                      <span className={styles.usedColorsItemCode}>{rowColorCode}</span>
+                    </span>
+                    <span
+                      className={[
+                        styles.sidebarColorPreviewCountBadge,
+                        styles.usedColorsItemCountBadge,
+                      ].join(" ")}
+                    >
+                      {entry.count}
+                    </span>
                   </button>
                 </div>
 
