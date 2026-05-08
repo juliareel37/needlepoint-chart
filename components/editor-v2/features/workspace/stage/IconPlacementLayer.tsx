@@ -653,6 +653,8 @@ function shouldUseCellSampledIconPreview(
   bounds: { left: number; top: number; width: number; height: number },
   metrics: GridWorldMetrics,
 ): boolean {
+  void metrics;
+
   if (!Number.isFinite(bounds.left) || !Number.isFinite(bounds.top)) {
     return false;
   }
@@ -662,18 +664,6 @@ function shouldUseCellSampledIconPreview(
   }
 
   if (bounds.width <= 0 || bounds.height <= 0) {
-    return false;
-  }
-
-  const right = bounds.left + bounds.width;
-  const bottom = bounds.top + bounds.height;
-  const isFullyInsideSurface =
-    bounds.left >= 0 &&
-    bounds.top >= 0 &&
-    right <= metrics.surfaceWidth &&
-    bottom <= metrics.surfaceHeight;
-
-  if (!isFullyInsideSurface) {
     return false;
   }
 
