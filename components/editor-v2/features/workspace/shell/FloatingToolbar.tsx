@@ -92,6 +92,7 @@ function FloatingToolbarPortalPopover({
   align = "start",
   children,
   clampToViewport = true,
+  closeOnInteractOutside = true,
   dockedToBottom = false,
   ignoreRefs = [],
   matchAnchorMinWidth = false,
@@ -104,6 +105,7 @@ function FloatingToolbarPortalPopover({
   anchorRef: React.RefObject<HTMLDivElement | null>;
   align?: "start" | "center";
   clampToViewport?: boolean;
+  closeOnInteractOutside?: boolean;
   dockedToBottom?: boolean;
   ignoreRefs?: Array<React.RefObject<HTMLElement | null>>;
   matchAnchorMinWidth?: boolean;
@@ -217,7 +219,7 @@ function FloatingToolbarPortalPopover({
   }, [mounted, updatePosition]);
 
   useEffect(() => {
-    if (!mounted || !onRequestClose) {
+    if (!mounted || !onRequestClose || !closeOnInteractOutside) {
       return;
     }
 
@@ -242,7 +244,14 @@ function FloatingToolbarPortalPopover({
 
     window.addEventListener("pointerdown", handlePointerDown, true);
     return () => window.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [anchorRef, ignoreRefs, mounted, onInteractOutsidePointerDown, onRequestClose]);
+  }, [
+    anchorRef,
+    closeOnInteractOutside,
+    ignoreRefs,
+    mounted,
+    onInteractOutsidePointerDown,
+    onRequestClose,
+  ]);
 
   if (!mounted) {
     return null;
@@ -1346,6 +1355,7 @@ export function FloatingToolbar({
             <FloatingToolbarPortalPopover
               align="center"
               anchorRef={drawPopoverTool === "erase" ? eraseAnchorRef : paintAnchorRef}
+              closeOnInteractOutside={false}
               onRequestClose={closeDrawMenu}
               role="dialog"
               aria-label="Draw size"
