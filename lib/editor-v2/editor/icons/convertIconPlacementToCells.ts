@@ -47,6 +47,7 @@ export async function renderCellSampledPlacementPreview(options: {
   previewContext.clearRect(0, 0, canvasWidth, canvasHeight);
 
   const pitch = options.metrics.cellSize + options.metrics.cellGap;
+  const gapOverlap = Math.max(0, options.metrics.cellGap / 2);
   const minCellX = Math.max(0, Math.floor(options.bounds.left / pitch));
   const minCellY = Math.max(0, Math.floor(options.bounds.top / pitch));
   const maxCellX = Math.min(
@@ -86,10 +87,25 @@ export async function renderCellSampledPlacementPreview(options: {
 
       const cellLeft = x * pitch - options.bounds.left;
       const cellTop = y * pitch - options.bounds.top;
+      const paintLeft = Math.max(0, cellLeft - gapOverlap);
+      const paintTop = Math.max(0, cellTop - gapOverlap);
+      const paintRight = Math.min(
+        canvasWidth,
+        cellLeft + options.metrics.cellSize + gapOverlap,
+      );
+      const paintBottom = Math.min(
+        canvasHeight,
+        cellTop + options.metrics.cellSize + gapOverlap,
+      );
       previewContext.fillStyle = `rgba(${pixel[0] ?? 0}, ${pixel[1] ?? 0}, ${pixel[2] ?? 0}, ${
         alpha / 255
       })`;
-      previewContext.fillRect(cellLeft, cellTop, options.metrics.cellSize, options.metrics.cellSize);
+      previewContext.fillRect(
+        paintLeft,
+        paintTop,
+        Math.max(1, paintRight - paintLeft),
+        Math.max(1, paintBottom - paintTop),
+      );
     }
   }
 

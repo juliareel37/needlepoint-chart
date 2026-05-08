@@ -82,7 +82,6 @@ export function IconPlacementLayer({
       worldBounds.width,
     ],
   );
-  const [coarsePointer, setCoarsePointer] = useState(false);
   const [previewTransform, setPreviewTransform] = useState<
     IconPlacementTransform | null
   >(null);
@@ -130,7 +129,7 @@ export function IconPlacementLayer({
     () => getIconPlacementBounds(baseRect, displayTransform),
     [baseRect, displayTransform],
   );
-  const mobileDisplayStageBounds = useMemo(
+  const displayStageBounds = useMemo(
     () => ({
       left: worldBounds.left + displayBounds.left * viewport.zoom,
       top: worldBounds.top + displayBounds.top * viewport.zoom,
@@ -139,18 +138,16 @@ export function IconPlacementLayer({
     }),
     [displayBounds, viewport.zoom, worldBounds.left, worldBounds.top],
   );
-  const mobileOverlayBounds = useMemo(
+  const overlayBounds = useMemo(
     () => ({
-      left: mobileDisplayStageBounds.left - stageBounds.left,
-      top: mobileDisplayStageBounds.top - stageBounds.top,
-      width: mobileDisplayStageBounds.width,
-      height: mobileDisplayStageBounds.height,
+      left: displayStageBounds.left - stageBounds.left,
+      top: displayStageBounds.top - stageBounds.top,
+      width: displayStageBounds.width,
+      height: displayStageBounds.height,
     }),
-    [mobileDisplayStageBounds, stageBounds.left, stageBounds.top],
+    [displayStageBounds, stageBounds.left, stageBounds.top],
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
-  const mobilePreviewIconRef = useRef<HTMLDivElement | null>(null);
-  const previewImageRef = useRef<HTMLImageElement | null>(null);
   const primitiveColors = useMemo(
     () =>
       placement.primitiveKind
@@ -212,15 +209,15 @@ export function IconPlacementLayer({
     placement.primitiveKind ? null : placement.src,
   );
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
-    if (coarsePointer && portalHost) {
+    if (portalHost) {
       setPreviewTransform(nextTransform);
-      const mobilePreviewIcon = mobilePreviewIconRef.current;
-      if (!mobilePreviewIcon) {
+      const previewIcon = previewIconRef.current;
+      if (!previewIcon) {
         return;
       }
 
       const nextBounds = projectMobileStageBounds(nextTransform, baseRect);
-      applyPreviewIconBox(mobilePreviewIcon, nextBounds, nextTransform.rotation);
+      applyPreviewIconBox(previewIcon, nextBounds, nextTransform.rotation);
       return;
     }
 
@@ -242,7 +239,6 @@ export function IconPlacementLayer({
     applyPreviewIconBox(previewIconRef.current, nextBounds, nextTransform.rotation);
   }, [
     baseRect,
-    coarsePointer,
     placement.primitiveKind,
     portalHost,
     projectMobileStageBounds,
@@ -358,30 +354,10 @@ export function IconPlacementLayer({
   ]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(pointer: coarse)");
-    const update = () => setCoarsePointer(mediaQuery.matches);
-
-    update();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", update);
-      return () => mediaQuery.removeEventListener("change", update);
-    }
-
-    mediaQuery.addListener(update);
-    return () => mediaQuery.removeListener(update);
-  }, []);
-
-  useEffect(() => {
     setPreviewTransform(null);
   }, [transform]);
 
-  const showMobilePositioning = coarsePointer && portalHost;
-  const mobileOverlay = showMobilePositioning
+  const portalOverlay = portalHost
     ? createPortal(
         <div
           style={{
@@ -393,13 +369,13 @@ export function IconPlacementLayer({
           }}
         >
           <div
-            ref={mobilePreviewIconRef}
+            ref={previewIconRef}
             style={{
               position: "absolute",
-              top: `${mobileOverlayBounds.top}px`,
-              left: `${mobileOverlayBounds.left}px`,
-              width: `${mobileOverlayBounds.width}px`,
-              height: `${mobileOverlayBounds.height}px`,
+              top: `${overlayBounds.top}px`,
+              left: `${overlayBounds.left}px`,
+              width: `${overlayBounds.width}px`,
+              height: `${overlayBounds.height}px`,
               pointerEvents: "none",
               display: "flex",
               alignItems: "center",
@@ -418,6 +394,7 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
+                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
@@ -442,7 +419,7 @@ export function IconPlacementLayer({
           <IconPlacementBoxOverlay
             ariaLabel="Icon placement controls"
             baseRect={baseRect}
-            bounds={mobileOverlayBounds}
+            bounds={overlayBounds}
             interactionBounds={displayBounds}
             getWorldPointFromClient={getWorldPointFromClient}
             onTransformCommit={handleTransformCommit}
@@ -464,8 +441,8 @@ export function IconPlacementLayer({
 
   return (
     <>
-      {mobileOverlay}
-      {!showMobilePositioning ? (
+      {portalOverlay}
+      {!portalHost ? (
         <div
           style={{
             position: "absolute",
@@ -497,7 +474,6 @@ export function IconPlacementLayer({
           >
             {previewSrc ? (
               <img
-                ref={previewImageRef}
                 src={previewSrc ?? undefined}
                 alt=""
                 aria-hidden="true"
@@ -505,6 +481,7 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
+                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
