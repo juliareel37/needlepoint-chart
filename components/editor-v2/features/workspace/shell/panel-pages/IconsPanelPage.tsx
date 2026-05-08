@@ -57,23 +57,28 @@ interface IconsPanelPageProps {
   dispatch: EditorStore["dispatch"];
   gridMetrics: GridWorldMetrics;
   onBackRequestHandled?: () => void;
-  onViewChange: (view: IconsPanelView) => void;
+  onScrollPositionChange?: (scrollTop: number) => void;
+  onViewChange: (
+    view: IconsPanelView,
+    options?: { overviewScrollTop?: number },
+  ) => void;
   placement: IconPlacementSession | null;
+  persistedScrollTop?: number;
   view: IconsPanelView;
   viewportCenter: WorldPoint | null;
   viewportWidth: number | null;
   viewportHeight: number | null;
 }
 
-const ICONS_PANEL_OVERVIEW_SCROLL_KEY = "overview";
-
 export function IconsPanelPage({
   backRequestKey = 0,
   dispatch,
   gridMetrics,
   onBackRequestHandled,
+  onScrollPositionChange,
   onViewChange,
   placement,
+  persistedScrollTop = 0,
   view,
   viewportCenter,
   viewportWidth,
@@ -97,7 +102,6 @@ export function IconsPanelPage({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const scrollPositionsRef = useRef<Map<string, number>>(new Map());
   const primitivePreviewStrokeColor = useMemo(
     () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
     [resolvedThemeMode],
@@ -109,11 +113,12 @@ export function IconsPanelPage({
   const handleViewChange = (nextView: IconsPanelView) => {
     const content = contentRef.current;
 
-    if (content && view.type === "overview") {
-      scrollPositionsRef.current.set(ICONS_PANEL_OVERVIEW_SCROLL_KEY, content.scrollTop);
-    }
-
-    onViewChange(nextView);
+    onViewChange(
+      nextView,
+      content && view.type === "overview"
+        ? { overviewScrollTop: content.scrollTop }
+        : undefined,
+    );
   };
 
   useEffect(() => {
@@ -304,12 +309,8 @@ export function IconsPanelPage({
       return;
     }
 
-    const savedScrollTop =
-      view.type === "overview"
-        ? (scrollPositionsRef.current.get(ICONS_PANEL_OVERVIEW_SCROLL_KEY) ?? 0)
-        : 0;
-    content.scrollTop = savedScrollTop;
-  }, [canRestoreScroll, view.type]);
+    content.scrollTop = persistedScrollTop;
+  }, [canRestoreScroll, persistedScrollTop, view.type]);
   const iconPreviewSrcById = useMemo(
     () =>
       iconItemsForPreview.reduce<Record<string, string>>((accumulator, icon) => {
@@ -502,10 +503,7 @@ export function IconsPanelPage({
             }
 
             if (view.type === "overview") {
-              scrollPositionsRef.current.set(
-                ICONS_PANEL_OVERVIEW_SCROLL_KEY,
-                content.scrollTop,
-              );
+              onScrollPositionChange?.(content.scrollTop);
             }
           }}
         >

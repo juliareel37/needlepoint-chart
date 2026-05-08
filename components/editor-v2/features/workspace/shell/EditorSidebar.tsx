@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
@@ -165,6 +165,7 @@ export function EditorSidebar({
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
   const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
+  const iconsOverviewScrollTopRef = useRef(0);
 
   useEffect(() => {
     if (!requestedColorPanelView) {
@@ -174,11 +175,16 @@ export function EditorSidebar({
     setColorPanelView(requestedColorPanelView);
   }, [requestedColorPanelView, requestedColorPanelViewKey]);
 
-  useEffect(() => {
-    if (activeSection !== "icons") {
-      setIconsPanelView({ type: "overview" });
+  const handleIconsPanelViewChange = (
+    nextView: IconsPanelView,
+    options?: { overviewScrollTop?: number },
+  ) => {
+    if (typeof options?.overviewScrollTop === "number") {
+      iconsOverviewScrollTopRef.current = options.overviewScrollTop;
     }
-  }, [activeSection]);
+
+    setIconsPanelView(nextView);
+  };
 
   return (
     <aside className={styles.sidebar}>
@@ -376,8 +382,16 @@ export function EditorSidebar({
               onBackRequestHandled={() => {
                 setIconsPanelView({ type: "overview" });
               }}
-              onViewChange={setIconsPanelView}
+              onScrollPositionChange={(scrollTop) => {
+                if (iconsPanelView.type === "overview") {
+                  iconsOverviewScrollTopRef.current = scrollTop;
+                }
+              }}
+              onViewChange={handleIconsPanelViewChange}
               placement={iconPlacement}
+              persistedScrollTop={
+                iconsPanelView.type === "overview" ? iconsOverviewScrollTopRef.current : 0
+              }
               view={iconsPanelView}
               viewportCenter={textViewportCenter}
               viewportWidth={textViewportWidth}
