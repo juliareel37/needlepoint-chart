@@ -176,6 +176,12 @@ export function ColorLibrary({
 
   function setFamilyFilter(nextFamilyFilter: DmcColorFamilyFilter | "all") {
     if (nextFamilyFilter === familyFilter) {
+      if (nextFamilyFilter === "all") {
+        return;
+      }
+
+      writePersistence(viewRef.current, "all");
+      setFamilyFilterState("all");
       return;
     }
 
