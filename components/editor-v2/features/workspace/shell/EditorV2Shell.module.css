@@ -2561,7 +2561,7 @@
   --used-colors-selection-dismiss-space: 36px;
   position: fixed;
   right: calc(8px + var(--used-colors-selection-dismiss-space));
-  bottom: 8px;
+  bottom: 3%;
   left: 8px;
   z-index: 1;
   display: flex;
