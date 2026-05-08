@@ -21,6 +21,7 @@ type ColorLibraryLayoutMode = "list" | "grid";
 type ColorLibraryPersistenceState = {
   view: ColorLibraryView;
   familyFilter: DmcColorFamilyFilter | "all";
+  layoutMode: ColorLibraryLayoutMode;
 };
 
 const colorLibraryPersistence = new Map<string, ColorLibraryPersistenceState>();
@@ -103,7 +104,9 @@ export function ColorLibrary({
   const [familyFilter, setFamilyFilterState] = useState<DmcColorFamilyFilter | "all">(
     () => initialPersistenceState?.familyFilter ?? "all",
   );
-  const [layoutMode, setLayoutMode] = useState<ColorLibraryLayoutMode>("grid");
+  const [layoutMode, setLayoutModeState] = useState<ColorLibraryLayoutMode>(
+    () => initialPersistenceState?.layoutMode ?? "grid",
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchInputInteractive, setSearchInputInteractive] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<{
@@ -125,7 +128,6 @@ export function ColorLibrary({
   const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement | null>(null);
   const viewRef = useRef<ColorLibraryView>(view);
-  const scrollToActiveFrameRef = useRef<number | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const matchesSearch = (color: PaletteColor) =>
@@ -153,6 +155,7 @@ export function ColorLibrary({
   function writePersistence(
     nextView: ColorLibraryView,
     nextFamilyFilter: DmcColorFamilyFilter | "all",
+    nextLayoutMode: ColorLibraryLayoutMode,
   ) {
     if (!persistenceKey) {
       return;
@@ -161,6 +164,7 @@ export function ColorLibrary({
     colorLibraryPersistence.set(persistenceKey, {
       view: nextView,
       familyFilter: nextFamilyFilter,
+      layoutMode: nextLayoutMode,
     });
   }
 
@@ -169,7 +173,7 @@ export function ColorLibrary({
       return;
     }
 
-    writePersistence(nextView, familyFilter);
+    writePersistence(nextView, familyFilter, layoutMode);
 
     setViewState(nextView);
   }
@@ -180,17 +184,26 @@ export function ColorLibrary({
         return;
       }
 
-      writePersistence(viewRef.current, "all");
+      writePersistence(viewRef.current, "all", layoutMode);
       setFamilyFilterState("all");
       return;
     }
 
-    writePersistence(viewRef.current, nextFamilyFilter);
+    writePersistence(viewRef.current, nextFamilyFilter, layoutMode);
     setFamilyFilterState(nextFamilyFilter);
   }
 
+  function setLayoutMode(nextLayoutMode: ColorLibraryLayoutMode) {
+    if (nextLayoutMode === layoutMode) {
+      return;
+    }
+
+    writePersistence(viewRef.current, familyFilter, nextLayoutMode);
+    setLayoutModeState(nextLayoutMode);
+  }
+
   function toggleLayoutMode() {
-    setLayoutMode((current) => (current === "grid" ? "list" : "grid"));
+    setLayoutMode(layoutMode === "grid" ? "list" : "grid");
   }
 
   useEffect(() => {
@@ -220,34 +233,21 @@ export function ColorLibrary({
       return;
     }
 
-    const target = libraryRef.current?.querySelector<HTMLButtonElement>(
+    const container = libraryRef.current;
+    const target = container?.querySelector<HTMLButtonElement>(
       `[data-color-library-id="${activeColorId}"]`,
     );
 
-    if (!target) {
+    if (!container || !target) {
       return;
     }
 
-    if (scrollToActiveFrameRef.current !== null) {
-      cancelAnimationFrame(scrollToActiveFrameRef.current);
-    }
+    const targetCenterOffset =
+      target.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const destinationScrollTop = Math.min(Math.max(targetCenterOffset, 0), maxScrollTop);
 
-    scrollToActiveFrameRef.current = window.requestAnimationFrame(() => {
-      scrollToActiveFrameRef.current = window.requestAnimationFrame(() => {
-        target.scrollIntoView({
-          block: "center",
-          inline: "nearest",
-        });
-        scrollToActiveFrameRef.current = null;
-      });
-    });
-
-    return () => {
-      if (scrollToActiveFrameRef.current !== null) {
-        cancelAnimationFrame(scrollToActiveFrameRef.current);
-        scrollToActiveFrameRef.current = null;
-      }
-    };
+    container.scrollTop = destinationScrollTop;
   }, [activeColorId, familyFilter, layoutMode, scrollActiveColorIntoView, view, searchQuery]);
 
   function updateTooltip(target: HTMLButtonElement | null) {
@@ -473,6 +473,7 @@ export function ColorLibrary({
         type="button"
         onClick={() => onColorSelect(color.id)}
         className={styles.colorListRow}
+        data-color-library-id={color.id}
         data-active={selected ? "true" : "false"}
         aria-label={`${color.name} (${color.code})`}
         aria-pressed={selected}
