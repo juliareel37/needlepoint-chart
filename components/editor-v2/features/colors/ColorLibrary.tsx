@@ -145,6 +145,7 @@ export function ColorLibrary({
   const familySections = getDmcColorFamilySections(familyFilteredColors);
   const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
   const hasSearchQuery = normalizedSearchQuery.length > 0;
+  const hasActiveFamilyFilter = familyFilter !== "all";
   const canShowFeaturedView = showFeaturedSection;
   const activeView = canShowFeaturedView ? view : "all";
   const segmentedOptions = [
@@ -611,7 +612,7 @@ export function ColorLibrary({
               <button
                 type="button"
                 className={styles.searchControlButton}
-                data-active={settingsOpen ? "true" : "false"}
+                data-active={settingsOpen || hasActiveFamilyFilter ? "true" : "false"}
                 aria-label={
                   settingsOpen ? "Hide color library settings" : "Show color library settings"
                 }

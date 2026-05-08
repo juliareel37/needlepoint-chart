@@ -84,10 +84,10 @@
   justify-content: center;
   min-height: 24px;
   padding: 0 10px;
-  border: 1px solid var(--ui-border-reg);
+  border: 1px solid var(--button-outlined-default-border);
   border-radius: 999px;
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
+  background: var(--button-outlined-default);
+  color: var(--button-outlined-default-text);
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
@@ -100,9 +100,10 @@
 }
 
 .familyFilterChip[data-selected="true"] {
-  border-color: var(--button-secondary-active);
-  background: var(--button-secondary-active);
-  color: var(--text-primary);
+  border-color: var(--button-outlined-active-border);
+  background: var(--button-outlined-active);
+  color: var(--button-outlined-active-text);
+  font-weight: 600;
 }
 
 .familyFilterChip:focus-visible {
@@ -145,17 +146,20 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 .searchControlButton[data-active="true"] {
-  background: var(--button-ghost2-hover);
-  color: var(--text-primary);
+  background: var(--button-outlined-active);
+  color: var(--button-outlined-active-text);
 }
 
 .viewControl {
@@ -450,20 +454,26 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .searchControlButton:hover {
+  .searchControlButton:hover:not([data-active="true"]) {
     background: var(--button-ghost2-hover);
     color: var(--text-primary);
   }
 
+  .searchControlButton[data-active="true"]:hover {
+    background: var(--button-outlined-active);
+    color: var(--button-outlined-active-text);
+  }
+
   .familyFilterChip:hover {
-    border-color: var(--ui-border-strong);
-    background: var(--button-secondary-hover);
-    color: var(--text-primary);
+    border-color: var(--button-outlined-default-border);
+    background: var(--button-outlined-hover);
+    color: var(--button-outlined-default-text);
   }
 
   .familyFilterChip[data-selected="true"]:hover {
-    border-color: var(--button-secondary-active);
-    background: var(--button-secondary-active);
+    border-color: var(--button-outlined-active-border);
+    background: var(--button-outlined-active);
+    color: var(--button-outlined-active-text);
   }
 
   .colorListRow:hover:not(:disabled) {
