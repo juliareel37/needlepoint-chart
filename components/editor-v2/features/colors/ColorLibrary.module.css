@@ -1,5 +1,4 @@
 .libraryShell {
-  --color-library-tooltip-overflow-padding: 16px;
   position: relative;
   overflow: visible;
   isolation: isolate;
@@ -348,10 +347,9 @@
 }
 
 .tooltipLayer {
-  position: absolute;
-  inset: calc(-1 * var(--color-library-tooltip-overflow-padding));
+  position: fixed;
+  inset: 0;
   z-index: calc(var(--z-editor-popover-high) - 1);
-  overflow: visible;
   pointer-events: none;
 }
 

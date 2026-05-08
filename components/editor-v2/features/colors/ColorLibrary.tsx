@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/design-system";
 import { ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system";
@@ -25,7 +26,6 @@ type ColorLibraryPersistenceState = {
 };
 
 const colorLibraryPersistence = new Map<string, ColorLibraryPersistenceState>();
-const TOOLTIP_OVERFLOW_PADDING = 16;
 
 function getSwatchCheckColor(hex: string) {
   const rgb = hexToRgb(hex);
@@ -290,10 +290,8 @@ export function ColorLibrary({
       key,
       label,
       detail,
-      anchorLeft: targetRect.left - shellRect.left + targetRect.width / 2,
-      anchorTop: shouldPlaceBelow
-        ? targetRect.bottom - shellRect.top
-        : targetRect.top - shellRect.top,
+      anchorLeft: targetRect.left + targetRect.width / 2,
+      anchorTop: shouldPlaceBelow ? targetRect.bottom : targetRect.top,
       placement: shouldPlaceBelow ? "bottom" : "top",
       target,
     });
@@ -323,13 +321,13 @@ export function ColorLibrary({
   }, [activeTooltip]);
 
   useLayoutEffect(() => {
-    if (!activeTooltip || !libraryShellRef.current || !tooltipRef.current) {
+    if (!activeTooltip || !tooltipRef.current) {
       setTooltipLayout(null);
       return;
     }
 
-    const shellWidth = libraryShellRef.current.clientWidth;
-    const shellHeight = libraryShellRef.current.clientHeight;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const tooltipWidth = tooltipRef.current.offsetWidth;
     const tooltipHeight = tooltipRef.current.offsetHeight;
     const sidePadding = 8;
@@ -337,9 +335,9 @@ export function ColorLibrary({
     const arrowHalfWidth = 4;
     const tooltipGap = 10;
     const minLeft = sidePadding;
-    const maxLeft = Math.max(sidePadding, shellWidth - sidePadding - tooltipWidth);
+    const maxLeft = Math.max(sidePadding, viewportWidth - sidePadding - tooltipWidth);
     const minTop = sidePadding;
-    const maxTop = Math.max(sidePadding, shellHeight - sidePadding - tooltipHeight);
+    const maxTop = Math.max(sidePadding, viewportHeight - sidePadding - tooltipHeight);
     const left = Math.min(
       Math.max(activeTooltip.anchorLeft - tooltipWidth / 2, minLeft),
       maxLeft,
@@ -766,45 +764,43 @@ export function ColorLibrary({
           ) : null}
         </div>
       </div>
-      {activeTooltip ? (
-        <div aria-hidden="true" className={styles.tooltipLayer}>
-          <span
-            ref={tooltipRef}
-            className={styles.tooltip}
-            data-placement={activeTooltip.placement}
-            style={{
-              left: `${
-                (tooltipLayout?.left ?? activeTooltip.anchorLeft) + TOOLTIP_OVERFLOW_PADDING
-              }px`,
-              top: `${
-                (tooltipLayout?.top ??
-                  (activeTooltip.placement === "top"
-                    ? activeTooltip.anchorTop
-                    : activeTooltip.anchorTop + 10)) + TOOLTIP_OVERFLOW_PADDING
-              }px`,
-            }}
-          >
-            <span className={styles.tooltipTitle}>{activeTooltip.label}</span>
-            {activeTooltip.detail ? (
-              <span className={styles.tooltipDetail}>{activeTooltip.detail}</span>
-            ) : null}
-          </span>
-          <span
-            className={styles.tooltipArrow}
-            data-placement={activeTooltip.placement}
-            style={{
-              left: `${
-                (tooltipLayout?.arrowLeft ?? activeTooltip.anchorLeft - 4) +
-                TOOLTIP_OVERFLOW_PADDING
-              }px`,
-              top:
-                activeTooltip.placement === "top"
-                  ? `${activeTooltip.anchorTop - 14 + TOOLTIP_OVERFLOW_PADDING}px`
-                  : `${activeTooltip.anchorTop + 6 + TOOLTIP_OVERFLOW_PADDING}px`,
-            }}
-          />
-        </div>
-      ) : null}
+      {activeTooltip
+        ? createPortal(
+            <div aria-hidden="true" className={styles.tooltipLayer}>
+              <span
+                ref={tooltipRef}
+                className={styles.tooltip}
+                data-placement={activeTooltip.placement}
+                style={{
+                  left: `${tooltipLayout?.left ?? activeTooltip.anchorLeft}px`,
+                  top: `${
+                    tooltipLayout?.top ??
+                    (activeTooltip.placement === "top"
+                      ? activeTooltip.anchorTop
+                      : activeTooltip.anchorTop + 10)
+                  }px`,
+                }}
+              >
+                <span className={styles.tooltipTitle}>{activeTooltip.label}</span>
+                {activeTooltip.detail ? (
+                  <span className={styles.tooltipDetail}>{activeTooltip.detail}</span>
+                ) : null}
+              </span>
+              <span
+                className={styles.tooltipArrow}
+                data-placement={activeTooltip.placement}
+                style={{
+                  left: `${tooltipLayout?.arrowLeft ?? activeTooltip.anchorLeft - 4}px`,
+                  top:
+                    activeTooltip.placement === "top"
+                      ? `${activeTooltip.anchorTop - 14}px`
+                      : `${activeTooltip.anchorTop + 6}px`,
+                }}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
