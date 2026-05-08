@@ -42,6 +42,8 @@ interface IconPlacementLayerProps {
   zoom: number;
 }
 
+const MAX_CELL_SAMPLED_PREVIEW_PIXELS = 4_194_304;
+
 export function IconPlacementLayer({
   dispatch,
   getWorldPointFromClient,
@@ -309,6 +311,13 @@ export function IconPlacementLayer({
         return;
       }
 
+      if (!shouldUseCellSampledIconPreview(displayBounds, metrics)) {
+        if (!cancelled) {
+          setPreviewSrc(basePreviewSrc);
+        }
+        return;
+      }
+
       try {
         const nextPreviewSrc = await renderCellSampledPlacementPreview({
           src: basePreviewSrc,
@@ -523,6 +532,37 @@ export function IconPlacementLayer({
       ) : null}
     </>
   );
+}
+
+function shouldUseCellSampledIconPreview(
+  bounds: { left: number; top: number; width: number; height: number },
+  metrics: GridWorldMetrics,
+): boolean {
+  if (!Number.isFinite(bounds.left) || !Number.isFinite(bounds.top)) {
+    return false;
+  }
+
+  if (!Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) {
+    return false;
+  }
+
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    return false;
+  }
+
+  const right = bounds.left + bounds.width;
+  const bottom = bounds.top + bounds.height;
+  const isFullyInsideSurface =
+    bounds.left >= 0 &&
+    bounds.top >= 0 &&
+    right <= metrics.surfaceWidth &&
+    bottom <= metrics.surfaceHeight;
+
+  if (!isFullyInsideSurface) {
+    return false;
+  }
+
+  return bounds.width * bounds.height <= MAX_CELL_SAMPLED_PREVIEW_PIXELS;
 }
 
 function applyPreviewIconBox(
