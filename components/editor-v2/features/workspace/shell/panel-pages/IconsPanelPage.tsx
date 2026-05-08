@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
@@ -53,8 +53,10 @@ export type IconsPanelView =
   | { type: "category"; category: string };
 
 interface IconsPanelPageProps {
+  backRequestKey?: number;
   dispatch: EditorStore["dispatch"];
   gridMetrics: GridWorldMetrics;
+  onBackRequestHandled?: () => void;
   onViewChange: (view: IconsPanelView) => void;
   placement: IconPlacementSession | null;
   view: IconsPanelView;
@@ -63,9 +65,13 @@ interface IconsPanelPageProps {
   viewportHeight: number | null;
 }
 
+const ICONS_PANEL_OVERVIEW_SCROLL_KEY = "overview";
+
 export function IconsPanelPage({
+  backRequestKey = 0,
   dispatch,
   gridMetrics,
+  onBackRequestHandled,
   onViewChange,
   placement,
   view,
@@ -90,18 +96,47 @@ export function IconsPanelPage({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const scrollPositionsRef = useRef<Map<string, number>>(new Map());
   const primitivePreviewStrokeColor = useMemo(
     () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
     [resolvedThemeMode],
   );
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const selectedCategory = view.type === "category" ? view.category : null;
+  const handledBackRequestKeyRef = useRef(backRequestKey);
+
+  const handleViewChange = (nextView: IconsPanelView) => {
+    const content = contentRef.current;
+
+    if (content && view.type === "overview") {
+      scrollPositionsRef.current.set(ICONS_PANEL_OVERVIEW_SCROLL_KEY, content.scrollTop);
+    }
+
+    onViewChange(nextView);
+  };
+
+  useEffect(() => {
+    if (backRequestKey === handledBackRequestKeyRef.current) {
+      return;
+    }
+
+    handledBackRequestKeyRef.current = backRequestKey;
+    handleViewChange({ type: "overview" });
+    onBackRequestHandled?.();
+  }, [backRequestKey, onBackRequestHandled]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadIconsForCurrentView() {
       const loadStartedAt = performance.now();
+      const shouldApplySkeletonDelay =
+        view.type === "overview"
+          ? normalizedSearchQuery.length > 0
+            ? iconFullLibraryCache === null
+            : iconOverviewCache === null
+          : !iconCategoryCache.has(view.category) && iconFullLibraryCache === null;
       setLoading(true);
       setLoadError(null);
 
@@ -143,11 +178,13 @@ export function IconsPanelPage({
           setLoadError(error instanceof Error ? error.message : "Unable to load icons.");
         }
       } finally {
-        const elapsed = performance.now() - loadStartedAt;
-        const remainingDelay = Math.max(ICON_SKELETON_MIN_DURATION_MS - elapsed, 0);
+        if (shouldApplySkeletonDelay) {
+          const elapsed = performance.now() - loadStartedAt;
+          const remainingDelay = Math.max(ICON_SKELETON_MIN_DURATION_MS - elapsed, 0);
 
-        if (remainingDelay > 0) {
-          await new Promise((resolve) => window.setTimeout(resolve, remainingDelay));
+          if (remainingDelay > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remainingDelay));
+          }
         }
 
         if (!cancelled) {
@@ -232,6 +269,8 @@ export function IconsPanelPage({
   );
   const categoryContentReady =
     view.type === "category" && loadedCategoryState.category === view.category;
+  const canRestoreScroll =
+    !loading && (view.type !== "category" || categoryContentReady);
   const placementActive = Boolean(placement);
   const hasSearchResults = iconGroups.length > 0;
   const hasCategorySearchResults = categoryContentReady && visibleCategoryIcons.length > 0;
@@ -253,6 +292,24 @@ export function IconsPanelPage({
     categoryContentReady,
     visibleCategoryIcons,
   ]);
+
+  useLayoutEffect(() => {
+    if (!canRestoreScroll) {
+      return;
+    }
+
+    const content = contentRef.current;
+
+    if (!content) {
+      return;
+    }
+
+    const savedScrollTop =
+      view.type === "overview"
+        ? (scrollPositionsRef.current.get(ICONS_PANEL_OVERVIEW_SCROLL_KEY) ?? 0)
+        : 0;
+    content.scrollTop = savedScrollTop;
+  }, [canRestoreScroll, view.type]);
   const iconPreviewSrcById = useMemo(
     () =>
       iconItemsForPreview.reduce<Record<string, string>>((accumulator, icon) => {
@@ -413,7 +470,7 @@ export function IconsPanelPage({
   }
 
   return (
-    <section className={styles.sidebarSection}>
+    <section className={[styles.sidebarSection, styles.iconsPanelSection].join(" ")}>
       <div className={styles.iconsPanelPageBody}>
         <div className={styles.sidebarSubsection}>
           <div className={styles.sidebarSearchField}>
@@ -435,9 +492,22 @@ export function IconsPanelPage({
               ? `icons-category-${selectedCategory ?? "none"}`
               : `icons-overview-${normalizedSearchQuery.length > 0 ? "search" : "default"}`
           }
-          className={[styles.iconsPanelPageContent, !loading ? styles.panelContentFadeIn : null]
-            .filter(Boolean)
-            .join(" ")}
+          ref={contentRef}
+          className={styles.iconsPanelPageContent}
+          onScroll={() => {
+            const content = contentRef.current;
+
+            if (!content) {
+              return;
+            }
+
+            if (view.type === "overview") {
+              scrollPositionsRef.current.set(
+                ICONS_PANEL_OVERVIEW_SCROLL_KEY,
+                content.scrollTop,
+              );
+            }
+          }}
         >
           {view.type === "category" ? (
             <>
@@ -507,7 +577,9 @@ export function IconsPanelPage({
                           className={styles.sidebarHeaderAction}
                           aria-label={`View all icons in ${group.category}`}
                           title={`View all icons in ${group.category}`}
-                          onClick={() => onViewChange({ type: "category", category: group.category })}
+                          onClick={() =>
+                            handleViewChange({ type: "category", category: group.category })
+                          }
                         >
                           <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
                         </Button>
@@ -523,7 +595,9 @@ export function IconsPanelPage({
                             className={styles.iconLibraryMoreButton}
                             aria-label={`View ${hiddenCount} more icons in ${group.category}`}
                             title={`View ${hiddenCount} more icons in ${group.category}`}
-                            onClick={() => onViewChange({ type: "category", category: group.category })}
+                            onClick={() =>
+                              handleViewChange({ type: "category", category: group.category })
+                            }
                           >
                             + {hiddenCount} more
                           </Button>

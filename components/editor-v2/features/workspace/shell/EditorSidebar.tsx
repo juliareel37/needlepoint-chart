@@ -164,6 +164,7 @@ export function EditorSidebar({
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
+  const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
 
   useEffect(() => {
     if (!requestedColorPanelView) {
@@ -209,7 +210,7 @@ export function EditorSidebar({
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to icon categories"
                 title="Back to icon categories"
-                onClick={() => setIconsPanelView({ type: "overview" })}
+                onClick={() => setIconsPanelBackRequestKey((current) => current + 1)}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
               </Button>
@@ -369,8 +370,12 @@ export function EditorSidebar({
 
           {activeSection === "icons" ? (
             <IconsPanelPage
+              backRequestKey={iconsPanelBackRequestKey}
               dispatch={dispatch}
               gridMetrics={gridMetrics}
+              onBackRequestHandled={() => {
+                setIconsPanelView({ type: "overview" });
+              }}
               onViewChange={setIconsPanelView}
               placement={iconPlacement}
               view={iconsPanelView}
