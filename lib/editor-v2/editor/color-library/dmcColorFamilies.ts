@@ -23,6 +23,13 @@ export type DmcColorFamilySection = {
   colors: PaletteColor[];
 };
 
+export type DmcColorFamilyFilter = DmcColorFamily | "other";
+
+export type DmcColorFamilyFilterOption = {
+  value: DmcColorFamilyFilter;
+  label: string;
+};
+
 const COMBINED_GREYSCALE_FAMILIES: DmcColorFamily[] = ["grey", "white", "black"];
 
 const DMC_COLOR_FAMILY_LABELS: Record<DmcColorFamily, string> = {
@@ -111,4 +118,13 @@ export function getDmcColorFamilySections(colors: PaletteColor[]): DmcColorFamil
   }
 
   return sections;
+}
+
+export function getDmcColorFamilyFilterOptions(
+  colors: PaletteColor[],
+): DmcColorFamilyFilterOption[] {
+  return getDmcColorFamilySections(colors).map((section) => ({
+    value: section.family,
+    label: section.label,
+  }));
 }

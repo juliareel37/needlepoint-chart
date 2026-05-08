@@ -59,9 +59,55 @@
     var(--color-library-body-padding-left);
 }
 
+.searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .searchField {
   position: relative;
+  min-width: 0;
   color: var(--text-primary);
+}
+
+.familyFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.familyFilterChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.familyFilterChip[data-selected="true"] {
+  border-color: var(--button-secondary-active);
+  background: var(--button-secondary-active);
+  color: var(--text-primary);
+}
+
+.familyFilterChip:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
 }
 
 .searchIcon {
@@ -82,13 +128,17 @@
   padding-top: 6px !important;
   padding-bottom: 6px !important;
   padding-left: 32px !important;
-  padding-right: 40px !important;
+  padding-right: 12px !important;
 }
 
-.searchSettingsTrigger {
-  position: absolute;
-  top: 50%;
-  right: 6px;
+.searchControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.searchControlButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -100,8 +150,12 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transform: translateY(-50%);
   transition: background-color 140ms ease, color 140ms ease;
+}
+
+.searchControlButton[data-active="true"] {
+  background: var(--button-ghost2-hover);
+  color: var(--text-primary);
 }
 
 .viewControl {
@@ -112,52 +166,31 @@
   min-width: 0;
 }
 
-.layoutToggle {
-  width: auto;
-}
-
-.layoutToggleItem {
-  min-width: 28px;
-  padding: 3px 8px;
-}
-
-.layoutToggleIcon {
-  display: inline-grid;
-  place-items: center;
-  color: inherit;
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
-}
-
-.layoutToggleIcon > span {
-  width: 12px;
-  height: 12px;
-}
-
-.searchSettingsTrigger:focus-visible {
+.searchControlButton:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 1px;
 }
 
-.searchSettingsTriggerIcon {
+.searchControlIcon {
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
 }
 
-.searchSettingsTriggerIcon > span {
+.searchControlIcon > span {
   width: 14px;
   height: 14px;
 }
 
-.settingsMenu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: var(--z-editor-popover-high);
-  min-width: 168px;
-  padding: 10px;
+.settingsPanel {
+  border-top: 1px solid var(--ui-border-subtle);
+  padding-top: 2px;
+}
+
+.settingsPanelContent {
+  display: grid;
+  gap: 10px;
+  /* padding-top: 10px; */
 }
 
 .settingsMenuSection {
@@ -409,9 +442,20 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .searchSettingsTrigger:hover {
+  .searchControlButton:hover {
     background: var(--button-ghost2-hover);
     color: var(--text-primary);
+  }
+
+  .familyFilterChip:hover {
+    border-color: var(--ui-border-strong);
+    background: var(--button-secondary-hover);
+    color: var(--text-primary);
+  }
+
+  .familyFilterChip[data-selected="true"]:hover {
+    border-color: var(--button-secondary-active);
+    background: var(--button-secondary-active);
   }
 
   .colorListRow:hover:not(:disabled) {

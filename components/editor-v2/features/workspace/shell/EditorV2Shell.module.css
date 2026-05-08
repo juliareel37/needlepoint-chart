@@ -696,9 +696,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  min-height: 32px;
-  padding-inline: 8px;
+  min-width: 24px;
+  min-height: 24px;
+  padding-inline: 6px;
   align-self: center;
   border-radius: 8px;
   color: var(--text-primary);

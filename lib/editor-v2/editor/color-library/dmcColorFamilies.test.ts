@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { PaletteColor } from "../store/state";
-import { getDmcColorFamily, getDmcColorFamilySections } from "./dmcColorFamilies";
+import {
+  getDmcColorFamily,
+  getDmcColorFamilyFilterOptions,
+  getDmcColorFamilySections,
+} from "./dmcColorFamilies";
 
 describe("getDmcColorFamily", () => {
   it("uses the family attached to the dmc color metadata", () => {
@@ -37,13 +41,29 @@ describe("getDmcColorFamilySections", () => {
     expect(sections.map((section) => section.label)).toEqual([
       "Red",
       "Pink",
-      "Black",
+      "Grey / B&W",
       "Other",
     ]);
     expect(sections[0]?.colors.map((color) => color.code)).toEqual(["321"]);
     expect(sections[1]?.colors.map((color) => color.code)).toEqual(["602"]);
     expect(sections[2]?.colors.map((color) => color.code)).toEqual(["310"]);
     expect(sections[3]?.colors.map((color) => color.code)).toEqual(["151"]);
+  });
+});
+
+describe("getDmcColorFamilyFilterOptions", () => {
+  it("builds filter chips from the rendered family sections", () => {
+    expect(
+      getDmcColorFamilyFilterOptions([
+        createColor("dmc-321", "321", "red"),
+        createColor("dmc-310", "310", "black"),
+        createColor("dmc-151", "151", "mystery"),
+      ]),
+    ).toEqual([
+      { value: "red", label: "Red" },
+      { value: "grey", label: "Grey / B&W" },
+      { value: "other", label: "Other" },
+    ]);
   });
 });
 
