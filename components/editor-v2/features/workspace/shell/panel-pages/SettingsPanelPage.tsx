@@ -53,25 +53,32 @@ export function SettingsPanelPage({
                   label: (
                     <>
                       <ButtonIcon icon="/icons/lucide/sun.svg" />
-                      Light
+                      <span className={styles.screenReaderOnly}>Light</span>
                     </>
                   ),
                   value: "light",
                 },
                 {
-                  label: "System",
+                  label: (
+                    <>
+                      <ButtonIcon icon="/icons/lucide/monitor.svg" />
+                      <span className={styles.screenReaderOnly}>System</span>
+                    </>
+                  ),
                   value: "system",
                 },
                 {
                   label: (
                     <>
                       <ButtonIcon icon="/icons/lucide/moon.svg" />
-                      Dark
+                      <span className={styles.screenReaderOnly}>Dark</span>
                     </>
                   ),
                   value: "dark",
                 },
               ]}
+              className={styles.themeControl}
+              itemClassName={styles.themeControlItem}
               onChange={(nextValue) => setThemeMode(nextValue)}
             />
           </div>

@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  ButtonIcon,
   Toolbar,
   ToolbarAnchor,
   ToolbarButton,
   ToolbarIcon,
   ToolbarPopover,
 } from "@/components/design-system";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
+import { useAuthStatus } from "@/lib/auth/client";
 import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
   getToolbarPopoverMeasuredWidth,
   getToolbarPopoverHorizontalPosition,
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
-import { CanvasAidsControls } from "./CanvasAidsControls";
+import { CanvasAidsControls, SegmentedChoiceSetting } from "./CanvasAidsControls";
 import styles from "./EditorV2Shell.module.css";
 
 interface CanvasAidsFloatingToolbarProps {
@@ -33,6 +36,8 @@ export function CanvasAidsFloatingToolbar({
   showSymbols,
   touchSnappingEnabled,
 }: CanvasAidsFloatingToolbarProps) {
+  const { isSignedIn } = useAuthStatus();
+  const { themeMode, setThemeMode } = useThemeMode();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
@@ -186,6 +191,48 @@ export function CanvasAidsFloatingToolbar({
               }}
             >
               <div className={styles.canvasAidsPopoverCard}>
+                {!isSignedIn ? (
+                  <div>
+                    <SegmentedChoiceSetting
+                      label="Theme"
+                      value={themeMode}
+                      ariaLabel="Application theme"
+                      options={[
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/sun.svg" />
+                              <span className={styles.screenReaderOnly}>Light</span>
+                            </>
+                          ),
+                          value: "light",
+                        },
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/monitor.svg" />
+                              <span className={styles.screenReaderOnly}>System</span>
+                            </>
+                          ),
+                          value: "system",
+                        },
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/moon.svg" />
+                              <span className={styles.screenReaderOnly}>Dark</span>
+                            </>
+                          ),
+                          value: "dark",
+                        },
+                      ]}
+                      className={styles.themeControl}
+                      itemClassName={styles.themeControlItem}
+                      onChange={(nextValue) => setThemeMode(nextValue)}
+                    />
+                  </div>
+                ) : null}
+                {!isSignedIn ? <div className={styles.sidebarDivider} /> : null}
                 <CanvasAidsControls
                   dispatch={dispatch}
                   showGridlines={showGridlines}

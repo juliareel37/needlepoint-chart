@@ -135,16 +135,20 @@ function SegmentedBooleanSetting({
 
 export function SegmentedChoiceSetting<T extends string>({
   ariaLabel,
+  className,
   disabled = false,
   helperText,
+  itemClassName,
   label,
   onChange,
   options,
   value,
 }: {
   ariaLabel: string;
+  className?: string;
   disabled?: boolean;
   helperText?: ReactNode;
+  itemClassName?: string;
   label: ReactNode;
   onChange: (next: T) => void;
   options: { label: ReactNode; value: T }[];
@@ -164,7 +168,9 @@ export function SegmentedChoiceSetting<T extends string>({
       </div>
       <SegmentedControl
         ariaLabel={ariaLabel}
+        className={className}
         disabled={disabled}
+        itemClassName={itemClassName}
         options={options}
         value={value}
         onChange={onChange}

@@ -108,6 +108,11 @@
   height: 14px;
 }
 
+.themeControlItem :global(.glyph) {
+  width: 14px;
+  height: 14px;
+}
+
 .screenReaderOnly {
   position: absolute;
   width: 1px;
