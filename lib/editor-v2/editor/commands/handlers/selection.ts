@@ -115,6 +115,19 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
     return command.kind === "selection.clear";
   },
   handle(state, command) {
+    const duplicatePlacement = state.session.duplicatePlacement;
+    const clearPatches =
+      duplicatePlacement?.operation === "cut"
+        ? buildGridReplacementPatch(
+            state,
+            buildPlacementSourceGridPoints(
+              duplicatePlacement.sourceRect,
+              duplicatePlacement.cells,
+            ),
+            duplicatePlacement,
+          )
+        : [];
+
     return {
       nextSession: {
         ...state.session,
@@ -139,7 +152,7 @@ export const clearSelectionCommandHandler: EditorCommandHandler<ClearSelectionCo
         },
       },
       nextUi: state.ui,
-      patches: [],
+      patches: clearPatches,
       inversePatches: [],
       effects: [],
       event: {

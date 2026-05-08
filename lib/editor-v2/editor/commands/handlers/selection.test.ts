@@ -489,6 +489,58 @@ describe("selection command handlers", () => {
     expect(store.getState().document.grid.cells[2 * 4 + 2]).toBe("dmc:666");
   });
 
+  it("clearing selection during cut placement restores the lifted cells before exiting selection", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "lasso";
+    initial.document.grid.width = 4;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = [
+      null, null, null, null,
+      null, "dmc:310", "dmc:321", null,
+      null, null, "dmc:666", null,
+      null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-11a",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 11, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-11b",
+      kind: "selection.clear",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 12, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.tool).toBe("pan");
+    expect(store.getState().session.selection).toEqual({
+      mode: "none",
+      shape: "rect",
+      rect: null,
+      lassoPoints: [],
+      mirrorAxis: null,
+      preview: null,
+    });
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 4 + 1]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 4 + 2]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 4 + 2]).toBe("dmc:666");
+  });
+
   it("commits cut placement by moving the lifted cells to the new location", () => {
     const initial = createInitialEditorStoreState();
     initial.document.grid.width = 6;
