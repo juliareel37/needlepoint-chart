@@ -490,12 +490,31 @@ export function ColorLibrary({
     <div
       ref={libraryShellRef}
       className={[styles.libraryShell, className].filter(Boolean).join(" ")}
+      onMouseMove={(event) => {
+        const target = event.target instanceof Element
+          ? event.target.closest("button[data-tooltip]")
+          : null;
+
+        if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+          setActiveTooltip((current) =>
+            current?.target.matches(":focus-visible") ? current : null,
+          );
+          return;
+        }
+
+        if (activeTooltip?.target !== target) {
+          updateTooltip(target);
+        }
+      }}
       onMouseOver={(event) => {
         const target = event.target instanceof Element
           ? event.target.closest("button[data-tooltip]")
           : null;
 
         if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+          setActiveTooltip((current) =>
+            current?.target.matches(":focus-visible") ? current : null,
+          );
           return;
         }
 
