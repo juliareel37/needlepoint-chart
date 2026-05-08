@@ -57,7 +57,7 @@ interface IconsPanelPageProps {
   dispatch: EditorStore["dispatch"];
   gridMetrics: GridWorldMetrics;
   onBackRequestHandled?: () => void;
-  onScrollPositionChange?: (scrollTop: number) => void;
+  onScrollPositionChange?: (scrollTop: number, view: IconsPanelView) => void;
   onViewChange: (
     view: IconsPanelView,
     options?: { overviewScrollTop?: number },
@@ -502,9 +502,7 @@ export function IconsPanelPage({
               return;
             }
 
-            if (view.type === "overview") {
-              onScrollPositionChange?.(content.scrollTop);
-            }
+            onScrollPositionChange?.(content.scrollTop, view);
           }}
         >
           {view.type === "category" ? (

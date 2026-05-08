@@ -166,6 +166,12 @@ export function EditorSidebar({
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
   const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
   const iconsOverviewScrollTopRef = useRef(0);
+  const iconsSubpageScrollRef = useRef<{ category: string | null; scrollTop: number }>({
+    category: null,
+    scrollTop: 0,
+  });
+  const previousActiveSectionRef = useRef(activeSection);
+  const shouldRestoreIconsSubpageScrollRef = useRef(false);
 
   useEffect(() => {
     if (!requestedColorPanelView) {
@@ -175,6 +181,20 @@ export function EditorSidebar({
     setColorPanelView(requestedColorPanelView);
   }, [requestedColorPanelView, requestedColorPanelViewKey]);
 
+  useEffect(() => {
+    const previousActiveSection = previousActiveSectionRef.current;
+
+    if (
+      previousActiveSection === "icons" &&
+      activeSection !== "icons" &&
+      iconsPanelView.type === "category"
+    ) {
+      shouldRestoreIconsSubpageScrollRef.current = true;
+    }
+
+    previousActiveSectionRef.current = activeSection;
+  }, [activeSection, iconsPanelView]);
+
   const handleIconsPanelViewChange = (
     nextView: IconsPanelView,
     options?: { overviewScrollTop?: number },
@@ -183,6 +203,7 @@ export function EditorSidebar({
       iconsOverviewScrollTopRef.current = options.overviewScrollTop;
     }
 
+    shouldRestoreIconsSubpageScrollRef.current = false;
     setIconsPanelView(nextView);
   };
 
@@ -379,18 +400,27 @@ export function EditorSidebar({
               backRequestKey={iconsPanelBackRequestKey}
               dispatch={dispatch}
               gridMetrics={gridMetrics}
-              onBackRequestHandled={() => {
-                setIconsPanelView({ type: "overview" });
-              }}
-              onScrollPositionChange={(scrollTop) => {
-                if (iconsPanelView.type === "overview") {
+              onBackRequestHandled={() => {}}
+              onScrollPositionChange={(scrollTop, view) => {
+                if (view.type === "overview") {
                   iconsOverviewScrollTopRef.current = scrollTop;
+                  return;
                 }
+
+                iconsSubpageScrollRef.current = {
+                  category: view.category,
+                  scrollTop,
+                };
               }}
               onViewChange={handleIconsPanelViewChange}
               placement={iconPlacement}
               persistedScrollTop={
-                iconsPanelView.type === "overview" ? iconsOverviewScrollTopRef.current : 0
+                iconsPanelView.type === "overview"
+                  ? iconsOverviewScrollTopRef.current
+                  : shouldRestoreIconsSubpageScrollRef.current &&
+                      iconsSubpageScrollRef.current.category === iconsPanelView.category
+                    ? iconsSubpageScrollRef.current.scrollTop
+                    : 0
               }
               view={iconsPanelView}
               viewportCenter={textViewportCenter}
