@@ -7,6 +7,8 @@ import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
 import { AuthProvider } from "@/lib/auth/client";
 import AppHeaderNav from "@/components/app/AppHeaderNav";
+import { getCurrentUserThemePreference } from "@/lib/auth/server";
+import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -54,23 +56,31 @@ const appShellStyle: CSSProperties &
   "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
 };
 
-const themeBootstrapScript = `
+function createThemeBootstrapScript(profileThemeMode: string | null) {
+  return `
 (() => {
   try {
+    const profileTheme = ${JSON.stringify(profileThemeMode)};
     const saved = window.localStorage.getItem("wippa:theme");
-    const resolved = saved === "system"
+    const nextTheme = profileTheme === "light" || profileTheme === "dark" || profileTheme === "system"
+      ? profileTheme
+      : (saved === "light" || saved === "dark" || saved === "system" ? saved : "light");
+    const resolved = nextTheme === "system"
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-      : saved;
+      : nextTheme;
+    document.documentElement.setAttribute(${JSON.stringify(THEME_MODE_ATTRIBUTE)}, nextTheme);
     if (resolved === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
     } else {
       document.documentElement.removeAttribute("data-theme");
     }
+    window.localStorage.setItem("wippa:theme", nextTheme);
   } catch {}
 })();
 `;
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
@@ -122,6 +132,9 @@ export default function RootLayout({
       </html>
     );
   }
+
+  const profileThemeMode = await getCurrentUserThemePreference();
+  const themeBootstrapScript = createThemeBootstrapScript(profileThemeMode);
 
   return (
     <html lang="en" suppressHydrationWarning>

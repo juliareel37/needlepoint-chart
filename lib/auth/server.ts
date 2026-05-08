@@ -1,6 +1,8 @@
+import { AppThemePreference } from "@prisma/client";
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 import { prisma } from "@/lib/db";
 import { getAccountSettingsContextFromProviderIds, type AccountSettingsContext } from "./account-settings";
+import type { ThemeMode } from "@/lib/theme/themePreference";
 
 const neonAuthBaseUrl = process.env.NEON_AUTH_BASE_URL;
 const neonAuthCookieSecret = process.env.NEON_AUTH_COOKIE_SECRET;
@@ -27,6 +29,7 @@ export interface AuthSession {
   authUserId: string | null;
   email: string | null;
   name: string | null;
+  themePreference: ThemeMode | null;
 }
 
 interface AuthUserProfile {
@@ -37,6 +40,33 @@ interface AuthUserProfile {
 
 function normalizeEmail(email: string | null) {
   return email?.trim().toLowerCase() || null;
+}
+
+function fromPrismaThemePreference(
+  themePreference: AppThemePreference | null,
+): ThemeMode | null {
+  switch (themePreference) {
+    case AppThemePreference.DARK:
+      return "dark";
+    case AppThemePreference.SYSTEM:
+      return "system";
+    case AppThemePreference.LIGHT:
+      return "light";
+    default:
+      return null;
+  }
+}
+
+function toPrismaThemePreference(themePreference: ThemeMode): AppThemePreference {
+  switch (themePreference) {
+    case "dark":
+      return AppThemePreference.DARK;
+    case "system":
+      return AppThemePreference.SYSTEM;
+    case "light":
+    default:
+      return AppThemePreference.LIGHT;
+  }
 }
 
 async function getCurrentAuthUser(): Promise<AuthUserProfile | null> {
@@ -128,14 +158,22 @@ export async function getAuthSession(): Promise<AuthSession> {
       authUserId: null,
       email: null,
       name: null,
+      themePreference: null,
     };
   }
 
+  const userId = await createOrLinkAppUserForAuthUser(authUser);
+  const appUser = await prisma.appUser.findUnique({
+    where: { id: userId },
+    select: { themePreference: true },
+  });
+
   return {
-    userId: await createOrLinkAppUserForAuthUser(authUser),
+    userId,
     authUserId: authUser.id,
     email: authUser.email,
     name: authUser.name,
+    themePreference: fromPrismaThemePreference(appUser?.themePreference ?? null),
   };
 }
 
@@ -152,4 +190,31 @@ export async function getAccountSettingsContext(): Promise<AccountSettingsContex
   const { data: accounts } = await auth.listAccounts();
   const providerIds = accounts?.map((account) => account.providerId) ?? [];
   return getAccountSettingsContextFromProviderIds(providerIds);
+}
+
+export async function getCurrentUserThemePreference(): Promise<ThemeMode | null> {
+  return (await getAuthSession()).themePreference;
+}
+
+export async function updateCurrentUserThemePreference(
+  themePreference: ThemeMode,
+): Promise<ThemeMode | null> {
+  const authUser = await getCurrentAuthUser();
+
+  if (!authUser) {
+    return null;
+  }
+
+  const appUserId = await createOrLinkAppUserForAuthUser(authUser);
+  const updated = await prisma.appUser.update({
+    where: { id: appUserId },
+    data: {
+      themePreference: toPrismaThemePreference(themePreference),
+    },
+    select: {
+      themePreference: true,
+    },
+  });
+
+  return fromPrismaThemePreference(updated.themePreference);
 }

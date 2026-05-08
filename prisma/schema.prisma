@@ -14,11 +14,18 @@ enum SaveSource {
   RESTORE
 }
 
+enum AppThemePreference {
+  LIGHT
+  SYSTEM
+  DARK
+}
+
 model AppUser {
-  id           String         @id @default(cuid())
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  identities   AuthIdentity[]
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  themePreference AppThemePreference?
+  identities      AuthIdentity[]
   editorDesigns EditorDesign[]
 }
 

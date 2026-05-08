@@ -1,17 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuthSession } from "@/lib/auth/client";
+import {
+  THEME_MODE_ATTRIBUTE,
+  THEME_STORAGE_KEY,
+  parseThemeMode,
+  type ThemeMode,
+} from "@/lib/theme/themePreference";
 
-export type ThemeMode = "light" | "system" | "dark";
+export type { ThemeMode } from "@/lib/theme/themePreference";
 export type ResolvedThemeMode = "light" | "dark";
 
-const THEME_STORAGE_KEY = "wippa:theme";
 const THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 const THEME_TRANSITION_ATTRIBUTE = "data-theme-transitioning";
 const THEME_TRANSITION_DURATION_MS = 260;
 const THEME_CHANGE_EVENT = "wippa:theme-change";
 
 let themeTransitionTimeoutId: number | null = null;
+const profileThemeRequestCache = new Map<string, Promise<ThemeMode | null>>();
 
 function getSystemThemeMode(): ResolvedThemeMode {
   if (typeof window === "undefined") {
@@ -69,6 +76,8 @@ function applyThemeMode(nextTheme: ThemeMode, options?: { animate?: boolean }): 
 
   const resolvedTheme = resolveThemeMode(nextTheme);
 
+  document.documentElement.setAttribute(THEME_MODE_ATTRIBUTE, nextTheme);
+
   if (resolvedTheme === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");
   } else {
@@ -83,24 +92,70 @@ function getThemeModeFromDocument(): ThemeMode {
     return "light";
   }
 
+  const attributeTheme = parseThemeMode(
+    document.documentElement.getAttribute(THEME_MODE_ATTRIBUTE),
+  );
+
+  if (attributeTheme) {
+    return attributeTheme;
+  }
+
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
 
-function parseStoredThemeMode(value: string | null): ThemeMode | null {
-  if (value === "light" || value === "dark" || value === "system") {
-    return value;
+function persistThemeModeLocally(nextTheme: ThemeMode) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  } catch {}
+}
+
+async function fetchProfileThemeMode(userId: string): Promise<ThemeMode | null> {
+  const cachedRequest = profileThemeRequestCache.get(userId);
+  if (cachedRequest) {
+    return cachedRequest;
   }
 
-  return null;
+  const request = fetch("/api/auth/theme-preference", {
+    cache: "no-store",
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = (await response.json().catch(() => null)) as
+        | { themeMode?: string }
+        | null;
+
+      return parseThemeMode(payload?.themeMode ?? null);
+    })
+    .catch(() => null)
+    .finally(() => {
+      profileThemeRequestCache.delete(userId);
+    });
+
+  profileThemeRequestCache.set(userId, request);
+  return request;
+}
+
+async function persistThemeModeToProfile(nextTheme: ThemeMode): Promise<void> {
+  await fetch("/api/auth/theme-preference", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ themeMode: nextTheme }),
+  });
 }
 
 export function useThemeMode() {
+  const { isLoaded, isSignedIn, user } = useAuthSession();
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [resolvedThemeMode, setResolvedThemeMode] = useState<ResolvedThemeMode>("light");
 
   useEffect(() => {
     try {
-      const savedTheme = parseStoredThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
+      const savedTheme = parseThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
       const nextTheme = savedTheme ?? getThemeModeFromDocument();
       const nextResolvedTheme = applyThemeMode(nextTheme);
       setThemeMode(nextTheme);
@@ -140,7 +195,7 @@ export function useThemeMode() {
       return;
     }
 
-    const syncFromStorage = (nextTheme: ThemeMode) => {
+    const syncTheme = (nextTheme: ThemeMode) => {
       const nextResolvedTheme = applyThemeMode(nextTheme);
       setThemeMode(nextTheme);
       setResolvedThemeMode(nextResolvedTheme);
@@ -153,7 +208,7 @@ export function useThemeMode() {
         return;
       }
 
-      syncFromStorage(nextTheme);
+      syncTheme(nextTheme);
     };
 
     const handleStorage = (event: StorageEvent) => {
@@ -161,8 +216,8 @@ export function useThemeMode() {
         return;
       }
 
-      const nextTheme = parseStoredThemeMode(event.newValue) ?? getThemeModeFromDocument();
-      syncFromStorage(nextTheme);
+      const nextTheme = parseThemeMode(event.newValue) ?? getThemeModeFromDocument();
+      syncTheme(nextTheme);
     };
 
     window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange as EventListener);
@@ -174,16 +229,51 @@ export function useThemeMode() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn || !user?.id) {
+      const localTheme =
+        (typeof window !== "undefined"
+          ? parseThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY))
+          : null) ?? getThemeModeFromDocument();
+      const nextResolvedTheme = applyThemeMode(localTheme);
+      setThemeMode(localTheme);
+      setResolvedThemeMode(nextResolvedTheme);
+      return;
+    }
+
+    let isCancelled = false;
+
+    void fetchProfileThemeMode(user.id).then((profileThemeMode) => {
+      if (isCancelled || !profileThemeMode) {
+        return;
+      }
+
+      persistThemeModeLocally(profileThemeMode);
+      const nextResolvedTheme = applyThemeMode(profileThemeMode);
+      setThemeMode(profileThemeMode);
+      setResolvedThemeMode(nextResolvedTheme);
+      emitThemeChange(profileThemeMode);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]);
+
   const setAndPersistThemeMode = (nextTheme: ThemeMode) => {
     const nextResolvedTheme = applyThemeMode(nextTheme, { animate: true });
     setThemeMode(nextTheme);
     setResolvedThemeMode(nextResolvedTheme);
-
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    } catch {}
-
+    persistThemeModeLocally(nextTheme);
     emitThemeChange(nextTheme);
+
+    if (isSignedIn && user?.id) {
+      void persistThemeModeToProfile(nextTheme).catch(() => {});
+    }
   };
 
   return {
