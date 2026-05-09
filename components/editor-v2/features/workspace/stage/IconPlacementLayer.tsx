@@ -225,6 +225,64 @@ export function IconPlacementLayer({
     placement.primitiveKind ? null : placement.src,
   );
   const [sampledPreviewCells, setSampledPreviewCells] = useState<CellSampledPreviewCell[] | null>(null);
+  const sampledPreviewCanvasFrame = useMemo(() => {
+    if (!sampledPreviewCells || sampledPreviewCells.length === 0) {
+      return null;
+    }
+
+    const devicePixelRatio =
+      typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+    const pitch = metrics.cellSize + metrics.cellGap;
+    const gapOverlap = Math.max(0, metrics.cellGap / 2);
+    let minLeft = Number.POSITIVE_INFINITY;
+    let minTop = Number.POSITIVE_INFINITY;
+    let maxRight = Number.NEGATIVE_INFINITY;
+    let maxBottom = Number.NEGATIVE_INFINITY;
+
+    for (const cell of sampledPreviewCells) {
+      const rect = snapRectToDevicePixels(
+        {
+          left: (cell.x * pitch - displayBounds.left - gapOverlap) * viewport.zoom,
+          top: (cell.y * pitch - displayBounds.top - gapOverlap) * viewport.zoom,
+          width: (metrics.cellSize + gapOverlap * 2) * viewport.zoom,
+          height: (metrics.cellSize + gapOverlap * 2) * viewport.zoom,
+        },
+        devicePixelRatio,
+      );
+
+      if (rect.width <= 0 || rect.height <= 0) {
+        continue;
+      }
+
+      minLeft = Math.min(minLeft, rect.left);
+      minTop = Math.min(minTop, rect.top);
+      maxRight = Math.max(maxRight, rect.left + rect.width);
+      maxBottom = Math.max(maxBottom, rect.top + rect.height);
+    }
+
+    if (
+      !Number.isFinite(minLeft) ||
+      !Number.isFinite(minTop) ||
+      !Number.isFinite(maxRight) ||
+      !Number.isFinite(maxBottom)
+    ) {
+      return null;
+    }
+
+    return {
+      left: minLeft,
+      top: minTop,
+      width: Math.max(0, maxRight - minLeft),
+      height: Math.max(0, maxBottom - minTop),
+    };
+  }, [
+    displayBounds.left,
+    displayBounds.top,
+    metrics.cellGap,
+    metrics.cellSize,
+    sampledPreviewCells,
+    viewport.zoom,
+  ]);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (portalHost) {
       setPreviewTransform(nextTransform);
@@ -398,15 +456,14 @@ export function IconPlacementLayer({
 
   useEffect(() => {
     const canvas = previewCanvasRef.current;
-    if (!canvas || !sampledPreviewCells) {
+    if (!canvas || !sampledPreviewCells || !sampledPreviewCanvasFrame) {
       return;
     }
 
     const devicePixelRatio =
       typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
-    const renderBounds = portalHost ? overlayBounds : displayBounds;
-    const cssWidth = Math.max(1, renderBounds.width);
-    const cssHeight = Math.max(1, renderBounds.height);
+    const cssWidth = Math.max(1, sampledPreviewCanvasFrame.width);
+    const cssHeight = Math.max(1, sampledPreviewCanvasFrame.height);
     const backingWidth = Math.max(1, Math.round(cssWidth * devicePixelRatio));
     const backingHeight = Math.max(1, Math.round(cssHeight * devicePixelRatio));
 
@@ -445,19 +502,20 @@ export function IconPlacementLayer({
       }
 
       context.fillStyle = `rgba(${cell.color.r}, ${cell.color.g}, ${cell.color.b}, ${cell.alpha})`;
-      context.fillRect(cellRect.left, cellRect.top, cellRect.width, cellRect.height);
+      context.fillRect(
+        cellRect.left - sampledPreviewCanvasFrame.left,
+        cellRect.top - sampledPreviewCanvasFrame.top,
+        cellRect.width,
+        cellRect.height,
+      );
     }
   }, [
     displayBounds.left,
     displayBounds.top,
-    displayBounds.width,
-    displayBounds.height,
     metrics.cellGap,
     metrics.cellSize,
-    overlayBounds.height,
-    overlayBounds.width,
-    portalHost,
     sampledPreviewCells,
+    sampledPreviewCanvasFrame,
     viewport.zoom,
   ]);
 
@@ -494,8 +552,11 @@ export function IconPlacementLayer({
                 ref={previewCanvasRef}
                 aria-hidden="true"
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  position: "absolute",
+                  left: `${sampledPreviewCanvasFrame?.left ?? 0}px`,
+                  top: `${sampledPreviewCanvasFrame?.top ?? 0}px`,
+                  width: `${sampledPreviewCanvasFrame?.width ?? 0}px`,
+                  height: `${sampledPreviewCanvasFrame?.height ?? 0}px`,
                   imageRendering: "pixelated",
                 }}
               />
@@ -591,8 +652,11 @@ export function IconPlacementLayer({
                 ref={previewCanvasRef}
                 aria-hidden="true"
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  position: "absolute",
+                  left: `${sampledPreviewCanvasFrame?.left ?? 0}px`,
+                  top: `${sampledPreviewCanvasFrame?.top ?? 0}px`,
+                  width: `${sampledPreviewCanvasFrame?.width ?? 0}px`,
+                  height: `${sampledPreviewCanvasFrame?.height ?? 0}px`,
                   imageRendering: "pixelated",
                 }}
               />
@@ -653,8 +717,6 @@ function shouldUseCellSampledIconPreview(
   bounds: { left: number; top: number; width: number; height: number },
   metrics: GridWorldMetrics,
 ): boolean {
-  void metrics;
-
   if (!Number.isFinite(bounds.left) || !Number.isFinite(bounds.top)) {
     return false;
   }
@@ -667,7 +729,20 @@ function shouldUseCellSampledIconPreview(
     return false;
   }
 
-  return bounds.width * bounds.height <= MAX_CELL_SAMPLED_PREVIEW_PIXELS;
+  const visibleWidth = Math.max(
+    0,
+    Math.min(bounds.left + bounds.width, metrics.surfaceWidth) - Math.max(bounds.left, 0),
+  );
+  const visibleHeight = Math.max(
+    0,
+    Math.min(bounds.top + bounds.height, metrics.surfaceHeight) - Math.max(bounds.top, 0),
+  );
+
+  if (visibleWidth <= 0 || visibleHeight <= 0) {
+    return false;
+  }
+
+  return visibleWidth * visibleHeight <= MAX_CELL_SAMPLED_PREVIEW_PIXELS;
 }
 
 function loadPreviewImage(src: string): Promise<HTMLImageElement> {
