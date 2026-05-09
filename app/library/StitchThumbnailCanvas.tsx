@@ -14,7 +14,12 @@ import type { LibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { getThreadStitchCanvas } from "@/lib/stitchUtils";
 
 const EDITOR_TRACE_POSITION_CELL_SIZE = 28;
-const LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD = 2;
+const LOW_SCALE_PREVIEW_DEVICE_PIXEL_THRESHOLD = 2;
+
+export function shouldUseCompactThumbnailPreview(cellSize: number, devicePixelRatio: number) {
+  return cellSize * Math.max(1, devicePixelRatio) < LOW_SCALE_PREVIEW_DEVICE_PIXEL_THRESHOLD;
+}
+
 function getThumbnailSurfaceSize(snapshot: LibraryStitchSnapshot) {
   return {
     width: snapshot.width * EDITOR_TRACE_POSITION_CELL_SIZE,
@@ -183,7 +188,7 @@ export function StitchThumbnailCanvas({
       const drawY = (height - drawHeight) / 2;
       const oversampleFactor = cellSize >= 18 ? 1 : cellSize >= 12 ? 1.5 : 2;
       const stitchSize = Math.max(1, Math.round(cellSize * oversampleFactor));
-      const shouldUseCompactPreview = cellSize < LOW_SCALE_PREVIEW_CELL_SIZE_THRESHOLD;
+      const shouldUseCompactPreview = shouldUseCompactThumbnailPreview(cellSize, dpr);
 
       context.imageSmoothingEnabled = oversampleFactor > 1;
       if (oversampleFactor > 1) {
