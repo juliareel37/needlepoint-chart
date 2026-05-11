@@ -413,6 +413,7 @@ export function EditorV2Shell({
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [exportAuthModalOpen, setExportAuthModalOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
@@ -661,6 +662,14 @@ export function EditorV2Shell({
       ),
     });
   }, [document, openSignIn]);
+  const handleExportRequest = useCallback(() => {
+    if (!hasSavedDesignAccess) {
+      setExportAuthModalOpen(true);
+      return;
+    }
+
+    void onExportDocument(document);
+  }, [document, hasSavedDesignAccess, onExportDocument]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -2080,7 +2089,7 @@ export function EditorV2Shell({
     }
 
     if (value === "download") {
-      void onExportDocument(document);
+      handleExportRequest();
       return;
     }
 
@@ -2432,7 +2441,7 @@ export function EditorV2Shell({
                 size="md"
                 className={styles.headerExportButton}
                 disabled={exportButtonState === "exporting"}
-                onClick={() => onExportDocument(document)}
+                onClick={handleExportRequest}
               >
                 {exportButtonState === "exporting" ? (
                   <>
@@ -2575,6 +2584,19 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      <Modal
+        isOpen={exportAuthModalOpen}
+        title="Create an account to export designs"
+        description="Create an account to export your pattern as a PDF - it's free!"
+        tone="warning"
+        dismissLabel="Go back"
+        confirmLabel="Sign in"
+        onDismiss={() => setExportAuthModalOpen(false)}
+        onConfirm={() => {
+          setExportAuthModalOpen(false);
+          openSignInForCurrentDesign();
+        }}
+      />
       <Modal
         isOpen={deleteConfirmationOpen}
         title={currentStorageId ? "Move this design to Trash?" : "Discard this design?"}
