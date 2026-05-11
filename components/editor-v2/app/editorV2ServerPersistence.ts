@@ -1,6 +1,8 @@
 "use client";
 
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
+import type { LibraryTracePlacement } from "@/lib/library/designs";
+import type { LibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import {
   type PersistedEditorV2DesignRecord,
   hydrateEditorV2Document,
@@ -13,6 +15,10 @@ export interface SavedEditorV2DocumentRecord {
   gridWidth: number;
   gridHeight: number;
   updatedAt: string;
+  previewUrl: string | null;
+  thumbnailUrl: string | null;
+  tracePlacement: LibraryTracePlacement | null;
+  stitchSnapshot: LibraryStitchSnapshot | null;
 }
 
 export interface DeletedEditorV2DesignMetadata {
@@ -145,14 +151,18 @@ export async function listSavedEditorV2Documents({
           id: string;
           title: string;
           gridWidth: number;
-        gridHeight: number;
-        updatedAt: string;
-      }>;
-      activeCount?: number;
-      deletedCount?: number;
-      hasMore?: boolean;
-      nextOffset?: number | null;
-      error?: string;
+          gridHeight: number;
+          updatedAt: string;
+          previewUrl?: string | null;
+          thumbnailUrl?: string | null;
+          tracePlacement?: LibraryTracePlacement | null;
+          stitchSnapshot?: LibraryStitchSnapshot | null;
+        }>;
+        activeCount?: number;
+        deletedCount?: number;
+        hasMore?: boolean;
+        nextOffset?: number | null;
+        error?: string;
       }
     | null;
 
@@ -166,12 +176,16 @@ export async function listSavedEditorV2Documents({
   return {
     documents: Array.isArray(body?.designs)
       ? body.designs.map((design) => ({
-        storageId: design.id,
-        title: design.title,
-        gridWidth: design.gridWidth,
-        gridHeight: design.gridHeight,
-        updatedAt: design.updatedAt,
-      }))
+          storageId: design.id,
+          title: design.title,
+          gridWidth: design.gridWidth,
+          gridHeight: design.gridHeight,
+          updatedAt: design.updatedAt,
+          previewUrl: design.previewUrl ?? null,
+          thumbnailUrl: design.thumbnailUrl ?? null,
+          tracePlacement: design.tracePlacement ?? null,
+          stitchSnapshot: design.stitchSnapshot ?? null,
+        }))
       : [],
     activeCount: typeof body?.activeCount === "number" ? body.activeCount : 0,
     deletedCount: typeof body?.deletedCount === "number" ? body.deletedCount : 0,

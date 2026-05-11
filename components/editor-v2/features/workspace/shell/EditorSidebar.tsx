@@ -309,6 +309,10 @@ export function EditorSidebar({
               lastSaveConfirmedAt={lastSaveConfirmedAt}
               onClearLocalBrowserData={onClearLocalBrowserData}
               onDownloadDocument={onDownloadDocument}
+              onOpenRecentDesign={(storageId) => {
+                window.location.assign(`/editor/designs/${storageId}`);
+              }}
+              onOpenSavedDocuments={onOpenSavedDocuments}
               onDuplicateDocument={onDuplicateDocument}
               onOpenVersionHistory={onOpenVersionHistory}
               onSaveVersionSnapshot={onSaveVersionSnapshot}
@@ -316,6 +320,8 @@ export function EditorSidebar({
               onStartOver={onStartOver}
               recoveredLocalChanges={recoveredLocalChanges}
               renameRequestToken={renameRequestToken}
+              savedDocuments={savedDocuments}
+              savedDocumentsLoading={savedDocumentsLoading}
               saveMessage={saveMessage}
               snapshotSaving={snapshotSaving}
             />

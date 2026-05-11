@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { StitchThumbnailCanvas } from "@/app/library/StitchThumbnailCanvas";
 import { Button, ButtonIcon } from "@/components/design-system";
 import type { LibraryTracePlacement } from "@/lib/library/designs";
 import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/store";
+import type { SavedEditorV2DocumentRecord } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { EditableDesignTitle } from "../EditableDesignTitle";
 import styles from "../EditorV2Shell.module.css";
@@ -22,6 +24,8 @@ interface DocumentPanelPageProps {
   lastSaveConfirmedAt: number | null;
   onClearLocalBrowserData: () => Promise<void> | void;
   onDownloadDocument: () => void;
+  onOpenRecentDesign: (storageId: string) => void;
+  onOpenSavedDocuments: () => Promise<void> | void;
   onDuplicateDocument: () => void;
   onOpenVersionHistory: () => void;
   onSaveVersionSnapshot: () => void;
@@ -29,6 +33,8 @@ interface DocumentPanelPageProps {
   onStartOver: () => void;
   recoveredLocalChanges: boolean;
   renameRequestToken: number;
+  savedDocuments: SavedEditorV2DocumentRecord[];
+  savedDocumentsLoading: boolean;
   saveMessage: string;
   snapshotSaving: boolean;
 }
@@ -46,6 +52,8 @@ export function DocumentPanelPage({
   lastSaveConfirmedAt,
   onClearLocalBrowserData,
   onDownloadDocument,
+  onOpenRecentDesign,
+  onOpenSavedDocuments,
   onDuplicateDocument,
   onOpenVersionHistory,
   onSaveVersionSnapshot,
@@ -53,6 +61,8 @@ export function DocumentPanelPage({
   onStartOver,
   recoveredLocalChanges,
   renameRequestToken,
+  savedDocuments,
+  savedDocumentsLoading,
   saveMessage,
   snapshotSaving,
 }: DocumentPanelPageProps) {
@@ -91,6 +101,23 @@ export function DocumentPanelPage({
       ? `${document.grid.meshCount}-count`
       : "Not set";
   const historyDisabled = hasSavedDesignAccess && !currentStorageId;
+  const recentSavedDocuments = useMemo(
+    () => savedDocuments.filter((record) => record.storageId !== currentStorageId).slice(0, 3),
+    [currentStorageId, savedDocuments],
+  );
+
+  useEffect(() => {
+    if (!hasSavedDesignAccess || savedDocumentsLoading || recentSavedDocuments.length > 0) {
+      return;
+    }
+
+    void onOpenSavedDocuments();
+  }, [
+    hasSavedDesignAccess,
+    onOpenSavedDocuments,
+    recentSavedDocuments.length,
+    savedDocumentsLoading,
+  ]);
 
   return (
     <section className={styles.sidebarSection}>
@@ -221,6 +248,65 @@ export function DocumentPanelPage({
             History
           </Button>
         </section>
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+        {hasSavedDesignAccess ? (
+          <section className={styles.documentRecentSection}>
+            <h3 className={styles.documentRecentTitle} style={typographyStyles.h5}>
+              Recent designs
+            </h3>
+            {savedDocumentsLoading && recentSavedDocuments.length === 0 ? (
+              <p className={styles.documentRecentState} style={typographyStyles.p2}>
+                Loading recent designs...
+              </p>
+            ) : recentSavedDocuments.length > 0 ? (
+              <div className={styles.documentRecentList}>
+                {recentSavedDocuments.map((record) => (
+                  <button
+                    key={record.storageId}
+                    type="button"
+                    className={styles.documentRecentItem}
+                    onClick={() => onOpenRecentDesign(record.storageId)}
+                  >
+                    <div className={styles.documentRecentThumbnailFrame}>
+                      <div className={styles.documentRecentThumbnailSurface}>
+                        {record.stitchSnapshot ? (
+                          <StitchThumbnailCanvas
+                            snapshot={record.stitchSnapshot}
+                            traceThumbnailUrl={record.previewUrl}
+                            tracePlacement={record.tracePlacement}
+                            className={styles.documentRecentThumbnailCanvas}
+                          />
+                        ) : (
+                          <div className={styles.documentRecentThumbnailPlaceholder} aria-hidden="true" />
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.documentRecentMeta}>
+                      <p
+                        className={styles.documentRecentName}
+                        style={{ ...typographyStyles.p2, fontWeight: 750 }}
+                      >
+                        {record.title}
+                      </p>
+                      <p className={styles.documentRecentDetail} style={typographyStyles.p2}>
+                        {record.gridWidth} × {record.gridHeight} sts
+                        <span className={styles.documentRecentDetailDivider} aria-hidden="true">
+                          •
+                        </span>
+                        {formatRelativeTimestamp(record.updatedAt) ?? "just now"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.documentRecentState} style={typographyStyles.p2}>
+                No recent designs yet.
+              </p>
+            )}
+          </section>
+        ) : null}
 
         <section className={styles.documentSecondaryActions}>
           {/* <Button
@@ -323,6 +409,10 @@ function formatRelativeTimestamp(value: string | null) {
   }
 
   const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 1) {
+    return "just now";
+  }
+
   if (elapsedMinutes < 60) {
     return `${elapsedMinutes}m ago`;
   }

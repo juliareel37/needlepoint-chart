@@ -2212,7 +2212,7 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!suppressHeaderForSetupModal && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
               hasSavedDesignAccess ? (

@@ -9,6 +9,7 @@ import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/crea
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { EDITOR_V2_SAVE_MODE } from "@/lib/editor-v2/config";
+import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { EditorV2Providers } from "./EditorV2Providers";
 import { readStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import {
@@ -67,6 +68,44 @@ const PENDING_SAVED_ROUTE_HANDOFF_STORAGE_KEY = "editor-v2-pending-saved-route";
 const SAVED_DOCUMENTS_PAGE_SIZE = 6;
 const AUTH_HANDOFF_LOCAL_RESTORE_DELAY_MS = 1500;
 const pendingSavedRouteHandoffCache = new Map<string, PendingSavedRouteHandoff>();
+
+function createSavedDocumentRecord(
+  document: EditorDocumentState,
+  savedRecord: Pick<
+    SaveEditorV2DocumentResult,
+    "storageId" | "title" | "gridWidth" | "gridHeight" | "updatedAt"
+  >,
+): SavedEditorV2DocumentRecord {
+  return {
+    storageId: savedRecord.storageId,
+    title: savedRecord.title,
+    gridWidth: savedRecord.gridWidth,
+    gridHeight: savedRecord.gridHeight,
+    updatedAt: savedRecord.updatedAt,
+    previewUrl: document.trace?.previewUrl ?? null,
+    thumbnailUrl: document.trace?.thumbnailUrl ?? null,
+    tracePlacement: document.trace
+      ? {
+          imageWidth: document.trace.imageWidth,
+          imageHeight: document.trace.imageHeight,
+          cropX: document.trace.cropX,
+          cropY: document.trace.cropY,
+          cropWidth: document.trace.cropWidth,
+          cropHeight: document.trace.cropHeight,
+          offsetX: document.trace.offsetX,
+          offsetY: document.trace.offsetY,
+          scale: document.trace.scale,
+          rotation: document.trace.rotation,
+        }
+      : null,
+    stitchSnapshot: buildLibraryStitchSnapshot({
+      gridWidth: document.grid.width,
+      gridHeight: document.grid.height,
+      cells: document.grid.cells,
+      colorsById: document.palette.colorsById,
+    }),
+  };
+}
 
 interface VersionPreviewSession {
   liveDocument: EditorDocumentState;
@@ -310,13 +349,7 @@ export function EditorV2Page({
         document: loadedDocument,
       });
       setSavedDocuments((existing) => {
-        const nextRecord: SavedEditorV2DocumentRecord = {
-          storageId: savedRecord.storageId,
-          title: savedRecord.title,
-          gridWidth: savedRecord.gridWidth,
-          gridHeight: savedRecord.gridHeight,
-          updatedAt: savedRecord.updatedAt,
-        };
+        const nextRecord = createSavedDocumentRecord(loadedDocument, savedRecord);
 
         return [
           nextRecord,
@@ -893,13 +926,7 @@ export function EditorV2Page({
           setInitialLocalSnapshot(null);
           setSetupErrorMessage(null);
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: savedRecord.storageId,
-              title: savedRecord.title,
-              gridWidth: savedRecord.gridWidth,
-              gridHeight: savedRecord.gridHeight,
-              updatedAt: savedRecord.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(document, savedRecord);
 
             return [
               nextRecord,
@@ -936,13 +963,7 @@ export function EditorV2Page({
         onRestoreVersion={async (storageId, versionId) => {
           const restored = await restoreEditorV2DesignVersion(storageId, versionId);
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: restored.storageId,
-              title: restored.title,
-              gridWidth: restored.gridWidth,
-              gridHeight: restored.gridHeight,
-              updatedAt: restored.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(restored.document, restored);
 
             return [
               nextRecord,
@@ -973,13 +994,7 @@ export function EditorV2Page({
             mode: "copy",
           });
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: restored.storageId,
-              title: restored.title,
-              gridWidth: restored.gridWidth,
-              gridHeight: restored.gridHeight,
-              updatedAt: restored.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(restored.document, restored);
 
             return [
               nextRecord,
