@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRouter } from "next/navigation";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { useAuthStatus } from "@/lib/auth/client";
+import { DEFAULT_DMC_COLOR_ID } from "@/lib/editor-v2/editor/color-library";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
@@ -34,6 +35,7 @@ import {
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
 import {
+  createAutosaveSnapshotRecord,
   deleteGuestLocalSnapshots,
   deleteLocalSnapshot,
   readGuestLocalDraftIds,
@@ -41,6 +43,7 @@ import {
   readLocalSnapshot,
   shouldRecoverLocalSnapshot,
   type EditorV2LocalSnapshotRecord,
+  writeLocalSnapshot,
 } from "./editorV2AutosavePersistence";
 import {
   consumeEditorV2AuthHandoffFromUrl,
@@ -1095,10 +1098,36 @@ export function EditorV2Page({
                 return;
               }
 
+              const initialDraftState = createInitialDraftState(
+                config,
+                stickyCanvasPreferences,
+              );
+
+              await writeLocalSnapshot(
+                createAutosaveSnapshotRecord({
+                  key: config.draftId,
+                  storageId: null,
+                  persistenceScope: "guest-draft",
+                  document: initialDraftState.document,
+                  activeColorId:
+                    initialDraftState.session.activeTool.colorId ?? DEFAULT_DMC_COLOR_ID,
+                  serializedHash: null,
+                  latestLocalSequenceId: 0,
+                  latestSyncRequestedSequenceId: 0,
+                  latestSyncAppliedSequenceId: 0,
+                  baseServerVersion: null,
+                  lastKnownServerVersion: null,
+                  lastSuccessfulSyncAt: null,
+                  recoveredLocalChanges: false,
+                  degradedLocalRecovery: false,
+                }),
+              );
+
               resetCurrentDesignState();
               setSetupModalMode("full");
               setDesignConfig(config);
               setSetupModalOpen(false);
+              router.push(`/editor/designs/${config.draftId}`);
             }}
             onDraftHeightChange={setDraftHeight}
             onDraftHeightInchesChange={setDraftHeightInches}
@@ -1164,6 +1193,13 @@ function createPersistedDraftDocument(
   config: EditorV2DesignConfigNew,
   canvasPreferences: EditorDocumentState["canvasPreferences"] | null,
 ): EditorDocumentState {
+  return createInitialDraftState(config, canvasPreferences).document;
+}
+
+function createInitialDraftState(
+  config: EditorV2DesignConfigNew,
+  canvasPreferences: EditorDocumentState["canvasPreferences"] | null,
+) {
   return createNewDesignState(config.width, config.height, {
     canvasPreferences,
     projectId: config.draftId,
@@ -1171,7 +1207,7 @@ function createPersistedDraftDocument(
     meshCount: config.meshCount,
     widthInches: config.widthInches,
     heightInches: config.heightInches,
-  }).document;
+  });
 }
 
 function applySavedRecordToDocument(
