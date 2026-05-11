@@ -375,7 +375,12 @@ export function AuthAccountSettingsPanel({
       }
 
       onAfterSignOut?.();
-      router.push("/");
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+        return;
+      }
+
+      router.replace("/");
       router.refresh();
     } catch {
       return;

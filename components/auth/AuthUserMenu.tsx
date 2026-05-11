@@ -135,7 +135,12 @@ export function AuthUserMenu() {
     }
 
     setOpen(false);
-    router.push("/");
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+      return;
+    }
+
+    router.replace("/");
     router.refresh();
   }
 
