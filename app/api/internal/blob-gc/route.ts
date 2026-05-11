@@ -30,10 +30,18 @@ export async function GET(req: Request) {
   const editorDesigns = await prisma.editorDesign.findMany({
     select: { data: true },
   });
+  const editorDesignVersions = await prisma.editorDesignVersion.findMany({
+    select: { data: true },
+  });
 
   const referenced = new Set<string>();
   for (const design of editorDesigns) {
     for (const url of extractEditorV2TraceBlobUrls(design.data)) {
+      referenced.add(url);
+    }
+  }
+  for (const version of editorDesignVersions) {
+    for (const url of extractEditorV2TraceBlobUrls(version.data)) {
       referenced.add(url);
     }
   }

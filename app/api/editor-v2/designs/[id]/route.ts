@@ -225,12 +225,6 @@ export async function PUT(req: Request, context: RouteContext) {
     };
   });
 
-  const retainedBlobUrls = new Set(result.retainedBlobUrls);
-  for (const url of extractEditorV2TraceBlobUrls(existing.data)) {
-    if (!retainedBlobUrls.has(url)) {
-      void deleteBlobIfExists(url);
-    }
-  }
   for (const url of result.orphanedPrunedBlobUrls) {
     void deleteBlobIfExists(url);
   }

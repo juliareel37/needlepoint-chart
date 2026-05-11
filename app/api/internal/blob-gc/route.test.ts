@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { listMock, delMock, editorDesignFindManyMock } = vi.hoisted(() => ({
+const {
+  listMock,
+  delMock,
+  editorDesignFindManyMock,
+  editorDesignVersionFindManyMock,
+  listActiveGuestTraceAssetUrlsMock,
+  purgeExpiredGuestTraceAssetsMock,
+} = vi.hoisted(() => ({
   listMock: vi.fn(),
   delMock: vi.fn(),
   editorDesignFindManyMock: vi.fn(),
+  editorDesignVersionFindManyMock: vi.fn(),
+  listActiveGuestTraceAssetUrlsMock: vi.fn(),
+  purgeExpiredGuestTraceAssetsMock: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({
@@ -16,7 +26,15 @@ vi.mock("@/lib/db", () => ({
     editorDesign: {
       findMany: editorDesignFindManyMock,
     },
+    editorDesignVersion: {
+      findMany: editorDesignVersionFindManyMock,
+    },
   },
+}));
+
+vi.mock("@/lib/editor-v2/server/guestTraceAssets", () => ({
+  listActiveGuestTraceAssetUrls: listActiveGuestTraceAssetUrlsMock,
+  purgeExpiredGuestTraceAssets: purgeExpiredGuestTraceAssetsMock,
 }));
 
 import { GET } from "./route";
@@ -26,6 +44,9 @@ describe("GET /api/internal/blob-gc", () => {
     vi.clearAllMocks();
     process.env.BLOB_GC_SECRET = "secret";
     editorDesignFindManyMock.mockResolvedValue([]);
+    editorDesignVersionFindManyMock.mockResolvedValue([]);
+    listActiveGuestTraceAssetUrlsMock.mockResolvedValue([]);
+    purgeExpiredGuestTraceAssetsMock.mockResolvedValue([]);
   });
 
   it("rejects missing secret header", async () => {
@@ -40,6 +61,7 @@ describe("GET /api/internal/blob-gc", () => {
     const dayMs = 24 * 60 * 60 * 1000;
     const referencedA = "https://store.blob.vercel-storage.com/a.png";
     const referencedB = "https://store.blob.vercel-storage.com/b.png";
+    const referencedVersion = "https://store.blob.vercel-storage.com/version.png";
     const orphanOld = "https://store.blob.vercel-storage.com/orphan-old.png";
     const orphanNew = "https://store.blob.vercel-storage.com/orphan-new.png";
 
@@ -54,10 +76,20 @@ describe("GET /api/internal/blob-gc", () => {
         },
       },
     ]);
+    editorDesignVersionFindManyMock.mockResolvedValue([
+      {
+        data: {
+          trace: {
+            previewUrl: referencedVersion,
+          },
+        },
+      },
+    ]);
     listMock.mockResolvedValue({
       blobs: [
         { url: referencedA, uploadedAt: new Date(Date.now() - 2 * dayMs) },
         { url: referencedB, uploadedAt: new Date(Date.now() - 2 * dayMs) },
+        { url: referencedVersion, uploadedAt: new Date(Date.now() - 2 * dayMs) },
         { url: orphanOld, uploadedAt: new Date(Date.now() - 2 * dayMs) },
         { url: orphanNew, uploadedAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
       ],
@@ -79,7 +111,8 @@ describe("GET /api/internal/blob-gc", () => {
       dryRun: false,
       deleted: 1,
       candidates: 1,
-      referenced: 2,
+      referenced: 3,
+      expiredGuestBlobCount: 0,
       minAgeHours: 24,
     });
   });
@@ -108,6 +141,7 @@ describe("GET /api/internal/blob-gc", () => {
       deleted: 0,
       candidates: 1,
       referenced: 0,
+      expiredGuestBlobCount: 0,
       minAgeHours: 1,
     });
   });

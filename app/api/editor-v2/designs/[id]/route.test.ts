@@ -12,6 +12,7 @@ const {
   versionCreateMock,
   versionFindManyMock,
   versionDeleteManyMock,
+  guestTraceAssetUpdateManyMock,
   transactionMock,
   deleteBlobIfExistsMock,
 } = vi.hoisted(() => ({
@@ -23,6 +24,7 @@ const {
   versionCreateMock: vi.fn(),
   versionFindManyMock: vi.fn(),
   versionDeleteManyMock: vi.fn(),
+  guestTraceAssetUpdateManyMock: vi.fn(),
   transactionMock: vi.fn(),
   deleteBlobIfExistsMock: vi.fn(),
 }));
@@ -44,6 +46,9 @@ vi.mock("@/lib/db", () => ({
       create: versionCreateMock,
       findMany: versionFindManyMock,
       deleteMany: versionDeleteManyMock,
+    },
+    guestTraceAsset: {
+      updateMany: guestTraceAssetUpdateManyMock,
     },
   },
 }));
@@ -77,6 +82,9 @@ describe("editor-v2 individual design routes", () => {
           create: versionCreateMock,
           findMany: versionFindManyMock,
           deleteMany: versionDeleteManyMock,
+        },
+        guestTraceAsset: {
+          updateMany: guestTraceAssetUpdateManyMock,
         },
       }),
     );
@@ -273,7 +281,7 @@ describe("editor-v2 individual design routes", () => {
     });
   });
 
-  it("cleans up replaced trace blobs after saving", async () => {
+  it("does not eagerly delete replaced trace blobs after saving", async () => {
     const state = createNewDesignState(2, 2);
     state.document.trace = {
       previewUrl: "https://blob.example.com/new-preview.webp",
@@ -345,10 +353,7 @@ describe("editor-v2 individual design routes", () => {
       updatedAt: "2026-04-16T12:10:00.000Z",
       versionToken: "2026-04-16T12:10:00.000Z",
     });
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledTimes(3);
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-preview.webp");
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-thumbnail.webp");
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-original.png");
+    expect(deleteBlobIfExistsMock).not.toHaveBeenCalled();
   });
 
   it("skips creating a duplicate version when autosave content is unchanged", async () => {

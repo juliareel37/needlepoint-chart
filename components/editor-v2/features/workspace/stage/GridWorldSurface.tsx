@@ -475,24 +475,34 @@ export function GridWorldSurface({
     };
   }, [coarsePointer, trace?.previewUrl, tracePositioningEnabled]);
 
-  const traceAssetReady =
-    !trace?.previewUrl ||
-    (loadedTraceAsset?.previewUrl === trace.previewUrl &&
-      loadedTraceAsset.ready &&
-      !!loadedTraceAsset.image &&
-      loadedTraceAsset.width > 0 &&
-      loadedTraceAsset.height > 0);
+  const traceAssetLoaded =
+    Boolean(
+      trace?.previewUrl &&
+        loadedTraceAsset?.previewUrl === trace.previewUrl &&
+        loadedTraceAsset.ready &&
+        !!loadedTraceAsset.image &&
+        loadedTraceAsset.width > 0 &&
+        loadedTraceAsset.height > 0,
+    );
+  const traceAssetFailed =
+    Boolean(
+      trace?.previewUrl &&
+        loadedTraceAsset?.previewUrl === trace.previewUrl &&
+        !loadedTraceAsset.ready,
+    );
+  const traceAssetReady = !trace?.previewUrl || traceAssetLoaded;
   const deferPaintUntilTraceReady =
     Boolean(onSurfaceReady) &&
     Boolean(trace?.previewUrl) &&
-    !traceAssetReady;
+    !traceAssetReady &&
+    !traceAssetFailed;
   const handleDisplayRendered = useCallback(() => {
-    if (!traceAssetReady) {
+    if (!traceAssetReady && !traceAssetFailed) {
       return;
     }
 
     onSurfaceReady?.();
-  }, [onSurfaceReady, traceAssetReady]);
+  }, [onSurfaceReady, traceAssetFailed, traceAssetReady]);
 
 
 
