@@ -25,6 +25,7 @@ interface DocumentPanelPageProps {
   onClearLocalBrowserData: () => Promise<void> | void;
   onDownloadDocument: () => void;
   onOpenRecentDesign: (storageId: string) => void;
+  onOpenAllDesigns: () => void;
   onOpenSavedDocuments: () => Promise<void> | void;
   onDuplicateDocument: () => void;
   onOpenVersionHistory: () => void;
@@ -53,6 +54,7 @@ export function DocumentPanelPage({
   onClearLocalBrowserData,
   onDownloadDocument,
   onOpenRecentDesign,
+  onOpenAllDesigns,
   onOpenSavedDocuments,
   onDuplicateDocument,
   onOpenVersionHistory,
@@ -188,7 +190,7 @@ export function DocumentPanelPage({
           <Button
             type="button"
             variant="secondary"
-            size="lg"
+            size="md"
             className={styles.documentActionButton}
             onClick={onDuplicateDocument}
           >
@@ -200,7 +202,7 @@ export function DocumentPanelPage({
           <Button
             type="button"
             variant="secondary"
-            size="lg"
+            size="md"
             className={styles.documentActionButton}
             disabled={snapshotSaving}
             onClick={onSaveVersionSnapshot}
@@ -217,7 +219,7 @@ export function DocumentPanelPage({
           <Button
             type="button"
             variant="secondary"
-            size="lg"
+            size="md"
             className={styles.documentActionButton}
             disabled={exportInProgress}
             onClick={onDownloadDocument}
@@ -237,7 +239,7 @@ export function DocumentPanelPage({
           <Button
             type="button"
             variant="secondary"
-            size="lg"
+            size="md"
             className={styles.documentActionButton}
             disabled={historyDisabled}
             onClick={onOpenVersionHistory}
@@ -252,9 +254,23 @@ export function DocumentPanelPage({
 
         {hasSavedDesignAccess ? (
           <section className={styles.documentRecentSection}>
-            <h3 className={styles.documentRecentTitle} style={typographyStyles.h5}>
-              Recent designs
-            </h3>
+            <div className={styles.documentRecentHeader}>
+              <h3 className={styles.documentRecentTitle} style={typographyStyles.h5}>
+                Recent designs
+              </h3>
+              <button
+                type="button"
+                className={styles.documentRecentSeeAllButton}
+                onClick={onOpenAllDesigns}
+              >
+                <span className={styles.documentRecentSeeAllLabel} style={typographyStyles.p2}>
+                  <span>See all</span>
+                  <span className={styles.documentRecentSeeAllCaret} aria-hidden="true">
+                    ›
+                  </span>
+                </span>
+              </button>
+            </div>
             {savedDocumentsLoading && recentSavedDocuments.length === 0 ? (
               <p className={styles.documentRecentState} style={typographyStyles.p2}>
                 Loading recent designs...

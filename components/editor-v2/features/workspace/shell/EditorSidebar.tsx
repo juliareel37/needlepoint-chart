@@ -309,6 +309,9 @@ export function EditorSidebar({
               lastSaveConfirmedAt={lastSaveConfirmedAt}
               onClearLocalBrowserData={onClearLocalBrowserData}
               onDownloadDocument={onDownloadDocument}
+              onOpenAllDesigns={() => {
+                window.location.assign("/library");
+              }}
               onOpenRecentDesign={(storageId) => {
                 window.location.assign(`/editor/designs/${storageId}`);
               }}
