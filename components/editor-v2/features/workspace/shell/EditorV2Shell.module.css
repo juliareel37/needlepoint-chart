@@ -103,10 +103,10 @@
 .sidebarSurface {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
   height: 100%;
   max-height: 100%;
-  padding: 24px;
+  padding: 0;
   background: var(--surface-primary);
   overflow: hidden;
   overscroll-behavior-y: none;
@@ -117,6 +117,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 24px 24px 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--ui-border-reg);
 }
@@ -135,6 +136,7 @@
   overflow-y: auto;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
+  padding: 24px 0;
 }
 
 .sidebarPanelBackRow {
@@ -210,6 +212,7 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  padding-inline: 24px;
 }
 
 .sidebarSectionHeader {
@@ -274,6 +277,10 @@
   overflow-y: auto;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
+  width: calc(100% + 24px);
+  margin-right: -24px;
+  padding-right: 24px;
+  box-sizing: border-box;
 }
 
 .iconsPanelSection {
@@ -4089,7 +4096,17 @@
     overflow-y: auto;
     overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
-    padding: 20px 20px 24px;
+    padding: 20px 0 24px;
+  }
+
+  .sidebarSection {
+    padding-inline: 20px;
+  }
+
+  .iconsPanelPageContent {
+    width: calc(100% + 20px);
+    margin-right: -20px;
+    padding-right: 20px;
   }
 
   .modalOverlay {
