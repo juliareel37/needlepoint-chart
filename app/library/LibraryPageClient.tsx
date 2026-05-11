@@ -19,6 +19,7 @@ import {
 import {
   deleteSavedEditorV2Document,
   loadSavedEditorV2Document,
+  renameSavedEditorV2Document,
   restoreDeletedEditorV2Document,
   saveEditorV2Document,
   type SavedEditorV2DocumentView,
@@ -36,6 +37,7 @@ const LOADING_CARD_COUNT = PAGE_SIZE;
 const DESIGN_OPEN_TRANSITION_MS = 70;
 const activeCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
+  { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "delete", label: "Move to Trash", icon: "/icons/lucide/trash.svg" },
 ] as const;
@@ -210,11 +212,14 @@ export function LibraryPageClient({
   const [openingDesignId, setOpeningDesignId] = useState<string | null>(null);
   const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [touchSelectionMode, setTouchSelectionMode] = useState(false);
+  const [renamingDesignId, setRenamingDesignId] = useState<string | null>(null);
+  const [renameDraftTitle, setRenameDraftTitle] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const designOpenTimeoutRef = useRef<number | null>(null);
   const touchMenuInteractionBlockUntilRef = useRef(0);
   const pendingPermanentDeletionTimeoutRef = useRef<number | null>(null);
   const pendingPermanentDeletionRef = useRef<PendingPermanentDeletion | null>(null);
+  const renameCommitOnBlurRef = useRef(true);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const normalizedSearchQuery = deferredSearchQuery.trim();
   const requestKey = `${collectionView}:${normalizedSearchQuery.toLowerCase()}`;
@@ -461,6 +466,18 @@ export function LibraryPageClient({
   }, [pendingPermanentDeletion]);
 
   useEffect(() => {
+    if (!renamingDesignId) {
+      return;
+    }
+
+    const renamedDesignStillVisible = designs.some((design) => design.id === renamingDesignId);
+    if (!renamedDesignStillVisible) {
+      setRenamingDesignId(null);
+      setRenameDraftTitle("");
+    }
+  }, [designs, renamingDesignId]);
+
+  useEffect(() => {
     if (!initialNotice) {
       return;
     }
@@ -475,6 +492,11 @@ export function LibraryPageClient({
     event: NavigableDesignClickEvent,
     designId: string,
   ) {
+    if (renamingDesignId === designId) {
+      event.preventDefault();
+      return;
+    }
+
     if (collectionView === "deleted") {
       event.preventDefault();
       return;
@@ -643,6 +665,13 @@ export function LibraryPageClient({
 
     if (menuAction === "open") {
       router.push(`/editor/designs/${design.id}`);
+      return;
+    }
+
+    if (menuAction === "rename") {
+      renameCommitOnBlurRef.current = true;
+      setRenameDraftTitle(design.title);
+      setRenamingDesignId(design.id);
       return;
     }
 
@@ -1012,6 +1041,10 @@ export function LibraryPageClient({
   }
 
   function renderDesignMenu(design: LibraryDesignRecord) {
+    if (renamingDesignId === design.id) {
+      return null;
+    }
+
     const baseCardMenuItems =
       collectionView === "deleted" ? deletedCardMenuItems : activeCardMenuItems;
     const cardMenuItems = touchPrimaryInput
@@ -1047,6 +1080,98 @@ export function LibraryPageClient({
           triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
         />
       </div>
+    );
+  }
+
+  function cancelRename() {
+    renameCommitOnBlurRef.current = true;
+    setRenamingDesignId(null);
+    setRenameDraftTitle("");
+  }
+
+  async function commitRename(designId: string) {
+    const design = designs.find((candidate) => candidate.id === designId);
+    const nextTitle = renameDraftTitle.trim();
+
+    if (!design) {
+      cancelRename();
+      return;
+    }
+
+    if (!nextTitle || nextTitle === design.title) {
+      cancelRename();
+      return;
+    }
+
+    setPendingCardAction({ designId, action: "rename" });
+    setCardActionError(null);
+
+    try {
+      const saved = await renameSavedEditorV2Document(designId, nextTitle);
+      setDesigns((existing) =>
+        existing.map((record) =>
+          record.id === designId
+            ? {
+                ...record,
+                title: saved.title,
+                updatedAt: saved.updatedAt,
+                updatedLabel: "Edited just now",
+              }
+            : record,
+        ),
+      );
+      setRenamingDesignId(null);
+      setRenameDraftTitle("");
+    } catch (error) {
+      setCardActionError(
+        error instanceof Error ? error.message : "Couldn't rename design.",
+      );
+    } finally {
+      setPendingCardAction((current) =>
+        current?.designId === designId && current.action === "rename" ? null : current,
+      );
+    }
+  }
+
+  function renderRenameInput(design: LibraryDesignRecord, className?: string) {
+    const isPendingRename =
+      pendingCardAction?.designId === design.id &&
+      pendingCardAction.action === "rename";
+
+    return (
+      <FieldInput
+        autoFocus
+        value={renameDraftTitle}
+        disabled={isPendingRename}
+        className={className}
+        aria-label={`Rename ${design.title}`}
+        onChange={(event) => setRenameDraftTitle(event.target.value)}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        onBlur={() => {
+          if (!renameCommitOnBlurRef.current) {
+            renameCommitOnBlurRef.current = true;
+            return;
+          }
+
+          void commitRename(design.id);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            renameCommitOnBlurRef.current = false;
+            void commitRename(design.id);
+            return;
+          }
+
+          if (event.key === "Escape") {
+            event.preventDefault();
+            renameCommitOnBlurRef.current = false;
+            cancelRename();
+          }
+        }}
+      />
     );
   }
 
@@ -1292,13 +1417,26 @@ export function LibraryPageClient({
 
                       <div className={styles.cardBody}>
                         <div className={styles.cardTopRow}>
-                          <Link
-                            href={designHref}
-                            className={styles.cardTitleLink}
-                            onClick={(event) => navigateToDesign(event, design.id)}
-                          >
-                            <h2 className={styles.cardTitle}>{design.title}</h2>
-                          </Link>
+                          {renamingDesignId === design.id ? (
+                            <div
+                              className={styles.cardTitleLink}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                              }}
+                            >
+                              <span className={styles.cardTitleEditor}>
+                                {renderRenameInput(design, styles.cardTitleInput)}
+                              </span>
+                            </div>
+                          ) : (
+                            <Link
+                              href={designHref}
+                              className={styles.cardTitleLink}
+                              onClick={(event) => navigateToDesign(event, design.id)}
+                            >
+                              <h2 className={styles.cardTitle}>{design.title}</h2>
+                            </Link>
+                          )}
 
                           {renderDesignMenu(design)}
                         </div>
@@ -1391,51 +1529,88 @@ export function LibraryPageClient({
                         handleDesktopListRowClick(event, design.id);
                       }}
                     >
-                      <Link
-                        href={designHref}
-                        className={styles.listNameCell}
-                        onClick={(event) => {
-                          if (touchPrimaryInput && touchSelectionMode) {
-                            event.preventDefault();
-                            return;
-                          }
-
-                          if (desktopSelectionMode) {
-                            event.preventDefault();
-                            return;
-                          }
-
-                          navigateToDesign(event, design.id);
-                        }}
-                      >
-                        <span className={styles.listThumbnailFrame}>
-                          <StitchThumbnailCanvas
-                            snapshot={design.stitchSnapshot}
-                            traceThumbnailUrl={design.previewUrl}
-                            tracePlacement={design.tracePlacement}
-                            className={styles.listThumbnailCanvas}
-                            testId={`list-thumbnail-${design.id}`}
-                          />
-                        </span>
-                        <span className={styles.listNameContent}>
-                          <span className={styles.listTitle}>{design.title}</span>
-                          <span className={styles.listMobileMeta}>
-                            <span className={styles.listMobileMetaItem}>
-                              {design.gridWidth} × {design.gridHeight} cells
-                            </span>
-                            <span className={styles.listMobileMetaItem}>
-                              {typeof design.colorCount === "number"
-                                ? `${design.colorCount} ${
-                                    design.colorCount === 1 ? "color" : "colors"
-                                  }`
-                                : "—"}
-                            </span>
-                            <span className={styles.listMobileMetaItem}>
-                              {design.updatedLabel.replace(/^Edited /, "")}
+                      {renamingDesignId === design.id ? (
+                        <div
+                          className={styles.listNameCell}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                          }}
+                        >
+                          <span className={styles.listThumbnailFrame}>
+                            <StitchThumbnailCanvas
+                              snapshot={design.stitchSnapshot}
+                              traceThumbnailUrl={design.previewUrl}
+                              tracePlacement={design.tracePlacement}
+                              className={styles.listThumbnailCanvas}
+                              testId={`list-thumbnail-${design.id}`}
+                            />
+                          </span>
+                          <span className={styles.listNameContent}>
+                            {renderRenameInput(design, styles.listTitleInput)}
+                            <span className={styles.listMobileMeta}>
+                              <span className={styles.listMobileMetaItem}>
+                                {design.gridWidth} × {design.gridHeight} cells
+                              </span>
+                              <span className={styles.listMobileMetaItem}>
+                                {typeof design.colorCount === "number"
+                                  ? `${design.colorCount} ${
+                                      design.colorCount === 1 ? "color" : "colors"
+                                    }`
+                                  : "—"}
+                              </span>
+                              <span className={styles.listMobileMetaItem}>
+                                {design.updatedLabel.replace(/^Edited /, "")}
+                              </span>
                             </span>
                           </span>
-                        </span>
-                      </Link>
+                        </div>
+                      ) : (
+                        <Link
+                          href={designHref}
+                          className={styles.listNameCell}
+                          onClick={(event) => {
+                            if (touchPrimaryInput && touchSelectionMode) {
+                              event.preventDefault();
+                              return;
+                            }
+
+                            if (desktopSelectionMode) {
+                              event.preventDefault();
+                              return;
+                            }
+
+                            navigateToDesign(event, design.id);
+                          }}
+                        >
+                          <span className={styles.listThumbnailFrame}>
+                            <StitchThumbnailCanvas
+                              snapshot={design.stitchSnapshot}
+                              traceThumbnailUrl={design.previewUrl}
+                              tracePlacement={design.tracePlacement}
+                              className={styles.listThumbnailCanvas}
+                              testId={`list-thumbnail-${design.id}`}
+                            />
+                          </span>
+                          <span className={styles.listNameContent}>
+                            <span className={styles.listTitle}>{design.title}</span>
+                            <span className={styles.listMobileMeta}>
+                              <span className={styles.listMobileMetaItem}>
+                                {design.gridWidth} × {design.gridHeight} cells
+                              </span>
+                              <span className={styles.listMobileMetaItem}>
+                                {typeof design.colorCount === "number"
+                                  ? `${design.colorCount} ${
+                                      design.colorCount === 1 ? "color" : "colors"
+                                    }`
+                                  : "—"}
+                              </span>
+                              <span className={styles.listMobileMetaItem}>
+                                {design.updatedLabel.replace(/^Edited /, "")}
+                              </span>
+                            </span>
+                          </span>
+                        </Link>
+                      )}
 
                       <Link
                         href={designHref}

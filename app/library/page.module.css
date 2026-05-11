@@ -487,6 +487,16 @@
   color: var(--text-secondary);
 }
 
+.listTitleInput,
+.cardTitleInput {
+  width: 100%;
+  min-width: 0;
+}
+
+.listTitleInput {
+  height: 36px;
+}
+
 .listMobileMeta {
   display: none;
 }
@@ -740,6 +750,10 @@
   letter-spacing: -0.03em;
   color: var(--text-primary);
   transition: color 160ms ease;
+}
+
+.cardTitleEditor {
+  display: block;
 }
 
 .cardTitleLink {

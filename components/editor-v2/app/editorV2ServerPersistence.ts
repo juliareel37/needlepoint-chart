@@ -303,6 +303,20 @@ export async function saveEditorV2Document(
   };
 }
 
+export async function renameSavedEditorV2Document(
+  storageId: string,
+  title: string,
+): Promise<SaveEditorV2DocumentResult> {
+  const loaded = await loadSavedEditorV2Document(storageId);
+  loaded.document.project.title = title;
+  return saveEditorV2Document(
+    loaded.document,
+    storageId,
+    loaded.versionToken,
+    "manual",
+  );
+}
+
 export async function listEditorV2DesignVersions(
   storageId: string,
 ): Promise<EditorDesignVersionListItem[]> {
