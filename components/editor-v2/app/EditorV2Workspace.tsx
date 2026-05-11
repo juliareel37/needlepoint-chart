@@ -42,6 +42,7 @@ export function EditorV2Workspace({
   isVersionPreview,
   versionPreviewMeta,
   saveMode,
+  onLocalDraftPersisted,
   savedDocuments,
   savedDocumentsLoading,
   savedDocumentsHasMore,
@@ -61,6 +62,7 @@ export function EditorV2Workspace({
   onRestoreVersion,
   onRestoreVersionAsCopy,
   onDeleteCurrentDesign,
+  onClearLocalBrowserData,
   onStartOver,
   persistentSuccessNotification,
   onDismissPersistentSuccessNotification,
@@ -85,6 +87,7 @@ export function EditorV2Workspace({
     saveSource: LoadEditorV2VersionResult["saveSource"];
   } | null;
   saveMode: "manual" | "autosave";
+  onLocalDraftPersisted?: (draftId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   savedDocumentsHasMore: boolean;
@@ -120,6 +123,7 @@ export function EditorV2Workspace({
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   onStartOver: () => void;
   persistentSuccessNotification: EditorV2SuccessNotification | null;
   onDismissPersistentSuccessNotification: () => void;
@@ -153,6 +157,7 @@ export function EditorV2Workspace({
     isVersionHistoryMode,
     isVersionPreview,
     saveMode,
+    onLocalDraftPersisted,
     onSaveDocument,
   });
 
@@ -276,6 +281,7 @@ export function EditorV2Workspace({
           }
         }}
         onStartOver={onStartOver}
+        onClearLocalBrowserData={onClearLocalBrowserData}
         currentStorageId={currentStorageId}
         deleteButtonState={deleteButtonState}
         errorNotification={errorNotification}

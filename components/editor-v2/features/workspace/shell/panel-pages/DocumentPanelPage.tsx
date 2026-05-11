@@ -24,6 +24,7 @@ interface DocumentPanelPageProps {
   renameRequestToken: number;
   onSignIn: () => void;
   onStartOver: () => void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   recoveredLocalChanges: boolean;
   saveMessage: string;
   saveMode: "manual" | "autosave";
@@ -50,6 +51,7 @@ export function DocumentPanelPage({
   renameRequestToken,
   onSignIn,
   onStartOver,
+  onClearLocalBrowserData,
   recoveredLocalChanges,
   saveMessage,
   saveMode,

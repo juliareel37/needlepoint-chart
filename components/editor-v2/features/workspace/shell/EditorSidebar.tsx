@@ -58,6 +58,7 @@ interface EditorSidebarProps {
   onSignIn: () => void;
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   previewMode: boolean;
   previewModeDisabled?: boolean;
   selectionControlActive: boolean;
@@ -126,6 +127,7 @@ export function EditorSidebar({
   onSignIn,
   onScopeModeChange,
   onStartOver,
+  onClearLocalBrowserData,
   previewMode,
   previewModeDisabled = false,
   selectionControlActive,
@@ -292,6 +294,7 @@ export function EditorSidebar({
                 renameRequestToken={renameRequestToken}
                 onSignIn={onSignIn}
                 onStartOver={onStartOver}
+                onClearLocalBrowserData={onClearLocalBrowserData}
                 recoveredLocalChanges={recoveredLocalChanges}
                 saveMessage={saveMessage}
                 saveMode={saveMode}

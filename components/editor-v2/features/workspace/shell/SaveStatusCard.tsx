@@ -6,7 +6,9 @@ import styles from "./EditorV2Shell.module.css";
 
 const SAVE_SUCCESS_PREFIX = "Saved at ";
 const AUTOSAVE_SUCCESS_PREFIX = "Autosaved at ";
+const LOCAL_AUTOSAVE_SUCCESS_PREFIX = "Saved locally at ";
 const VERSION_SAVE_SUCCESS_PREFIX = "Version saved at ";
+const SAVING_LOCAL_PREFIX = "Saving locally";
 
 export function SaveStatusCard({
   autoSaveEnabled,
@@ -29,39 +31,38 @@ export function SaveStatusCard({
   saveMode: "manual" | "autosave";
   saveMessage: string;
 }) {
-  if (layout !== "banner" && saveMode === "autosave" && !hasSavedDesignAccess) {
+  const guestBanner = layout === "banner" && !hasSavedDesignAccess;
+  const localAutosaveOnly = saveMode === "autosave" && !hasSavedDesignAccess;
+
+  if (layout !== "banner" && saveMode === "autosave" && !hasSavedDesignAccess && !localAutosaveOnly) {
     return null;
   }
 
-  if (!autoSaveEnabled && !saveMessage && !hasUnsavedChanges) {
+  if (!guestBanner && !autoSaveEnabled && !saveMessage && !hasUnsavedChanges) {
     return null;
   }
 
-  const state = getSaveStatusState(saveMessage, hasSavedDesignAccess);
-  const showInlineSignInLink =
-    layout === "banner" && !hasSavedDesignAccess && !recoveredLocalChanges && !saveMessage;
-  const message =
-    autoSaveEnabled
-      ? "Autosave enabled"
-      : recoveredLocalChanges
-        ? "Recovered local changes. Sync pending."
-        : !hasSavedDesignAccess && !saveMessage
-          ? "Changes not saved. Sign in to save your work."
-          : saveMessage || "Changes not saved";
-  const icon =
-    autoSaveEnabled
-      ? "/icons/lucide/cloud_done.svg"
-      : recoveredLocalChanges
-        ? "/icons/lucide/backup.svg"
-        : state === "info"
-          ? "/icons/lucide/info.svg"
-          : state === "alert"
-            ? "/icons/lucide/alert.svg"
-            : state === "ready"
-              ? "/icons/lucide/alert.svg"
-              : state === "error"
-                ? "/icons/lucide/alert.svg"
-                : saveModeIconForState(state, saveMode);
+  const state = guestBanner
+    ? "alert"
+    : getSaveStatusState(saveMessage, hasSavedDesignAccess);
+  const showInlineSignInLink = guestBanner;
+  const message = getSaveStatusMessage({
+    autoSaveEnabled,
+    hasSavedDesignAccess,
+    hasUnsavedChanges,
+    layout,
+    recoveredLocalChanges,
+    saveMessage,
+  });
+  const icon = getSaveStatusIcon({
+    autoSaveEnabled,
+    hasSavedDesignAccess,
+    layout,
+    recoveredLocalChanges,
+    saveMode,
+    saveMessage,
+    state,
+  });
 
   return (
     <div
@@ -78,7 +79,6 @@ export function SaveStatusCard({
       <p className={styles.headerSaveStatusMessage} style={typographyStyles.p2}>
         {showInlineSignInLink ? (
           <>
-            Changes not saved.{" "}
             <button
               type="button"
               className={styles.headerSaveStatusInlineLink}
@@ -86,7 +86,7 @@ export function SaveStatusCard({
             >
               Sign in
             </button>{" "}
-            to save your work.
+            to keep designs in your library and sync them across devices. Guest drafts stay only on this browser for up to 7 days.
           </>
         ) : (
           message
@@ -104,6 +104,124 @@ export function SaveStatusCard({
       ) : null}
     </div>
   );
+}
+
+function getSaveStatusMessage({
+  autoSaveEnabled,
+  hasSavedDesignAccess,
+  hasUnsavedChanges,
+  layout,
+  recoveredLocalChanges,
+  saveMessage,
+}: {
+  autoSaveEnabled: boolean;
+  hasSavedDesignAccess: boolean;
+  hasUnsavedChanges: boolean;
+  layout: "header" | "banner" | "panel";
+  recoveredLocalChanges: boolean;
+  saveMessage: string;
+}): string {
+  if (!hasSavedDesignAccess) {
+    if (layout === "banner") {
+      return "Sign in to keep designs in your library and sync them across devices. Guest drafts stay only on this browser for up to 7 days.";
+    }
+
+    if (saveMessage.startsWith(SAVING_LOCAL_PREFIX) || saveMessage.startsWith(LOCAL_AUTOSAVE_SUCCESS_PREFIX)) {
+      return saveMessage;
+    }
+
+    if (saveMessage.startsWith("Local recovery limited")) {
+      return saveMessage;
+    }
+
+    if (recoveredLocalChanges) {
+      return "Local draft restored on this browser.";
+    }
+
+    if (autoSaveEnabled) {
+      return "Autosaving locally on this browser.";
+    }
+
+    if (hasUnsavedChanges) {
+      return "Unsaved local changes.";
+    }
+
+    return "Local draft active on this browser.";
+  }
+
+  if (autoSaveEnabled) {
+    return "Autosave enabled";
+  }
+
+  if (recoveredLocalChanges) {
+    return "Recovered local changes. Sync pending.";
+  }
+
+  if (!hasSavedDesignAccess && !saveMessage) {
+    return "Changes not saved. Sign in to save your work.";
+  }
+
+  return saveMessage || "Changes not saved";
+}
+
+function getSaveStatusIcon({
+  autoSaveEnabled,
+  hasSavedDesignAccess,
+  layout,
+  recoveredLocalChanges,
+  saveMode,
+  saveMessage,
+  state,
+}: {
+  autoSaveEnabled: boolean;
+  hasSavedDesignAccess: boolean;
+  layout: "header" | "banner" | "panel";
+  recoveredLocalChanges: boolean;
+  saveMode: "manual" | "autosave";
+  saveMessage: string;
+  state: "ready" | "saving" | "saved" | "error" | "info" | "alert";
+}): string {
+  if (!hasSavedDesignAccess && layout === "banner") {
+    return "/icons/lucide/alert.svg";
+  }
+
+  if (!hasSavedDesignAccess) {
+    if (recoveredLocalChanges) {
+      return "/icons/lucide/backup.svg";
+    }
+
+    if (
+      autoSaveEnabled ||
+      saveMessage.startsWith(SAVING_LOCAL_PREFIX) ||
+      saveMessage.startsWith(LOCAL_AUTOSAVE_SUCCESS_PREFIX)
+    ) {
+      return "/icons/lucide/cloud_done.svg";
+    }
+
+    if (saveMessage.startsWith("Local recovery limited")) {
+      return "/icons/lucide/alert.svg";
+    }
+
+    return "/icons/lucide/info.svg";
+  }
+
+  if (autoSaveEnabled) {
+    return "/icons/lucide/cloud_done.svg";
+  }
+
+  if (recoveredLocalChanges) {
+    return "/icons/lucide/backup.svg";
+  }
+
+  if (state === "info") {
+    return "/icons/lucide/info.svg";
+  }
+
+  if (state === "alert" || state === "ready" || state === "error") {
+    return "/icons/lucide/alert.svg";
+  }
+
+  return saveModeIconForState(state, saveMode);
 }
 
 function getSaveStatusState(
@@ -125,6 +243,7 @@ function getSaveStatusState(
   if (
     saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
     saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(LOCAL_AUTOSAVE_SUCCESS_PREFIX) ||
     saveMessage.startsWith(VERSION_SAVE_SUCCESS_PREFIX)
   ) {
     return "saved";

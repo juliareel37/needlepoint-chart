@@ -10,6 +10,7 @@ import { getNormalizedTraceCrop } from "../trace/crop";
 
 export function createEditorStateFromDocument(
   document: EditorDocumentState,
+  options: { activeColorId?: string | null } = {},
 ): EditorStoreState {
   const state = createInitialEditorStoreState();
   const now = Date.now();
@@ -51,7 +52,12 @@ export function createEditorStateFromDocument(
         })()
       : null,
   };
+  const requestedActiveColorId = options.activeColorId ?? null;
   const defaultColorId =
+    (requestedActiveColorId &&
+    normalizedDocument.palette.colorsById[requestedActiveColorId]
+      ? requestedActiveColorId
+      : null) ??
     normalizedDocument.palette.extractedPaletteIds[0] ??
     Object.keys(normalizedDocument.palette.colorsById)[0] ??
     null;

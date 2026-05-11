@@ -4,6 +4,8 @@ import type { DocumentPatch } from "@/lib/editor-v2/editor/store";
 import {
   computeSerializedDocumentHash,
   createAutosaveSnapshotRecord,
+  getLocalSnapshotPersistenceScope,
+  getLocalSnapshotRetentionMs,
   getDirtyChunksFromPatches,
   shouldRecoverLocalSnapshot,
 } from "./editorV2AutosavePersistence";
@@ -51,6 +53,38 @@ describe("editor v2 autosave persistence helpers", () => {
 
     expect(first.serialized).toBe(second.serialized);
     expect(first.hash).toBe(second.hash);
+  });
+
+  it("treats local draft snapshots as guest drafts with 7 day retention", () => {
+    expect(
+      getLocalSnapshotPersistenceScope({
+        key: "local_123",
+        storageId: null,
+      }),
+    ).toBe("guest-draft");
+
+    expect(
+      getLocalSnapshotRetentionMs({
+        key: "local_123",
+        storageId: null,
+      }),
+    ).toBe(1000 * 60 * 60 * 24 * 7);
+  });
+
+  it("keeps unsaved signed-in recovery snapshots on the shorter retention window", () => {
+    expect(
+      getLocalSnapshotPersistenceScope({
+        key: "design_123",
+        storageId: null,
+      }),
+    ).toBe("server-recovery");
+
+    expect(
+      getLocalSnapshotRetentionMs({
+        key: "design_123",
+        storageId: null,
+      }),
+    ).toBe(1000 * 60 * 60 * 24);
   });
 
   it("recovers local snapshots only when unsynced work exists on the current server base version", () => {
@@ -104,5 +138,17 @@ describe("editor v2 autosave persistence helpers", () => {
         currentServerVersion: "2026-04-16T12:00:00.000Z",
       }),
     ).toBe(false);
+  });
+
+  it("stores the active color alongside local snapshots", () => {
+    const document = createNewDesignState(4, 4).document;
+    const snapshot = createAutosaveSnapshotRecord({
+      key: "local_123",
+      storageId: null,
+      document,
+      activeColorId: "dmc-321",
+    });
+
+    expect(snapshot.activeColorId).toBe("dmc-321");
   });
 });

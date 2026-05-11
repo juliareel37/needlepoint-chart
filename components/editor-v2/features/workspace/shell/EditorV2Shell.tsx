@@ -239,6 +239,7 @@ export function EditorV2Shell({
   hasSavedDesignAccess,
   onCanvasReady,
   onDeleteCurrentDesign,
+  onClearLocalBrowserData,
   onDismissErrorNotification,
   onDismissSuccessNotification,
   onExportDocument,
@@ -284,6 +285,7 @@ export function EditorV2Shell({
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   onDismissErrorNotification: () => void;
   onDismissSuccessNotification: () => void;
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
@@ -1697,9 +1699,10 @@ export function EditorV2Shell({
       : Boolean(saveMessage || hasUnsavedChanges);
   const showDocumentPanelStatus =
     isBottomPanelLayout &&
-    ((saveMode === "autosave" && showSaveStatus) ||
-      (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
-  const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
+    (hasSavedDesignAccess &&
+      ((saveMode === "autosave" && showSaveStatus) ||
+        (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus)));
+  const showHeaderSaveStatus = hasSavedDesignAccess;
   const renderHeaderSaveStatusCard = showHeaderSaveStatus && showSaveStatus;
   const showHeaderSaveStatusInFileMenu =
     !isBottomPanelLayout && isCompactHistoryLayout && renderHeaderSaveStatusCard;
@@ -1743,8 +1746,10 @@ export function EditorV2Shell({
     (IS_DEV_APP_MODE || saveMode === "manual" || !hasSavedDesignAccess);
 
   useEffect(() => {
-    setSaveBannerDismissed(false);
-  }, [hasUnsavedChanges, saveMessage]);
+    if (!hasSavedDesignAccess) {
+      setSaveBannerDismissed(false);
+    }
+  }, [hasSavedDesignAccess]);
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
@@ -2199,19 +2204,33 @@ export function EditorV2Shell({
       {!suppressHeaderForSetupModal && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
-              showHeaderSaveStatus ? (
-                <SaveStatusCard
-                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                  hasSavedDesignAccess={hasSavedDesignAccess}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  layout="header"
-                  onDismiss={null}
-                  onSignIn={openSignInForCurrentDesign}
-                  recoveredLocalChanges={recoveredLocalChanges}
-                  saveMode={saveMode}
-                  saveMessage={saveMessage}
-                />
-              ) : null
+              hasSavedDesignAccess ? (
+                <div className={styles.headerFileMenuGroup}>
+                  <SaveStatusCard
+                    autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
+                    hasSavedDesignAccess={hasSavedDesignAccess}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    layout="header"
+                    onDismiss={null}
+                    onSignIn={openSignInForCurrentDesign}
+                    recoveredLocalChanges={recoveredLocalChanges}
+                    saveMode={saveMode}
+                    saveMessage={saveMessage}
+                  />
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className={styles.headerSaveButton}
+                  onClick={() => {
+                    void onClearLocalBrowserData();
+                  }}
+                >
+                  Clear browser drafts
+                </Button>
+              )
             ) : (
               <div className={styles.headerFileMenuGroup}>
                 <HeaderFileMenu
@@ -2255,10 +2274,23 @@ export function EditorV2Shell({
                     saveMessage={saveMessage}
                   />
                 ) : null}
+                {!hasSavedDesignAccess ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className={styles.headerSaveButton}
+                    onClick={() => {
+                      void onClearLocalBrowserData();
+                    }}
+                  >
+                    Clear browser drafts
+                  </Button>
+                ) : null}
               </div>
             ),
             headerAutosaveTarget,
-          )
+         )
         : null}
       {!isVersionHistoryMode && showTopSaveBanner && topBannerTarget
         ? createPortal(
@@ -2790,6 +2822,7 @@ export function EditorV2Shell({
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                     onSignIn={openSignInForCurrentDesign}
                     onStartOver={onStartOver}
+                    onClearLocalBrowserData={onClearLocalBrowserData}
                     previewMode={previewMode}
                     previewModeDisabled={previewModeDisabled}
                     traceCropDraft={tracePreviewCrop}

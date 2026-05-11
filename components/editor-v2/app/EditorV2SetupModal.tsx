@@ -53,6 +53,7 @@ export interface EditorV2DesignConfigNew {
 export interface EditorV2DesignConfigLoaded {
   kind: "loaded";
   document: EditorDocumentState;
+  activeColorId?: string | null;
   storageId: string;
   instanceKey: string;
 }
@@ -78,6 +79,7 @@ interface EditorV2SetupModalProps {
   onOpenSavedDocuments: () => Promise<void> | void;
   onLoadMoreSavedDocuments: () => Promise<void> | void;
   onSignIn: () => void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   onClose: () => void;
   onCreateDesign: (config: EditorV2DesignConfigNew) => void;
   onDraftHeightChange: (value: string) => void;
@@ -113,6 +115,7 @@ export function EditorV2SetupModal({
   onOpenSavedDocuments,
   onLoadMoreSavedDocuments,
   onSignIn,
+  onClearLocalBrowserData,
   onClose,
   onCreateDesign,
   onDraftHeightChange,

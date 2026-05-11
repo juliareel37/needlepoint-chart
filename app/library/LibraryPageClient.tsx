@@ -1675,6 +1675,7 @@ export function LibraryPageClient({
             onOpenSavedDocuments={() => {}}
             onLoadMoreSavedDocuments={() => {}}
             onSignIn={() => {}}
+            onClearLocalBrowserData={() => {}}
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={handleCreateDesign}
             onDraftHeightChange={setDraftHeight}

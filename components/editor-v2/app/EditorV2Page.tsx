@@ -34,7 +34,9 @@ import {
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
 import {
+  deleteGuestLocalSnapshots,
   deleteLocalSnapshot,
+  readMostRecentGuestLocalSnapshot,
   readLocalSnapshot,
   shouldRecoverLocalSnapshot,
   type EditorV2LocalSnapshotRecord,
@@ -120,6 +122,7 @@ export function EditorV2Page({
     { mode: "entry" | "saved"; storageId: string | null } | undefined
   >(undefined);
   const pendingEntryRouteModeRef = useRef<"full" | "new-only" | null>(null);
+  const attemptedGuestDraftResumeRef = useRef(false);
   const hasLoadedSavedDocumentsRef = useRef(false);
   const nextSavedDocumentsOffsetRef = useRef(0);
   const pendingAuthHandoffDocumentRef = useRef<EditorDocumentState | null>(null);
@@ -269,6 +272,20 @@ export function EditorV2Page({
     [resetCurrentDesignState],
   );
 
+  const clearLocalBrowserData = useCallback(async () => {
+    await deleteGuestLocalSnapshots();
+
+    if (typeof window !== "undefined") {
+      clearEditorV2BrowserStorage(window);
+    }
+
+    pendingAuthHandoffDocumentRef.current = null;
+    attemptedGuestDraftResumeRef.current = true;
+    resetCurrentDesignState();
+    openEntryRoute("full");
+    router.replace("/editor");
+  }, [openEntryRoute, resetCurrentDesignState, router]);
+
   const applySavedRouteState = useCallback(
     (
       document: EditorDocumentState,
@@ -322,6 +339,7 @@ export function EditorV2Page({
   const openLoadedDesignState = useCallback(
     ({
       document,
+      activeColorId = null,
       storageId,
       versionToken,
       instanceKey,
@@ -330,6 +348,7 @@ export function EditorV2Page({
       localSnapshot = null,
     }: {
       document: EditorDocumentState;
+      activeColorId?: string | null;
       storageId: string;
       versionToken: string | null;
       instanceKey: string;
@@ -347,6 +366,7 @@ export function EditorV2Page({
       setDesignConfig({
         kind: "loaded",
         document,
+        activeColorId,
         storageId,
         instanceKey,
       });
@@ -454,6 +474,12 @@ export function EditorV2Page({
     }
   }, [isLoaded, isSignedIn, resetCurrentDesignState]);
 
+  useEffect(() => {
+    if (isSignedIn || routeMode === "saved" || routeStorageId !== null) {
+      attemptedGuestDraftResumeRef.current = false;
+    }
+  }, [isSignedIn, routeMode, routeStorageId]);
+
   useLayoutEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -512,6 +538,33 @@ export function EditorV2Page({
     setCanvasLoadingKey("auth_handoff_restore");
     setSetupModalOpen(false);
   }, [resetCurrentDesignState]);
+
+  useEffect(() => {
+    if (
+      !mounted ||
+      !isLoaded ||
+      isSignedIn ||
+      routeMode !== "entry" ||
+      routeStorageId !== null ||
+      pendingAuthHandoffDocumentRef.current ||
+      attemptedGuestDraftResumeRef.current
+    ) {
+      return;
+    }
+
+    attemptedGuestDraftResumeRef.current = true;
+
+    void readMostRecentGuestLocalSnapshot()
+      .then((snapshot) => {
+        if (!snapshot) {
+          return;
+        }
+
+        setSetupModalOpen(false);
+        router.replace(`/editor/designs/${snapshot.key}`);
+      })
+      .catch(() => {});
+  }, [isLoaded, isSignedIn, mounted, routeMode, routeStorageId, router]);
 
   useEffect(() => {
     const handedOffDocument = pendingAuthHandoffDocumentRef.current;
@@ -588,7 +641,9 @@ export function EditorV2Page({
 
   const initialState = useMemo(() => {
     if (designConfig.kind === "loaded") {
-      return createEditorStateFromDocument(designConfig.document);
+      return createEditorStateFromDocument(designConfig.document, {
+        activeColorId: designConfig.activeColorId,
+      });
     }
 
     return createNewDesignState(designConfig.width, designConfig.height, {
@@ -618,6 +673,7 @@ export function EditorV2Page({
         : loaded.document;
       openLoadedDesignState({
         document,
+        activeColorId: shouldRecover ? (localSnapshot?.activeColorId ?? null) : null,
         storageId,
         versionToken: loaded.versionToken,
         instanceKey,
@@ -659,6 +715,7 @@ export function EditorV2Page({
             setDesignConfig({
               kind: "loaded",
               document: localSnapshot.document,
+              activeColorId: localSnapshot.activeColorId,
               storageId: "",
               instanceKey: `draft_${routeStorageId}_${Date.now()}`,
             });
@@ -685,6 +742,7 @@ export function EditorV2Page({
         setDesignConfig({
           kind: "loaded",
           document: pendingSavedRouteHandoff.document,
+          activeColorId: null,
           storageId: routeStorageId,
           instanceKey,
         });
@@ -777,6 +835,13 @@ export function EditorV2Page({
             : null
         }
         saveMode={EDITOR_V2_SAVE_MODE}
+        onLocalDraftPersisted={(draftId) => {
+          if (isSignedIn || routeStorageId === draftId) {
+            return;
+          }
+
+          router.replace(`/editor/designs/${draftId}`);
+        }}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
         savedDocumentsHasMore={savedDocumentsHasMore}
@@ -944,6 +1009,7 @@ export function EditorV2Page({
 
           navigateToEntryRoute("full");
         }}
+        onClearLocalBrowserData={clearLocalBrowserData}
         onStartOver={() => {
           setSetupErrorMessage(null);
           setSetupModalMode("new-only");
@@ -991,6 +1057,7 @@ export function EditorV2Page({
                 ),
               });
             }}
+            onClearLocalBrowserData={clearLocalBrowserData}
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={async (config) => {
               if (isLoaded && isSignedIn) {
@@ -1116,6 +1183,27 @@ function applySavedRecordToDocument(
 
 function isLocalDesignId(designId: string): boolean {
   return designId.startsWith("local_");
+}
+
+function clearEditorV2BrowserStorage(currentWindow: Window): void {
+  clearStorageEntries(currentWindow.localStorage);
+  clearStorageEntries(currentWindow.sessionStorage);
+}
+
+function clearStorageEntries(storage: Storage): void {
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+
+    if (key && key.startsWith("editor-v2-")) {
+      keysToRemove.push(key);
+    }
+  }
+
+  for (const key of keysToRemove) {
+    storage.removeItem(key);
+  }
 }
 
 interface PendingSavedRouteHandoff {
