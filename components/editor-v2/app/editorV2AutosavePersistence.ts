@@ -257,6 +257,23 @@ export async function readMostRecentGuestLocalSnapshot(): Promise<EditorV2LocalS
   return guestDrafts[0] ?? null;
 }
 
+export async function readGuestLocalDraftIds(): Promise<string[]> {
+  if (typeof indexedDB === "undefined") {
+    return [];
+  }
+
+  await pruneLocalSnapshots();
+
+  const db = await openAutosaveDb();
+  const transaction = db.transaction(AUTOSAVE_STORE_NAME, "readonly");
+  const store = transaction.objectStore(AUTOSAVE_STORE_NAME);
+  const snapshots = await requestToPromise<EditorV2LocalSnapshotRecord[]>(store.getAll());
+
+  return snapshots
+    .filter((snapshot) => getLocalSnapshotPersistenceScope(snapshot) === "guest-draft")
+    .map((snapshot) => snapshot.key);
+}
+
 export async function writeLocalSnapshot(
   snapshot: EditorV2LocalSnapshotRecord,
 ): Promise<{ degradedLocalRecovery: boolean }> {

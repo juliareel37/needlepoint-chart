@@ -28,6 +28,7 @@ interface TracePanelPageProps {
   repositionActive: boolean;
   repositionOrigin: TraceRepositionOrigin | null;
   trace: TraceDocument | null;
+  guestDraftId?: string | null;
 }
 
 export function TracePanelPage({
@@ -45,6 +46,7 @@ export function TracePanelPage({
   repositionActive,
   repositionOrigin,
   trace,
+  guestDraftId = null,
 }: TracePanelPageProps) {
   return (
     <section className={styles.sidebarSection}>
@@ -53,6 +55,7 @@ export function TracePanelPage({
           cropDraft={cropDraft}
           cropEditing={cropEditing}
           dispatch={dispatch}
+          guestDraftId={guestDraftId}
           grid={grid}
           gridMetrics={gridMetrics}
           onBeginCrop={onBeginCrop}

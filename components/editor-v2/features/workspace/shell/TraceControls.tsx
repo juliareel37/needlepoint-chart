@@ -51,6 +51,7 @@ import styles from "./EditorV2Shell.module.css";
 const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
 
 interface TraceControlsProps {
+  guestDraftId?: string | null;
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
@@ -68,6 +69,7 @@ interface TraceControlsProps {
 }
 
 export function TraceControls({
+  guestDraftId = null,
   grid,
   gridMetrics,
   palette,
@@ -139,7 +141,7 @@ export function TraceControls({
     setTraceUploadErrorMessage(null);
 
     try {
-      const uploadedTrace = await uploadTraceFile(file);
+      const uploadedTrace = await uploadTraceFile(file, { guestDraftId });
 
       if (sequence !== traceUploadSequenceRef.current) {
         return;
@@ -1093,7 +1095,10 @@ export function TraceControls({
   );
 }
 
-async function uploadTraceFile(file: File): Promise<{
+async function uploadTraceFile(
+  file: File,
+  options: { guestDraftId?: string | null } = {},
+): Promise<{
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
@@ -1117,6 +1122,7 @@ async function uploadTraceFile(file: File): Promise<{
     },
     body: JSON.stringify({
       fileName: file.name,
+      guestDraftId: options.guestDraftId ?? null,
       mimeType: file.type || null,
       originalPathname: uploadedOriginal.pathname,
       originalUrl: uploadedOriginal.url,

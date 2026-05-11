@@ -2,6 +2,10 @@ import { del, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractEditorV2TraceBlobUrls } from "@/lib/blob";
+import {
+  listActiveGuestTraceAssetUrls,
+  purgeExpiredGuestTraceAssets,
+} from "@/lib/editor-v2/server/guestTraceAssets";
 
 export const runtime = "nodejs";
 
@@ -9,6 +13,18 @@ export async function GET(req: Request) {
   const secret = req.headers.get("x-cron-secret");
   if (!process.env.BLOB_GC_SECRET || secret !== process.env.BLOB_GC_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const dryRun = searchParams.get("dryRun") === "1";
+  const minAgeHoursValue = Number(searchParams.get("minAgeHours") ?? "24");
+  const minAgeHours =
+    Number.isFinite(minAgeHoursValue) && minAgeHoursValue >= 0 ? minAgeHoursValue : 24;
+  const minAgeMs = minAgeHours * 60 * 60 * 1000;
+  const now = Date.now();
+  const expiredGuestBlobUrls = dryRun ? [] : await purgeExpiredGuestTraceAssets(prisma);
+  for (const url of expiredGuestBlobUrls) {
+    void del(url).catch(() => {});
   }
 
   const editorDesigns = await prisma.editorDesign.findMany({
@@ -21,14 +37,10 @@ export async function GET(req: Request) {
       referenced.add(url);
     }
   }
+  for (const url of await listActiveGuestTraceAssetUrls(prisma)) {
+    referenced.add(url);
+  }
 
-  const { searchParams } = new URL(req.url);
-  const dryRun = searchParams.get("dryRun") === "1";
-  const minAgeHoursValue = Number(searchParams.get("minAgeHours") ?? "24");
-  const minAgeHours =
-    Number.isFinite(minAgeHoursValue) && minAgeHoursValue >= 0 ? minAgeHoursValue : 24;
-  const minAgeMs = minAgeHours * 60 * 60 * 1000;
-  const now = Date.now();
   let deleted = 0;
   let candidates = 0;
   let cursor: string | undefined;
@@ -58,6 +70,7 @@ export async function GET(req: Request) {
     deleted,
     candidates,
     referenced: referenced.size,
+    expiredGuestBlobCount: expiredGuestBlobUrls.length,
     minAgeHours,
   });
 }

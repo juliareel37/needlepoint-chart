@@ -1,6 +1,8 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { isBlobUrl } from "@/lib/blob";
+import { prisma } from "@/lib/db";
+import { trackGuestTraceAsset } from "@/lib/editor-v2/server/guestTraceAssets";
 import {
   MAX_UPLOAD_BYTES,
   getOrientedImageSize,
@@ -17,6 +19,7 @@ interface CompleteTraceUploadRequest {
   mimeType?: unknown;
   originalPathname?: unknown;
   originalUrl?: unknown;
+  guestDraftId?: unknown;
 }
 
 export async function POST(req: Request) {
@@ -28,6 +31,8 @@ export async function POST(req: Request) {
   const fileName = body && typeof body.fileName === "string" ? body.fileName : null;
   const requestedMimeType =
     body && typeof body.mimeType === "string" ? body.mimeType : null;
+  const guestDraftId =
+    body && typeof body.guestDraftId === "string" ? body.guestDraftId : null;
 
   if (!originalUrl || !isBlobUrl(originalUrl)) {
     return NextResponse.json({ error: "Missing uploaded blob URL" }, { status: 400 });
@@ -79,6 +84,20 @@ export async function POST(req: Request) {
       contentType: "image/webp",
     }),
   ]);
+
+  if (guestDraftId) {
+    await trackGuestTraceAsset(prisma, {
+      guestDraftId,
+      originalUrl,
+      previewUrl: previewUpload.url,
+      thumbnailUrl: thumbnailUpload.url,
+      fileName,
+      byteSize: originalBuffer.length,
+      mimeType,
+      imageWidth: orientedSize.width,
+      imageHeight: orientedSize.height,
+    });
+  }
 
   return NextResponse.json({
     originalUrl,

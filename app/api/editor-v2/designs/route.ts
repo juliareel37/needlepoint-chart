@@ -11,6 +11,7 @@ import {
   createEditorDesignVersionSnapshot,
   hashPersistedEditorV2Design,
 } from "@/lib/editor-v2/server/versioning";
+import { claimGuestTraceAssetsForDesign } from "@/lib/editor-v2/server/guestTraceAssets";
 import type { LibraryDesignView } from "@/lib/library/designs";
 import { deleteBlobIfExists } from "@/lib/blob";
 import { loadLibraryDesignPage } from "@/lib/library/designs";
@@ -97,6 +98,8 @@ export async function POST(req: Request) {
         purgeAfterAt: null,
       },
     });
+
+    await claimGuestTraceAssetsForDesign(tx, createdDesign.id, data);
 
     const prunedVersions = await createEditorDesignVersionSnapshot(tx, {
       designId: createdDesign.id,

@@ -36,6 +36,7 @@ import {
 import {
   deleteGuestLocalSnapshots,
   deleteLocalSnapshot,
+  readGuestLocalDraftIds,
   readMostRecentGuestLocalSnapshot,
   readLocalSnapshot,
   shouldRecoverLocalSnapshot,
@@ -273,6 +274,11 @@ export function EditorV2Page({
   );
 
   const clearLocalBrowserData = useCallback(async () => {
+    const guestDraftIds = await readGuestLocalDraftIds();
+
+    await Promise.all(
+      guestDraftIds.map((draftId) => deleteGuestTraceAssetsForDraft(draftId)),
+    );
     await deleteGuestLocalSnapshots();
 
     if (typeof window !== "undefined") {
@@ -1004,6 +1010,9 @@ export function EditorV2Page({
           }
 
           if (localSnapshotKey) {
+            if (!currentStorageId && isLocalDesignId(localSnapshotKey)) {
+              await deleteGuestTraceAssetsForDraft(localSnapshotKey);
+            }
             await deleteLocalSnapshot(localSnapshotKey);
           }
 
@@ -1183,6 +1192,17 @@ function applySavedRecordToDocument(
 
 function isLocalDesignId(designId: string): boolean {
   return designId.startsWith("local_");
+}
+
+async function deleteGuestTraceAssetsForDraft(draftId: string): Promise<void> {
+  if (!isLocalDesignId(draftId) || typeof window === "undefined") {
+    return;
+  }
+
+  await fetch(`/api/upload-trace/guest-drafts/${encodeURIComponent(draftId)}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  }).catch(() => {});
 }
 
 function clearEditorV2BrowserStorage(currentWindow: Window): void {

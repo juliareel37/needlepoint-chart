@@ -90,6 +90,7 @@ model EditorDesign {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   versions        EditorDesignVersion[]
+  guestTraceAssets GuestTraceAsset[]
   appUser         AppUser             @relation(fields: [appUserId], references: [id], onDelete: Cascade)
 
   @@index([appUserId])
@@ -111,4 +112,28 @@ model EditorDesignVersion {
 
   @@index([designId])
   @@index([designId, createdAt])
+}
+
+model GuestTraceAsset {
+  id              String       @id @default(cuid())
+  guestDraftId    String
+  originalUrl     String       @unique
+  previewUrl      String       @unique
+  thumbnailUrl    String       @unique
+  fileName        String?
+  byteSize        Int?
+  mimeType        String?
+  imageWidth      Int?
+  imageHeight     Int?
+  claimedDesignId String?
+  claimedAt       DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  claimedDesign   EditorDesign? @relation(fields: [claimedDesignId], references: [id], onDelete: SetNull)
+
+  @@index([guestDraftId])
+  @@index([expiresAt])
+  @@index([claimedDesignId])
+  @@index([claimedAt])
 }

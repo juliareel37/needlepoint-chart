@@ -372,6 +372,7 @@ export function EditorSidebar({
                 cropDraft={traceCropDraft}
                 cropEditing={traceCropEditing}
                 dispatch={dispatch}
+                guestDraftId={currentStorageId ? null : document.project.id}
                 grid={document.grid}
                 gridMetrics={gridMetrics}
                 onBeginCrop={onBeginTraceCrop}

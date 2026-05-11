@@ -18,6 +18,7 @@ import {
   hashPersistedEditorV2Design,
   shouldCreateEditorDesignVersion,
 } from "@/lib/editor-v2/server/versioning";
+import { claimGuestTraceAssetsForDesign } from "@/lib/editor-v2/server/guestTraceAssets";
 
 export const runtime = "nodejs";
 
@@ -187,6 +188,8 @@ export async function PUT(req: Request, context: RouteContext) {
           : {}),
       },
     });
+
+    await claimGuestTraceAssetsForDesign(tx, id, data);
 
     const prunedVersions = shouldVersion
       ? await createEditorDesignVersionSnapshot(tx, {
