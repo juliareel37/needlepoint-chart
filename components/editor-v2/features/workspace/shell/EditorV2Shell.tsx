@@ -257,6 +257,7 @@ export function EditorV2Shell({
   onStartOver,
   onCloseSetupModal,
   hasPersistableUnsavedChanges,
+  lastSaveConfirmedAt,
   recoveredLocalChanges,
   saveButtonState,
   saveMessage,
@@ -313,6 +314,7 @@ export function EditorV2Shell({
   onStartOver: () => void;
   onCloseSetupModal: () => void;
   hasPersistableUnsavedChanges: boolean;
+  lastSaveConfirmedAt: number | null;
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
@@ -401,7 +403,7 @@ export function EditorV2Shell({
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const visibleSidebarSection =
     !isBottomPanelLayout &&
-    (activeSidebarSection === "document" || activeSidebarSection === "settings")
+    activeSidebarSection === "settings"
       ? "color"
       : activeSidebarSection;
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -1707,10 +1709,10 @@ export function EditorV2Shell({
       ? true
       : Boolean(saveMessage || hasUnsavedChanges);
   const showDocumentPanelStatus =
-    isBottomPanelLayout &&
-    (hasSavedDesignAccess &&
-      ((saveMode === "autosave" && showSaveStatus) ||
-        (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus)));
+    activeSidebarSection === "document" &&
+    hasSavedDesignAccess &&
+    ((saveMode === "autosave" && showSaveStatus) ||
+      (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
   const showHeaderSaveStatus = hasSavedDesignAccess;
   const renderHeaderSaveStatusCard = showHeaderSaveStatus && showSaveStatus;
   const showHeaderSaveStatusInFileMenu =
@@ -2773,7 +2775,7 @@ export function EditorV2Shell({
           <>
             <EditorRail
               activeSection={visibleSidebarSection}
-              hideDocumentItem={!isBottomPanelLayout}
+              hideDocumentItem={false}
               hideSettingsItem={!isBottomPanelLayout}
               panelCollapsed={sidebarCollapsed}
               onSelectSection={(section) => {
@@ -2842,10 +2844,45 @@ export function EditorV2Shell({
                     onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
+                    onDuplicateDocument={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      duplicateDesignToNewTab(document);
+                    }}
+                    onDownloadDocument={handleExportRequest}
+                    onSaveVersionSnapshot={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      if (saveButtonState === "saving") {
+                        return;
+                      }
+
+                      void onSaveVersionSnapshot();
+                    }}
+                    onOpenVersionHistory={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      if (!currentStorageId) {
+                        return;
+                      }
+
+                      onEnterVersionHistoryMode();
+                    }}
                     onSignIn={openSignInForCurrentDesign}
                     onStartOver={onStartOver}
                     onClearLocalBrowserData={onClearLocalBrowserData}
                     previewMode={previewMode}
+                    snapshotSaving={saveButtonState === "saving"}
+                    exportInProgress={exportButtonState === "exporting"}
                     previewModeDisabled={previewModeDisabled}
                     traceCropDraft={tracePreviewCrop}
                     traceCropEditing={traceCropEditing}
@@ -2864,6 +2901,7 @@ export function EditorV2Shell({
                     document={document}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
+                    lastSaveConfirmedAt={lastSaveConfirmedAt}
                     recoveredLocalChanges={recoveredLocalChanges}
                     requestedColorPanelView={requestedColorPanelView}
                     requestedColorPanelViewKey={requestedColorPanelViewKey}

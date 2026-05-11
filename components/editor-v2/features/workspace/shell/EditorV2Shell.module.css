@@ -354,9 +354,14 @@
     box-shadow 140ms ease;
 }
 
+.editableTitleTrigger:hover .editableTitleSurface {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+}
+
 .editableTitleTrigger:focus-visible .editableTitleSurface {
-  border-color: var(--ui-border-subtle);
-  background: var(--surface-card);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
 }
 
 .editableTitleText {
@@ -388,14 +393,191 @@
 }
 
 .documentPanelTitleRow {
-  display: none;
+  display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.documentPanelTitleRow .sidebarTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .documentPanelTitleStatus {
   width: fit-content;
   max-width: 100%;
+}
+
+.documentSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 0 8px;
+}
+
+.documentSummaryRow {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.documentThumbnailFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.documentThumbnailSurface {
+  width: 72px;
+  height: 72px;
+  padding: 6px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: var(--canvas-stage-bg);
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--ui-shadow-sm);
+  overflow: hidden;
+}
+
+.documentThumbnailCanvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.documentSummaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.documentStatusRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-left: 8px;
+  margin-top: -2px;
+  color: var(--text-secondary);
+}
+
+.documentStatusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--text-secondary);
+  flex: 0 0 auto;
+}
+
+.documentStatusRow[data-state="saved"] .documentStatusDot {
+  background: var(--status-success-base);
+}
+
+.documentStatusRow[data-state="pending"] .documentStatusDot {
+  background: var(--brand-500);
+}
+
+.documentStatusRow[data-state="error"] .documentStatusDot {
+  background: var(--status-destructive-base);
+}
+
+.documentStatusLabel,
+.documentStatusDetail,
+.documentStatusDivider {
+  margin: 0;
+}
+
+.documentStatusLabel {
+  color: var(--text-primary);
+}
+
+.documentStatusDetail {
+  color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+}
+
+.documentStatusDivider {
+  color: color-mix(in srgb, var(--text-secondary) 42%, transparent);
+}
+
+.documentMetadataCard {
+  padding: 16px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 20px;
+  background: var(--surface-card);
+}
+
+.documentMetadataGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 16px;
+}
+
+.documentMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.documentMetaLabel {
+  margin: 0;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.documentMetaValue {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.documentActionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.documentActionButton {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* min-height: 116px; */
+  padding: 18px 16px;
+  border-radius: 18px;
+  text-align: center;
+}
+
+.documentActionIconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+}
+
+.documentActionIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.documentSecondaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.documentSecondaryButton {
+  min-width: 0;
 }
 
 .headerDesignTitle {
@@ -3312,8 +3494,8 @@
   }
 
   .editableTitleTrigger:hover .editableTitleSurface {
-    border-color: var(--ui-border-reg);
-    background: var(--surface-card);
+    border-color: transparent;
+    background: color-mix(in srgb, var(--text-primary) 7%, transparent);
   }
 
   .editableTitleTrigger:hover .titleHoverIcon,
@@ -3536,9 +3718,8 @@
 
   .documentPanelTitleRow {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
 
@@ -3549,7 +3730,7 @@
 
   .documentPanelTitleStatus {
     flex: 0 0 auto;
-    margin-left: auto;
+    margin-left: 0;
   }
 
   .documentPanelTitleRow .editableTitleTrigger {
@@ -3563,6 +3744,18 @@
 
   .documentPanelTitleRow .titleHoverIcon {
     opacity: 0.65;
+  }
+
+  .documentSummaryRow {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .documentThumbnailSurface {
+    width: 64px;
+    height: 64px;
+    padding: 5px;
   }
 
 
@@ -3736,10 +3929,6 @@
 }
 
 @media (min-width: 769px) {
-  .documentPanelTitle {
-    display: none;
-  }
-
   .editableTitleRootHeader {
     display: block;
   }

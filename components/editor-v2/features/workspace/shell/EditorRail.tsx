@@ -21,15 +21,6 @@ const railItems: Array<{ id: EditorSidebarSection; label: string; icon: string }
   { id: "settings", label: "Settings", icon: "/icons/lucide/settings.svg" },
 ];
 
-const railItemsWithoutDocument: Array<{ id: EditorSidebarSection; label: string; icon: string }> = [
-  // { id: "document", label: "Document", icon: "/icons/lucide/file.svg" },
-  { id: "color", label: "Color", icon: "/icons/lucide/palette.svg" },
-  { id: "trace", label: "Trace", icon: "/icons/lucide/image.svg" },
-  { id: "text", label: "Text", icon: "/icons/lucide/type-outline.svg" },
-  { id: "icons", label: "Icons", icon: "/icons/lucide/shapes-icon.svg" },
-  { id: "settings", label: "Settings", icon: "/icons/lucide/settings.svg" },
-];
-
 export function EditorRail({
   activeSection,
   hideDocumentItem = false,
@@ -37,9 +28,9 @@ export function EditorRail({
   panelCollapsed,
   onSelectSection,
 }: EditorRailProps) {
-  const visibleRailItems = (hideDocumentItem ? railItemsWithoutDocument : railItems).filter(
-    (item) => !(hideSettingsItem && item.id === "settings"),
-  );
+  const visibleRailItems = railItems.filter(
+    (item) => !(hideDocumentItem && item.id === "document"),
+  ).filter((item) => !(hideSettingsItem && item.id === "settings"));
 
   return (
     <aside className={styles.rail} aria-label="Editor sections">

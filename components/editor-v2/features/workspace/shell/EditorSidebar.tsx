@@ -55,11 +55,17 @@ interface EditorSidebarProps {
   onClose: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
+  onDuplicateDocument: () => void;
+  onDownloadDocument: () => void;
+  onSaveVersionSnapshot: () => void;
+  onOpenVersionHistory: () => void;
   onSignIn: () => void;
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
   onClearLocalBrowserData: () => Promise<void> | void;
   previewMode: boolean;
+  snapshotSaving: boolean;
+  exportInProgress: boolean;
   previewModeDisabled?: boolean;
   selectionControlActive: boolean;
   selectionPromptVisible: boolean;
@@ -75,6 +81,7 @@ interface EditorSidebarProps {
   document: EditorDocumentState;
   gridMetrics: GridWorldMetrics;
   highlightedColorId: string | null;
+  lastSaveConfirmedAt: number | null;
   recoveredLocalChanges: boolean;
   saveMessage: string;
   saveMode: "manual" | "autosave";
@@ -124,11 +131,17 @@ export function EditorSidebar({
   onClose,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
+  onDuplicateDocument,
+  onDownloadDocument,
+  onSaveVersionSnapshot,
+  onOpenVersionHistory,
   onSignIn,
   onScopeModeChange,
   onStartOver,
   onClearLocalBrowserData,
   previewMode,
+  snapshotSaving,
+  exportInProgress,
   previewModeDisabled = false,
   selectionControlActive,
   selectionPromptVisible,
@@ -144,6 +157,7 @@ export function EditorSidebar({
   document,
   gridMetrics,
   highlightedColorId,
+  lastSaveConfirmedAt,
   recoveredLocalChanges,
   saveMessage,
   saveMode,
@@ -282,64 +296,29 @@ export function EditorSidebar({
 
         <div className={styles.sidebarPanelBody}>
           {activeSection === "document" ? (
-            isBottomPanelLayout ? (
-              <DocumentPanelPage
-                autoSaveEnabled={autoSaveEnabled}
-                dispatch={dispatch}
-                documentTitle={documentTitle}
-                hasSavedDesignAccess={hasSavedDesignAccess}
-                hasUnsavedChanges={hasUnsavedChanges}
-                isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
-                onLoadSelected={onLoadSelected}
-                renameRequestToken={renameRequestToken}
-                onSignIn={onSignIn}
-                onStartOver={onStartOver}
-                onClearLocalBrowserData={onClearLocalBrowserData}
-                recoveredLocalChanges={recoveredLocalChanges}
-                saveMessage={saveMessage}
-                saveMode={saveMode}
-                savedDocuments={savedDocuments}
-                savedDocumentsLoading={savedDocumentsLoading}
-                savedDocumentsHasMore={savedDocumentsHasMore}
-                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
-                onOpenSavedDocuments={onOpenSavedDocuments}
-                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
-                currentStorageId={currentStorageId}
-                onEnterVersionHistoryMode={onEnterVersionHistoryMode}
-                selectedStorageId={selectedStorageId}
-                setSelectedStorageId={setSelectedStorageId}
-              />
-            ) : (
-              <>
-                {/*
-                <DocumentPanelPage
-                  autoSaveEnabled={autoSaveEnabled}
-                  dispatch={dispatch}
-                  documentTitle={documentTitle}
-                  hasSavedDesignAccess={hasSavedDesignAccess}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
-                  onLoadSelected={onLoadSelected}
-                  renameRequestToken={renameRequestToken}
-                  onSignIn={onSignIn}
-                  onStartOver={onStartOver}
-                  recoveredLocalChanges={recoveredLocalChanges}
-                  saveMessage={saveMessage}
-                  saveMode={saveMode}
-                  savedDocuments={savedDocuments}
-                  savedDocumentsLoading={savedDocumentsLoading}
-                  savedDocumentsHasMore={savedDocumentsHasMore}
-                  savedDocumentsLoadingMore={savedDocumentsLoadingMore}
-                  onOpenSavedDocuments={onOpenSavedDocuments}
-                  onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
-                  currentStorageId={currentStorageId}
-                  onEnterVersionHistoryMode={onEnterVersionHistoryMode}
-                  selectedStorageId={selectedStorageId}
-                  setSelectedStorageId={setSelectedStorageId}
-                />
-                */}
-              </>
-            )
+            <DocumentPanelPage
+              autoSaveEnabled={autoSaveEnabled}
+              currentStorageId={currentStorageId}
+              dispatch={dispatch}
+              document={document}
+              documentTitle={documentTitle}
+              exportInProgress={exportInProgress}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
+              lastSaveConfirmedAt={lastSaveConfirmedAt}
+              onClearLocalBrowserData={onClearLocalBrowserData}
+              onDownloadDocument={onDownloadDocument}
+              onDuplicateDocument={onDuplicateDocument}
+              onOpenVersionHistory={onOpenVersionHistory}
+              onSaveVersionSnapshot={onSaveVersionSnapshot}
+              onSignIn={onSignIn}
+              onStartOver={onStartOver}
+              recoveredLocalChanges={recoveredLocalChanges}
+              renameRequestToken={renameRequestToken}
+              saveMessage={saveMessage}
+              snapshotSaving={snapshotSaving}
+            />
           ) : null}
 
           {activeSection === "color" ? (
