@@ -9,6 +9,7 @@ import type { EditorDocumentState, EditorStore } from "@/lib/editor-v2/editor/st
 import type { SavedEditorV2DocumentRecord } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { EditableDesignTitle } from "../EditableDesignTitle";
+import { SaveStatusCard } from "../SaveStatusCard";
 import styles from "../EditorV2Shell.module.css";
 
 interface DocumentPanelPageProps {
@@ -37,6 +38,7 @@ interface DocumentPanelPageProps {
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   saveMessage: string;
+  saveMode: "manual" | "autosave";
   snapshotSaving: boolean;
 }
 
@@ -66,6 +68,7 @@ export function DocumentPanelPage({
   savedDocuments,
   savedDocumentsLoading,
   saveMessage,
+  saveMode,
   snapshotSaving,
 }: DocumentPanelPageProps) {
   const stitchSnapshot = buildLibraryStitchSnapshot({
@@ -184,8 +187,23 @@ export function DocumentPanelPage({
             />
           </div>
         </section>
-            <div className={styles.traceSectionDivider} aria-hidden="true" />
+{/* 
+        <section className={styles.documentSaveStatusCard}>
+          <SaveStatusCard
+            autoSaveEnabled={autoSaveEnabled}
+            hasSavedDesignAccess={hasSavedDesignAccess}
+            hasUnsavedChanges={hasUnsavedChanges}
+            layout="panel"
+            onDismiss={null}
+            onSignIn={onSignIn}
+            recoveredLocalChanges={recoveredLocalChanges}
+            saveMode={saveMode}
+            saveMessage={saveMessage}
+          />
+        </section> */}
 
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
+{/* 
         <section className={styles.documentActionGrid}>
           <Button
             type="button"
@@ -250,7 +268,7 @@ export function DocumentPanelPage({
             History
           </Button>
         </section>
-            <div className={styles.traceSectionDivider} aria-hidden="true" />
+            <div className={styles.traceSectionDivider} aria-hidden="true" /> */}
 
         {hasSavedDesignAccess ? (
           <section className={styles.documentRecentSection}>

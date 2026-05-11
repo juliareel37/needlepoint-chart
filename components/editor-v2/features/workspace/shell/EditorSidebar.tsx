@@ -326,6 +326,7 @@ export function EditorSidebar({
               savedDocuments={savedDocuments}
               savedDocumentsLoading={savedDocumentsLoading}
               saveMessage={saveMessage}
+              saveMode={saveMode}
               snapshotSaving={snapshotSaving}
             />
           ) : null}
