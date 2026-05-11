@@ -2586,11 +2586,11 @@ export function EditorV2Shell({
         : null}
       <Modal
         isOpen={exportAuthModalOpen}
-        title="Create an account to export designs"
-        description="Create an account to export your pattern as a PDF - it's free!"
-        tone="warning"
-        dismissLabel="Go back"
-        confirmLabel="Sign in"
+        title="Export your pattern as a PDF"
+        description="Create a free account to download PDFs, save designs, and continue editing later."
+        tone="none"
+        dismissLabel="Not now"
+        confirmLabel="Create free account"
         onDismiss={() => setExportAuthModalOpen(false)}
         onConfirm={() => {
           setExportAuthModalOpen(false);
