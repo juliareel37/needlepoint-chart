@@ -28,6 +28,7 @@ import {
 import { SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW } from "./placementPreviewMode";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
 import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
+import styles from "../shell/EditorV2Shell.module.css";
 
 interface IconPlacementLayerProps {
   dispatch: EditorStore["dispatch"];
@@ -227,6 +228,7 @@ export function IconPlacementLayer({
   const [previewSrc, setPreviewSrc] = useState<string | null>(
     placement.primitiveKind ? null : placement.src,
   );
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [sampledPreviewCells, setSampledPreviewCells] = useState<CellSampledPreviewCell[] | null>(null);
   const handleTransformPreview = useCallback((nextTransform: typeof transform) => {
     if (portalHost) {
@@ -284,6 +286,7 @@ export function IconPlacementLayer({
     let cancelled = false;
 
     async function buildBasePreview() {
+      setIsPreviewLoading(true);
       const nextPreviewSrc = await (async () => {
         if (placement.primitiveKind) {
           return primitivePreviewSrc;
@@ -335,6 +338,7 @@ export function IconPlacementLayer({
       if (!previewSrc) {
         if (!cancelled) {
           setSampledPreviewCells(null);
+          setIsPreviewLoading(false);
         }
         return;
       }
@@ -342,6 +346,7 @@ export function IconPlacementLayer({
       if (!useCellSampledPreview || !shouldUseCellSampledIconPreview(displayBounds, metrics)) {
         if (!cancelled) {
           setSampledPreviewCells(null);
+          setIsPreviewLoading(false);
         }
         return;
       }
@@ -380,10 +385,12 @@ export function IconPlacementLayer({
         });
         if (!cancelled) {
           setSampledPreviewCells(nextSampledCells);
+          setIsPreviewLoading(false);
         }
       } catch {
         if (!cancelled) {
           setSampledPreviewCells(null);
+          setIsPreviewLoading(false);
         }
       }
     }
@@ -402,6 +409,48 @@ export function IconPlacementLayer({
     previewSrc,
     useCellSampledPreview,
   ]);
+
+  useEffect(() => {
+    if (placement.primitiveKind) {
+      setIsPreviewLoading(false);
+    }
+  }, [placement.primitiveKind]);
+
+  const previewLoadingOverlay = isPreviewLoading ? (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+        borderRadius: 12,
+        background: "rgba(255, 255, 255, 0.52)",
+        backdropFilter: "blur(2px)",
+        WebkitBackdropFilter: "blur(2px)",
+      }}
+    >
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 10px",
+          borderRadius: 999,
+          background: "rgba(255, 255, 255, 0.88)",
+          boxShadow: "0 6px 18px rgba(15, 23, 42, 0.12)",
+          color: "var(--text-primary)",
+          fontSize: 12,
+          fontWeight: 600,
+          lineHeight: 1,
+        }}
+      >
+        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+        Preparing preview...
+      </div>
+    </div>
+  ) : null;
 
   useEffect(() => {
     setPreviewTransform(null);
@@ -539,6 +588,7 @@ export function IconPlacementLayer({
                 }}
               />
             )}
+            {previewLoadingOverlay}
           </div>
 
           <IconPlacementBoxOverlay
@@ -636,6 +686,7 @@ export function IconPlacementLayer({
                 }}
               />
             )}
+            {previewLoadingOverlay}
           </div>
 
           <IconPlacementBoxOverlay

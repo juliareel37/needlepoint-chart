@@ -822,6 +822,7 @@ export function IconPlacementToolbar({
             type="button"
             variant="secondary"
             textOnly
+            disabled={isConverting}
             onClick={() => dispatch(createCancelIconPlacementCommand())}
           >
             Cancel
@@ -833,11 +834,19 @@ export function IconPlacementToolbar({
             textOnly
             // className={styles.selectionToolbarCloseButton}
             disabled={!canConvert}
+            aria-busy={isConverting}
             onClick={() => {
               void handleConvert();
             }}
           >
-            Apply
+            {isConverting ? (
+              <>
+                <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                Converting...
+              </>
+            ) : (
+              "Apply"
+            )}
           </ToolbarButton>
           
         </Toolbar>
