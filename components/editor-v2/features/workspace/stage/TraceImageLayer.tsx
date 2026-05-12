@@ -92,6 +92,7 @@ interface TraceImageLayerProps {
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
   eraserBrushSize?: number;
+  eraserBrushPreviewVisible?: boolean;
   eraserDraftRevision?: number;
   eraserEditing?: boolean;
   eraserMaskUrl?: string | null;
@@ -120,6 +121,7 @@ export function TraceImageLayer({
   cropEditing = false,
   dispatch,
   eraserBrushSize = 1,
+  eraserBrushPreviewVisible = false,
   eraserDraftRevision = 0,
   eraserEditing = false,
   eraserMaskUrl = null,
@@ -605,6 +607,7 @@ export function TraceImageLayer({
             baseRect={traceBaseRect}
             bounds={traceBounds}
             brushSize={eraserBrushSize}
+            brushPreviewVisible={eraserBrushPreviewVisible}
             draftRevision={eraserDraftRevision}
             draftMaskUrl={eraserMaskUrl}
             imageOpacity={imageOpacity}
@@ -712,6 +715,7 @@ interface TraceEraserEditorOverlayProps {
   baseRect: { left: number; top: number; width: number; height: number };
   bounds: { left: number; top: number; width: number; height: number };
   brushSize: number;
+  brushPreviewVisible: boolean;
   draftRevision: number;
   draftMaskUrl: string | null;
   imageOpacity: number;
@@ -729,6 +733,7 @@ function TraceEraserEditorOverlay({
   baseRect,
   bounds,
   brushSize,
+  brushPreviewVisible,
   draftRevision,
   draftMaskUrl,
   imageOpacity,
@@ -747,8 +752,29 @@ function TraceEraserEditorOverlay({
   const hasUserEditedMaskRef = useRef(false);
   const [maskSeeded, setMaskSeeded] = useState(false);
   const [maskSeedSourceKey, setMaskSeedSourceKey] = useState<string | null>(null);
+  const [coarsePointer, setCoarsePointer] = useState(false);
+  const [brushPreviewPoint, setBrushPreviewPoint] = useState<{ x: number; y: number } | null>(null);
   const matchingLoadedMask =
     traceAsset?.mask && traceAsset.mask.url === draftMaskUrl ? traceAsset.mask : null;
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
 
   useEffect(() => {
     hasUserEditedMaskRef.current = false;
@@ -1134,57 +1160,108 @@ function TraceEraserEditorOverlay({
       traceAsset?.mask?.url,
     ],
   );
+  const brushPreviewRadius = getTraceEraserBrushDiameter(brushSize, trace) / 2;
 
   return (
-    <canvas
-      ref={overlayCanvasRef}
-      onPointerDown={(event) => {
-        if (!drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, false)) {
-          return;
-        }
+    <>
+      <canvas
+        ref={overlayCanvasRef}
+        onPointerDown={(event) => {
+          activePointerIdRef.current = event.pointerId;
+          lastPointRef.current = null;
+          setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, false);
+        }}
+        onPointerMove={(event) => {
+          setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
+          if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
 
-        activePointerIdRef.current = event.pointerId;
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        if (activePointerIdRef.current !== event.pointerId) {
-          return;
-        }
+          drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, true);
+        }}
+        onPointerEnter={(event) => {
+          setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
+        }}
+        onPointerLeave={() => {
+          if (activePointerIdRef.current === null) {
+            setBrushPreviewPoint(null);
+          }
+        }}
+        onPointerUp={(event) => {
+          if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
 
-        drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, true);
-      }}
-      onPointerUp={(event) => {
-        if (activePointerIdRef.current !== event.pointerId) {
-          return;
-        }
-
-        activePointerIdRef.current = null;
-        lastPointRef.current = null;
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        commitDraft();
-      }}
-      onPointerCancel={(event) => {
-        if (activePointerIdRef.current !== event.pointerId) {
-          return;
-        }
-
-        activePointerIdRef.current = null;
-        lastPointRef.current = null;
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          activePointerIdRef.current = null;
+          lastPointRef.current = null;
+          setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-        commitDraft();
-      }}
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 4,
-        width: `${surfaceWidth}px`,
-        height: `${surfaceHeight}px`,
-        touchAction: "none",
-        cursor: "url('/paint-brush-cursor.cur') 0 24, crosshair",
-      }}
-    />
+          commitDraft();
+        }}
+        onPointerCancel={(event) => {
+          if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          activePointerIdRef.current = null;
+          lastPointRef.current = null;
+          setBrushPreviewPoint(null);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          commitDraft();
+        }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 4,
+          width: `${surfaceWidth}px`,
+          height: `${surfaceHeight}px`,
+          touchAction: "none",
+          cursor: coarsePointer ? "url('/paint-brush-cursor.cur') 0 24, crosshair" : "none",
+        }}
+      />
+      {!coarsePointer && brushPreviewPoint ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${brushPreviewPoint.x}px`,
+            top: `${brushPreviewPoint.y}px`,
+            width: `${brushPreviewRadius * 2}px`,
+            height: `${brushPreviewRadius * 2}px`,
+            transform: "translate(-50%, -50%)",
+            borderRadius: "999px",
+            border: "1.5px solid rgba(255, 255, 255, 0.96)",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.42)",
+            background: "rgba(255, 255, 255, 0.08)",
+            pointerEvents: "none",
+            zIndex: 5,
+          }}
+        />
+      ) : null}
+      {brushPreviewVisible ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: `${brushPreviewRadius * 2}px`,
+            height: `${brushPreviewRadius * 2}px`,
+            transform: "translate(-50%, -50%)",
+            borderRadius: "999px",
+            border: "2px solid rgba(255, 255, 255, 0.98)",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.52)",
+            background: "rgba(255, 255, 255, 0.12)",
+            pointerEvents: "none",
+            zIndex: 6,
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 

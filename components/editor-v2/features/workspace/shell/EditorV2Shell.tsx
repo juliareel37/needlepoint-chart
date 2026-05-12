@@ -453,6 +453,7 @@ export function EditorV2Shell({
   const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
   const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
   const [traceEraserDraftRevision, setTraceEraserDraftRevision] = useState(0);
+  const [traceEraserBrushPreviewVisible, setTraceEraserBrushPreviewVisible] = useState(false);
   const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);
   const [traceEraserDirty, setTraceEraserDirty] = useState(false);
   const [traceEraserInitialState, setTraceEraserInitialState] =
@@ -486,6 +487,7 @@ export function EditorV2Shell({
     setTraceEraserMode("erase");
     setTraceEraserDraftMaskUrl(null);
     setTraceEraserDraftRevision(0);
+    setTraceEraserBrushPreviewVisible(false);
     setTraceEraserMaskFullyVisible(!trace?.maskUrl);
     setTraceEraserDirty(false);
     setTraceEraserInitialState(null);
@@ -551,6 +553,7 @@ export function EditorV2Shell({
     setTraceEraserDraftRevision((current) => current + 1);
     setTraceEraserMaskFullyVisible(nextInitialState.isFullyVisible);
     setTraceEraserMode("erase");
+    setTraceEraserBrushPreviewVisible(false);
     setTraceEraserDirty(false);
     setTraceEraserUndoStack([]);
     setTraceEraserRedoStack([]);
@@ -654,6 +657,7 @@ export function EditorV2Shell({
     setTraceEraserActive(false);
     setTraceEraserDraftMaskUrl(null);
     setTraceEraserDraftRevision(0);
+    setTraceEraserBrushPreviewVisible(false);
     setTraceEraserMaskFullyVisible(true);
     setTraceEraserDirty(false);
     setTraceEraserMode("erase");
@@ -3166,6 +3170,7 @@ export function EditorV2Shell({
                           void handleCommitTraceEraser();
                         }}
                         onModeChange={setTraceEraserMode}
+                        onPreviewVisibilityChange={setTraceEraserBrushPreviewVisible}
                         onRedo={handleTraceEraserRedo}
                         onUndo={handleTraceEraserUndo}
                       />
@@ -3298,6 +3303,7 @@ export function EditorV2Shell({
                     traceCropAspectRatio={traceCropAspectRatio}
                     traceCropEditing={traceCropEditing}
                     traceEraserBrushSize={traceEraserBrushSize}
+                    traceEraserBrushPreviewVisible={traceEraserBrushPreviewVisible}
                     traceEraserEditing={traceEraserEditing}
                     traceEraserMaskUrl={traceEraserDraftMaskUrl}
                     traceEraserDraftRevision={traceEraserDraftRevision}

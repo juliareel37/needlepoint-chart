@@ -20,6 +20,7 @@ interface TraceEraserToolbarProps {
   onCancel: () => void;
   onCommit: () => void;
   onModeChange: (mode: "erase" | "restore") => void;
+  onPreviewVisibilityChange: (visible: boolean) => void;
   onRedo: () => void;
   onUndo: () => void;
 }
@@ -33,6 +34,7 @@ export function TraceEraserToolbar({
   onCancel,
   onCommit,
   onModeChange,
+  onPreviewVisibilityChange,
   onRedo,
   onUndo,
 }: TraceEraserToolbarProps) {
@@ -76,6 +78,10 @@ export function TraceEraserToolbar({
                   value={brushSizeSliderValue}
                   aria-label="Eraser brush size"
                   aria-valuetext={`${brushSizePercent}% image-size erase area`}
+                  onPointerDown={() => onPreviewVisibilityChange(true)}
+                  onPointerUp={() => onPreviewVisibilityChange(false)}
+                  onPointerCancel={() => onPreviewVisibilityChange(false)}
+                  onBlur={() => onPreviewVisibilityChange(false)}
                   onChange={(event) => {
                     const nextSliderValue = Number(event.currentTarget.value);
                     const nextBrushSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
@@ -89,7 +95,6 @@ export function TraceEraserToolbar({
                   style={{ width: "100%", maxWidth: "none" }}
                 />
               </div>
-              <span className={styles.traceEraserToolbarSliderValue}>{brushSizePercent}%</span>
             </div>
             <ToolbarDivider />
             <ToolbarButton
