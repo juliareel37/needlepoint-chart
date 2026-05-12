@@ -17,9 +17,11 @@ interface TracePanelPageProps {
   cropDraft?: TraceCropRect | null;
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
+  eraserEditing?: boolean;
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   onBeginCrop?: () => void;
+  onBeginEraser?: () => void;
   onCancelCrop?: () => void;
   onCommitCrop?: () => void;
   onResetCrop?: () => void;
@@ -35,9 +37,11 @@ export function TracePanelPage({
   cropDraft,
   cropEditing = false,
   dispatch,
+  eraserEditing = false,
   grid,
   gridMetrics,
   onBeginCrop,
+  onBeginEraser,
   onCancelCrop,
   onCommitCrop,
   onResetCrop,
@@ -55,10 +59,12 @@ export function TracePanelPage({
           cropDraft={cropDraft}
           cropEditing={cropEditing}
           dispatch={dispatch}
+          eraserEditing={eraserEditing}
           guestDraftId={guestDraftId}
           grid={grid}
           gridMetrics={gridMetrics}
           onBeginCrop={onBeginCrop}
+          onBeginEraser={onBeginEraser}
           onCancelCrop={onCancelCrop}
           onCommitCrop={onCommitCrop}
           onResetCrop={onResetCrop}

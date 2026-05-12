@@ -12,6 +12,7 @@ import {
   getTraceAssetCropRect,
   getTraceDisplaySize,
 } from "@/lib/editor-v2/editor/trace/crop";
+import { drawMaskedTraceSourceToCanvas } from "@/lib/editor-v2/editor/trace/mask";
 import type {
   CanvasSizing,
   LoadedTraceAsset,
@@ -159,11 +160,6 @@ export function renderDisplayCanvas(options: {
       metrics.surfaceWidth,
       metrics.surfaceHeight,
     );
-    const cropRect = getTraceAssetCropRect(
-      renderTrace,
-      displayTraceAsset.width,
-      displayTraceAsset.height,
-    );
     const bounds = getPositionedBounds(baseRect, {
       offsetX: renderTrace.offsetX,
       offsetY: renderTrace.offsetY,
@@ -184,12 +180,19 @@ export function renderDisplayCanvas(options: {
     context.globalAlpha = Math.min(Math.max(renderTrace.opacity, 0), 1);
     context.translate(traceRect.x + traceRect.width / 2, traceRect.y + traceRect.height / 2);
     context.rotate((renderTrace.rotation * Math.PI) / 180);
+    const maskedTraceCanvas = document.createElement("canvas");
+    drawMaskedTraceSourceToCanvas(maskedTraceCanvas, displayTraceAsset.image, {
+      trace: renderTrace,
+      width: displayTraceAsset.width,
+      height: displayTraceAsset.height,
+      mask: displayTraceAsset.mask,
+    });
     context.drawImage(
-      displayTraceAsset.image,
-      cropRect.cropX,
-      cropRect.cropY,
-      cropRect.cropWidth,
-      cropRect.cropHeight,
+      maskedTraceCanvas,
+      0,
+      0,
+      maskedTraceCanvas.width,
+      maskedTraceCanvas.height,
       -traceRect.width / 2,
       -traceRect.height / 2,
       traceRect.width,

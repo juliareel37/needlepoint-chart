@@ -2,6 +2,8 @@
 
 import { getContainedRect, getLocalPointWithinRotatedBounds, getPositionedBounds } from "../positioning";
 import { getTraceAssetCropRect, getTraceDisplaySize } from "./crop";
+import type { TraceMaskRenderSource } from "./mask";
+import { drawMaskedTraceSourceToCanvas } from "./mask";
 import type { PaletteColor, TraceDocument } from "../store/state";
 import type { GridCellValue } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
@@ -10,6 +12,7 @@ type PaletteLab = { id: string; L: number; A: number; B: number };
 
 export interface ConvertTraceImageToPatternArgs {
   traceImage: HTMLImageElement;
+  traceMaskImage?: TraceMaskRenderSource | null;
   trace: TraceDocument;
   metrics: GridWorldMetrics;
   palette: PaletteColor[];
@@ -45,6 +48,7 @@ export function convertTraceImageToPattern(
 ): ConvertTraceImageToPatternResult | null {
   const {
     traceImage,
+    traceMaskImage = null,
     trace,
     metrics,
     palette,
@@ -72,8 +76,21 @@ export function convertTraceImageToPattern(
     return null;
   }
 
+  const maskedSourceCanvas = document.createElement("canvas");
+  drawMaskedTraceSourceToCanvas(maskedSourceCanvas, traceImage, {
+    trace: {
+      ...trace,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: imageWidth,
+      cropHeight: imageHeight,
+    },
+    width: imageWidth,
+    height: imageHeight,
+    mask: traceMaskImage,
+  });
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(traceImage, 0, 0, canvas.width, canvas.height);
+  context.drawImage(maskedSourceCanvas, 0, 0, canvas.width, canvas.height);
 
   let imageData: ImageData;
   try {

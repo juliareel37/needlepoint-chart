@@ -97,7 +97,9 @@ interface EditorSidebarProps {
   textViewportHeight: number | null;
   traceCropDraft?: TraceCropRect | null;
   traceCropEditing?: boolean;
+  traceEraserEditing?: boolean;
   onBeginTraceCrop?: () => void;
+  onBeginTraceEraser?: () => void;
   onCancelTraceCrop?: () => void;
   onCommitTraceCrop?: () => void;
   onResetTraceCrop?: () => void;
@@ -173,7 +175,9 @@ export function EditorSidebar({
   textViewportHeight,
   traceCropDraft = null,
   traceCropEditing = false,
+  traceEraserEditing = false,
   onBeginTraceCrop,
+  onBeginTraceEraser,
   onCancelTraceCrop,
   onCommitTraceCrop,
   onResetTraceCrop,
@@ -361,10 +365,12 @@ export function EditorSidebar({
                 cropDraft={traceCropDraft}
                 cropEditing={traceCropEditing}
                 dispatch={dispatch}
+                eraserEditing={traceEraserEditing}
                 guestDraftId={currentStorageId ? null : document.project.id}
                 grid={document.grid}
                 gridMetrics={gridMetrics}
                 onBeginCrop={onBeginTraceCrop}
+                onBeginEraser={onBeginTraceEraser}
                 onCancelCrop={onCancelTraceCrop}
                 onCommitCrop={onCommitTraceCrop}
                 onResetCrop={onResetTraceCrop}

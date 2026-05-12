@@ -199,6 +199,7 @@ function createTrace(): TraceDocument {
     previewUrl: "https://example.com/trace.png",
     thumbnailUrl: "https://example.com/trace-thumb.png",
     originalUrl: "https://example.com/trace-full.png",
+    maskUrl: null,
     fileName: "trace.png",
     byteSize: 1024,
     mimeType: "image/png",

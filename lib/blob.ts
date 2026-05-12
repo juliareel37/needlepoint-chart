@@ -28,6 +28,7 @@ export function extractEditorV2TraceBlobUrls(data: unknown): string[] {
     typeof traceRecord.previewUrl === "string" ? traceRecord.previewUrl : null,
     typeof traceRecord.thumbnailUrl === "string" ? traceRecord.thumbnailUrl : null,
     typeof traceRecord.originalUrl === "string" ? traceRecord.originalUrl : null,
+    typeof traceRecord.maskUrl === "string" ? traceRecord.maskUrl : null,
     typeof traceRecord.assetUrl === "string" ? traceRecord.assetUrl : null,
   ]);
 }

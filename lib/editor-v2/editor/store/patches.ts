@@ -56,6 +56,7 @@ export interface UpsertTracePatch {
 export type TraceUpdateChanges = Partial<
   Pick<
     TraceDocument,
+    | "maskUrl"
     | "visible"
     | "blendMode"
     | "opacity"

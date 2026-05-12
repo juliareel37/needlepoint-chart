@@ -60,7 +60,9 @@ interface TraceControlsProps {
   dispatch?: EditorStore["dispatch"];
   cropDraft?: TraceCropRect | null;
   cropEditing?: boolean;
+  eraserEditing?: boolean;
   onBeginCrop?: () => void;
+  onBeginEraser?: () => void;
   onCancelCrop?: () => void;
   onCommitCrop?: () => void;
   onResetCrop?: () => void;
@@ -78,7 +80,9 @@ export function TraceControls({
   dispatch,
   cropDraft = null,
   cropEditing = false,
+  eraserEditing = false,
   onBeginCrop,
+  onBeginEraser,
   onCancelCrop,
   onCommitCrop,
   onResetCrop,
@@ -127,7 +131,7 @@ export function TraceControls({
     ? splitFileNameForDisplay(traceFileName)
     : null;
   const canConvert = Boolean(
-    trace && !repositionActive && !cropEditing && !conversionPreviewActive,
+    trace && !repositionActive && !cropEditing && !eraserEditing && !conversionPreviewActive,
   );
   const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -199,8 +203,18 @@ export function TraceControls({
 
     try {
       const traceImage = await loadTraceImage(trace.previewUrl);
+      const traceMaskImage = trace.maskUrl
+        ? await loadTraceImage(trace.maskUrl)
+        : null;
       const result = convertTraceImageToPattern({
         traceImage,
+        traceMaskImage: traceMaskImage
+          ? {
+              image: traceMaskImage,
+              width: traceMaskImage.naturalWidth || traceMaskImage.width,
+              height: traceMaskImage.naturalHeight || traceMaskImage.height,
+            }
+          : null,
         trace,
         metrics: gridMetrics,
         palette,
@@ -750,7 +764,7 @@ export function TraceControls({
                       type="button"
                       variant={positioningEnabled ? "primary" : "secondary"}
                       size="sm"
-                      disabled={!trace || cropEditing}
+                      disabled={!trace || cropEditing || eraserEditing}
                       onClick={() => {
                         if (positioningEnabled) {
                           dispatch(createCancelTraceRepositionCommand());
@@ -762,6 +776,29 @@ export function TraceControls({
                     >
                       <ButtonIcon icon="/icons/lucide/vector_square.svg" />
                       {positioningEnabled ? "Repositioning" : "Reposition"}
+                    </Button>
+                  </div>
+                </div>
+              </Field>
+
+              <Field>
+                <div className={styles.traceInlineFieldRow}>
+                  <span
+                    className={styles.traceInlineFieldLabel}
+                    style={typographyStyles.p2}
+                  >
+                    Eraser
+                  </span>
+                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant={eraserEditing ? "primary" : "secondary"}
+                      size="sm"
+                      disabled={!trace || repositionActive || cropEditing || conversionPreviewActive}
+                      onClick={onBeginEraser}
+                    >
+                      <ButtonIcon icon="/icons/lucide/eraser.svg" />
+                      {eraserEditing ? "Editing mask" : "Erase"}
                     </Button>
                   </div>
                 </div>

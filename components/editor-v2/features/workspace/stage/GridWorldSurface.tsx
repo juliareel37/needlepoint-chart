@@ -49,8 +49,13 @@ interface GridWorldSurfaceProps {
   traceCropAspectRatio?: number | null;
   traceCropEditing?: boolean;
   traceCropBase?: TraceCropRect | null;
+  traceEraserBrushSize?: number;
+  traceEraserEditing?: boolean;
+  traceEraserMaskUrl?: string | null;
+  traceEraserMode?: "erase" | "restore";
   traceDisplayOverride?: TraceCropRect | null;
   onTraceCropPreviewChange?: (crop: TraceCropRect | null) => void;
+  onTraceEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   zoomAnchor: { x: number; y: number } | null;
 }
 
@@ -73,8 +78,13 @@ export function GridWorldSurface({
   traceCropAspectRatio = null,
   traceCropEditing = false,
   traceCropBase = null,
+  traceEraserBrushSize = 24,
+  traceEraserEditing = false,
+  traceEraserMaskUrl = null,
+  traceEraserMode = "erase",
   traceDisplayOverride = null,
   onTraceCropPreviewChange,
+  onTraceEraserDraftChange,
   zoomAnchor,
 }: GridWorldSurfaceProps) {
   const grid = state.document.grid;
@@ -93,14 +103,16 @@ export function GridWorldSurface({
   const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
   const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
   const traceCropActive = Boolean(trace && traceVisible && traceCropEditing);
+  const traceEraserActive = Boolean(trace && traceVisible && traceEraserEditing);
   const showTraceOverlay = Boolean(
-    trace && traceVisible && (tracePositioningEnabled || traceCropActive),
+    trace && traceVisible && (tracePositioningEnabled || traceCropActive || traceEraserActive),
   );
   const showDisplayTrace = Boolean(
     trace &&
       traceVisible &&
       !tracePositioningEnabled &&
-      !traceCropActive,
+      !traceCropActive &&
+      !traceEraserActive,
   );
   const traceImageOpacity =
     trace && traceVisible && traceBlendMode === "crossfade"
@@ -143,9 +155,13 @@ export function GridWorldSurface({
   const iconPlacementActive = Boolean(iconPlacement);
   const duplicatePlacementActive = Boolean(duplicatePlacement);
   const positioningCursorActive =
-    tracePositioningEnabled || textPlacementActive || iconPlacementActive;
+    tracePositioningEnabled || traceEraserActive || textPlacementActive || iconPlacementActive;
   const paintDisabled =
-    interactionLocked || positioningCursorActive || traceCropActive || duplicatePlacementActive;
+    interactionLocked ||
+    positioningCursorActive ||
+    traceCropActive ||
+    traceEraserActive ||
+    duplicatePlacementActive;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -434,46 +450,20 @@ export function GridWorldSurface({
 
     let cancelled = false;
     const previewUrl = trace.previewUrl;
-    const image = new Image();
-    image.decoding = "async";
+    const maskUrl = trace.maskUrl;
 
-    const commitLoadedState = (ready: boolean) => {
+    loadTraceAssetBundle(previewUrl, maskUrl).then((bundle) => {
       if (cancelled) {
         return;
       }
 
-      if (ready && (image.naturalWidth <= 0 || image.naturalHeight <= 0)) {
-        setLoadedTraceAsset({
-          previewUrl,
-          height: 0,
-          image: null,
-          ready: false,
-          width: 0,
-        });
-        return;
-      }
-
-      setLoadedTraceAsset({
-        previewUrl,
-        height: ready ? image.naturalHeight : 0,
-        image: ready ? image : null,
-        ready,
-        width: ready ? image.naturalWidth : 0,
-      });
-    };
-
-    image.onload = () => commitLoadedState(true);
-    image.onerror = () => commitLoadedState(false);
-    image.src = previewUrl;
-
-    if (image.complete) {
-      commitLoadedState(image.naturalWidth > 0 && image.naturalHeight > 0);
-    }
+      setLoadedTraceAsset(bundle);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [coarsePointer, trace?.previewUrl, tracePositioningEnabled]);
+  }, [coarsePointer, trace?.maskUrl, trace?.previewUrl, tracePositioningEnabled]);
 
   const traceAssetLoaded =
     Boolean(
@@ -600,6 +590,11 @@ export function GridWorldSurface({
               cropAspectRatio={traceCropAspectRatio}
               cropBase={traceCropBase}
               onCropPreviewChange={onTraceCropPreviewChange}
+              eraserBrushSize={traceEraserBrushSize}
+              eraserEditing={traceEraserActive}
+              eraserMaskUrl={traceEraserMaskUrl}
+              eraserMode={traceEraserMode}
+              onEraserDraftChange={onTraceEraserDraftChange}
               traceDisplayOverride={traceDisplayOverride}
               touchSnappingEnabled={touchSnappingEnabled}
               viewport={viewport as ViewportState}
@@ -707,6 +702,62 @@ export function GridWorldSurface({
       </div>
     </div>
   );
+}
+
+async function loadTraceAssetBundle(
+  previewUrl: string,
+  maskUrl: string | null,
+): Promise<LoadedTraceAsset> {
+  try {
+    const image = await loadCanvasImage(previewUrl);
+    const mask = maskUrl
+      ? await loadCanvasImage(maskUrl).catch(() => null)
+      : null;
+
+    return {
+      previewUrl,
+      height: image.naturalHeight,
+      image,
+      mask: mask
+        ? {
+            url: maskUrl!,
+            width: mask.naturalWidth,
+            height: mask.naturalHeight,
+            image: mask,
+          }
+        : null,
+      ready: image.naturalWidth > 0 && image.naturalHeight > 0,
+      width: image.naturalWidth,
+    };
+  } catch {
+    return {
+      previewUrl,
+      height: 0,
+      image: null,
+      mask: null,
+      ready: false,
+      width: 0,
+    };
+  }
+}
+
+async function loadCanvasImage(url: string): Promise<HTMLImageElement> {
+  const image = new Image();
+  image.decoding = "async";
+
+  if (/^https?:\/\//i.test(url)) {
+    image.crossOrigin = "anonymous";
+  }
+
+  return new Promise((resolve, reject) => {
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Could not load image: ${url}`));
+    image.src = url;
+
+    if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      resolve(image);
+    }
+  });
 }
 
 function getGridOverlayStep(renderedCellSize: number): number {

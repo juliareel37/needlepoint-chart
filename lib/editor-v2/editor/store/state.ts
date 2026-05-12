@@ -66,6 +66,7 @@ export interface TraceDocument {
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
+  maskUrl: string | null;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;

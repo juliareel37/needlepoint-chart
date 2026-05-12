@@ -30,6 +30,7 @@ export interface PersistedEditorV2Trace {
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
+  maskUrl: string | null;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;
@@ -116,6 +117,7 @@ export function serializeEditorV2Document(
             previewUrl: document.trace.previewUrl,
             thumbnailUrl: document.trace.thumbnailUrl,
             originalUrl: document.trace.originalUrl,
+            maskUrl: document.trace.maskUrl,
             fileName: document.trace.fileName,
             byteSize: document.trace.byteSize,
             mimeType: document.trace.mimeType,
@@ -171,6 +173,7 @@ export function hydrateEditorV2Document(
             previewUrl: normalizedTrace.previewUrl,
             thumbnailUrl: normalizedTrace.thumbnailUrl,
             originalUrl: normalizedTrace.originalUrl,
+            maskUrl: normalizedTrace.maskUrl,
             fileName: normalizedTrace.fileName,
             byteSize: normalizedTrace.byteSize,
             mimeType: normalizedTrace.mimeType,
@@ -269,6 +272,7 @@ function isPersistedTrace(value: unknown): value is PersistedEditorV2Trace {
     typeof getLegacyCompatibleTraceUrl(trace, "previewUrl") === "string" &&
     typeof getLegacyCompatibleTraceUrl(trace, "thumbnailUrl") === "string" &&
     typeof getLegacyCompatibleTraceUrl(trace, "originalUrl") === "string" &&
+    (trace.maskUrl === null || trace.maskUrl === undefined || typeof trace.maskUrl === "string") &&
     typeof trace.offsetX === "number" &&
     typeof trace.offsetY === "number" &&
     typeof trace.scale === "number" &&
@@ -286,6 +290,7 @@ function normalizePersistedTrace(
     previewUrl: getLegacyCompatibleTraceUrl(trace, "previewUrl"),
     thumbnailUrl: getLegacyCompatibleTraceUrl(trace, "thumbnailUrl"),
     originalUrl: getLegacyCompatibleTraceUrl(trace, "originalUrl"),
+    maskUrl: trace.maskUrl ?? null,
     fileName: trace.fileName ?? null,
     byteSize: trace.byteSize ?? null,
     mimeType: trace.mimeType ?? null,

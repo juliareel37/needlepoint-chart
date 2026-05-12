@@ -6,6 +6,12 @@ export interface LoadedTraceAsset {
   previewUrl: string;
   height: number;
   image: CanvasImageSource | null;
+  mask: {
+    url: string;
+    width: number;
+    height: number;
+    image: CanvasImageSource;
+  } | null;
   ready: boolean;
   width: number;
 }

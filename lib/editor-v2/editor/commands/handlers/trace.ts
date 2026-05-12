@@ -29,6 +29,7 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
       previewUrl: command.payload.previewUrl,
       thumbnailUrl: command.payload.thumbnailUrl,
       originalUrl: command.payload.originalUrl,
+      maskUrl: null,
       fileName: command.payload.fileName,
       byteSize: command.payload.byteSize,
       mimeType: command.payload.mimeType,

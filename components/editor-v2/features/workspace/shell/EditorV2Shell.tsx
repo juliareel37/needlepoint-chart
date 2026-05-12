@@ -90,6 +90,7 @@ import {
 import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
+import { TraceEraserToolbar } from "./TraceEraserToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { ConversionPreviewToolbar } from "./ConversionPreviewToolbar";
 import {
@@ -421,6 +422,12 @@ export function EditorV2Shell({
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
     useState<TraceCropAspectRatioId>("freehand");
+  const [traceEraserActive, setTraceEraserActive] = useState(false);
+  const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(24);
+  const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
+  const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
+  const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);
+  const [traceEraserDirty, setTraceEraserDirty] = useState(false);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -444,10 +451,20 @@ export function EditorV2Shell({
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
     setTraceCropAspectRatioId("freehand");
+    setTraceEraserActive(false);
+    setTraceEraserMode("erase");
+    setTraceEraserDraftMaskUrl(null);
+    setTraceEraserMaskFullyVisible(!trace?.maskUrl);
+    setTraceEraserDirty(false);
   }, [trace?.previewUrl]);
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
+  const traceEraserEditing = traceEraserActive;
   const repositionModeActive =
-    traceRepositionActive || traceCropEditing || textPlacement !== null || iconPlacement !== null;
+    traceRepositionActive ||
+    traceCropEditing ||
+    traceEraserEditing ||
+    textPlacement !== null ||
+    iconPlacement !== null;
   const canUndoFromToolbar = canUndo && !repositionModeActive;
   const canRedoFromToolbar = canRedo && !repositionModeActive;
   const handleBeginTraceCrop = useCallback(() => {
@@ -471,6 +488,73 @@ export function EditorV2Shell({
   const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
     setTracePreviewCrop(crop);
   }, []);
+
+  const handleBeginTraceEraser = useCallback(() => {
+    if (!trace) {
+      return;
+    }
+
+    setTraceEraserDraftMaskUrl(trace.maskUrl ?? null);
+    setTraceEraserMaskFullyVisible(!trace.maskUrl);
+    setTraceEraserMode("erase");
+    setTraceEraserDirty(false);
+    setTraceEraserActive(true);
+  }, [trace]);
+
+  const handleTraceEraserDraftChange = useCallback(
+    (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      setTraceEraserDraftMaskUrl(nextMaskUrl);
+      setTraceEraserMaskFullyVisible(isFullyVisible);
+      setTraceEraserDirty(true);
+    },
+    [],
+  );
+
+  const handleCancelTraceEraser = useCallback(() => {
+    setTraceEraserActive(false);
+    setTraceEraserDraftMaskUrl(null);
+    setTraceEraserMaskFullyVisible(true);
+    setTraceEraserDirty(false);
+    setTraceEraserMode("erase");
+  }, []);
+
+  const handleCommitTraceEraser = useCallback(async () => {
+    if (!trace) {
+      handleCancelTraceEraser();
+      return;
+    }
+
+    let nextMaskUrl = trace.maskUrl ?? null;
+
+    if (traceEraserDirty) {
+      if (traceEraserMaskFullyVisible || !traceEraserDraftMaskUrl) {
+        nextMaskUrl = null;
+      } else {
+        nextMaskUrl = await uploadTraceMask({
+          dataUrl: traceEraserDraftMaskUrl,
+          originalUrl: trace.originalUrl,
+        });
+      }
+
+      if (nextMaskUrl !== trace.maskUrl) {
+        dispatch(
+          createUpdateTraceCommand(
+            { maskUrl: nextMaskUrl },
+            { history: { mode: "push", label: "Erase Trace" }, source: "toolbar" },
+          ),
+        );
+      }
+    }
+
+    handleCancelTraceEraser();
+  }, [
+    dispatch,
+    handleCancelTraceEraser,
+    trace,
+    traceEraserDirty,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+  ]);
 
   const handleCancelTraceCrop = useCallback(() => {
     setTracePreviewCrop(null);
@@ -1455,6 +1539,7 @@ export function EditorV2Shell({
       textPlacementActive: Boolean(textPlacement),
       traceConversionPreviewActive: Boolean(traceConversionPreview),
       traceCropEditing,
+      traceEraserEditing,
       traceRepositionActive,
     });
 
@@ -1476,6 +1561,11 @@ export function EditorV2Shell({
 
       if (escapeAction === "cancel-trace-crop") {
         handleCancelTraceCrop();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-eraser") {
+        handleCancelTraceEraser();
         return;
       }
 
@@ -1509,6 +1599,7 @@ export function EditorV2Shell({
     clearHighlightedColor,
     exitPreviewMode,
     handleCancelTraceCrop,
+    handleCancelTraceEraser,
     handleExitTraceConversionPreviewFromToolbar,
     highlightedColorId,
     iconPlacement,
@@ -1516,6 +1607,7 @@ export function EditorV2Shell({
     textPlacement,
     traceConversionPreview,
     traceCropEditing,
+    traceEraserEditing,
     traceRepositionActive,
   ]);
 
@@ -2841,7 +2933,9 @@ export function EditorV2Shell({
                     previewModeDisabled={previewModeDisabled}
                     traceCropDraft={tracePreviewCrop}
                     traceCropEditing={traceCropEditing}
+                    traceEraserEditing={traceEraserEditing}
                     onBeginTraceCrop={handleBeginTraceCrop}
+                    onBeginTraceEraser={handleBeginTraceEraser}
                     onCancelTraceCrop={handleCancelTraceCrop}
                     onCommitTraceCrop={handleCommitTraceCrop}
                     onResetTraceCrop={handleResetTraceCrop}
@@ -2887,6 +2981,17 @@ export function EditorV2Shell({
                       <ConversionPreviewToolbar
                         dispatch={dispatch}
                         onExitPreview={handleExitTraceConversionPreviewFromToolbar}
+                      />
+                    ) : traceEraserEditing && trace ? (
+                      <TraceEraserToolbar
+                        brushSize={traceEraserBrushSize}
+                        mode={traceEraserMode}
+                        onBrushSizeChange={setTraceEraserBrushSize}
+                        onCancel={handleCancelTraceEraser}
+                        onCommit={() => {
+                          void handleCommitTraceEraser();
+                        }}
+                        onModeChange={setTraceEraserMode}
                       />
                     ) : (traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
@@ -3016,8 +3121,13 @@ export function EditorV2Shell({
                     traceCropBase={traceCropSnapshot}
                     traceCropAspectRatio={traceCropAspectRatio}
                     traceCropEditing={traceCropEditing}
+                    traceEraserBrushSize={traceEraserBrushSize}
+                    traceEraserEditing={traceEraserEditing}
+                    traceEraserMaskUrl={traceEraserDraftMaskUrl}
+                    traceEraserMode={traceEraserMode}
                     traceDisplayOverride={tracePreviewCrop}
                     onTraceCropPreviewChange={handlePreviewTraceCropChange}
+                    onTraceEraserDraftChange={handleTraceEraserDraftChange}
                     zoomAnchor={zoomAnchor}
                   />
                 </div>
@@ -3540,4 +3650,36 @@ function duplicateDesignToNewTab(document: EditorDocumentState): void {
   );
   duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);
   window.open(duplicateUrl.toString(), "_blank", "noopener,noreferrer");
+}
+
+async function uploadTraceMask(input: {
+  dataUrl: string;
+  originalUrl: string;
+}): Promise<string> {
+  const blob = await dataUrlToBlob(input.dataUrl);
+  const formData = new FormData();
+  formData.set("file", new File([blob], "trace-mask.png", { type: "image/png" }));
+  formData.set("originalUrl", input.originalUrl);
+
+  const response = await fetch("/api/upload-trace-mask", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error || "Couldn't upload trace mask.");
+  }
+
+  const payload = (await response.json()) as { url?: string };
+  if (!payload.url) {
+    throw new Error("Trace mask upload did not return a URL.");
+  }
+
+  return payload.url;
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  return response.blob();
 }

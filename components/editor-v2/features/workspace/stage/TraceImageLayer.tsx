@@ -29,6 +29,10 @@ import {
   getTraceAssetCropRect,
   getTraceDisplaySize,
 } from "@/lib/editor-v2/editor/trace/crop";
+import {
+  drawMaskedTraceSourceToCanvas as drawTraceSourceToCanvas,
+  isMaskCanvasFullyVisible,
+} from "@/lib/editor-v2/editor/trace/mask";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
@@ -42,10 +46,15 @@ interface TraceImageLayerProps {
   cropBase?: TraceDisplayOverride;
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
+  eraserBrushSize?: number;
+  eraserEditing?: boolean;
+  eraserMaskUrl?: string | null;
+  eraserMode?: "erase" | "restore";
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
   onCropPreviewChange?: (crop: TraceDisplayOverride) => void;
+  onEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   positioningEnabled: boolean;
   portalHost?: HTMLElement | null;
   stageBounds: { left: number; top: number; width: number; height: number };
@@ -64,10 +73,15 @@ export function TraceImageLayer({
   cropBase = null,
   cropEditing = false,
   dispatch,
+  eraserBrushSize = 24,
+  eraserEditing = false,
+  eraserMaskUrl = null,
+  eraserMode = "erase",
   getWorldPointFromClient,
   imageOpacity,
   metrics,
   onCropPreviewChange,
+  onEraserDraftChange,
   positioningEnabled,
   portalHost = null,
   stageBounds,
@@ -295,6 +309,7 @@ export function TraceImageLayer({
           trace: renderTrace,
           width: mobilePreviewSize.width,
           height: mobilePreviewSize.height,
+          mask: traceAsset?.mask ?? null,
         });
       } else if (mobileCanvas) {
         mobileCanvas.width = 0;
@@ -319,6 +334,7 @@ export function TraceImageLayer({
           trace: renderTrace,
           width: mobilePreviewSize.width,
           height: mobilePreviewSize.height,
+          mask: traceAsset?.mask ?? null,
         });
       } else if (mobileCanvas) {
         mobileCanvas.width = 0;
@@ -330,6 +346,7 @@ export function TraceImageLayer({
           trace: renderTrace,
           width: traceAsset.width,
           height: traceAsset.height,
+          mask: traceAsset.mask,
         });
       }
       if (mobileCanvas) {
@@ -527,12 +544,37 @@ export function TraceImageLayer({
           />
         )
       : null;
+  const eraserOverlay =
+    eraserEditing &&
+    traceBaseRect &&
+    traceBounds &&
+    trace.imageWidth &&
+    trace.imageHeight &&
+    onEraserDraftChange
+      ? (
+          <TraceEraserEditorOverlay
+            assetHeight={trace.imageHeight}
+            assetWidth={trace.imageWidth}
+            baseRect={traceBaseRect}
+            bounds={traceBounds}
+            brushSize={eraserBrushSize}
+            draftMaskUrl={eraserMaskUrl}
+            mode={eraserMode}
+            onMaskChange={onEraserDraftChange}
+            surfaceHeight={metrics.surfaceHeight}
+            surfaceWidth={metrics.surfaceWidth}
+            trace={renderTrace}
+            traceAsset={traceAsset}
+          />
+        )
+      : null;
 
   return (
     <>
+      {eraserOverlay}
       {cropOverlay}
-      {cropEditing ? null : mobileOverlay}
-      {!cropEditing && (!coarsePointer || !positioningEnabled) ? (
+      {cropEditing || eraserEditing ? null : mobileOverlay}
+      {!cropEditing && !eraserEditing && (!coarsePointer || !positioningEnabled) ? (
         <div
           style={{
             position: "absolute",
@@ -612,6 +654,304 @@ export function TraceImageLayer({
         </div>
       ) : null}
     </>
+  );
+}
+
+interface TraceEraserEditorOverlayProps {
+  assetHeight: number;
+  assetWidth: number;
+  baseRect: { left: number; top: number; width: number; height: number };
+  bounds: { left: number; top: number; width: number; height: number };
+  brushSize: number;
+  draftMaskUrl: string | null;
+  mode: "erase" | "restore";
+  onMaskChange: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
+  surfaceHeight: number;
+  surfaceWidth: number;
+  trace: TraceDocument;
+  traceAsset: LoadedTraceAsset | null;
+}
+
+function TraceEraserEditorOverlay({
+  assetHeight,
+  assetWidth,
+  baseRect,
+  bounds,
+  brushSize,
+  draftMaskUrl,
+  mode,
+  onMaskChange,
+  surfaceHeight,
+  surfaceWidth,
+  trace,
+  traceAsset,
+}: TraceEraserEditorOverlayProps) {
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const composedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const initializedMaskUrlRef = useRef<string | null | undefined>(undefined);
+
+  const renderOverlay = useCallback(() => {
+    const overlayCanvas = overlayCanvasRef.current;
+    const maskCanvas = maskCanvasRef.current;
+
+    if (!overlayCanvas || !maskCanvas) {
+      return;
+    }
+
+    const context = overlayCanvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const canvasWidth = Math.max(1, Math.round(surfaceWidth * devicePixelRatio));
+    const canvasHeight = Math.max(1, Math.round(surfaceHeight * devicePixelRatio));
+
+    if (overlayCanvas.width !== canvasWidth || overlayCanvas.height !== canvasHeight) {
+      overlayCanvas.width = canvasWidth;
+      overlayCanvas.height = canvasHeight;
+      overlayCanvas.style.width = `${surfaceWidth}px`;
+      overlayCanvas.style.height = `${surfaceHeight}px`;
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    } else {
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+
+    context.clearRect(0, 0, surfaceWidth, surfaceHeight);
+    context.fillStyle = "rgba(190, 24, 24, 0.28)";
+    context.fillRect(0, 0, surfaceWidth, surfaceHeight);
+
+    if (!traceAsset?.ready || !traceAsset.image) {
+      return;
+    }
+
+    const composedCanvas =
+      composedCanvasRef.current ?? document.createElement("canvas");
+    composedCanvasRef.current = composedCanvas;
+    drawTraceSourceToCanvas(composedCanvas, traceAsset.image, {
+      trace,
+      width: traceAsset.width,
+      height: traceAsset.height,
+      mask: {
+        image: maskCanvas,
+        width: assetWidth,
+        height: assetHeight,
+      },
+    });
+
+    context.save();
+    context.globalCompositeOperation = "destination-out";
+    context.translate(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    context.rotate((trace.rotation * Math.PI) / 180);
+    context.drawImage(
+      composedCanvas,
+      0,
+      0,
+      composedCanvas.width,
+      composedCanvas.height,
+      -bounds.width / 2,
+      -bounds.height / 2,
+      bounds.width,
+      bounds.height,
+    );
+    context.restore();
+  }, [assetHeight, assetWidth, bounds.height, bounds.left, bounds.top, bounds.width, surfaceHeight, surfaceWidth, trace, traceAsset]);
+
+  useEffect(() => {
+    const maskCanvas = maskCanvasRef.current ?? document.createElement("canvas");
+    maskCanvasRef.current = maskCanvas;
+    const needsResize = maskCanvas.width !== assetWidth || maskCanvas.height !== assetHeight;
+    if (needsResize) {
+      maskCanvas.width = assetWidth;
+      maskCanvas.height = assetHeight;
+    }
+
+    const context = maskCanvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    if (initializedMaskUrlRef.current === draftMaskUrl && !needsResize) {
+      renderOverlay();
+      return;
+    }
+
+    initializedMaskUrlRef.current = draftMaskUrl;
+    context.clearRect(0, 0, assetWidth, assetHeight);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, assetWidth, assetHeight);
+
+    if (!draftMaskUrl) {
+      renderOverlay();
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+    image.decoding = "async";
+    if (/^https?:\/\//i.test(draftMaskUrl)) {
+      image.crossOrigin = "anonymous";
+    }
+    image.onload = () => {
+      if (cancelled) {
+        return;
+      }
+
+      context.clearRect(0, 0, assetWidth, assetHeight);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, assetWidth, assetHeight);
+      context.drawImage(image, 0, 0, assetWidth, assetHeight);
+      renderOverlay();
+    };
+    image.src = draftMaskUrl;
+
+    if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      context.clearRect(0, 0, assetWidth, assetHeight);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, assetWidth, assetHeight);
+      context.drawImage(image, 0, 0, assetWidth, assetHeight);
+      renderOverlay();
+    }
+
+    return () => {
+      cancelled = true;
+      image.onload = null;
+    };
+  }, [assetHeight, assetWidth, draftMaskUrl, renderOverlay]);
+
+  useEffect(() => {
+    renderOverlay();
+  }, [renderOverlay]);
+
+  const commitDraft = useCallback(() => {
+    const maskCanvas = maskCanvasRef.current;
+    if (!maskCanvas) {
+      onMaskChange(null, true);
+      return;
+    }
+
+    const isFullyVisible = isMaskCanvasFullyVisible(maskCanvas);
+    onMaskChange(
+      isFullyVisible ? null : maskCanvas.toDataURL("image/png"),
+      isFullyVisible,
+    );
+  }, [onMaskChange]);
+
+  const drawAtClientPoint = useCallback(
+    (clientX: number, clientY: number, connectFromLast: boolean) => {
+      const maskCanvas = maskCanvasRef.current;
+      if (!maskCanvas) {
+        return false;
+      }
+
+      const context = maskCanvas.getContext("2d");
+      if (!context) {
+        return false;
+      }
+
+      const localPoint = getLocalPointWithinRotatedBounds(
+        { x: clientX, y: clientY },
+        bounds,
+        trace.rotation,
+      );
+
+      if (
+        localPoint.x < 0 ||
+        localPoint.y < 0 ||
+        localPoint.x > bounds.width ||
+        localPoint.y > bounds.height
+      ) {
+        return false;
+      }
+
+      const scaleX = trace.cropWidth / Math.max(bounds.width, 1);
+      const scaleY = trace.cropHeight / Math.max(bounds.height, 1);
+      const point = {
+        x: trace.cropX + localPoint.x * scaleX,
+        y: trace.cropY + localPoint.y * scaleY,
+      };
+      const brushRadius = (brushSize * Math.max(scaleX, scaleY)) / 2;
+
+      context.save();
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.lineWidth = Math.max(1, brushRadius * 2);
+      context.strokeStyle = "#ffffff";
+      context.fillStyle = "#ffffff";
+      context.globalCompositeOperation = mode === "erase" ? "destination-out" : "source-over";
+
+      if (connectFromLast && lastPointRef.current) {
+        context.beginPath();
+        context.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+        context.lineTo(point.x, point.y);
+        context.stroke();
+      } else {
+        context.beginPath();
+        context.arc(point.x, point.y, Math.max(0.5, brushRadius), 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.restore();
+      lastPointRef.current = point;
+      renderOverlay();
+      return true;
+    },
+    [bounds, brushSize, mode, renderOverlay, trace],
+  );
+
+  return (
+    <canvas
+      ref={overlayCanvasRef}
+      onPointerDown={(event) => {
+        if (!drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, false)) {
+          return;
+        }
+
+        activePointerIdRef.current = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        if (activePointerIdRef.current !== event.pointerId) {
+          return;
+        }
+
+        drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, true);
+      }}
+      onPointerUp={(event) => {
+        if (activePointerIdRef.current !== event.pointerId) {
+          return;
+        }
+
+        activePointerIdRef.current = null;
+        lastPointRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        commitDraft();
+      }}
+      onPointerCancel={(event) => {
+        if (activePointerIdRef.current !== event.pointerId) {
+          return;
+        }
+
+        activePointerIdRef.current = null;
+        lastPointRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        commitDraft();
+      }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 4,
+        width: `${surfaceWidth}px`,
+        height: `${surfaceHeight}px`,
+        touchAction: "none",
+        cursor: mode === "erase" ? "crosshair" : "copy",
+      }}
+    />
   );
 }
 
@@ -1301,35 +1641,6 @@ function setDesktopProxyActive(
   proxy.style.display = showProxy ? "block" : "none";
 }
 
-
-function drawTraceSourceToCanvas(
-  canvas: HTMLCanvasElement,
-  imageSource: CanvasImageSource,
-  size: { trace: TraceDocument; width: number; height: number },
-): void {
-  const cropRect = getTraceAssetCropRect(size.trace, size.width, size.height);
-
-  canvas.width = Math.max(1, Math.round(cropRect.cropWidth));
-  canvas.height = Math.max(1, Math.round(cropRect.cropHeight));
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return;
-  }
-
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(
-    imageSource,
-    cropRect.cropX,
-    cropRect.cropY,
-    cropRect.cropWidth,
-    cropRect.cropHeight,
-    0,
-    0,
-    canvas.width,
-    canvas.height,
-  );
-}
 
 function getObjectPositionPercent(
   trace: TraceDocument,

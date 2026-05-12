@@ -7,12 +7,14 @@ export interface WorkspaceEscapeState {
   textPlacementActive: boolean;
   traceConversionPreviewActive: boolean;
   traceCropEditing: boolean;
+  traceEraserEditing?: boolean;
   traceRepositionActive: boolean;
 }
 
 export type WorkspaceEscapeAction =
   | "exit-trace-conversion-preview"
   | "cancel-trace-crop"
+  | "cancel-trace-eraser"
   | "cancel-trace-reposition"
   | "cancel-text-placement"
   | "cancel-icon-placement"
@@ -28,6 +30,10 @@ export function getWorkspaceEscapeAction(
 
   if (state.traceCropEditing) {
     return "cancel-trace-crop";
+  }
+
+  if (state.traceEraserEditing) {
+    return "cancel-trace-eraser";
   }
 
   if (state.traceRepositionActive) {

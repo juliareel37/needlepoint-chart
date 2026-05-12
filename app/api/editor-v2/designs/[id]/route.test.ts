@@ -287,6 +287,7 @@ describe("editor-v2 individual design routes", () => {
       previewUrl: "https://blob.example.com/new-preview.webp",
       thumbnailUrl: "https://blob.example.com/new-thumbnail.webp",
       originalUrl: "https://blob.example.com/new-original.png",
+      maskUrl: null,
       fileName: "trace.png",
       byteSize: 123,
       mimeType: "image/png",
