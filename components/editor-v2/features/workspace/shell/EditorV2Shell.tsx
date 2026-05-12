@@ -108,6 +108,7 @@ import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
 import { getWorkspaceEscapeAction } from "./escapeKeyBehavior";
 import { composeMaskedImageDataUrl } from "@/lib/editor-v2/editor/imageMasking";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
@@ -461,7 +462,8 @@ export function EditorV2Shell({
   const [traceEditModeActive, setTraceEditModeActive] = useState(false);
   const [traceEraserActive, setTraceEraserActive] = useState(false);
   const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(1);
-  const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
+  const [traceEraserEditMode, setTraceEraserEditMode] = useState<EraserEditMode>("brush");
+  const [traceEraserMode, setTraceEraserMode] = useState<EraserMode>("erase");
   const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
   const [traceEraserDraftRevision, setTraceEraserDraftRevision] = useState(0);
   const [traceEraserBrushPreviewVisible, setTraceEraserBrushPreviewVisible] = useState(false);
@@ -474,7 +476,8 @@ export function EditorV2Shell({
   const [traceEraserRedoStack, setTraceEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
   const [iconEraserActive, setIconEraserActive] = useState(false);
   const [iconEraserBrushSize, setIconEraserBrushSize] = useState(1);
-  const [iconEraserMode, setIconEraserMode] = useState<"erase" | "restore">("erase");
+  const [iconEraserEditMode, setIconEraserEditMode] = useState<EraserEditMode>("brush");
+  const [iconEraserMode, setIconEraserMode] = useState<EraserMode>("erase");
   const [iconEraserDraftMaskUrl, setIconEraserDraftMaskUrl] = useState<string | null>(null);
   const [iconEraserDraftRevision, setIconEraserDraftRevision] = useState(0);
   const [iconEraserBrushPreviewVisible, setIconEraserBrushPreviewVisible] = useState(false);
@@ -509,6 +512,7 @@ export function EditorV2Shell({
     setTraceCropAspectRatioId("freehand");
     setTraceEditModeActive(false);
     setTraceEraserActive(false);
+    setTraceEraserEditMode("brush");
     setTraceEraserMode("erase");
     setTraceEraserDraftMaskUrl(null);
     setTraceEraserDraftRevision(0);
@@ -523,6 +527,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     setIconEraserActive(false);
+    setIconEraserEditMode("brush");
     setIconEraserMode("erase");
     setIconEraserDraftMaskUrl(null);
     setIconEraserDraftRevision(0);
@@ -609,6 +614,7 @@ export function EditorV2Shell({
     setTraceEraserDraftMaskUrl(nextInitialState.maskUrl);
     setTraceEraserDraftRevision((current) => current + 1);
     setTraceEraserMaskFullyVisible(nextInitialState.isFullyVisible);
+    setTraceEraserEditMode("brush");
     setTraceEraserMode("erase");
     setTraceEraserBrushPreviewVisible(false);
     setTraceEraserDirty(false);
@@ -616,6 +622,25 @@ export function EditorV2Shell({
     setTraceEraserRedoStack([]);
     setTraceEraserActive(true);
   }, [trace]);
+
+  const handleTraceEraserEditModeChange = useCallback((nextMode: EraserEditMode) => {
+    setTraceEraserEditMode(nextMode);
+    if (nextMode === "magic") {
+      setTraceEraserMode("erase");
+      setTraceEraserBrushPreviewVisible(false);
+    }
+  }, []);
+
+  const handleTraceEraserModeChange = useCallback(
+    (nextMode: EraserMode) => {
+      if (traceEraserEditMode === "magic" && nextMode === "restore") {
+        return;
+      }
+
+      setTraceEraserMode(nextMode);
+    },
+    [traceEraserEditMode],
+  );
 
   const applyTraceEraserHistoryEntry = useCallback(
     (entry: TraceEraserHistoryEntry) => {
@@ -717,6 +742,7 @@ export function EditorV2Shell({
     setTraceEraserBrushPreviewVisible(false);
     setTraceEraserMaskFullyVisible(true);
     setTraceEraserDirty(false);
+    setTraceEraserEditMode("brush");
     setTraceEraserMode("erase");
     setTraceEraserInitialState(null);
     setTraceEraserUndoStack([]);
@@ -783,6 +809,7 @@ export function EditorV2Shell({
     setIconEraserDraftMaskUrl(nextInitialState.maskUrl);
     setIconEraserDraftRevision((current) => current + 1);
     setIconEraserMaskFullyVisible(nextInitialState.isFullyVisible);
+    setIconEraserEditMode("brush");
     setIconEraserMode("erase");
     setIconEraserBrushPreviewVisible(false);
     setIconEraserDirty(false);
@@ -790,6 +817,25 @@ export function EditorV2Shell({
     setIconEraserRedoStack([]);
     setIconEraserActive(true);
   }, [iconPlacement]);
+
+  const handleIconEraserEditModeChange = useCallback((nextMode: EraserEditMode) => {
+    setIconEraserEditMode(nextMode);
+    if (nextMode === "magic") {
+      setIconEraserMode("erase");
+      setIconEraserBrushPreviewVisible(false);
+    }
+  }, []);
+
+  const handleIconEraserModeChange = useCallback(
+    (nextMode: EraserMode) => {
+      if (iconEraserEditMode === "magic" && nextMode === "restore") {
+        return;
+      }
+
+      setIconEraserMode(nextMode);
+    },
+    [iconEraserEditMode],
+  );
 
   const applyIconEraserHistoryEntry = useCallback(
     (entry: TraceEraserHistoryEntry) => {
@@ -886,6 +932,7 @@ export function EditorV2Shell({
     setIconEraserBrushPreviewVisible(false);
     setIconEraserMaskFullyVisible(true);
     setIconEraserDirty(false);
+    setIconEraserEditMode("brush");
     setIconEraserMode("erase");
     setIconEraserInitialState(null);
     setIconEraserUndoStack([]);
@@ -3572,6 +3619,7 @@ export function EditorV2Shell({
                         brushSize={traceEraserBrushSize}
                         canRedo={traceEraserCanRedo}
                         canUndo={traceEraserCanUndo}
+                        eraserEditMode={traceEraserEditMode}
                         eraserMode={traceEraserMode}
                         onFitHeight={() => handleFitTraceToSurface("height")}
                         onFitWidth={() => handleFitTraceToSurface("width")}
@@ -3595,7 +3643,8 @@ export function EditorV2Shell({
                         onCropAspectRatioChange={
                           traceCropEditing ? handleTraceCropAspectRatioChange : undefined
                         }
-                        onModeChange={setTraceEraserMode}
+                        onEditModeChange={handleTraceEraserEditModeChange}
+                        onModeChange={handleTraceEraserModeChange}
                         onPreviewVisibilityChange={setTraceEraserBrushPreviewVisible}
                         onRedo={handleTraceEraserRedo}
                         onResetCrop={handleResetTraceCrop}
@@ -3620,13 +3669,15 @@ export function EditorV2Shell({
                         brushSize={iconEraserBrushSize}
                         canRedo={iconEraserCanRedo}
                         canUndo={iconEraserCanUndo}
+                        editMode={iconEraserEditMode}
                         mode={iconEraserMode}
                         onBrushSizeChange={setIconEraserBrushSize}
                         onCancel={handleCancelIconEraser}
                         onCommit={() => {
                           void handleCommitIconEraser();
                         }}
-                        onModeChange={setIconEraserMode}
+                        onEditModeChange={handleIconEraserEditModeChange}
+                        onModeChange={handleIconEraserModeChange}
                         onPreviewVisibilityChange={setIconEraserBrushPreviewVisible}
                         onRedo={handleIconEraserRedo}
                         onUndo={handleIconEraserUndo}
@@ -3736,6 +3787,7 @@ export function EditorV2Shell({
                     iconEraserMaskUrl={iconEraserDraftMaskUrl}
                     iconEraserDraftRevision={iconEraserDraftRevision}
                     iconEraserMode={iconEraserMode}
+                    iconEraserEditMode={iconEraserEditMode}
                     traceCropBase={traceCropSnapshot}
                     traceCropAspectRatio={traceCropAspectRatio}
                     traceCropEditing={traceCropEditing}
@@ -3745,6 +3797,7 @@ export function EditorV2Shell({
                     traceEraserMaskUrl={traceEraserDraftMaskUrl}
                     traceEraserDraftRevision={traceEraserDraftRevision}
                     traceEraserMode={traceEraserMode}
+                    traceEraserEditMode={traceEraserEditMode}
                     traceDisplayOverride={tracePreviewCrop}
                     onIconEraserDraftChange={handleIconEraserDraftChange}
                     onTraceCropPreviewChange={handlePreviewTraceCropChange}

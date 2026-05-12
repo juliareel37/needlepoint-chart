@@ -9,17 +9,20 @@ import {
   ToolbarGroup,
   ToolbarIcon,
 } from "@/components/design-system";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
 import styles from "./EditorV2Shell.module.css";
 
 interface TraceEraserToolbarProps {
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
-  mode: "erase" | "restore";
+  editMode: EraserEditMode;
+  mode: EraserMode;
   onBrushSizeChange: (brushSize: number) => void;
   onCancel: () => void;
   onCommit: () => void;
-  onModeChange: (mode: "erase" | "restore") => void;
+  onEditModeChange: (mode: EraserEditMode) => void;
+  onModeChange: (mode: EraserMode) => void;
   onPreviewVisibilityChange: (visible: boolean) => void;
   onRedo: () => void;
   onUndo: () => void;
@@ -29,10 +32,12 @@ export function TraceEraserToolbar({
   brushSize,
   canRedo,
   canUndo,
+  editMode,
   mode,
   onBrushSizeChange,
   onCancel,
   onCommit,
+  onEditModeChange,
   onModeChange,
   onPreviewVisibilityChange,
   onRedo,
@@ -49,51 +54,67 @@ export function TraceEraserToolbar({
         <Toolbar className={styles.floatingToolbar}>
           <ToolbarGroup>
             <SegmentedControl
-              ariaLabel="Trace eraser mode"
-              value={mode}
-              onChange={(value) => onModeChange(value as "erase" | "restore")}
+              ariaLabel="Trace eraser edit mode"
+              value={editMode}
+              onChange={(value) => onEditModeChange(value as EraserEditMode)}
               options={[
-                { label: "Erase", value: "erase" },
-                { label: "Restore", value: "restore" },
+                { label: "Brush", value: "brush" },
+                { label: "Magic", value: "magic" },
               ]}
             />
             <ToolbarDivider />
-            <div
-              style={{
-                display: "flex",
-                gap: 15,
-                alignItems: "center",
-                flexWrap: "nowrap",
-                padding: "6px 8px",
-              }}
-            >
-              <ToolbarIcon icon="/icons/other/stroke-width.svg" />
-              <div className={styles.traceSliderTooltipWrap} style={{ width: 80, flexShrink: 0 }}>
-                <Slider
-                  min={1}
-                  max={10}
-                  step={0.05}
-                  value={brushSizeSliderValue}
-                  aria-label="Eraser brush size"
-                  aria-valuetext={`${brushSizePercent}% image-size erase area`}
-                  onPointerDown={() => onPreviewVisibilityChange(true)}
-                  onPointerUp={() => onPreviewVisibilityChange(false)}
-                  onPointerCancel={() => onPreviewVisibilityChange(false)}
-                  onBlur={() => onPreviewVisibilityChange(false)}
-                  onChange={(event) => {
-                    const nextSliderValue = Number(event.currentTarget.value);
-                    const nextBrushSize = Math.min(Math.max(nextSliderValue, 1), 10);
-
-                    if (Math.abs(nextBrushSize - brushSizeSliderValue) < 0.001) {
-                      return;
-                    }
-
-                    onBrushSizeChange(nextBrushSize);
+            <SegmentedControl
+              ariaLabel="Trace eraser mode"
+              value={mode}
+              onChange={(value) => onModeChange(value as EraserMode)}
+              options={[
+                { label: "Erase", value: "erase" },
+                { label: "Restore", value: "restore", disabled: editMode === "magic" },
+              ]}
+            />
+            {editMode === "brush" ? (
+              <>
+                <ToolbarDivider />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 15,
+                    alignItems: "center",
+                    flexWrap: "nowrap",
+                    padding: "6px 8px",
                   }}
-                  style={{ width: "100%", maxWidth: "none" }}
-                />
-              </div>
-            </div>
+                >
+                  <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+                  <div className={styles.traceSliderTooltipWrap} style={{ width: 80, flexShrink: 0 }}>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={0.05}
+                      value={brushSizeSliderValue}
+                      aria-label="Eraser brush size"
+                      aria-valuetext={`${brushSizePercent}% image-size erase area`}
+                      onPointerDown={() => onPreviewVisibilityChange(true)}
+                      onPointerUp={() => onPreviewVisibilityChange(false)}
+                      onPointerCancel={() => onPreviewVisibilityChange(false)}
+                      onBlur={() => onPreviewVisibilityChange(false)}
+                      onChange={(event) => {
+                        const nextSliderValue = Number(event.currentTarget.value);
+                        const nextBrushSize = Math.min(Math.max(nextSliderValue, 1), 10);
+
+                        if (Math.abs(nextBrushSize - brushSizeSliderValue) < 0.001) {
+                          return;
+                        }
+
+                        onBrushSizeChange(nextBrushSize);
+                      }}
+                      style={{ width: "100%", maxWidth: "none" }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <ToolbarDivider />
+            )}
             <ToolbarDivider />
             <ToolbarButton
               type="button"

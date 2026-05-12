@@ -33,6 +33,12 @@ import {
   drawMaskedTraceSourceToCanvas as drawTraceSourceToCanvas,
   isMaskCanvasFullyVisible,
 } from "@/lib/editor-v2/editor/trace/mask";
+import type { ConnectedMagicSelection, EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
+import {
+  applyMagicSelectionToMaskCanvas,
+  createConnectedMagicSelection,
+  getMagicWandToleranceFromDragDistance,
+} from "@/lib/editor-v2/editor/magicWand";
 import { createPreviewTraceRepositionCommand } from "../workspaceCommands";
 import { PositioningBoxOverlay } from "./overlays/PositioningBoxOverlay";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
@@ -96,7 +102,8 @@ interface TraceImageLayerProps {
   eraserDraftRevision?: number;
   eraserEditing?: boolean;
   eraserMaskUrl?: string | null;
-  eraserMode?: "erase" | "restore";
+  eraserEditMode?: EraserEditMode;
+  eraserMode?: EraserMode;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   imageOpacity: number;
   metrics: GridWorldMetrics;
@@ -125,6 +132,7 @@ export function TraceImageLayer({
   eraserDraftRevision = 0,
   eraserEditing = false,
   eraserMaskUrl = null,
+  eraserEditMode = "brush",
   eraserMode = "erase",
   getWorldPointFromClient,
   imageOpacity,
@@ -610,6 +618,7 @@ export function TraceImageLayer({
             brushPreviewVisible={eraserBrushPreviewVisible}
             draftRevision={eraserDraftRevision}
             draftMaskUrl={eraserMaskUrl}
+            editMode={eraserEditMode}
             imageOpacity={imageOpacity}
             mode={eraserMode}
             onMaskChange={onEraserDraftChange}
@@ -718,8 +727,9 @@ interface TraceEraserEditorOverlayProps {
   brushPreviewVisible: boolean;
   draftRevision: number;
   draftMaskUrl: string | null;
+  editMode: EraserEditMode;
   imageOpacity: number;
-  mode: "erase" | "restore";
+  mode: EraserMode;
   onMaskChange: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   surfaceHeight: number;
   surfaceWidth: number;
@@ -736,6 +746,7 @@ function TraceEraserEditorOverlay({
   brushPreviewVisible,
   draftRevision,
   draftMaskUrl,
+  editMode,
   imageOpacity,
   mode,
   onMaskChange,
@@ -746,9 +757,17 @@ function TraceEraserEditorOverlay({
 }: TraceEraserEditorOverlayProps) {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const combinedMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const composedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sourceSampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sourceImageDataRef = useRef<ImageData | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const magicSessionRef = useRef<{
+    seedMaskPoint: { x: number; y: number };
+    seedStagePoint: { x: number; y: number };
+  } | null>(null);
+  const previewSelectionRef = useRef<ConnectedMagicSelection | null>(null);
   const hasUserEditedMaskRef = useRef(false);
   const [maskSeeded, setMaskSeeded] = useState(false);
   const [maskSeedSourceKey, setMaskSeedSourceKey] = useState<string | null>(null);
@@ -778,9 +797,33 @@ function TraceEraserEditorOverlay({
 
   useEffect(() => {
     hasUserEditedMaskRef.current = false;
+    magicSessionRef.current = null;
+    previewSelectionRef.current = null;
     setMaskSeedSourceKey(null);
     setMaskSeeded(false);
   }, [draftRevision]);
+
+  useEffect(() => {
+    if (!traceAsset?.ready || !traceAsset.image || assetWidth <= 0 || assetHeight <= 0) {
+      sourceImageDataRef.current = null;
+      return;
+    }
+
+    const sampleCanvas = sourceSampleCanvasRef.current ?? document.createElement("canvas");
+    sourceSampleCanvasRef.current = sampleCanvas;
+    sampleCanvas.width = assetWidth;
+    sampleCanvas.height = assetHeight;
+
+    const context = sampleCanvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+      sourceImageDataRef.current = null;
+      return;
+    }
+
+    context.clearRect(0, 0, assetWidth, assetHeight);
+    context.drawImage(traceAsset.image, 0, 0, assetWidth, assetHeight);
+    sourceImageDataRef.current = context.getImageData(0, 0, assetWidth, assetHeight);
+  }, [assetHeight, assetWidth, traceAsset]);
 
   useEffect(() => {
     traceEraserDebugLog("mount-state", {
@@ -837,11 +880,30 @@ function TraceEraserEditorOverlay({
       return;
     }
 
+    let effectiveMaskCanvas = maskCanvas;
+    if (previewSelectionRef.current?.selectedPixelCount) {
+      const combinedMaskCanvas =
+        combinedMaskCanvasRef.current ?? document.createElement("canvas");
+      combinedMaskCanvasRef.current = combinedMaskCanvas;
+      combinedMaskCanvas.width = assetWidth;
+      combinedMaskCanvas.height = assetHeight;
+      const combinedContext = combinedMaskCanvas.getContext("2d");
+      if (combinedContext) {
+        combinedContext.clearRect(0, 0, assetWidth, assetHeight);
+        combinedContext.drawImage(maskCanvas, 0, 0, assetWidth, assetHeight);
+        applyMagicSelectionToMaskCanvas({
+          maskCanvas: combinedMaskCanvas,
+          selection: previewSelectionRef.current,
+        });
+        effectiveMaskCanvas = combinedMaskCanvas;
+      }
+    }
+
     const maskSource =
       !maskSeeded && matchingLoadedMask
         ? matchingLoadedMask
         : {
-            image: maskCanvas,
+            image: effectiveMaskCanvas,
             width: assetWidth,
             height: assetHeight,
           };
@@ -900,6 +962,12 @@ function TraceEraserEditorOverlay({
     trace,
     traceAsset,
   ]);
+
+  useEffect(() => {
+    magicSessionRef.current = null;
+    previewSelectionRef.current = null;
+    renderOverlay();
+  }, [editMode, renderOverlay]);
 
   useEffect(() => {
     const maskCanvas = maskCanvasRef.current ?? document.createElement("canvas");
@@ -1067,8 +1135,35 @@ function TraceEraserEditorOverlay({
     );
   }, [maskSeedSourceKey, onMaskChange]);
 
+  const getMaskPointFromStagePoint = useCallback(
+    (stageX: number, stageY: number) => {
+      const localPoint = getLocalPointWithinRotatedBounds(
+        { x: stageX, y: stageY },
+        bounds,
+        trace.rotation,
+      );
+
+      if (
+        localPoint.x < 0 ||
+        localPoint.y < 0 ||
+        localPoint.x > bounds.width ||
+        localPoint.y > bounds.height
+      ) {
+        return null;
+      }
+
+      const scaleX = trace.cropWidth / Math.max(bounds.width, 1);
+      const scaleY = trace.cropHeight / Math.max(bounds.height, 1);
+      return {
+        x: trace.cropX + localPoint.x * scaleX,
+        y: trace.cropY + localPoint.y * scaleY,
+      };
+    },
+    [bounds, trace.cropHeight, trace.cropWidth, trace.cropX, trace.cropY, trace.rotation],
+  );
+
   const drawAtClientPoint = useCallback(
-    (clientX: number, clientY: number, connectFromLast: boolean) => {
+    (stageX: number, stageY: number, connectFromLast: boolean) => {
       const maskCanvas = maskCanvasRef.current;
       if (!maskCanvas) {
         traceEraserDebugLog("paint-blocked-no-canvas", {});
@@ -1089,27 +1184,13 @@ function TraceEraserEditorOverlay({
         return false;
       }
 
-      const localPoint = getLocalPointWithinRotatedBounds(
-        { x: clientX, y: clientY },
-        bounds,
-        trace.rotation,
-      );
-
-      if (
-        localPoint.x < 0 ||
-        localPoint.y < 0 ||
-        localPoint.x > bounds.width ||
-        localPoint.y > bounds.height
-      ) {
+      const point = getMaskPointFromStagePoint(stageX, stageY);
+      if (!point) {
         return false;
       }
 
       const scaleX = trace.cropWidth / Math.max(bounds.width, 1);
       const scaleY = trace.cropHeight / Math.max(bounds.height, 1);
-      const point = {
-        x: trace.cropX + localPoint.x * scaleX,
-        y: trace.cropY + localPoint.y * scaleY,
-      };
       const brushDiameter = getTraceEraserBrushDiameter(brushSize, trace);
       const brushRadius = (brushDiameter * Math.max(scaleX, scaleY)) / 2;
 
@@ -1148,9 +1229,9 @@ function TraceEraserEditorOverlay({
       return true;
     },
     [
-      bounds,
       brushSize,
       draftMaskUrl,
+      getMaskPointFromStagePoint,
       maskSeedSourceKey,
       maskSeeded,
       matchingLoadedMask?.url,
@@ -1160,6 +1241,60 @@ function TraceEraserEditorOverlay({
       traceAsset?.mask?.url,
     ],
   );
+
+  const updateMagicPreview = useCallback(
+    (stageX: number, stageY: number) => {
+      const sourceImageData = sourceImageDataRef.current;
+      const magicSession = magicSessionRef.current;
+      if (!maskSeeded || !sourceImageData || !magicSession) {
+        return false;
+      }
+
+      const tolerance = getMagicWandToleranceFromDragDistance(
+        Math.hypot(
+          stageX - magicSession.seedStagePoint.x,
+          stageY - magicSession.seedStagePoint.y,
+        ),
+      );
+      previewSelectionRef.current = createConnectedMagicSelection({
+        imageData: sourceImageData,
+        seedX: magicSession.seedMaskPoint.x,
+        seedY: magicSession.seedMaskPoint.y,
+        tolerance,
+      });
+      renderOverlay();
+      return true;
+    },
+    [maskSeeded, renderOverlay],
+  );
+
+  const commitMagicPreview = useCallback(() => {
+    const maskCanvas = maskCanvasRef.current;
+    const previewSelection = previewSelectionRef.current;
+    if (!maskCanvas || !previewSelection?.selectedPixelCount) {
+      previewSelectionRef.current = null;
+      magicSessionRef.current = null;
+      renderOverlay();
+      commitDraft();
+      return;
+    }
+
+    applyMagicSelectionToMaskCanvas({
+      maskCanvas,
+      selection: previewSelection,
+    });
+    hasUserEditedMaskRef.current = true;
+    previewSelectionRef.current = null;
+    magicSessionRef.current = null;
+    renderOverlay();
+    commitDraft();
+  }, [commitDraft, renderOverlay]);
+
+  const clearMagicPreview = useCallback(() => {
+    previewSelectionRef.current = null;
+    magicSessionRef.current = null;
+    renderOverlay();
+  }, [renderOverlay]);
   const brushPreviewRadius = getTraceEraserBrushDiameter(brushSize, trace) / 2;
 
   return (
@@ -1171,11 +1306,36 @@ function TraceEraserEditorOverlay({
           lastPointRef.current = null;
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           event.currentTarget.setPointerCapture(event.pointerId);
+          if (editMode === "magic") {
+            const seedMaskPoint = getMaskPointFromStagePoint(
+              event.nativeEvent.offsetX,
+              event.nativeEvent.offsetY,
+            );
+            if (!seedMaskPoint) {
+              return;
+            }
+
+            magicSessionRef.current = {
+              seedMaskPoint,
+              seedStagePoint: {
+                x: event.nativeEvent.offsetX,
+                y: event.nativeEvent.offsetY,
+              },
+            };
+            updateMagicPreview(event.nativeEvent.offsetX, event.nativeEvent.offsetY);
+            return;
+          }
+
           drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, false);
         }}
         onPointerMove={(event) => {
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          if (editMode === "magic") {
+            updateMagicPreview(event.nativeEvent.offsetX, event.nativeEvent.offsetY);
             return;
           }
 
@@ -1198,6 +1358,11 @@ function TraceEraserEditorOverlay({
           lastPointRef.current = null;
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           event.currentTarget.releasePointerCapture(event.pointerId);
+          if (editMode === "magic") {
+            commitMagicPreview();
+            return;
+          }
+
           commitDraft();
         }}
         onPointerCancel={(event) => {
@@ -1211,6 +1376,11 @@ function TraceEraserEditorOverlay({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
+          if (editMode === "magic") {
+            clearMagicPreview();
+            return;
+          }
+
           commitDraft();
         }}
         style={{
@@ -1220,10 +1390,15 @@ function TraceEraserEditorOverlay({
           width: `${surfaceWidth}px`,
           height: `${surfaceHeight}px`,
           touchAction: "none",
-          cursor: coarsePointer ? "url('/paint-brush-cursor.cur') 0 24, crosshair" : "none",
+          cursor:
+            editMode === "brush"
+              ? coarsePointer
+                ? "url('/paint-brush-cursor.cur') 0 24, crosshair"
+                : "none"
+              : "crosshair",
         }}
       />
-      {!coarsePointer && brushPreviewPoint ? (
+      {editMode === "brush" && !coarsePointer && brushPreviewPoint ? (
         <div
           aria-hidden="true"
           style={{
@@ -1242,7 +1417,7 @@ function TraceEraserEditorOverlay({
           }}
         />
       ) : null}
-      {brushPreviewVisible ? (
+      {editMode === "brush" && brushPreviewVisible ? (
         <div
           aria-hidden="true"
           style={{

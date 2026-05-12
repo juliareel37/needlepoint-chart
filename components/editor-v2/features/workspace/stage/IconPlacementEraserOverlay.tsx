@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getLocalPointWithinRotatedBounds } from "@/lib/editor-v2/editor/positioning";
 import { loadMaskableImage } from "@/lib/editor-v2/editor/imageMasking";
 import { isMaskCanvasFullyVisible } from "@/lib/editor-v2/editor/trace/mask";
+import type { ConnectedMagicSelection, EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
+import {
+  applyMagicSelectionToMaskCanvas,
+  createConnectedMagicSelection,
+  getMagicWandToleranceFromDragDistance,
+} from "@/lib/editor-v2/editor/magicWand";
 
 const MIN_IMAGE_FRACTION = 0.01;
 const MAX_IMAGE_FRACTION = 0.35;
@@ -30,10 +36,11 @@ interface IconPlacementEraserOverlayProps {
   displaySrc: string;
   draftMaskUrl: string | null;
   draftRevision: number;
+  editMode: EraserEditMode;
   imageOpacity: number;
   intrinsicHeight: number;
   intrinsicWidth: number;
-  mode: "erase" | "restore";
+  mode: EraserMode;
   onMaskChange: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   rotation: number;
   stageHeight: number;
@@ -47,6 +54,7 @@ export function IconPlacementEraserOverlay({
   displaySrc,
   draftMaskUrl,
   draftRevision,
+  editMode,
   imageOpacity,
   intrinsicHeight,
   intrinsicWidth,
@@ -58,10 +66,18 @@ export function IconPlacementEraserOverlay({
 }: IconPlacementEraserOverlayProps) {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const combinedMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const composedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sourceImageRef = useRef<HTMLImageElement | null>(null);
+  const sourceSampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sourceImageDataRef = useRef<ImageData | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const magicSessionRef = useRef<{
+    seedMaskPoint: { x: number; y: number };
+    seedStagePoint: { x: number; y: number };
+  } | null>(null);
+  const previewSelectionRef = useRef<ConnectedMagicSelection | null>(null);
   const [maskSeeded, setMaskSeeded] = useState(false);
   const [coarsePointer, setCoarsePointer] = useState(false);
   const [brushPreviewPoint, setBrushPreviewPoint] = useState<{ x: number; y: number } | null>(null);
@@ -92,22 +108,38 @@ export function IconPlacementEraserOverlay({
       .then((image) => {
         if (!cancelled) {
           sourceImageRef.current = image;
+          const sampleCanvas = sourceSampleCanvasRef.current ?? document.createElement("canvas");
+          sourceSampleCanvasRef.current = sampleCanvas;
+          sampleCanvas.width = Math.max(1, intrinsicWidth);
+          sampleCanvas.height = Math.max(1, intrinsicHeight);
+          const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+          if (sampleContext) {
+            sampleContext.clearRect(0, 0, intrinsicWidth, intrinsicHeight);
+            sampleContext.drawImage(image, 0, 0, intrinsicWidth, intrinsicHeight);
+            sourceImageDataRef.current = sampleContext.getImageData(0, 0, intrinsicWidth, intrinsicHeight);
+          } else {
+            sourceImageDataRef.current = null;
+          }
           renderOverlay();
         }
       })
       .catch(() => {
         if (!cancelled) {
           sourceImageRef.current = null;
+          sourceImageDataRef.current = null;
         }
       });
 
     return () => {
       cancelled = true;
       sourceImageRef.current = null;
+      sourceImageDataRef.current = null;
     };
-  }, [displaySrc]);
+  }, [displaySrc, intrinsicHeight, intrinsicWidth]);
 
   useEffect(() => {
+    magicSessionRef.current = null;
+    previewSelectionRef.current = null;
     setMaskSeeded(false);
   }, [draftRevision]);
 
@@ -135,11 +167,30 @@ export function IconPlacementEraserOverlay({
       return;
     }
 
+    let effectiveMaskCanvas = maskCanvas;
+    if (previewSelectionRef.current?.selectedPixelCount) {
+      const combinedMaskCanvas =
+        combinedMaskCanvasRef.current ?? document.createElement("canvas");
+      combinedMaskCanvasRef.current = combinedMaskCanvas;
+      combinedMaskCanvas.width = Math.max(1, intrinsicWidth);
+      combinedMaskCanvas.height = Math.max(1, intrinsicHeight);
+      const combinedContext = combinedMaskCanvas.getContext("2d");
+      if (combinedContext) {
+        combinedContext.clearRect(0, 0, intrinsicWidth, intrinsicHeight);
+        combinedContext.drawImage(maskCanvas, 0, 0, intrinsicWidth, intrinsicHeight);
+        applyMagicSelectionToMaskCanvas({
+          maskCanvas: combinedMaskCanvas,
+          selection: previewSelectionRef.current,
+        });
+        effectiveMaskCanvas = combinedMaskCanvas;
+      }
+    }
+
     composedContext.clearRect(0, 0, intrinsicWidth, intrinsicHeight);
     composedContext.globalCompositeOperation = "source-over";
     composedContext.drawImage(sourceImage, 0, 0, intrinsicWidth, intrinsicHeight);
     composedContext.globalCompositeOperation = "destination-in";
-    composedContext.drawImage(maskCanvas, 0, 0, intrinsicWidth, intrinsicHeight);
+    composedContext.drawImage(effectiveMaskCanvas, 0, 0, intrinsicWidth, intrinsicHeight);
     composedContext.globalCompositeOperation = "source-over";
 
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -205,6 +256,12 @@ export function IconPlacementEraserOverlay({
   ]);
 
   useEffect(() => {
+    magicSessionRef.current = null;
+    previewSelectionRef.current = null;
+    renderOverlay();
+  }, [editMode, renderOverlay]);
+
+  useEffect(() => {
     const maskCanvas = maskCanvasRef.current ?? document.createElement("canvas");
     maskCanvasRef.current = maskCanvas;
     maskCanvas.width = Math.max(1, intrinsicWidth);
@@ -263,20 +320,10 @@ export function IconPlacementEraserOverlay({
     onMaskChange(isFullyVisible ? null : maskCanvas.toDataURL("image/png"), isFullyVisible);
   }, [onMaskChange]);
 
-  const drawAtClientPoint = useCallback(
-    (clientX: number, clientY: number, connectFromLast: boolean) => {
-      const maskCanvas = maskCanvasRef.current;
-      if (!maskCanvas || !maskSeeded) {
-        return false;
-      }
-
-      const context = maskCanvas.getContext("2d");
-      if (!context) {
-        return false;
-      }
-
+  const getMaskPointFromStagePoint = useCallback(
+    (stageX: number, stageY: number) => {
       const localPoint = getLocalPointWithinRotatedBounds(
-        { x: clientX, y: clientY },
+        { x: stageX, y: stageY },
         bounds,
         rotation,
       );
@@ -287,15 +334,37 @@ export function IconPlacementEraserOverlay({
         localPoint.x > bounds.width ||
         localPoint.y > bounds.height
       ) {
-        return false;
+        return null;
       }
 
       const scaleX = intrinsicWidth / Math.max(bounds.width, 1);
       const scaleY = intrinsicHeight / Math.max(bounds.height, 1);
-      const point = {
+      return {
         x: localPoint.x * scaleX,
         y: localPoint.y * scaleY,
       };
+    },
+    [bounds, intrinsicHeight, intrinsicWidth, rotation],
+  );
+
+  const drawAtClientPoint = useCallback(
+    (stageX: number, stageY: number, connectFromLast: boolean) => {
+      const maskCanvas = maskCanvasRef.current;
+      if (!maskCanvas || !maskSeeded) {
+        return false;
+      }
+
+      const context = maskCanvas.getContext("2d");
+      if (!context) {
+        return false;
+      }
+
+      const point = getMaskPointFromStagePoint(stageX, stageY);
+      if (!point) {
+        return false;
+      }
+      const scaleX = intrinsicWidth / Math.max(bounds.width, 1);
+      const scaleY = intrinsicHeight / Math.max(bounds.height, 1);
       const brushDiameter = getBrushDiameter(brushSize, {
         width: intrinsicWidth,
         height: intrinsicHeight,
@@ -327,8 +396,8 @@ export function IconPlacementEraserOverlay({
       return true;
     },
     [
-      bounds,
       brushSize,
+      getMaskPointFromStagePoint,
       intrinsicHeight,
       intrinsicWidth,
       maskSeeded,
@@ -337,6 +406,59 @@ export function IconPlacementEraserOverlay({
       rotation,
     ],
   );
+
+  const updateMagicPreview = useCallback(
+    (stageX: number, stageY: number) => {
+      const sourceImageData = sourceImageDataRef.current;
+      const magicSession = magicSessionRef.current;
+      if (!maskSeeded || !sourceImageData || !magicSession) {
+        return false;
+      }
+
+      const tolerance = getMagicWandToleranceFromDragDistance(
+        Math.hypot(
+          stageX - magicSession.seedStagePoint.x,
+          stageY - magicSession.seedStagePoint.y,
+        ),
+      );
+      previewSelectionRef.current = createConnectedMagicSelection({
+        imageData: sourceImageData,
+        seedX: magicSession.seedMaskPoint.x,
+        seedY: magicSession.seedMaskPoint.y,
+        tolerance,
+      });
+      renderOverlay();
+      return true;
+    },
+    [maskSeeded, renderOverlay],
+  );
+
+  const commitMagicPreview = useCallback(() => {
+    const maskCanvas = maskCanvasRef.current;
+    const previewSelection = previewSelectionRef.current;
+    if (!maskCanvas || !previewSelection?.selectedPixelCount) {
+      previewSelectionRef.current = null;
+      magicSessionRef.current = null;
+      renderOverlay();
+      commitDraft();
+      return;
+    }
+
+    applyMagicSelectionToMaskCanvas({
+      maskCanvas,
+      selection: previewSelection,
+    });
+    previewSelectionRef.current = null;
+    magicSessionRef.current = null;
+    renderOverlay();
+    commitDraft();
+  }, [commitDraft, renderOverlay]);
+
+  const clearMagicPreview = useCallback(() => {
+    previewSelectionRef.current = null;
+    magicSessionRef.current = null;
+    renderOverlay();
+  }, [renderOverlay]);
 
   const brushPreviewRadius = getBrushDiameter(brushSize, {
     width: intrinsicWidth,
@@ -352,11 +474,36 @@ export function IconPlacementEraserOverlay({
           lastPointRef.current = null;
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           event.currentTarget.setPointerCapture(event.pointerId);
+          if (editMode === "magic") {
+            const seedMaskPoint = getMaskPointFromStagePoint(
+              event.nativeEvent.offsetX,
+              event.nativeEvent.offsetY,
+            );
+            if (!seedMaskPoint) {
+              return;
+            }
+
+            magicSessionRef.current = {
+              seedMaskPoint,
+              seedStagePoint: {
+                x: event.nativeEvent.offsetX,
+                y: event.nativeEvent.offsetY,
+              },
+            };
+            updateMagicPreview(event.nativeEvent.offsetX, event.nativeEvent.offsetY);
+            return;
+          }
+
           drawAtClientPoint(event.nativeEvent.offsetX, event.nativeEvent.offsetY, false);
         }}
         onPointerMove={(event) => {
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           if (activePointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          if (editMode === "magic") {
+            updateMagicPreview(event.nativeEvent.offsetX, event.nativeEvent.offsetY);
             return;
           }
 
@@ -379,6 +526,11 @@ export function IconPlacementEraserOverlay({
           lastPointRef.current = null;
           setBrushPreviewPoint({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
           event.currentTarget.releasePointerCapture(event.pointerId);
+          if (editMode === "magic") {
+            commitMagicPreview();
+            return;
+          }
+
           commitDraft();
         }}
         onPointerCancel={(event) => {
@@ -392,6 +544,11 @@ export function IconPlacementEraserOverlay({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
+          if (editMode === "magic") {
+            clearMagicPreview();
+            return;
+          }
+
           commitDraft();
         }}
         style={{
@@ -401,10 +558,15 @@ export function IconPlacementEraserOverlay({
           width: `${stageWidth}px`,
           height: `${stageHeight}px`,
           touchAction: "none",
-          cursor: coarsePointer ? "url('/paint-brush-cursor.cur') 0 24, crosshair" : "none",
+          cursor:
+            editMode === "brush"
+              ? coarsePointer
+                ? "url('/paint-brush-cursor.cur') 0 24, crosshair"
+                : "none"
+              : "crosshair",
         }}
       />
-      {!coarsePointer && brushPreviewPoint ? (
+      {editMode === "brush" && !coarsePointer && brushPreviewPoint ? (
         <div
           aria-hidden="true"
           style={{
@@ -423,7 +585,7 @@ export function IconPlacementEraserOverlay({
           }}
         />
       ) : null}
-      {brushPreviewVisible ? (
+      {editMode === "brush" && brushPreviewVisible ? (
         <div
           aria-hidden="true"
           style={{

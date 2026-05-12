@@ -25,6 +25,7 @@ import {
   getIconPlacementBounds,
   type IconPlacementTransform,
 } from "@/lib/editor-v2/editor/icons/iconPlacementGeometry";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
 import { SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW } from "./placementPreviewMode";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
 import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
@@ -38,7 +39,8 @@ interface IconPlacementLayerProps {
   eraserDraftRevision?: number;
   eraserEditing?: boolean;
   eraserMaskUrl?: string | null;
-  eraserMode?: "erase" | "restore";
+  eraserEditMode?: EraserEditMode;
+  eraserMode?: EraserMode;
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   metrics: GridWorldMetrics;
   onEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
@@ -62,6 +64,7 @@ export function IconPlacementLayer({
   eraserDraftRevision = 0,
   eraserEditing = false,
   eraserMaskUrl = null,
+  eraserEditMode = "brush",
   eraserMode = "erase",
   getWorldPointFromClient,
   metrics,
@@ -639,6 +642,7 @@ export function IconPlacementLayer({
             displaySrc={previewSrc}
             draftMaskUrl={eraserMaskUrl}
             draftRevision={eraserDraftRevision}
+            editMode={eraserEditMode}
             imageOpacity={1}
             intrinsicHeight={placement.intrinsicHeight}
             intrinsicWidth={placement.intrinsicWidth}

@@ -30,6 +30,7 @@ import { useGridInteractions } from "../interactions/useGridInteractions";
 import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 import { clearTraceSampler } from "../trace/traceSampler";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
 
 function traceEraserDebugEnabled(): boolean {
   if (typeof window === "undefined") {
@@ -77,13 +78,15 @@ interface GridWorldSurfaceProps {
   iconEraserDraftRevision?: number;
   iconEraserEditing?: boolean;
   iconEraserMaskUrl?: string | null;
-  iconEraserMode?: "erase" | "restore";
+  iconEraserEditMode?: EraserEditMode;
+  iconEraserMode?: EraserMode;
   traceEraserBrushSize?: number;
   traceEraserBrushPreviewVisible?: boolean;
   traceEraserEditing?: boolean;
   traceEraserMaskUrl?: string | null;
   traceEraserDraftRevision?: number;
-  traceEraserMode?: "erase" | "restore";
+  traceEraserEditMode?: EraserEditMode;
+  traceEraserMode?: EraserMode;
   traceDisplayOverride?: TraceCropRect | null;
   onIconEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   onTraceCropPreviewChange?: (crop: TraceCropRect | null) => void;
@@ -116,12 +119,14 @@ export function GridWorldSurface({
   iconEraserDraftRevision = 0,
   iconEraserEditing = false,
   iconEraserMaskUrl = null,
+  iconEraserEditMode = "brush",
   iconEraserMode = "erase",
   traceEraserBrushSize = 1,
   traceEraserBrushPreviewVisible = false,
   traceEraserEditing = false,
   traceEraserMaskUrl = null,
   traceEraserDraftRevision = 0,
+  traceEraserEditMode = "brush",
   traceEraserMode = "erase",
   traceDisplayOverride = null,
   onIconEraserDraftChange,
@@ -718,6 +723,7 @@ export function GridWorldSurface({
               eraserEditing={traceEraserActive}
               eraserMaskUrl={traceEraserMaskUrl}
               eraserDraftRevision={traceEraserDraftRevision}
+              eraserEditMode={traceEraserEditMode}
               eraserMode={traceEraserMode}
               onEraserDraftChange={onTraceEraserDraftChange}
               traceDisplayOverride={traceDisplayOverride}
@@ -799,6 +805,7 @@ export function GridWorldSurface({
               eraserDraftRevision={iconEraserDraftRevision}
               eraserEditing={iconEraserEditing}
               eraserMaskUrl={iconEraserMaskUrl}
+              eraserEditMode={iconEraserEditMode}
               eraserMode={iconEraserMode}
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
