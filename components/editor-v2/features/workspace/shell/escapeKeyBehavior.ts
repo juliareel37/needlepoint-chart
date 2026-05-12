@@ -4,6 +4,7 @@ export interface WorkspaceEscapeState {
   highlightedColorActive: boolean;
   iconPlacementActive: boolean;
   previewMode: boolean;
+  traceEditModeActive: boolean;
   textPlacementActive: boolean;
   traceConversionPreviewActive: boolean;
   traceCropEditing: boolean;
@@ -13,6 +14,7 @@ export interface WorkspaceEscapeState {
 
 export type WorkspaceEscapeAction =
   | "exit-trace-conversion-preview"
+  | "exit-trace-edit"
   | "cancel-trace-crop"
   | "cancel-trace-eraser"
   | "cancel-trace-reposition"
@@ -38,6 +40,10 @@ export function getWorkspaceEscapeAction(
 
   if (state.traceRepositionActive) {
     return "cancel-trace-reposition";
+  }
+
+  if (state.traceEditModeActive) {
+    return "exit-trace-edit";
   }
 
   if (state.textPlacementActive) {

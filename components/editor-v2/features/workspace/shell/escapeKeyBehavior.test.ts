@@ -8,6 +8,7 @@ describe("getWorkspaceEscapeAction", () => {
         highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: false,
+        traceEditModeActive: false,
         textPlacementActive: false,
         traceConversionPreviewActive: false,
         traceCropEditing: false,
@@ -22,6 +23,7 @@ describe("getWorkspaceEscapeAction", () => {
         highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: true,
+        traceEditModeActive: false,
         textPlacementActive: true,
         traceConversionPreviewActive: false,
         traceCropEditing: false,
@@ -36,6 +38,7 @@ describe("getWorkspaceEscapeAction", () => {
         highlightedColorActive: false,
         iconPlacementActive: true,
         previewMode: true,
+        traceEditModeActive: true,
         textPlacementActive: true,
         traceConversionPreviewActive: true,
         traceCropEditing: true,
@@ -50,6 +53,7 @@ describe("getWorkspaceEscapeAction", () => {
         highlightedColorActive: false,
         iconPlacementActive: false,
         previewMode: false,
+        traceEditModeActive: true,
         textPlacementActive: false,
         traceConversionPreviewActive: false,
         traceCropEditing: true,
@@ -64,11 +68,27 @@ describe("getWorkspaceEscapeAction", () => {
         highlightedColorActive: true,
         iconPlacementActive: false,
         previewMode: true,
+        traceEditModeActive: false,
         textPlacementActive: false,
         traceConversionPreviewActive: false,
         traceCropEditing: false,
         traceRepositionActive: false,
       }),
     ).toBe("clear-highlight");
+  });
+
+  it("exits image edit mode before text or preview flows", () => {
+    expect(
+      getWorkspaceEscapeAction({
+        highlightedColorActive: false,
+        iconPlacementActive: false,
+        previewMode: true,
+        traceEditModeActive: true,
+        textPlacementActive: true,
+        traceConversionPreviewActive: false,
+        traceCropEditing: false,
+        traceRepositionActive: false,
+      }),
+    ).toBe("exit-trace-edit");
   });
 });

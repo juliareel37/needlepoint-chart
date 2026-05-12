@@ -33,7 +33,6 @@ import {
   createBeginDuplicatePlacementCommand,
   createCancelDuplicatePlacementCommand,
   createCancelMirrorCommand,
-  createBeginTraceRepositionCommand,
   createBeginMirrorFromSelectionCommand,
   createClearCanvasCommand,
   createClearSelectionCommand,
@@ -318,6 +317,7 @@ interface FloatingToolbarProps {
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
   onOpenSelectionColorsPanel: () => void;
+  onToggleTraceEditMode: () => void;
   onToolbarSelectionIntent: () => void;
   onColorLibraryDismissPointerDown?: (gesture: ColorLibraryDismissGesture) => void;
   onBrushPreviewVisibilityChange?: (visible: boolean) => void;
@@ -350,6 +350,7 @@ export function FloatingToolbar({
   mirrorSessionActive,
   isBottomPanelLayout,
   onOpenSelectionColorsPanel,
+  onToggleTraceEditMode,
   onToolbarSelectionIntent,
   onColorLibraryDismissPointerDown,
   onBrushPreviewVisibilityChange,
@@ -1443,8 +1444,8 @@ export function FloatingToolbar({
                       // closeImageMenu();
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-                    <ToolbarLabel>Settings</ToolbarLabel>
+                    <ToolbarIcon icon="/icons/lucide/eye.svg" />
+                    <ToolbarLabel>Display settings</ToolbarLabel>
                   </ToolbarButton>
 
                   <ToolbarDivider />
@@ -1453,17 +1454,15 @@ export function FloatingToolbar({
                   <ToolbarButton
                     type="button"
                     labelled
-                    aria-label="Reposition trace"
-                    title="Reposition trace"
+                    aria-label="Edit image"
+                    title="Edit image"
                     onClick={() => {
                       closeImageMenu();
-                      dispatch(
-                        createBeginTraceRepositionCommand("toolbar"),
-                      );
+                      onToggleTraceEditMode();
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
-                    Reposition
+                    <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+                    Edit image
                   </ToolbarButton>
 
                 </>

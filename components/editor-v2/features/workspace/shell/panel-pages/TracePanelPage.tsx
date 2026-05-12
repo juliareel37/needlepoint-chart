@@ -17,6 +17,7 @@ interface TracePanelPageProps {
   cropDraft?: TraceCropRect | null;
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
+  editModeActive?: boolean;
   eraserEditing?: boolean;
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
@@ -25,6 +26,7 @@ interface TracePanelPageProps {
   onCancelCrop?: () => void;
   onCommitCrop?: () => void;
   onResetCrop?: () => void;
+  onToggleEditMode?: () => void;
   palette: PaletteColor[];
   previewState: TraceConversionPreviewState | null;
   repositionActive: boolean;
@@ -37,6 +39,7 @@ export function TracePanelPage({
   cropDraft,
   cropEditing = false,
   dispatch,
+  editModeActive = false,
   eraserEditing = false,
   grid,
   gridMetrics,
@@ -45,6 +48,7 @@ export function TracePanelPage({
   onCancelCrop,
   onCommitCrop,
   onResetCrop,
+  onToggleEditMode,
   palette,
   previewState,
   repositionActive,
@@ -59,6 +63,7 @@ export function TracePanelPage({
           cropDraft={cropDraft}
           cropEditing={cropEditing}
           dispatch={dispatch}
+          editModeActive={editModeActive}
           eraserEditing={eraserEditing}
           guestDraftId={guestDraftId}
           grid={grid}
@@ -68,6 +73,7 @@ export function TracePanelPage({
           onCancelCrop={onCancelCrop}
           onCommitCrop={onCommitCrop}
           onResetCrop={onResetCrop}
+          onToggleEditMode={onToggleEditMode}
           palette={palette}
           previewState={previewState}
           repositionActive={repositionActive}

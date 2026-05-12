@@ -33,11 +33,8 @@ import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   createApplyTraceConversionCommand,
   createAttachTraceCommand,
-  createBeginTraceRepositionCommand,
   createCancelTraceConversionPreviewCommand,
-  createCancelTraceRepositionCommand,
   createCommitTraceConversionPreviewCommand,
-  createCommitTraceRepositionCommand,
   createPreviewTraceConversionCommand,
   createRemoveTraceCommand,
   createUpdateTraceCommand,
@@ -59,6 +56,7 @@ interface TraceControlsProps {
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
   cropDraft?: TraceCropRect | null;
+  editModeActive?: boolean;
   cropEditing?: boolean;
   eraserEditing?: boolean;
   onBeginCrop?: () => void;
@@ -66,6 +64,7 @@ interface TraceControlsProps {
   onCancelCrop?: () => void;
   onCommitCrop?: () => void;
   onResetCrop?: () => void;
+  onToggleEditMode?: () => void;
   repositionActive?: boolean;
   repositionOrigin?: TraceRepositionOrigin | null;
 }
@@ -79,6 +78,7 @@ export function TraceControls({
   trace,
   dispatch,
   cropDraft = null,
+  editModeActive = false,
   cropEditing = false,
   eraserEditing = false,
   onBeginCrop,
@@ -86,6 +86,7 @@ export function TraceControls({
   onCancelCrop,
   onCommitCrop,
   onResetCrop,
+  onToggleEditMode,
   repositionActive = false,
   repositionOrigin = null,
 }: TraceControlsProps) {
@@ -122,7 +123,8 @@ export function TraceControls({
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
-  const traceEditingPreviewActive = positioningEnabled || cropEditing;
+  const traceEditingPreviewActive =
+    editModeActive || positioningEnabled || cropEditing || eraserEditing;
   const conversionPreviewActive = previewState !== null;
   const preservePositioningSectionLayout =
     repositionOrigin === "upload" || repositionOrigin === "replace";
@@ -131,7 +133,12 @@ export function TraceControls({
     ? splitFileNameForDisplay(traceFileName)
     : null;
   const canConvert = Boolean(
-    trace && !repositionActive && !cropEditing && !eraserEditing && !conversionPreviewActive,
+    trace &&
+      !editModeActive &&
+      !repositionActive &&
+      !cropEditing &&
+      !eraserEditing &&
+      !conversionPreviewActive,
   );
   const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -757,103 +764,22 @@ export function TraceControls({
                     className={styles.traceInlineFieldLabel}
                     style={typographyStyles.p2}
                   >
-                    Position
+                    Edit image
                   </span>
                   <div className={styles.traceInlineActionControl}>
                     <Button
                       type="button"
-                      variant={positioningEnabled ? "primary" : "secondary"}
+                      variant={editModeActive ? "primary" : "secondary"}
                       size="sm"
-                      disabled={!trace || cropEditing || eraserEditing}
-                      onClick={() => {
-                        if (positioningEnabled) {
-                          dispatch(createCancelTraceRepositionCommand());
-                          return;
-                        }
-
-                        dispatch(createBeginTraceRepositionCommand("panel"));
-                      }}
+                      disabled={!trace || conversionPreviewActive}
+                      onClick={onToggleEditMode}
                     >
-                      <ButtonIcon icon="/icons/lucide/vector_square.svg" />
-                      {positioningEnabled ? "Repositioning" : "Reposition"}
+                      {/* <ButtonIcon icon="/icons/lucide/image-upscale.svg" /> */}
+                      {editModeActive ? "Edit" : "Edit"}
                     </Button>
                   </div>
                 </div>
               </Field>
-
-              <Field>
-                <div className={styles.traceInlineFieldRow}>
-                  <span
-                    className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
-                  >
-                    Eraser
-                  </span>
-                  <div className={styles.traceInlineActionControl}>
-                    <Button
-                      type="button"
-                      variant={eraserEditing ? "primary" : "secondary"}
-                      size="sm"
-                      disabled={!trace || repositionActive || cropEditing || conversionPreviewActive}
-                      onClick={onBeginEraser}
-                    >
-                      <ButtonIcon icon="/icons/lucide/eraser.svg" />
-                      {eraserEditing ? "Editing mask" : "Erase"}
-                    </Button>
-                  </div>
-                </div>
-              </Field>
-
-              {/* {positioningEnabled && !preservePositioningSectionLayout ? (
-                <div
-                  className={styles.panelRow}
-                  style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
-                >
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    style={{ minWidth: 96, flexShrink: 0 }}
-                    disabled={cropEditing}
-                    onClick={() => dispatch(createCancelTraceRepositionCommand())}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    style={{ minWidth: 96, flexShrink: 0 }}
-                    disabled={cropEditing}
-                    onClick={() => dispatch(createCommitTraceRepositionCommand())}
-                  >
-                    Done
-                  </Button>
-                </div>
-              ) : null} */}
-{/* 
-              <Field>
-                <div className={styles.traceInlineFieldRow}>
-                  <span
-                    className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
-                  >
-                    Crop
-                  </span>
-                  <div className={styles.traceInlineActionControl}>
-                    <Button
-                      type="button"
-                      variant={cropEditing ? "primary" : "secondary"}
-                      size="sm"
-                      disabled={!trace}
-                      onClick={onBeginCrop}
-                    >
-                      <ButtonIcon icon="/icons/lucide/crop.svg" />
-                      {cropEditing ? "Cropping" : "Crop"}
-                    </Button>
-                  </div>
-                </div>
-              </Field> */}
 
               {/* {cropEditing && cropDraft ? (
                 <div style={{ display: "grid", gap: 10 }}>

@@ -75,6 +75,7 @@ interface EditorSidebarProps {
   touchSnappingEnabled: boolean;
   trace: TraceDocument | null;
   traceConversionPreview: TraceConversionPreviewState | null;
+  traceEditModeActive?: boolean;
   traceRepositionActive: boolean;
   traceRepositionOrigin: TraceRepositionOrigin | null;
   usedColors: Array<{ colorId: string; count: number }>;
@@ -103,6 +104,7 @@ interface EditorSidebarProps {
   onCancelTraceCrop?: () => void;
   onCommitTraceCrop?: () => void;
   onResetTraceCrop?: () => void;
+  onToggleTraceEditMode?: () => void;
 }
 
 export function EditorSidebar({
@@ -153,6 +155,7 @@ export function EditorSidebar({
   touchSnappingEnabled,
   trace,
   traceConversionPreview,
+  traceEditModeActive = false,
   traceRepositionActive,
   traceRepositionOrigin,
   usedColors,
@@ -181,6 +184,7 @@ export function EditorSidebar({
   onCancelTraceCrop,
   onCommitTraceCrop,
   onResetTraceCrop,
+  onToggleTraceEditMode,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
@@ -365,6 +369,7 @@ export function EditorSidebar({
                 cropDraft={traceCropDraft}
                 cropEditing={traceCropEditing}
                 dispatch={dispatch}
+                editModeActive={traceEditModeActive}
                 eraserEditing={traceEraserEditing}
                 guestDraftId={currentStorageId ? null : document.project.id}
                 grid={document.grid}
@@ -374,6 +379,7 @@ export function EditorSidebar({
                 onCancelCrop={onCancelTraceCrop}
                 onCommitCrop={onCommitTraceCrop}
                 onResetCrop={onResetTraceCrop}
+                onToggleEditMode={onToggleTraceEditMode}
                 palette={palette}
                 previewState={traceConversionPreview}
                 repositionActive={traceRepositionActive}

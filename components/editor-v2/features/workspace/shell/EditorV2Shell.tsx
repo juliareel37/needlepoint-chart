@@ -40,6 +40,7 @@ import {
 } from "@/components/design-system";
 import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
 import type {
+  ActiveTool,
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
 import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
@@ -66,6 +67,7 @@ import type {
 } from "../../../app/EditorV2Workspace";
 import {
   createCancelTraceConversionPreviewCommand,
+  createBeginTraceRepositionCommand,
   createCancelTraceRepositionCommand,
   createCommitTraceRepositionCommand,
   createCancelIconPlacementCommand,
@@ -74,6 +76,7 @@ import {
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
+  createSetToolCommand,
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
@@ -90,7 +93,6 @@ import {
 import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
-import { TraceEraserToolbar } from "./TraceEraserToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { ConversionPreviewToolbar } from "./ConversionPreviewToolbar";
 import {
@@ -426,6 +428,7 @@ export function EditorV2Shell({
   const usedColorsSelectionPromptStartedRef = useRef(false);
   const previousActiveSidebarSectionRef = useRef(activeSidebarSection);
   const selectionScopeOwnerRef = useRef<"panel" | "toolbar" | null>(null);
+  const traceEditReturnToolRef = useRef<ActiveTool | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const visibleSidebarSection =
@@ -448,6 +451,7 @@ export function EditorV2Shell({
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
     useState<TraceCropAspectRatioId>("freehand");
+  const [traceEditModeActive, setTraceEditModeActive] = useState(false);
   const [traceEraserActive, setTraceEraserActive] = useState(false);
   const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(1);
   const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
@@ -484,6 +488,7 @@ export function EditorV2Shell({
     setTracePreviewCrop(null);
     setTraceCropSnapshot(null);
     setTraceCropAspectRatioId("freehand");
+    setTraceEditModeActive(false);
     setTraceEraserActive(false);
     setTraceEraserMode("erase");
     setTraceEraserDraftMaskUrl(null);
@@ -509,7 +514,17 @@ export function EditorV2Shell({
   const traceEraserEditing = traceEraserActive;
   const traceEraserCanUndo = traceEraserUndoStack.length > 0;
   const traceEraserCanRedo = traceEraserRedoStack.length > 0;
+  const traceEditSubmode = traceCropEditing
+    ? "crop"
+    : traceEraserEditing
+      ? "erase"
+      : traceRepositionActive
+        ? "reposition"
+        : "none";
+  const traceImageEditingActive =
+    traceEditModeActive || traceEditSubmode !== "none";
   const repositionModeActive =
+    traceImageEditingActive ||
     traceRepositionActive ||
     traceCropEditing ||
     traceEraserEditing ||
@@ -518,13 +533,6 @@ export function EditorV2Shell({
   const canUndoFromToolbar = canUndo && !repositionModeActive;
   const canRedoFromToolbar = canRedo && !repositionModeActive;
   const handleBeginTraceCrop = useCallback(() => {
-    if (traceCropEditing) {
-      setTracePreviewCrop(null);
-      setTraceCropSnapshot(null);
-      setTraceCropAspectRatioId("freehand");
-      return;
-    }
-
     if (!trace) {
       return;
     }
@@ -533,7 +541,7 @@ export function EditorV2Shell({
     setTraceCropSnapshot(nextCrop);
     setTracePreviewCrop(nextCrop);
     setTraceCropAspectRatioId("freehand");
-  }, [trace, traceCropEditing]);
+  }, [trace]);
 
   const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
     setTracePreviewCrop(crop);
@@ -824,6 +832,15 @@ export function EditorV2Shell({
     tracePreviewCrop,
     traceRepositionActive,
   ]);
+  const handleCancelTraceReposition = useCallback(() => {
+    dispatch(createCancelTraceRepositionCommand());
+  }, [dispatch]);
+  const handleCommitTraceReposition = useCallback(() => {
+    dispatch(createCommitTraceRepositionCommand());
+  }, [dispatch]);
+  const handleBeginTraceReposition = useCallback(() => {
+    dispatch(createBeginTraceRepositionCommand("toolbar"));
+  }, [dispatch]);
   const traceCropAspectRatio = useMemo(() => {
     if (!trace) {
       return null;
@@ -855,6 +872,91 @@ export function EditorV2Shell({
       });
     },
     [trace, tracePreviewCrop],
+  );
+  const handleDoneTraceEditing = useCallback(() => {
+    setTraceEditModeActive(false);
+  }, []);
+  const handleToggleTraceEditMode = useCallback(() => {
+    if (!trace) {
+      return;
+    }
+
+    if (traceImageEditingActive) {
+      void handleDoneTraceEditing();
+      return;
+    }
+
+    setTraceEditModeActive(true);
+  }, [handleDoneTraceEditing, trace, traceImageEditingActive]);
+  const handleCancelActiveTraceEditMode = useCallback(() => {
+    if (traceCropEditing) {
+      handleCancelTraceCrop();
+      return;
+    }
+
+    if (traceEraserEditing) {
+      handleCancelTraceEraser();
+      return;
+    }
+
+    if (traceRepositionActive) {
+      handleCancelTraceReposition();
+    }
+  }, [
+    handleCancelTraceCrop,
+    handleCancelTraceEraser,
+    handleCancelTraceReposition,
+    traceCropEditing,
+    traceEraserEditing,
+    traceRepositionActive,
+  ]);
+  const handleActivateTraceEditSubmode = useCallback(
+    async (mode: "crop" | "erase" | "reposition") => {
+      if (!trace) {
+        return;
+      }
+
+      setTraceEditModeActive(true);
+
+      if (traceEditSubmode === mode) {
+        handleCancelActiveTraceEditMode();
+        return;
+      }
+
+      if (traceCropEditing) {
+        handleCommitTraceCrop();
+      } else if (traceEraserEditing) {
+        await handleCommitTraceEraser();
+      } else if (traceRepositionActive) {
+        handleCommitTraceReposition();
+      }
+
+      if (mode === "crop") {
+        handleBeginTraceCrop();
+        return;
+      }
+
+      if (mode === "erase") {
+        handleBeginTraceEraser();
+        return;
+      }
+
+      handleBeginTraceReposition();
+    },
+    [
+      handleBeginTraceCrop,
+      handleBeginTraceEraser,
+      handleBeginTraceReposition,
+      handleCancelActiveTraceEditMode,
+      handleCommitTraceCrop,
+      handleCommitTraceEraser,
+      handleCommitTraceReposition,
+      trace,
+      traceCropEditing,
+      traceEditSubmode,
+      traceEraserEditing,
+      traceRepositionActive,
+    ],
   );
   const handleFitTraceToSurface = useCallback(
     (dimension: "width" | "height") => {
@@ -902,6 +1004,28 @@ export function EditorV2Shell({
     },
     [dispatch, state.document.grid.height, state.document.grid.width, trace],
   );
+  const handleApplyActiveTraceEditMode = useCallback(async () => {
+    if (traceCropEditing) {
+      handleCommitTraceCrop();
+      return;
+    }
+
+    if (traceEraserEditing) {
+      await handleCommitTraceEraser();
+      return;
+    }
+
+    if (traceRepositionActive) {
+      handleCommitTraceReposition();
+    }
+  }, [
+    handleCommitTraceCrop,
+    handleCommitTraceEraser,
+    handleCommitTraceReposition,
+    traceCropEditing,
+    traceEraserEditing,
+    traceRepositionActive,
+  ]);
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -955,6 +1079,7 @@ export function EditorV2Shell({
   const previewModeDisabled =
     Boolean(textPlacement) ||
     Boolean(iconPlacement) ||
+    traceImageEditingActive ||
     traceRepositionActive ||
     selectionControlActive;
   const mobileVisibleTopInset =
@@ -1607,7 +1732,7 @@ export function EditorV2Shell({
   ]);
 
   useEffect(() => {
-    if (!traceRepositionActive) {
+    if (!traceImageEditingActive) {
       mobileTraceRepositionWasActiveRef.current = false;
       return;
     }
@@ -1622,8 +1747,29 @@ export function EditorV2Shell({
     dispatch,
     isBottomPanelLayout,
     sidebarCollapsed,
-    traceRepositionActive,
+    traceImageEditingActive,
   ]);
+
+  useEffect(() => {
+    if (traceImageEditingActive) {
+      if (traceEditReturnToolRef.current === null && activeTool !== "pan") {
+        traceEditReturnToolRef.current = activeTool;
+      }
+
+      if (activeTool !== "pan") {
+        dispatch(createSetToolCommand("pan"));
+      }
+
+      return;
+    }
+
+    const returnTool = traceEditReturnToolRef.current;
+    traceEditReturnToolRef.current = null;
+
+    if (returnTool && activeTool === "pan") {
+      dispatch(createSetToolCommand(returnTool));
+    }
+  }, [activeTool, dispatch, traceImageEditingActive]);
 
   useEffect(() => {
     if (!textPlacement) {
@@ -1723,6 +1869,7 @@ export function EditorV2Shell({
       highlightedColorActive: highlightedColorId !== null,
       iconPlacementActive: Boolean(iconPlacement),
       previewMode,
+      traceEditModeActive: traceImageEditingActive,
       textPlacementActive: Boolean(textPlacement),
       traceConversionPreviewActive: Boolean(traceConversionPreview),
       traceCropEditing,
@@ -1757,7 +1904,12 @@ export function EditorV2Shell({
       }
 
       if (escapeAction === "cancel-trace-reposition") {
-        dispatch(createCancelTraceRepositionCommand());
+        handleCancelTraceReposition();
+        return;
+      }
+
+      if (escapeAction === "exit-trace-edit") {
+        setTraceEditModeActive(false);
         return;
       }
 
@@ -1782,16 +1934,18 @@ export function EditorV2Shell({
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [
-    dispatch,
     clearHighlightedColor,
+    dispatch,
     exitPreviewMode,
     handleCancelTraceCrop,
     handleCancelTraceEraser,
+    handleCancelTraceReposition,
     handleExitTraceConversionPreviewFromToolbar,
     highlightedColorId,
     iconPlacement,
     previewMode,
     textPlacement,
+    traceImageEditingActive,
     traceConversionPreview,
     traceCropEditing,
     traceEraserEditing,
@@ -3120,12 +3274,14 @@ export function EditorV2Shell({
                     previewModeDisabled={previewModeDisabled}
                     traceCropDraft={tracePreviewCrop}
                     traceCropEditing={traceCropEditing}
+                    traceEditModeActive={traceImageEditingActive}
                     traceEraserEditing={traceEraserEditing}
                     onBeginTraceCrop={handleBeginTraceCrop}
                     onBeginTraceEraser={handleBeginTraceEraser}
                     onCancelTraceCrop={handleCancelTraceCrop}
                     onCommitTraceCrop={handleCommitTraceCrop}
                     onResetTraceCrop={handleResetTraceCrop}
+                    onToggleTraceEditMode={handleToggleTraceEditMode}
                     trace={trace}
                     traceConversionPreview={traceConversionPreview}
                     traceRepositionActive={traceRepositionActive}
@@ -3169,37 +3325,42 @@ export function EditorV2Shell({
                         dispatch={dispatch}
                         onExitPreview={handleExitTraceConversionPreviewFromToolbar}
                       />
-                    ) : traceEraserEditing && trace ? (
-                      <TraceEraserToolbar
+                    ) : traceImageEditingActive && trace ? (
+                      <TraceRepositionToolbar
+                        activeMode={traceEditSubmode}
+                        cropEditing={traceCropEditing}
+                        cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         brushSize={traceEraserBrushSize}
                         canRedo={traceEraserCanRedo}
                         canUndo={traceEraserCanUndo}
-                        mode={traceEraserMode}
-                        onBrushSizeChange={setTraceEraserBrushSize}
-                        onCancel={handleCancelTraceEraser}
-                        onCommit={() => {
-                          void handleCommitTraceEraser();
-                        }}
-                        onModeChange={setTraceEraserMode}
-                        onPreviewVisibilityChange={setTraceEraserBrushPreviewVisible}
-                        onRedo={handleTraceEraserRedo}
-                        onUndo={handleTraceEraserUndo}
-                      />
-                    ) : (traceRepositionActive || traceCropEditing) && trace ? (
-                      <TraceRepositionToolbar
-                        cropEditing={traceCropEditing}
-                        cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
-                        dispatch={dispatch}
+                        eraserMode={traceEraserMode}
                         onFitHeight={() => handleFitTraceToSurface("height")}
                         onFitWidth={() => handleFitTraceToSurface("width")}
-                        onBeginCrop={handleBeginTraceCrop}
+                        onBeginCrop={() => {
+                          void handleActivateTraceEditSubmode("crop");
+                        }}
+                        onBeginEraser={() => {
+                          void handleActivateTraceEditSubmode("erase");
+                        }}
+                        onBeginReposition={() => {
+                          void handleActivateTraceEditSubmode("reposition");
+                        }}
+                        onBrushSizeChange={setTraceEraserBrushSize}
+                        onApplyCrop={handleCommitTraceCrop}
+                        onApplyMode={() => {
+                          void handleApplyActiveTraceEditMode();
+                        }}
                         onCancelCrop={handleCancelTraceCrop}
-                        onCommitCrop={handleCommitTraceCrop}
+                        onCancelMode={handleCancelActiveTraceEditMode}
+                        onDone={handleDoneTraceEditing}
                         onCropAspectRatioChange={
                           traceCropEditing ? handleTraceCropAspectRatioChange : undefined
                         }
-                        onCancel={() => dispatch(createCancelTraceRepositionCommand())}
-                        onCommit={() => dispatch(createCommitTraceRepositionCommand())}
+                        onModeChange={setTraceEraserMode}
+                        onPreviewVisibilityChange={setTraceEraserBrushPreviewVisible}
+                        onRedo={handleTraceEraserRedo}
+                        onResetCrop={handleResetTraceCrop}
+                        onUndo={handleTraceEraserUndo}
                         trace={trace}
                       />
                     ) : textPlacement ? (
@@ -3255,6 +3416,7 @@ export function EditorV2Shell({
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
                         onToolbarSelectionIntent={handleToolbarSelectionIntent}
+                        onToggleTraceEditMode={handleToggleTraceEditMode}
                         onColorLibraryDismissPointerDown={(gesture) => {
                           colorLibraryDismissGestureRef.current = gesture;
                         }}
