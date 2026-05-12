@@ -6,6 +6,7 @@ import type {
   ActiveTool,
   EditorStore,
   EditorStoreState,
+  GridPoint,
   PaletteColor,
   ViewportState,
 } from "@/lib/editor-v2/editor/store";
@@ -55,6 +56,7 @@ interface GridWorldSurfaceProps {
   activeColorId: string | null;
   activeTool: ActiveTool;
   brushSize: number;
+  brushPreviewVisible?: boolean;
   colorLibraryDismissGestureRef?: RefObject<ColorLibraryDismissGesture | null>;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
@@ -86,6 +88,7 @@ export function GridWorldSurface({
   activeColorId,
   activeTool,
   brushSize,
+  brushPreviewVisible = false,
   colorLibraryDismissGestureRef,
   colorsById,
   dispatch,
@@ -178,6 +181,7 @@ export function GridWorldSurface({
     x: 0,
     y: 0,
   });
+  const [brushPreviewCell, setBrushPreviewCell] = useState<GridPoint | null>(null);
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -195,6 +199,24 @@ export function GridWorldSurface({
     traceCropActive ||
     traceEraserActive ||
     duplicatePlacementActive;
+  const mainBrushToolActive = activeTool === "paint" || activeTool === "erase";
+  const normalizedBrushSize = Number.isFinite(brushSize)
+    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
+    : 1;
+  const brushLeadingOffset = Math.floor((normalizedBrushSize - 1) / 2);
+  const brushCursorSize = normalizedBrushSize * metrics.cellSize * viewport.zoom;
+  const brushCursorVisible =
+    !coarsePointer &&
+    !interactionLocked &&
+    !paintDisabled &&
+    mainBrushToolActive &&
+    brushPreviewCell !== null;
+  const centeredBrushPreviewVisible =
+    !coarsePointer &&
+    !interactionLocked &&
+    !paintDisabled &&
+    mainBrushToolActive &&
+    brushPreviewVisible;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -282,6 +304,14 @@ export function GridWorldSurface({
           ),
     );
   }, [duplicatePlacement, grid.height, grid.width]);
+
+  useEffect(() => {
+    if (mainBrushToolActive && !interactionLocked && !paintDisabled) {
+      return;
+    }
+
+    setBrushPreviewCell(null);
+  }, [interactionLocked, mainBrushToolActive, paintDisabled]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -557,12 +587,36 @@ export function GridWorldSurface({
       onMouseDownCapture={handleStageMouseDownCapture}
       onPointerDownCapture={handleStagePointerDownCapture}
       onAuxClick={handleStageAuxClick}
+      onPointerMove={(event) => {
+        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+          return;
+        }
+
+        const point = getGridPointFromClient(event.clientX, event.clientY);
+        setBrushPreviewCell(point);
+      }}
+      onPointerDown={(event) => {
+        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+          return;
+        }
+
+        const point = getGridPointFromClient(event.clientX, event.clientY);
+        setBrushPreviewCell(point);
+      }}
+      onPointerLeave={() => {
+        setBrushPreviewCell(null);
+      }}
       style={{
         position: "relative",
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        cursor: interactionLocked ? "default" : selectionCursor ?? cursor,
+        cursor:
+          interactionLocked
+            ? "default"
+            : brushCursorVisible
+              ? "none"
+              : selectionCursor ?? cursor,
         touchAction: interactionLocked ? "auto" : "none",
       }}
     >
@@ -757,6 +811,49 @@ export function GridWorldSurface({
           ) : null}
         </div>
       </div>
+      {brushCursorVisible ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${
+              worldBounds.left -
+              stageBounds.left +
+              (brushPreviewCell.x - brushLeadingOffset) * metrics.cellSize * viewport.zoom
+            }px`,
+            top: `${
+              worldBounds.top -
+              stageBounds.top +
+              (brushPreviewCell.y - brushLeadingOffset) * metrics.cellSize * viewport.zoom
+            }px`,
+            width: `${brushCursorSize}px`,
+            height: `${brushCursorSize}px`,
+            border: "1.5px solid rgba(255, 255, 255, 0.96)",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.42)",
+            background: "rgba(255, 255, 255, 0.08)",
+            pointerEvents: "none",
+            zIndex: 6,
+          }}
+        />
+      ) : null}
+      {centeredBrushPreviewVisible ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: `${brushCursorSize}px`,
+            height: `${brushCursorSize}px`,
+            transform: "translate(-50%, -50%)",
+            border: "2px solid rgba(255, 255, 255, 0.98)",
+            boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.52)",
+            background: "rgba(255, 255, 255, 0.12)",
+            pointerEvents: "none",
+            zIndex: 7,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

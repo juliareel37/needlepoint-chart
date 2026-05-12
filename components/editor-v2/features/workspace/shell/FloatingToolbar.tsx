@@ -320,6 +320,7 @@ interface FloatingToolbarProps {
   onOpenSelectionColorsPanel: () => void;
   onToolbarSelectionIntent: () => void;
   onColorLibraryDismissPointerDown?: (gesture: ColorLibraryDismissGesture) => void;
+  onBrushPreviewVisibilityChange?: (visible: boolean) => void;
   selectionRequestKey: number;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -351,6 +352,7 @@ export function FloatingToolbar({
   onOpenSelectionColorsPanel,
   onToolbarSelectionIntent,
   onColorLibraryDismissPointerDown,
+  onBrushPreviewVisibilityChange,
   selectionRequestKey,
   showSymbols,
   symbolAssignments,
@@ -577,11 +579,12 @@ export function FloatingToolbar({
     function handlePointerUp() {
       setBrushSizeSliderDragging(false);
       setBrushSizeTooltipVisible(false);
+      onBrushPreviewVisibilityChange?.(false);
     }
 
     window.addEventListener("pointerup", handlePointerUp);
     return () => window.removeEventListener("pointerup", handlePointerUp);
-  }, [brushSizeTooltipVisible]);
+  }, [brushSizeTooltipVisible, onBrushPreviewVisibilityChange]);
 
   useEffect(() => {
     if (!selectionVisible) {
@@ -669,6 +672,7 @@ export function FloatingToolbar({
     setDrawPopoverTool(null);
     setBrushSizeSliderDragging(false);
     setBrushSizeTooltipVisible(false);
+    onBrushPreviewVisibilityChange?.(false);
   }
 
   function closeColorLibrary(): void {
@@ -775,10 +779,22 @@ export function FloatingToolbar({
           onPointerDown={() => {
             setBrushSizeSliderDragging(true);
             setBrushSizeTooltipVisible(true);
+            onBrushPreviewVisibilityChange?.(true);
+          }}
+          onPointerUp={() => {
+            setBrushSizeSliderDragging(false);
+            setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
+          }}
+          onPointerCancel={() => {
+            setBrushSizeSliderDragging(false);
+            setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
           }}
           onBlur={() => {
             setBrushSizeSliderDragging(false);
             setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
           }}
           onChange={(e) => {
             const nextSliderValue = Number(e.currentTarget.value);

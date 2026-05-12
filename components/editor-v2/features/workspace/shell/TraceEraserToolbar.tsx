@@ -38,12 +38,10 @@ export function TraceEraserToolbar({
   onRedo,
   onUndo,
 }: TraceEraserToolbarProps) {
-  const normalizedBrushSize = Number.isFinite(brushSize)
-    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
+  const brushSizeSliderValue = Number.isFinite(brushSize)
+    ? Math.min(Math.max(brushSize, 1), 10)
     : 1;
-  const brushSizeSliderValue = brushSize;
   const brushSizePercent = Math.round(1 + ((brushSizeSliderValue - 1) / 9) * 99);
-  const brushSizeTooltipPercent = ((brushSizeSliderValue - 1) / 9) * 100;
 
   return (
     <div className={styles.selectionToolbarCluster}>
@@ -84,9 +82,9 @@ export function TraceEraserToolbar({
                   onBlur={() => onPreviewVisibilityChange(false)}
                   onChange={(event) => {
                     const nextSliderValue = Number(event.currentTarget.value);
-                    const nextBrushSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
+                    const nextBrushSize = Math.min(Math.max(nextSliderValue, 1), 10);
 
-                    if (nextBrushSize === normalizedBrushSize) {
+                    if (Math.abs(nextBrushSize - brushSizeSliderValue) < 0.001) {
                       return;
                     }
 

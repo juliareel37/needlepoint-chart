@@ -454,6 +454,7 @@ export function EditorV2Shell({
   const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
   const [traceEraserDraftRevision, setTraceEraserDraftRevision] = useState(0);
   const [traceEraserBrushPreviewVisible, setTraceEraserBrushPreviewVisible] = useState(false);
+  const [mainBrushPreviewVisible, setMainBrushPreviewVisible] = useState(false);
   const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);
   const [traceEraserDirty, setTraceEraserDirty] = useState(false);
   const [traceEraserInitialState, setTraceEraserInitialState] =
@@ -488,12 +489,22 @@ export function EditorV2Shell({
     setTraceEraserDraftMaskUrl(null);
     setTraceEraserDraftRevision(0);
     setTraceEraserBrushPreviewVisible(false);
+    setMainBrushPreviewVisible(false);
     setTraceEraserMaskFullyVisible(!trace?.maskUrl);
     setTraceEraserDirty(false);
     setTraceEraserInitialState(null);
     setTraceEraserUndoStack([]);
     setTraceEraserRedoStack([]);
   }, [trace?.previewUrl]);
+
+  useEffect(() => {
+    if (activeTool === "paint" || activeTool === "erase") {
+      return;
+    }
+
+    setMainBrushPreviewVisible(false);
+  }, [activeTool]);
+
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
   const traceEraserEditing = traceEraserActive;
   const traceEraserCanUndo = traceEraserUndoStack.length > 0;
@@ -3248,6 +3259,7 @@ export function EditorV2Shell({
                           colorLibraryDismissGestureRef.current = gesture;
                         }}
                         onOpenSelectionColorsPanel={handleOpenSelectionColorsPanel}
+                        onBrushPreviewVisibilityChange={setMainBrushPreviewVisible}
                         selectionRequestKey={selectionRequestKey}
                         showSymbols={showSymbols}
                         symbolAssignments={document.palette.symbolAssignments}
@@ -3288,6 +3300,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
+                    brushPreviewVisible={mainBrushPreviewVisible}
                     colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
