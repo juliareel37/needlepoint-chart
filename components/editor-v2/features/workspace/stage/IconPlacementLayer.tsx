@@ -158,6 +158,10 @@ export function IconPlacementLayer({
   );
   const previewIconRef = useRef<HTMLDivElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previewImageCacheRef = useRef<{
+    src: string;
+    image: HTMLImageElement;
+  } | null>(null);
   const primitiveColors = useMemo(
     () =>
       placement.primitiveKind
@@ -279,17 +283,13 @@ export function IconPlacementLayer({
   useEffect(() => {
     let cancelled = false;
 
-    async function buildPreview() {
-      const basePreviewSrc = await (async () => {
+    async function buildBasePreview() {
+      const nextPreviewSrc = await (async () => {
         if (placement.primitiveKind) {
           return primitivePreviewSrc;
         }
 
         if (placement.colorSlots.length === 0) {
-          if (!useCellSampledPreview) {
-            return placement.src;
-          }
-
           return placement.src;
         }
 
@@ -306,32 +306,64 @@ export function IconPlacementLayer({
         );
       })();
 
-      if (!basePreviewSrc) {
+      if (!cancelled) {
+        setPreviewSrc(nextPreviewSrc);
+      }
+    }
+
+    void buildBasePreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    paletteById,
+    placement.colorSlots,
+    placement.intrinsicHeight,
+    placement.intrinsicWidth,
+    placement.primitiveKind,
+    placement.src,
+    placement.strokeWidthScale,
+    placement.supportsStrokeWidth,
+    primitivePreviewSrc,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function buildSampledPreview() {
+      if (!previewSrc) {
         if (!cancelled) {
           setSampledPreviewCells(null);
-          setPreviewSrc(null);
         }
         return;
       }
 
-      if (!useCellSampledPreview) {
+      if (!useCellSampledPreview || !shouldUseCellSampledIconPreview(displayBounds, metrics)) {
         if (!cancelled) {
           setSampledPreviewCells(null);
-          setPreviewSrc(basePreviewSrc);
-        }
-        return;
-      }
-
-      if (!shouldUseCellSampledIconPreview(displayBounds, metrics)) {
-        if (!cancelled) {
-          setSampledPreviewCells(null);
-          setPreviewSrc(basePreviewSrc);
         }
         return;
       }
 
       try {
-        const image = await loadPreviewImage(basePreviewSrc);
+        const cachedPreview = previewImageCacheRef.current;
+        const image =
+          cachedPreview?.src === previewSrc
+            ? cachedPreview.image
+            : await loadPreviewImage(previewSrc);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (cachedPreview?.src !== previewSrc) {
+          previewImageCacheRef.current = {
+            src: previewSrc,
+            image,
+          };
+        }
+
         const sourceCanvas = document.createElement("canvas");
         sourceCanvas.width = Math.max(1, Math.ceil(displayBounds.width));
         sourceCanvas.height = Math.max(1, Math.ceil(displayBounds.height));
@@ -348,17 +380,15 @@ export function IconPlacementLayer({
         });
         if (!cancelled) {
           setSampledPreviewCells(nextSampledCells);
-          setPreviewSrc(basePreviewSrc);
         }
       } catch {
         if (!cancelled) {
           setSampledPreviewCells(null);
-          setPreviewSrc(basePreviewSrc);
         }
       }
     }
 
-    void buildPreview();
+    void buildSampledPreview();
 
     return () => {
       cancelled = true;
@@ -369,20 +399,7 @@ export function IconPlacementLayer({
     displayBounds.left,
     displayBounds.top,
     metrics,
-    paletteById,
-    placement.colorSlots,
-    placement.intrinsicHeight,
-    placement.intrinsicWidth,
-    placement.primitiveKind,
-    placement.primitiveStrokeReferenceSize,
-    placement.src,
-    placement.strokeWidthScale,
-    placement.primitivePatternScale,
-    placement.primitiveSpacingScale,
-    placement.supportsStrokeWidth,
-    primitivePreviewSrc,
-    previewColor,
-    primitiveColors,
+    previewSrc,
     useCellSampledPreview,
   ]);
 

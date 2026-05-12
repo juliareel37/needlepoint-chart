@@ -1914,7 +1914,7 @@
 .iconPlacementSwatchList {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
   padding-inline: 4px;
   padding-block: 2px;
 }

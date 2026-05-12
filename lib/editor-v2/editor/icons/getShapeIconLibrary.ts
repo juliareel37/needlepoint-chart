@@ -6,9 +6,9 @@ import type {
 } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
 import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
 import {
-  extractIconColorSlotsFromRaster,
   extractIconColorSlotsFromSvg,
 } from "./iconColorSlots";
+import { extractIconColorSlotsFromRaster } from "./iconRasterColorSlots.server";
 import { getPrimitiveDefaultColorSlots, getPrimitiveIconKind } from "./primitiveIcon";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");

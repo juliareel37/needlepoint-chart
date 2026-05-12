@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  extractIconColorSlotsFromRaster,
   extractIconColorSlotsFromSvg,
   findNearestIconColorSlot,
 } from "./iconColorSlots";
+import { extractIconColorSlotsFromRaster } from "./iconRasterColorSlots.server";
 
 describe("extractIconColorSlotsFromSvg", () => {
   it("collects unique fill and stroke colors and normalizes rgb values", () => {
