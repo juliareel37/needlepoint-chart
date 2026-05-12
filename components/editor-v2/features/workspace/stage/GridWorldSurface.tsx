@@ -30,6 +30,27 @@ import { createPanViewportCommand } from "../workspaceCommands";
 import type { LoadedTraceAsset } from "./GridCanvasStage.shared";
 import { clearTraceSampler } from "../trace/traceSampler";
 
+function traceEraserDebugEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const debugWindow = window as typeof window & { __TRACE_ERASER_DEBUG__?: boolean };
+  if (debugWindow.__TRACE_ERASER_DEBUG__) {
+    return true;
+  }
+
+  return new URLSearchParams(window.location.search).get("traceEraserDebug") === "1";
+}
+
+function traceEraserDebugLog(event: string, payload: Record<string, unknown>): void {
+  if (!traceEraserDebugEnabled()) {
+    return;
+  }
+
+  console.debug(`[trace-eraser:surface:${event}]`, payload);
+}
+
 interface GridWorldSurfaceProps {
   activeColorId: string | null;
   activeTool: ActiveTool;
@@ -452,18 +473,40 @@ export function GridWorldSurface({
     const previewUrl = trace.previewUrl;
     const maskUrl = trace.maskUrl;
 
+    traceEraserDebugLog("load-start", {
+      previewUrl,
+      maskUrl,
+      traceEraserEditing,
+      traceEraserMaskUrl,
+    });
+
     loadTraceAssetBundle(previewUrl, maskUrl).then((bundle) => {
       if (cancelled) {
         return;
       }
 
+      traceEraserDebugLog("load-complete", {
+        previewUrl,
+        requestedMaskUrl: maskUrl,
+        loadedMaskUrl: bundle.mask?.url ?? null,
+        ready: bundle.ready,
+        width: bundle.width,
+        height: bundle.height,
+      });
       setLoadedTraceAsset(bundle);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [coarsePointer, trace?.maskUrl, trace?.previewUrl, tracePositioningEnabled]);
+  }, [
+    coarsePointer,
+    trace?.maskUrl,
+    trace?.previewUrl,
+    traceEraserEditing,
+    traceEraserMaskUrl,
+    tracePositioningEnabled,
+  ]);
 
   const traceAssetLoaded =
     Boolean(

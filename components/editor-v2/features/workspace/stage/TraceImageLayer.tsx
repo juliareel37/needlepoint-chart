@@ -41,6 +41,27 @@ import type { TraceDisplayOverride } from "./GridCanvasStage.shared";
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
 
+function traceEraserDebugEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const debugWindow = window as typeof window & { __TRACE_ERASER_DEBUG__?: boolean };
+  if (debugWindow.__TRACE_ERASER_DEBUG__) {
+    return true;
+  }
+
+  return new URLSearchParams(window.location.search).get("traceEraserDebug") === "1";
+}
+
+function traceEraserDebugLog(event: string, payload: Record<string, unknown>): void {
+  if (!traceEraserDebugEnabled()) {
+    return;
+  }
+
+  console.debug(`[trace-eraser:overlay:${event}]`, payload);
+}
+
 interface TraceImageLayerProps {
   cropAspectRatio?: number | null;
   cropBase?: TraceDisplayOverride;
@@ -559,6 +580,7 @@ export function TraceImageLayer({
             bounds={traceBounds}
             brushSize={eraserBrushSize}
             draftMaskUrl={eraserMaskUrl}
+            imageOpacity={imageOpacity}
             mode={eraserMode}
             onMaskChange={onEraserDraftChange}
             surfaceHeight={metrics.surfaceHeight}
@@ -664,6 +686,7 @@ interface TraceEraserEditorOverlayProps {
   bounds: { left: number; top: number; width: number; height: number };
   brushSize: number;
   draftMaskUrl: string | null;
+  imageOpacity: number;
   mode: "erase" | "restore";
   onMaskChange: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   surfaceHeight: number;
@@ -679,6 +702,7 @@ function TraceEraserEditorOverlay({
   bounds,
   brushSize,
   draftMaskUrl,
+  imageOpacity,
   mode,
   onMaskChange,
   surfaceHeight,
@@ -691,7 +715,21 @@ function TraceEraserEditorOverlay({
   const composedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-  const initializedMaskUrlRef = useRef<string | null | undefined>(undefined);
+  const hasUserEditedMaskRef = useRef(false);
+  const [maskSeeded, setMaskSeeded] = useState(false);
+  const [maskSeedSourceKey, setMaskSeedSourceKey] = useState<string | null>(null);
+  const matchingLoadedMask =
+    traceAsset?.mask && traceAsset.mask.url === draftMaskUrl ? traceAsset.mask : null;
+
+  useEffect(() => {
+    traceEraserDebugLog("mount-state", {
+      draftMaskUrl,
+      loadedMaskUrl: traceAsset?.mask?.url ?? null,
+      matchingLoadedMaskUrl: matchingLoadedMask?.url ?? null,
+      maskSeeded,
+      maskSeedSourceKey,
+    });
+  }, [draftMaskUrl, maskSeedSourceKey, maskSeeded, matchingLoadedMask?.url, traceAsset?.mask?.url]);
 
   const renderOverlay = useCallback(() => {
     const overlayCanvas = overlayCanvasRef.current;
@@ -728,18 +766,29 @@ function TraceEraserEditorOverlay({
       return;
     }
 
-    const composedCanvas =
-      composedCanvasRef.current ?? document.createElement("canvas");
+    const composedCanvas = composedCanvasRef.current ?? document.createElement("canvas");
     composedCanvasRef.current = composedCanvas;
+    if (!maskSeeded && draftMaskUrl && !matchingLoadedMask) {
+      traceEraserDebugLog("render-waiting-for-mask", {
+        draftMaskUrl,
+        loadedMaskUrl: traceAsset?.mask?.url ?? null,
+      });
+      return;
+    }
+
+    const maskSource =
+      !maskSeeded && matchingLoadedMask
+        ? matchingLoadedMask
+        : {
+            image: maskCanvas,
+            width: assetWidth,
+            height: assetHeight,
+          };
     drawTraceSourceToCanvas(composedCanvas, traceAsset.image, {
       trace,
       width: traceAsset.width,
       height: traceAsset.height,
-      mask: {
-        image: maskCanvas,
-        width: assetWidth,
-        height: assetHeight,
-      },
+      mask: maskSource,
     });
 
     context.save();
@@ -758,15 +807,75 @@ function TraceEraserEditorOverlay({
       bounds.height,
     );
     context.restore();
-  }, [assetHeight, assetWidth, bounds.height, bounds.left, bounds.top, bounds.width, surfaceHeight, surfaceWidth, trace, traceAsset]);
+
+    context.save();
+    context.globalAlpha = Math.min(Math.max(imageOpacity, 0), 1);
+    context.translate(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    context.rotate((trace.rotation * Math.PI) / 180);
+    context.drawImage(
+      composedCanvas,
+      0,
+      0,
+      composedCanvas.width,
+      composedCanvas.height,
+      -bounds.width / 2,
+      -bounds.height / 2,
+      bounds.width,
+      bounds.height,
+    );
+    context.restore();
+  }, [
+    assetHeight,
+    assetWidth,
+    bounds.height,
+    bounds.left,
+    bounds.top,
+    bounds.width,
+    imageOpacity,
+    matchingLoadedMask,
+    maskSeeded,
+    surfaceHeight,
+    surfaceWidth,
+    trace,
+    traceAsset,
+  ]);
 
   useEffect(() => {
     const maskCanvas = maskCanvasRef.current ?? document.createElement("canvas");
     maskCanvasRef.current = maskCanvas;
-    const needsResize = maskCanvas.width !== assetWidth || maskCanvas.height !== assetHeight;
-    if (needsResize) {
+
+    if (maskCanvas.width !== assetWidth || maskCanvas.height !== assetHeight) {
       maskCanvas.width = assetWidth;
       maskCanvas.height = assetHeight;
+      hasUserEditedMaskRef.current = false;
+      setMaskSeedSourceKey(null);
+      if (maskSeeded) {
+        setMaskSeeded(false);
+        return;
+      }
+    }
+
+    const preferredSeedSourceKey =
+      matchingLoadedMask?.url ?? draftMaskUrl ?? "__fully-visible__";
+    const shouldReseedFromLoadedMask =
+      matchingLoadedMask !== null &&
+      !hasUserEditedMaskRef.current &&
+      maskSeedSourceKey !== matchingLoadedMask.url;
+
+    traceEraserDebugLog("seed-check", {
+      draftMaskUrl,
+      loadedMaskUrl: traceAsset?.mask?.url ?? null,
+      matchingLoadedMaskUrl: matchingLoadedMask?.url ?? null,
+      preferredSeedSourceKey,
+      maskSeedSourceKey,
+      maskSeeded,
+      shouldReseedFromLoadedMask,
+      hasUserEditedMask: hasUserEditedMaskRef.current,
+    });
+
+    if (maskSeeded && !shouldReseedFromLoadedMask) {
+      renderOverlay();
+      return;
     }
 
     const context = maskCanvas.getContext("2d");
@@ -774,21 +883,38 @@ function TraceEraserEditorOverlay({
       return;
     }
 
-    if (initializedMaskUrlRef.current === draftMaskUrl && !needsResize) {
-      renderOverlay();
-      return;
-    }
-
-    initializedMaskUrlRef.current = draftMaskUrl;
-    context.clearRect(0, 0, assetWidth, assetHeight);
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, assetWidth, assetHeight);
-
     if (!draftMaskUrl) {
+      context.clearRect(0, 0, assetWidth, assetHeight);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, assetWidth, assetHeight);
+      traceEraserDebugLog("seed-fully-visible", {
+        preferredSeedSourceKey,
+      });
+      hasUserEditedMaskRef.current = false;
+      setMaskSeedSourceKey(preferredSeedSourceKey);
+      setMaskSeeded(true);
       renderOverlay();
       return;
     }
 
+    if (matchingLoadedMask) {
+      context.clearRect(0, 0, assetWidth, assetHeight);
+      traceEraserDebugLog("seed-loaded-mask", {
+        preferredSeedSourceKey,
+        loadedMaskUrl: matchingLoadedMask.url,
+      });
+      context.drawImage(matchingLoadedMask.image, 0, 0, assetWidth, assetHeight);
+      hasUserEditedMaskRef.current = false;
+      setMaskSeedSourceKey(preferredSeedSourceKey);
+      setMaskSeeded(true);
+      renderOverlay();
+      return;
+    }
+
+    traceEraserDebugLog("seed-from-draft-url", {
+      preferredSeedSourceKey,
+      draftMaskUrl,
+    });
     let cancelled = false;
     const image = new Image();
     image.decoding = "async";
@@ -801,26 +927,58 @@ function TraceEraserEditorOverlay({
       }
 
       context.clearRect(0, 0, assetWidth, assetHeight);
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, assetWidth, assetHeight);
       context.drawImage(image, 0, 0, assetWidth, assetHeight);
+      hasUserEditedMaskRef.current = false;
+      setMaskSeedSourceKey(preferredSeedSourceKey);
+      setMaskSeeded(true);
+      traceEraserDebugLog("seed-from-draft-url-loaded", {
+        draftMaskUrl,
+        preferredSeedSourceKey,
+      });
+      renderOverlay();
+    };
+    image.onerror = () => {
+      if (cancelled) {
+        return;
+      }
+
+      setMaskSeedSourceKey(preferredSeedSourceKey);
+      setMaskSeeded(true);
+      traceEraserDebugLog("seed-from-draft-url-error", {
+        draftMaskUrl,
+        preferredSeedSourceKey,
+      });
       renderOverlay();
     };
     image.src = draftMaskUrl;
 
     if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
       context.clearRect(0, 0, assetWidth, assetHeight);
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, assetWidth, assetHeight);
       context.drawImage(image, 0, 0, assetWidth, assetHeight);
+      hasUserEditedMaskRef.current = false;
+      setMaskSeedSourceKey(preferredSeedSourceKey);
+      setMaskSeeded(true);
+      traceEraserDebugLog("seed-from-draft-url-sync", {
+        draftMaskUrl,
+        preferredSeedSourceKey,
+      });
       renderOverlay();
     }
 
     return () => {
       cancelled = true;
       image.onload = null;
+      image.onerror = null;
     };
-  }, [assetHeight, assetWidth, draftMaskUrl, renderOverlay]);
+  }, [
+    assetHeight,
+    assetWidth,
+    draftMaskUrl,
+    maskSeedSourceKey,
+    maskSeeded,
+    matchingLoadedMask,
+    renderOverlay,
+  ]);
 
   useEffect(() => {
     renderOverlay();
@@ -829,21 +987,39 @@ function TraceEraserEditorOverlay({
   const commitDraft = useCallback(() => {
     const maskCanvas = maskCanvasRef.current;
     if (!maskCanvas) {
+      traceEraserDebugLog("commit-no-canvas", {});
       onMaskChange(null, true);
       return;
     }
 
     const isFullyVisible = isMaskCanvasFullyVisible(maskCanvas);
+    const nextMaskUrl = isFullyVisible ? null : maskCanvas.toDataURL("image/png");
+    traceEraserDebugLog("commit", {
+      isFullyVisible,
+      nextMaskUrl,
+      maskSeedSourceKey,
+      hasUserEditedMask: hasUserEditedMaskRef.current,
+    });
     onMaskChange(
-      isFullyVisible ? null : maskCanvas.toDataURL("image/png"),
+      nextMaskUrl,
       isFullyVisible,
     );
-  }, [onMaskChange]);
+  }, [maskSeedSourceKey, onMaskChange]);
 
   const drawAtClientPoint = useCallback(
     (clientX: number, clientY: number, connectFromLast: boolean) => {
       const maskCanvas = maskCanvasRef.current;
       if (!maskCanvas) {
+        traceEraserDebugLog("paint-blocked-no-canvas", {});
+        return false;
+      }
+
+      if (!maskSeeded) {
+        traceEraserDebugLog("paint-blocked-unseeded", {
+          draftMaskUrl,
+          loadedMaskUrl: traceAsset?.mask?.url ?? null,
+          matchingLoadedMaskUrl: matchingLoadedMask?.url ?? null,
+        });
         return false;
       }
 
@@ -895,11 +1071,31 @@ function TraceEraserEditorOverlay({
       }
 
       context.restore();
+      hasUserEditedMaskRef.current = true;
       lastPointRef.current = point;
+      traceEraserDebugLog("paint", {
+        mode,
+        pointX: point.x,
+        pointY: point.y,
+        brushRadius,
+        draftMaskUrl,
+        maskSeedSourceKey,
+      });
       renderOverlay();
       return true;
     },
-    [bounds, brushSize, mode, renderOverlay, trace],
+    [
+      bounds,
+      brushSize,
+      draftMaskUrl,
+      maskSeedSourceKey,
+      maskSeeded,
+      matchingLoadedMask?.url,
+      mode,
+      renderOverlay,
+      trace,
+      traceAsset?.mask?.url,
+    ],
   );
 
   return (

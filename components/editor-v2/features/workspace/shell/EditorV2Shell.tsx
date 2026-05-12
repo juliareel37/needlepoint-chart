@@ -118,6 +118,27 @@ const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const HEADER_FILE_RECENT_LIMIT = 5;
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
+
+function traceEraserDebugEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const debugWindow = window as typeof window & { __TRACE_ERASER_DEBUG__?: boolean };
+  if (debugWindow.__TRACE_ERASER_DEBUG__) {
+    return true;
+  }
+
+  return new URLSearchParams(window.location.search).get("traceEraserDebug") === "1";
+}
+
+function traceEraserDebugLog(event: string, payload: Record<string, unknown>): void {
+  if (!traceEraserDebugEnabled()) {
+    return;
+  }
+
+  console.debug(`[trace-eraser:shell:${event}]`, payload);
+}
 const versionHistoryTimelineScrollCache = new Map<string, number>();
 type HeaderFileMenuItem = {
   id: string;
@@ -494,6 +515,16 @@ export function EditorV2Shell({
       return;
     }
 
+    traceEraserDebugLog("begin", {
+      previewUrl: trace.previewUrl,
+      maskUrl: trace.maskUrl,
+      imageWidth: trace.imageWidth,
+      imageHeight: trace.imageHeight,
+      cropX: trace.cropX,
+      cropY: trace.cropY,
+      cropWidth: trace.cropWidth,
+      cropHeight: trace.cropHeight,
+    });
     setTraceEraserDraftMaskUrl(trace.maskUrl ?? null);
     setTraceEraserMaskFullyVisible(!trace.maskUrl);
     setTraceEraserMode("erase");
@@ -503,6 +534,10 @@ export function EditorV2Shell({
 
   const handleTraceEraserDraftChange = useCallback(
     (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      traceEraserDebugLog("draft-change", {
+        nextMaskUrl,
+        isFullyVisible,
+      });
       setTraceEraserDraftMaskUrl(nextMaskUrl);
       setTraceEraserMaskFullyVisible(isFullyVisible);
       setTraceEraserDirty(true);
@@ -511,6 +546,7 @@ export function EditorV2Shell({
   );
 
   const handleCancelTraceEraser = useCallback(() => {
+    traceEraserDebugLog("cancel", {});
     setTraceEraserActive(false);
     setTraceEraserDraftMaskUrl(null);
     setTraceEraserMaskFullyVisible(true);
@@ -535,6 +571,13 @@ export function EditorV2Shell({
           originalUrl: trace.originalUrl,
         });
       }
+
+      traceEraserDebugLog("commit", {
+        previousMaskUrl: trace.maskUrl,
+        draftMaskUrl: traceEraserDraftMaskUrl,
+        nextMaskUrl,
+        traceEraserMaskFullyVisible,
+      });
 
       if (nextMaskUrl !== trace.maskUrl) {
         dispatch(
