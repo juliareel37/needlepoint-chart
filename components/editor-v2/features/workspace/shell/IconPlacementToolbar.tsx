@@ -316,7 +316,7 @@ export function IconPlacementToolbar({
     !isConverting &&
     (placement.colorSlots.length > 0
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
-      : Boolean(activeColorId));
+      : palette.length > 0 || Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
   const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
     placement.primitiveKind,

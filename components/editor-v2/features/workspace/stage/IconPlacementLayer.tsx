@@ -8,7 +8,6 @@ import {
   resolvePrimitiveColorSlots,
 } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import {
-  renderFlatColorIconPreview,
   renderIconPlacementPreview,
 } from "@/lib/editor-v2/editor/icons/renderIconPlacementPreview";
 import {
@@ -288,15 +287,10 @@ export function IconPlacementLayer({
 
         if (placement.colorSlots.length === 0) {
           if (!useCellSampledPreview) {
-            return null;
+            return placement.src;
           }
 
-          return renderFlatColorIconPreview(
-            placement.src,
-            placement.intrinsicWidth,
-            placement.intrinsicHeight,
-            previewColor,
-          );
+          return placement.src;
         }
 
         return renderIconPlacementPreview(

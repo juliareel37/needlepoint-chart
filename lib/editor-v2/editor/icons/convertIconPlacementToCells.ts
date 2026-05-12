@@ -1,6 +1,6 @@
 import type { GridPoint, IconPlacementSession, PaletteColor } from "../store/state";
 import type { GridWorldMetrics } from "../viewport";
-import { hexToRgb } from "../color-utils";
+import { findClosestPaletteColorId, hexToRgb } from "../color-utils";
 import {
   getContainedRect,
   getLocalPointWithinRotatedBounds,
@@ -301,7 +301,7 @@ function resolvePlacementColorId(
   paletteById: Record<string, PaletteColor>,
 ): string | null {
   if (placement.colorSlots.length === 0) {
-    return fallbackColorId;
+    return resolveRasterPlacementColorId(pixel, fallbackColorId, paletteById);
   }
 
   const slot = findNearestResolvedIconColorSlot(
@@ -310,6 +310,15 @@ function resolvePlacementColorId(
     paletteById,
   );
   return slot?.paletteColorId ?? fallbackColorId;
+}
+
+export function resolveRasterPlacementColorId(
+  pixel: { r: number; g: number; b: number },
+  fallbackColorId: string | null,
+  paletteById: Record<string, PaletteColor>,
+): string | null {
+  const closestColorId = findClosestPaletteColorId(paletteById, pixel);
+  return closestColorId ?? fallbackColorId;
 }
 
 function findNearestResolvedIconColorSlot(

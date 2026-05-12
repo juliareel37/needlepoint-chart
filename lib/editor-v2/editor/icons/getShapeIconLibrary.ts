@@ -5,7 +5,10 @@ import type {
   ShapeIconLibraryOverviewGroup,
 } from "@/components/editor-v2/features/workspace/shell/panel-pages/iconLibrary";
 import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/panel-pages/iconSearchKeywords.json";
-import { extractIconColorSlotsFromSvg } from "./iconColorSlots";
+import {
+  extractIconColorSlotsFromRaster,
+  extractIconColorSlotsFromSvg,
+} from "./iconColorSlots";
 import { getPrimitiveDefaultColorSlots, getPrimitiveIconKind } from "./primitiveIcon";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
@@ -131,7 +134,7 @@ async function buildShapeIconLibraryItem(
 ): Promise<ShapeIconLibraryItem> {
   const fileContents = await fs.readFile(descriptor.absolutePath);
   const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } =
-    buildIconAsset(
+    await buildIconAsset(
       fileContents,
       descriptor.absolutePath,
       descriptor.extension,
@@ -173,12 +176,12 @@ async function collectIconFiles(directory: string): Promise<string[]> {
   return files.flat();
 }
 
-function buildIconAsset(
+async function buildIconAsset(
   fileContents: Buffer,
   absolutePath: string,
   extension: string,
   normalizedRelativePath: string,
-): {
+): Promise<{
   src: string;
   width: number;
   height: number;
@@ -186,7 +189,7 @@ function buildIconAsset(
   primitiveKind: ShapeIconLibraryItem["primitiveKind"];
   lockAspectRatio: boolean;
   supportsStrokeWidth: boolean;
-} {
+}> {
   const primitiveKind = getPrimitiveIconKind(normalizedRelativePath);
   const lockAspectRatio = primitiveKind === "star";
   const primitiveColorSlots = primitiveKind
@@ -217,7 +220,7 @@ function buildIconAsset(
       src: buildBinaryDataUrl(fileContents, "image/png"),
       width,
       height,
-      colorSlots: [],
+      colorSlots: await extractIconColorSlotsFromRaster(fileContents),
       primitiveKind,
       lockAspectRatio,
       supportsStrokeWidth: false,
