@@ -73,6 +73,7 @@ interface GridWorldSurfaceProps {
   traceEraserBrushSize?: number;
   traceEraserEditing?: boolean;
   traceEraserMaskUrl?: string | null;
+  traceEraserDraftRevision?: number;
   traceEraserMode?: "erase" | "restore";
   traceDisplayOverride?: TraceCropRect | null;
   onTraceCropPreviewChange?: (crop: TraceCropRect | null) => void;
@@ -102,6 +103,7 @@ export function GridWorldSurface({
   traceEraserBrushSize = 1,
   traceEraserEditing = false,
   traceEraserMaskUrl = null,
+  traceEraserDraftRevision = 0,
   traceEraserMode = "erase",
   traceDisplayOverride = null,
   onTraceCropPreviewChange,
@@ -644,6 +646,7 @@ export function GridWorldSurface({
               eraserBrushSize={traceEraserBrushSize}
               eraserEditing={traceEraserActive}
               eraserMaskUrl={traceEraserMaskUrl}
+              eraserDraftRevision={traceEraserDraftRevision}
               eraserMode={traceEraserMode}
               onEraserDraftChange={onTraceEraserDraftChange}
               traceDisplayOverride={traceDisplayOverride}

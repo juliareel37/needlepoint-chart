@@ -92,6 +92,7 @@ interface TraceImageLayerProps {
   cropEditing?: boolean;
   dispatch: EditorStore["dispatch"];
   eraserBrushSize?: number;
+  eraserDraftRevision?: number;
   eraserEditing?: boolean;
   eraserMaskUrl?: string | null;
   eraserMode?: "erase" | "restore";
@@ -119,6 +120,7 @@ export function TraceImageLayer({
   cropEditing = false,
   dispatch,
   eraserBrushSize = 1,
+  eraserDraftRevision = 0,
   eraserEditing = false,
   eraserMaskUrl = null,
   eraserMode = "erase",
@@ -603,6 +605,7 @@ export function TraceImageLayer({
             baseRect={traceBaseRect}
             bounds={traceBounds}
             brushSize={eraserBrushSize}
+            draftRevision={eraserDraftRevision}
             draftMaskUrl={eraserMaskUrl}
             imageOpacity={imageOpacity}
             mode={eraserMode}
@@ -709,6 +712,7 @@ interface TraceEraserEditorOverlayProps {
   baseRect: { left: number; top: number; width: number; height: number };
   bounds: { left: number; top: number; width: number; height: number };
   brushSize: number;
+  draftRevision: number;
   draftMaskUrl: string | null;
   imageOpacity: number;
   mode: "erase" | "restore";
@@ -725,6 +729,7 @@ function TraceEraserEditorOverlay({
   baseRect,
   bounds,
   brushSize,
+  draftRevision,
   draftMaskUrl,
   imageOpacity,
   mode,
@@ -744,6 +749,12 @@ function TraceEraserEditorOverlay({
   const [maskSeedSourceKey, setMaskSeedSourceKey] = useState<string | null>(null);
   const matchingLoadedMask =
     traceAsset?.mask && traceAsset.mask.url === draftMaskUrl ? traceAsset.mask : null;
+
+  useEffect(() => {
+    hasUserEditedMaskRef.current = false;
+    setMaskSeedSourceKey(null);
+    setMaskSeeded(false);
+  }, [draftRevision]);
 
   useEffect(() => {
     traceEraserDebugLog("mount-state", {

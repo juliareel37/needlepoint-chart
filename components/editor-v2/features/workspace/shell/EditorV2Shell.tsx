@@ -119,6 +119,11 @@ const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
 const HEADER_FILE_RECENT_LIMIT = 5;
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
 
+interface TraceEraserHistoryEntry {
+  maskUrl: string | null;
+  isFullyVisible: boolean;
+}
+
 function traceEraserDebugEnabled(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -447,8 +452,13 @@ export function EditorV2Shell({
   const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(1);
   const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
   const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
+  const [traceEraserDraftRevision, setTraceEraserDraftRevision] = useState(0);
   const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);
   const [traceEraserDirty, setTraceEraserDirty] = useState(false);
+  const [traceEraserInitialState, setTraceEraserInitialState] =
+    useState<TraceEraserHistoryEntry | null>(null);
+  const [traceEraserUndoStack, setTraceEraserUndoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [traceEraserRedoStack, setTraceEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -475,11 +485,17 @@ export function EditorV2Shell({
     setTraceEraserActive(false);
     setTraceEraserMode("erase");
     setTraceEraserDraftMaskUrl(null);
+    setTraceEraserDraftRevision(0);
     setTraceEraserMaskFullyVisible(!trace?.maskUrl);
     setTraceEraserDirty(false);
+    setTraceEraserInitialState(null);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
   }, [trace?.previewUrl]);
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
   const traceEraserEditing = traceEraserActive;
+  const traceEraserCanUndo = traceEraserUndoStack.length > 0;
+  const traceEraserCanRedo = traceEraserRedoStack.length > 0;
   const repositionModeActive =
     traceRepositionActive ||
     traceCropEditing ||
@@ -515,6 +531,11 @@ export function EditorV2Shell({
       return;
     }
 
+    const nextInitialState = {
+      maskUrl: trace.maskUrl ?? null,
+      isFullyVisible: !trace.maskUrl,
+    };
+
     traceEraserDebugLog("begin", {
       previewUrl: trace.previewUrl,
       maskUrl: trace.maskUrl,
@@ -525,33 +546,120 @@ export function EditorV2Shell({
       cropWidth: trace.cropWidth,
       cropHeight: trace.cropHeight,
     });
-    setTraceEraserDraftMaskUrl(trace.maskUrl ?? null);
-    setTraceEraserMaskFullyVisible(!trace.maskUrl);
+    setTraceEraserInitialState(nextInitialState);
+    setTraceEraserDraftMaskUrl(nextInitialState.maskUrl);
+    setTraceEraserDraftRevision((current) => current + 1);
+    setTraceEraserMaskFullyVisible(nextInitialState.isFullyVisible);
     setTraceEraserMode("erase");
     setTraceEraserDirty(false);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
     setTraceEraserActive(true);
   }, [trace]);
 
+  const applyTraceEraserHistoryEntry = useCallback(
+    (entry: TraceEraserHistoryEntry) => {
+      setTraceEraserDraftMaskUrl(entry.maskUrl);
+      setTraceEraserDraftRevision((current) => current + 1);
+      setTraceEraserMaskFullyVisible(entry.isFullyVisible);
+      setTraceEraserDirty(
+        traceEraserInitialState === null
+          ? false
+          : entry.maskUrl !== traceEraserInitialState.maskUrl ||
+              entry.isFullyVisible !== traceEraserInitialState.isFullyVisible,
+      );
+    },
+    [traceEraserInitialState],
+  );
+
   const handleTraceEraserDraftChange = useCallback(
     (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      if (
+        nextMaskUrl === traceEraserDraftMaskUrl &&
+        isFullyVisible === traceEraserMaskFullyVisible
+      ) {
+        return;
+      }
+
       traceEraserDebugLog("draft-change", {
         nextMaskUrl,
         isFullyVisible,
       });
+      setTraceEraserUndoStack((current) => [
+        ...current,
+        {
+          maskUrl: traceEraserDraftMaskUrl,
+          isFullyVisible: traceEraserMaskFullyVisible,
+        },
+      ]);
+      setTraceEraserRedoStack([]);
       setTraceEraserDraftMaskUrl(nextMaskUrl);
       setTraceEraserMaskFullyVisible(isFullyVisible);
-      setTraceEraserDirty(true);
+      setTraceEraserDirty(
+        traceEraserInitialState === null
+          ? true
+          : nextMaskUrl !== traceEraserInitialState.maskUrl ||
+              isFullyVisible !== traceEraserInitialState.isFullyVisible,
+      );
     },
-    [],
+    [traceEraserDraftMaskUrl, traceEraserInitialState, traceEraserMaskFullyVisible],
   );
+
+  const handleTraceEraserUndo = useCallback(() => {
+    if (traceEraserUndoStack.length === 0) {
+      return;
+    }
+
+    const previousEntry = traceEraserUndoStack[traceEraserUndoStack.length - 1];
+    setTraceEraserUndoStack((current) => current.slice(0, -1));
+    setTraceEraserRedoStack((current) => [
+      {
+        maskUrl: traceEraserDraftMaskUrl,
+        isFullyVisible: traceEraserMaskFullyVisible,
+      },
+      ...current,
+    ]);
+    applyTraceEraserHistoryEntry(previousEntry);
+  }, [
+    applyTraceEraserHistoryEntry,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+    traceEraserUndoStack,
+  ]);
+
+  const handleTraceEraserRedo = useCallback(() => {
+    if (traceEraserRedoStack.length === 0) {
+      return;
+    }
+
+    const [nextEntry, ...remainingEntries] = traceEraserRedoStack;
+    setTraceEraserRedoStack(remainingEntries);
+    setTraceEraserUndoStack((current) => [
+      ...current,
+      {
+        maskUrl: traceEraserDraftMaskUrl,
+        isFullyVisible: traceEraserMaskFullyVisible,
+      },
+    ]);
+    applyTraceEraserHistoryEntry(nextEntry);
+  }, [
+    applyTraceEraserHistoryEntry,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+    traceEraserRedoStack,
+  ]);
 
   const handleCancelTraceEraser = useCallback(() => {
     traceEraserDebugLog("cancel", {});
     setTraceEraserActive(false);
     setTraceEraserDraftMaskUrl(null);
+    setTraceEraserDraftRevision(0);
     setTraceEraserMaskFullyVisible(true);
     setTraceEraserDirty(false);
     setTraceEraserMode("erase");
+    setTraceEraserInitialState(null);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
   }, []);
 
   const handleCommitTraceEraser = useCallback(async () => {
@@ -1558,6 +1666,18 @@ export function EditorV2Shell({
         ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "z") ||
         (event.ctrlKey && !event.shiftKey && key === "y");
 
+      if (traceEraserEditing && isUndoShortcut && traceEraserCanUndo) {
+        event.preventDefault();
+        handleTraceEraserUndo();
+        return;
+      }
+
+      if (traceEraserEditing && isRedoShortcut && traceEraserCanRedo) {
+        event.preventDefault();
+        handleTraceEraserRedo();
+        return;
+      }
+
       if (isUndoShortcut && canUndo) {
         event.preventDefault();
         dispatch(createUndoCommand());
@@ -1572,7 +1692,16 @@ export function EditorV2Shell({
 
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [canRedo, canUndo, dispatch]);
+  }, [
+    canRedo,
+    canUndo,
+    dispatch,
+    handleTraceEraserRedo,
+    handleTraceEraserUndo,
+    traceEraserCanRedo,
+    traceEraserCanUndo,
+    traceEraserEditing,
+  ]);
 
   useEffect(() => {
     const escapeAction = getWorkspaceEscapeAction({
@@ -3028,6 +3157,8 @@ export function EditorV2Shell({
                     ) : traceEraserEditing && trace ? (
                       <TraceEraserToolbar
                         brushSize={traceEraserBrushSize}
+                        canRedo={traceEraserCanRedo}
+                        canUndo={traceEraserCanUndo}
                         mode={traceEraserMode}
                         onBrushSizeChange={setTraceEraserBrushSize}
                         onCancel={handleCancelTraceEraser}
@@ -3035,6 +3166,8 @@ export function EditorV2Shell({
                           void handleCommitTraceEraser();
                         }}
                         onModeChange={setTraceEraserMode}
+                        onRedo={handleTraceEraserRedo}
+                        onUndo={handleTraceEraserUndo}
                       />
                     ) : (traceRepositionActive || traceCropEditing) && trace ? (
                       <TraceRepositionToolbar
@@ -3167,6 +3300,7 @@ export function EditorV2Shell({
                     traceEraserBrushSize={traceEraserBrushSize}
                     traceEraserEditing={traceEraserEditing}
                     traceEraserMaskUrl={traceEraserDraftMaskUrl}
+                    traceEraserDraftRevision={traceEraserDraftRevision}
                     traceEraserMode={traceEraserMode}
                     traceDisplayOverride={tracePreviewCrop}
                     onTraceCropPreviewChange={handlePreviewTraceCropChange}

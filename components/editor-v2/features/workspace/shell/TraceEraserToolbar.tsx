@@ -13,20 +13,28 @@ import styles from "./EditorV2Shell.module.css";
 
 interface TraceEraserToolbarProps {
   brushSize: number;
+  canRedo: boolean;
+  canUndo: boolean;
   mode: "erase" | "restore";
   onBrushSizeChange: (brushSize: number) => void;
   onCancel: () => void;
   onCommit: () => void;
   onModeChange: (mode: "erase" | "restore") => void;
+  onRedo: () => void;
+  onUndo: () => void;
 }
 
 export function TraceEraserToolbar({
   brushSize,
+  canRedo,
+  canUndo,
   mode,
   onBrushSizeChange,
   onCancel,
   onCommit,
   onModeChange,
+  onRedo,
+  onUndo,
 }: TraceEraserToolbarProps) {
   const normalizedBrushSize = Number.isFinite(brushSize)
     ? Math.min(Math.max(Math.round(brushSize), 1), 10)
@@ -83,6 +91,25 @@ export function TraceEraserToolbar({
               </div>
               <span className={styles.traceEraserToolbarSliderValue}>{brushSizePercent}%</span>
             </div>
+            <ToolbarDivider />
+            <ToolbarButton
+              type="button"
+              variant="secondary"
+              disabled={!canUndo}
+              onClick={onUndo}
+              aria-label="Undo eraser change"
+            >
+              <ToolbarIcon icon="/icons/lucide/undo.svg" />
+            </ToolbarButton>
+            <ToolbarButton
+              type="button"
+              variant="secondary"
+              disabled={!canRedo}
+              onClick={onRedo}
+              aria-label="Redo eraser change"
+            >
+              <ToolbarIcon icon="/icons/lucide/redo.svg" />
+            </ToolbarButton>
             <ToolbarDivider />
             <ToolbarButton type="button" variant="secondary" textOnly onClick={onCancel}>
               Cancel
