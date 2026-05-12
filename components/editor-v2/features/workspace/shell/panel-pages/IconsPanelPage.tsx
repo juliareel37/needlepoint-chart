@@ -560,7 +560,7 @@ export function IconsPanelPage({
                       <div className={styles.sidebarSubsectionHeaderRow}>
                         <div className={styles.sidebarSubsectionHeader}>
                           <h3 style={typographyStyles.h5}>{group.category}</h3>
-                          {!normalizedSearchQuery && hiddenCount > 0 ? (
+                          {!normalizedSearchQuery ? (
                             <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
                               {group.count} icons
                             </p>
