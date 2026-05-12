@@ -31,6 +31,7 @@ export interface EditorV2SuccessNotification {
 
 export function EditorV2Workspace({
   canvasLoading,
+  authResolved,
   hasSavedDesignAccess,
   onCanvasReady,
   currentStorageId,
@@ -72,6 +73,7 @@ export function EditorV2Workspace({
   setupModalOpen,
 }: {
   canvasLoading: boolean;
+  authResolved: boolean;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   currentStorageId: string;
@@ -173,6 +175,7 @@ export function EditorV2Workspace({
     <div>
       <EditorV2Shell
         canvasLoading={canvasLoading}
+        authResolved={authResolved}
         hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={onCanvasReady}
         onExportDocument={async (document) => {

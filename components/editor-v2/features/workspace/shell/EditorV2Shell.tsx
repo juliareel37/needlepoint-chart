@@ -273,6 +273,7 @@ export function EditorV2Shell({
   deleteButtonState,
   errorNotification,
   exportButtonState,
+  authResolved,
   hasSavedDesignAccess,
   onCanvasReady,
   onDeleteCurrentDesign,
@@ -320,6 +321,7 @@ export function EditorV2Shell({
   deleteButtonState: DeleteButtonState;
   errorNotification: EditorV2ErrorNotification | null;
   exportButtonState: ExportButtonState;
+  authResolved: boolean;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
@@ -2461,7 +2463,8 @@ export function EditorV2Shell({
         .slice(0, HEADER_FILE_RECENT_LIMIT),
     [currentStorageId, savedDocuments],
   );
-  const showLoggedOutTopBanner = !hasSavedDesignAccess && !saveBannerDismissed;
+  const showLoggedOutTopBanner =
+    authResolved && !hasSavedDesignAccess && !saveBannerDismissed;
   const showTopSaveBanner = showLoggedOutTopBanner;
   const showSaveConfirmationOverlay =
     saveNotificationVisible &&

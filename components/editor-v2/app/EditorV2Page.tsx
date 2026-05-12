@@ -181,7 +181,8 @@ export function EditorV2Page({
     designConfig.kind === "new"
       ? designConfig.draftId
       : designConfig.document.project.id;
-  const hasSavedDesignAccess = mounted && isLoaded && isSignedIn;
+  const authResolved = mounted && isLoaded;
+  const hasSavedDesignAccess = authResolved && isSignedIn;
   const stickyCanvasPreferences = isSignedIn ? readStickyCanvasPreferences() : null;
 
   useEffect(() => {
@@ -856,6 +857,7 @@ export function EditorV2Page({
     >
       <EditorV2Workspace
         canvasLoading={canvasLoadingKey !== null}
+        authResolved={authResolved}
         hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={() => {
           setCanvasLoadingKey((currentKey) =>
