@@ -78,10 +78,60 @@
   color: var(--text-primary);
 }
 
-.subtitle {
-  font-size: 14px;
-  line-height: 1.4;
+.scopedHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scopedTitle {
+  font-size: 22px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbButton {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.breadcrumbButton:hover,
+.breadcrumbButton:focus-visible {
+  color: var(--brand-500);
+  outline: none;
+}
+
+.breadcrumbDivider {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-tertiary);
+}
+
+.breadcrumbCurrent {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-tertiary);
 }
 
 .actions {
@@ -92,22 +142,150 @@
   gap: 12px;
 }
 
-.folderTabs {
+.folderCard {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--brand-100) 36%, white) 0%, var(--surface-primary) 100%);
+  box-shadow: 0 10px 28px rgba(44, 61, 96, 0.06);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.folderCard[data-active="true"],
+.folderListRow[data-active="true"] {
+  border-color: var(--brand-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-200) 40%, transparent);
+}
+
+.folderCardButton,
+.folderListButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folderCardButton {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
+  flex-direction: column;
+  min-height: 100%;
 }
 
-.folderTabGroup {
-  display: inline-flex;
-  align-items: center;
+.folderCardVisual {
+  position: relative;
+  padding: 22px 18px 10px;
+  min-height: 158px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--brand-200) 40%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--brand-100) 58%, white) 0%, transparent 100%);
+}
+
+.folderGlyph {
+  position: relative;
+  display: inline-block;
+}
+
+.folderGlyphTab {
+  position: absolute;
+  top: 0;
+  left: 12%;
+  width: 38%;
+  height: 24%;
+  border-radius: 12px 12px 0 0;
+  background: color-mix(in srgb, var(--brand-300) 68%, white);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.folderGlyphBody {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin-top: 12%;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--brand-200) 72%, white) 0%, color-mix(in srgb, var(--brand-100) 32%, white) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-300) 45%, var(--ui-border-reg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 18px 30px rgba(44, 61, 96, 0.12);
+}
+
+.folderCardGlyph {
+  width: min(74%, 150px);
+  aspect-ratio: 1.08 / 0.8;
+}
+
+.folderListGlyph {
+  width: 42px;
+  aspect-ratio: 1.08 / 0.8;
+}
+
+.folderCardBody {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+  padding: 16px 16px 14px;
+  border-top: 1px solid var(--ui-border-reg);
 }
 
-.folderTabMenuWrapper {
-  flex: 0 0 auto;
+.folderCardTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.folderCardTitle {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.folderCardMeta,
+.folderListCount {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.folderMenuWrapper {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+.folderListRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  min-height: 88px;
+  padding: 0 16px;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.folderListRow + .folderListRow {
+  border-top: 1px solid var(--ui-border-reg);
+}
+
+.folderListButton {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  min-height: 88px;
+  padding: 0;
 }
 
 .folderModalContent {
@@ -126,8 +304,18 @@
 
 .searchRow {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 18px;
+}
+
+.searchControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .notificationOverlayTop {
@@ -270,11 +458,17 @@
   justify-self: start;
 }
 
-.collectionToggle {
+.layoutToggle {
   justify-self: start;
 }
 
-.layoutToggle {
+.utilityRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.libraryNavButton {
   justify-self: start;
 }
 
@@ -902,6 +1096,13 @@
     background: rgba(255, 255, 255, 0.08);
   }
 
+  .folderCard:hover,
+  .folderListRow:hover {
+    transform: translateY(-2px);
+    border-color: var(--ui-border-strong);
+    box-shadow: 0 18px 36px rgba(44, 61, 96, 0.1);
+  }
+
   .card:not([data-selected="true"]):hover {
     transform: translateY(-2px);
     border-color: var(--ui-border-strong);
@@ -1058,15 +1259,6 @@
     justify-content: flex-start;
   }
 
-  .viewRow {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "menu menu"
-      "sort toggle";
-    align-items: center;
-    row-gap: 24px;
-  }
-
   .bulkBar {
     width: 100%;
     max-width: none;
@@ -1108,8 +1300,8 @@
     display: none;
   }
 
-  .collectionToggle {
-    justify-self: start;
+  .utilityRow {
+    justify-content: flex-end;
   }
 }
 
@@ -1133,6 +1325,20 @@
     /* grid-template-columns: 1fr 1fr; */
     grid-template-columns: 1fr;
 
+  }
+
+  .searchRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .utilityRow {
+    justify-content: flex-start;
+  }
+
+  .searchControls {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .searchField {

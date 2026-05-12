@@ -338,6 +338,16 @@ export function LibraryPageClient({
       ? null
       : folders.find((folder) => folder.id === selectedFolderId) ?? null;
 
+  function beginLibraryScopeTransition() {
+    setSelectedDesignIds(new Set<string>());
+    setTouchSelectionMode(false);
+    setNextOffset(null);
+    setHasMore(false);
+    setLoadMoreError(null);
+    setDesigns([]);
+    setInitialLoadPending(true);
+  }
+
   async function loadInitialPage() {
     const currentRequestKey = requestKey;
     setInitialLoadPending(true);
@@ -356,7 +366,6 @@ export function LibraryPageClient({
       setDesigns(result.designs);
       setFolders(result.folders);
       setRootDesignCount(result.rootDesignCount);
-      setSelectedFolderId(collectionView === "active" ? result.selectedFolder?.id ?? null : null);
       setTotalCount(result.totalCount);
       setActiveCount(result.activeCount);
       setDeletedCount(result.deletedCount);
@@ -618,6 +627,18 @@ export function LibraryPageClient({
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
   }
 
+  function navigateLibraryScope(next: {
+    view: LibraryCollectionView;
+    folderId?: string | null;
+  }) {
+    beginLibraryScopeTransition();
+    updateLibraryUrl({
+      view: next.view,
+      folderId: next.view === "deleted" ? null : next.folderId ?? null,
+      notice: null,
+    });
+  }
+
   function navigateToDesign(
     event: NavigableDesignClickEvent,
     designId: string,
@@ -818,7 +839,7 @@ export function LibraryPageClient({
           title: "Folder created",
           description: `"${folder.name}" is ready for your designs.`,
         });
-        updateLibraryUrl({ folderId: folder.id, view: "active", notice: null });
+        navigateLibraryScope({ folderId: folder.id, view: "active" });
         return;
       }
 
@@ -840,7 +861,7 @@ export function LibraryPageClient({
       await deleteEditorV2Folder(deletedFolder.id);
       setFolderDialog(null);
       if (selectedFolderId === deletedFolder.id) {
-        updateLibraryUrl({ folderId: null, view: "active", notice: null });
+        navigateLibraryScope({ folderId: null, view: "active" });
       } else {
         void loadInitialPage();
       }
@@ -1347,6 +1368,57 @@ export function LibraryPageClient({
     );
   }
 
+  function renderFolderMenu(folder: SavedEditorV2DesignFolder) {
+    return (
+      <div className={styles.cardMenuAnchor} data-card-menu="true">
+        <SingleSelectDropdown
+          ariaLabel={`Folder actions for ${folder.name}`}
+          items={[
+            { id: "rename", label: "Rename folder", icon: "/icons/lucide/pencil.svg" },
+            { id: "delete", label: "Delete folder", icon: "/icons/lucide/trash.svg" },
+          ]}
+          value=""
+          placeholder="Folder actions"
+          triggerLabel={<span className={styles.cardMenuDots}>⋮</span>}
+          triggerVariant="ghost"
+          showChevron={false}
+          menuPortalToViewport
+          menuPlacement="bottom-end"
+          menuShowTrailingCheck={false}
+          minWidth="auto"
+          getItemValue={(item) => item.id}
+          getItemLabel={(item) => (
+            <span className={styles.cardMenuItemLabel}>
+              <ButtonIcon icon={item.icon} className={styles.cardMenuItemIcon} />
+              <span>{item.label}</span>
+            </span>
+          )}
+          onValueChange={(value) => {
+            if (value === "rename") {
+              openRenameFolderDialog(folder);
+              return;
+            }
+
+            openDeleteFolderDialog(folder);
+          }}
+          wrapperClassName={styles.folderMenuWrapper}
+          triggerClassName={styles.cardMenuTrigger}
+          menuClassName={styles.cardMenuSurface}
+          triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+        />
+      </div>
+    );
+  }
+
+  function renderFolderGlyph(className?: string) {
+    return (
+      <span className={[styles.folderGlyph, className].filter(Boolean).join(" ")} aria-hidden="true">
+        <span className={styles.folderGlyphTab} />
+        <span className={styles.folderGlyphBody} />
+      </span>
+    );
+  }
+
   function renderDesignMenu(design: LibraryDesignRecord) {
     if (renamingDesignId === design.id) {
       return null;
@@ -1494,6 +1566,15 @@ export function LibraryPageClient({
 
   const selectedSortOption =
     sortOptions.find((option) => option.id === sortMode) ?? sortOptions[0];
+  const visibleFolderItems =
+    collectionView === "active" && selectedFolderId === null
+      ? folders.filter((folder) =>
+          normalizedSearchQuery.length === 0
+            ? true
+            : folder.name.toLowerCase().includes(normalizedSearchQuery.toLowerCase()),
+        )
+      : [];
+  const hasVisibleLibraryItems = visibleFolderItems.length > 0 || designs.length > 0;
 
   return (
     <main
@@ -1510,34 +1591,60 @@ export function LibraryPageClient({
       >
         <header className={styles.header}>
           <div className={styles.headerCopy}>
-            <h1 className={styles.title}>
-              {collectionView === "deleted"
-                ? "Trash"
-                : currentFolder
-                  ? currentFolder.name
-                  : "My Designs"}
-            </h1>
-            <p className={styles.subtitle}>
-              {collectionView === "deleted"
-                ? "Deleted designs stay here for 30 days."
-                : currentFolder
-                  ? `${currentFolder.designCount} design${currentFolder.designCount === 1 ? "" : "s"} in this folder`
-                  : `${rootDesignCount} design${rootDesignCount === 1 ? "" : "s"} at the top level`}
-            </p>
+            {collectionView === "active" && currentFolder ? (
+              <div className={styles.scopedHeader}>
+                <div className={styles.breadcrumbs} aria-label="Library breadcrumbs">
+                  <button
+                    type="button"
+                    className={styles.breadcrumbButton}
+                    onClick={() => {
+                      navigateLibraryScope({ view: "active", folderId: null });
+                    }}
+                  >
+                    My Designs
+                  </button>
+                  <span className={styles.breadcrumbDivider} aria-hidden="true">
+                    →
+                  </span>
+                  <span className={styles.breadcrumbCurrent}>{currentFolder.name}</span>
+                </div>
+                <h1 className={styles.scopedTitle}>{currentFolder.name}</h1>
+              </div>
+            ) : (
+              <h1 className={styles.title}>
+                {collectionView === "deleted" ? "Trash" : "My Designs"}
+              </h1>
+            )}
           </div>
 
           <div className={styles.actions}>
-            {/* <label className={styles.searchField}>
-              <span className={styles.searchIcon} aria-hidden="true" />
-              <FieldInput
-                type="search"
-                name="search"
-                placeholder="Search designs"
-                aria-label="Search designs"
-                className={styles.searchInput}
-              />
-            </label> */}
-
+            {collectionView === "deleted" ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className={styles.libraryNavButton}
+                onClick={() => {
+                  navigateLibraryScope({ view: "active", folderId: null });
+                }}
+              >
+                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+                Back to My Designs
+              </Button>
+            ) : selectedFolderId === null ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className={styles.libraryNavButton}
+                onClick={() => {
+                  navigateLibraryScope({ view: "deleted" });
+                }}
+              >
+                <ButtonIcon icon="/icons/lucide/trash.svg" />
+                Trash ({deletedCount})
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="secondary"
@@ -1562,175 +1669,6 @@ export function LibraryPageClient({
           </div>
         </header>
 
-        <div className={styles.folderTabs} aria-label="Folder navigation">
-          <Button
-            type="button"
-            variant={collectionView === "active" && selectedFolderId === null ? "primary" : "secondary"}
-            size="md"
-            onClick={() => {
-              setCollectionView("active");
-              setSelectedFolderId(null);
-              setSelectedDesignIds(new Set<string>());
-              setTouchSelectionMode(false);
-              setNextOffset(null);
-              updateLibraryUrl({ view: "active", folderId: null, notice: null });
-            }}
-          >
-            All Designs ({rootDesignCount})
-          </Button>
-          {folders.map((folder) => (
-            <div key={folder.id} className={styles.folderTabGroup}>
-              <Button
-                type="button"
-                variant={
-                  collectionView === "active" && selectedFolderId === folder.id
-                    ? "primary"
-                    : "secondary"
-                }
-                size="md"
-                onClick={() => {
-                  setCollectionView("active");
-                  setSelectedFolderId(folder.id);
-                  setSelectedDesignIds(new Set<string>());
-                  setTouchSelectionMode(false);
-                  setNextOffset(null);
-                  updateLibraryUrl({ view: "active", folderId: folder.id, notice: null });
-                }}
-              >
-                {folder.name} ({folder.designCount})
-              </Button>
-              <SingleSelectDropdown
-                ariaLabel={`Folder actions for ${folder.name}`}
-                items={[
-                  { id: "rename", label: "Rename folder", icon: "/icons/lucide/pencil.svg" },
-                  { id: "delete", label: "Delete folder", icon: "/icons/lucide/trash.svg" },
-                ]}
-                value=""
-                placeholder="Folder actions"
-                triggerLabel={<span className={styles.cardMenuDots}>⋮</span>}
-                triggerVariant="ghost"
-                showChevron={false}
-                menuPortalToViewport
-                menuPlacement="bottom-end"
-                menuShowTrailingCheck={false}
-                minWidth="auto"
-                getItemValue={(item) => item.id}
-                getItemLabel={(item) => (
-                  <span className={styles.cardMenuItemLabel}>
-                    <ButtonIcon icon={item.icon} className={styles.cardMenuItemIcon} />
-                    <span>{item.label}</span>
-                  </span>
-                )}
-                onValueChange={(value) => {
-                  if (value === "rename") {
-                    openRenameFolderDialog(folder);
-                    return;
-                  }
-
-                  openDeleteFolderDialog(folder);
-                }}
-                wrapperClassName={styles.folderTabMenuWrapper}
-                triggerClassName={styles.cardMenuTrigger}
-                menuClassName={styles.cardMenuSurface}
-                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
-              />
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant={collectionView === "deleted" ? "primary" : "secondary"}
-            size="md"
-            onClick={() => {
-              setCollectionView("deleted");
-              setSelectedFolderId(null);
-              setSelectedDesignIds(new Set<string>());
-              setTouchSelectionMode(false);
-              setNextOffset(null);
-              updateLibraryUrl({ view: "deleted", folderId: null, notice: null });
-            }}
-          >
-            Trash ({deletedCount})
-          </Button>
-        </div>
-
-        <div className={styles.viewRow}>
-          <SegmentedControl<LibraryCollectionView>
-            ariaLabel="Design collection view"
-            className={`${styles.viewToggle} ${styles.collectionToggle}`}
-            itemClassName={styles.viewToggleItem}
-            value={collectionView}
-            onChange={(value) => {
-              setCollectionView(value);
-              setSelectedFolderId(value === "deleted" ? null : selectedFolderId);
-              setSelectedDesignIds(new Set<string>());
-              setTouchSelectionMode(false);
-              setNextOffset(null);
-              updateLibraryUrl({
-                view: value,
-                folderId: value === "deleted" ? null : selectedFolderId,
-                notice: null,
-              });
-            }}
-            options={[
-              {
-                value: "active",
-                label: `All Designs (${activeCount})`,
-              },
-              {
-                value: "deleted",
-                label: `Trash (${deletedCount})`,
-              },
-            ]}
-          />
-          <div className={styles.sortControl}>
-            <SingleSelectDropdown<SortOption>
-              ariaLabel="Sort designs"
-              items={[...sortOptions]}
-              value={sortMode}
-              placeholder="Sort"
-              triggerVariant="selection"
-              triggerLabel={
-                <span className={styles.sortTriggerLabel}>
-                  <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
-                </span>
-              }
-              getItemValue={(item) => item.id}
-              getItemLabel={(item) => item.label}
-              onValueChange={(value) => {
-                setSortMode(value as LibrarySortMode);
-              }}
-              triggerClassName={styles.sortTrigger}
-              wrapperClassName={styles.sortDropdown}
-              menuClassName={styles.sortMenu}
-              minWidth="auto"
-              menuPlacement="bottom-end"
-              menuPortalToViewport
-              openOnHover={!touchPrimaryInput}
-            />
-          </div>
-          <span
-            className={styles.viewControlsDividerKeep}
-            aria-hidden="true"
-          />
-          <SegmentedControl<LibraryViewMode>
-            ariaLabel="Design library view"
-            className={`${styles.viewToggle} ${styles.layoutToggle}`}
-            itemClassName={styles.viewToggleItem}
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              {
-                value: "list",
-                label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
-              },
-              {
-                value: "grid",
-                label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
-              },
-            ]}
-          />
-        </div>
-
         <div className={styles.searchRow}>
           <label className={styles.searchField}>
             <span className={styles.searchIcon} aria-hidden="true" />
@@ -1749,12 +1687,144 @@ export function LibraryPageClient({
               className={styles.searchInput}
             />
           </label>
+          <div className={styles.searchControls}>
+            <div className={styles.sortControl}>
+              <SingleSelectDropdown<SortOption>
+                ariaLabel="Sort designs"
+                items={[...sortOptions]}
+                value={sortMode}
+                placeholder="Sort"
+                triggerVariant="selection"
+                triggerLabel={
+                  <span className={styles.sortTriggerLabel}>
+                    <span className={styles.sortTriggerValue}>{selectedSortOption.label}</span>
+                  </span>
+                }
+                getItemValue={(item) => item.id}
+                getItemLabel={(item) => item.label}
+                onValueChange={(value) => {
+                  setSortMode(value as LibrarySortMode);
+                }}
+                triggerClassName={styles.sortTrigger}
+                wrapperClassName={styles.sortDropdown}
+                menuClassName={styles.sortMenu}
+                minWidth="auto"
+                menuPlacement="bottom-end"
+                menuPortalToViewport
+                openOnHover={!touchPrimaryInput}
+              />
+            </div>
+            <SegmentedControl<LibraryViewMode>
+              ariaLabel="Design library view"
+              className={`${styles.viewToggle} ${styles.layoutToggle}`}
+              itemClassName={styles.viewToggleItem}
+              value={viewMode}
+              onChange={setViewMode}
+              options={[
+                {
+                  value: "list",
+                  label: <ButtonIcon icon="/icons/lucide/list.svg" className={styles.viewToggleIcon} />,
+                },
+                {
+                  value: "grid",
+                  label: <ButtonIcon icon="/icons/lucide/layout-grid.svg" className={styles.viewToggleIcon} />,
+                },
+              ]}
+            />
+          </div>
         </div>
 
-        {designs.length > 0 ? (
+        {isInitialLoading ? (
+          viewMode === "grid" ? (
+            <section className={styles.grid} aria-label="Loading saved designs">
+              {loadingCards.map((card) => (
+                <article
+                  key={`initial-loading-${card}`}
+                  className={`${styles.card} ${styles.loadingCard}`}
+                  aria-hidden="true"
+                >
+                  <div className={styles.thumbnail}>
+                    <div className={styles.thumbnailFrame}>
+                      <div className={styles.loadingThumbnail}>
+                        <span className="loading-spinner" aria-hidden="true" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.cardBody}>
+                    <div className={styles.loadingLineShort} />
+                    <div className={styles.loadingLineLong} />
+                    <div className={styles.loadingLineMedium} />
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : (
+            <section className={styles.listView} aria-label="Loading saved designs list">
+              <div className={styles.listHeader}>
+                <span className={styles.listHeaderName}>Name</span>
+                <span>Size</span>
+                <span>Colors</span>
+                <span>Last Edited</span>
+                <span className={styles.listHeaderActions} aria-hidden="true" />
+              </div>
+              <div className={styles.listBody}>
+                {loadingCards.map((card) => (
+                  <article
+                    key={`initial-list-loading-${card}`}
+                    className={`${styles.listRow} ${styles.loadingCard}`}
+                    aria-hidden="true"
+                  >
+                    <div className={styles.listNameCell}>
+                      <span className={styles.listThumbnailFrame}>
+                        <span className={styles.loadingThumbnail}>
+                          <span className="loading-spinner" aria-hidden="true" />
+                        </span>
+                      </span>
+                      <div className={styles.listLoadingText}>
+                        <div className={styles.loadingLineLong} />
+                      </div>
+                    </div>
+                    <div className={styles.loadingLineMedium} />
+                    <div className={styles.loadingLineShort} />
+                    <div className={styles.loadingLineMedium} />
+                    <div />
+                  </article>
+                ))}
+              </div>
+            </section>
+          )
+        ) : hasVisibleLibraryItems ? (
           <>
             {viewMode === "grid" ? (
               <section className={styles.grid} aria-label="Saved designs">
+                {visibleFolderItems.map((folder) => (
+                  <article
+                    key={folder.id}
+                    className={styles.folderCard}
+                    data-active="false"
+                  >
+                    <button
+                      type="button"
+                      className={styles.folderCardButton}
+                      onClick={() => {
+                        navigateLibraryScope({ view: "active", folderId: folder.id });
+                      }}
+                    >
+                      <div className={styles.folderCardVisual}>
+                        {renderFolderGlyph(styles.folderCardGlyph)}
+                      </div>
+                      <div className={styles.folderCardBody}>
+                        <div className={styles.folderCardTopRow}>
+                          <h3 className={styles.folderCardTitle}>{folder.name}</h3>
+                        </div>
+                        <p className={styles.folderCardMeta}>
+                          {folder.designCount} design{folder.designCount === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                    </button>
+                    {renderFolderMenu(folder)}
+                  </article>
+                ))}
                 {sortedDesigns.map((design) => {
                   const isSelected = selectedDesignIds.has(design.id);
                   const designHref =
@@ -1937,6 +2007,37 @@ export function LibraryPageClient({
                 </div>
 
                 <div className={styles.listBody}>
+                  {visibleFolderItems.map((folder) => (
+                    <article
+                      key={folder.id}
+                      className={styles.folderListRow}
+                      data-active="false"
+                    >
+                      <button
+                        type="button"
+                        className={styles.folderListButton}
+                        onClick={() => {
+                          navigateLibraryScope({ view: "active", folderId: folder.id });
+                        }}
+                      >
+                        <span className={styles.listThumbnailFrame}>
+                          {renderFolderGlyph(styles.folderListGlyph)}
+                        </span>
+                        <span className={styles.listNameContent}>
+                          <span className={styles.listTitle}>{folder.name}</span>
+                          <span className={styles.listMobileMeta}>
+                            <span className={styles.listMobileMetaItem}>
+                              {folder.designCount} design{folder.designCount === 1 ? "" : "s"}
+                            </span>
+                          </span>
+                        </span>
+                        <span className={styles.folderListCount}>
+                          {folder.designCount} design{folder.designCount === 1 ? "" : "s"}
+                        </span>
+                      </button>
+                      <div className={styles.listActionsCell}>{renderFolderMenu(folder)}</div>
+                    </article>
+                  ))}
                   {sortedDesigns.map((design) => {
                     const isSelected = selectedDesignIds.has(design.id);
                     const designHref =
@@ -2168,65 +2269,6 @@ export function LibraryPageClient({
 
             <div ref={sentinelRef} className={styles.scrollSentinel} aria-hidden="true" />
           </>
-        ) : isInitialLoading ? (
-          viewMode === "grid" ? (
-            <section className={styles.grid} aria-label="Loading saved designs">
-              {loadingCards.map((card) => (
-                <article
-                  key={`initial-loading-${card}`}
-                  className={`${styles.card} ${styles.loadingCard}`}
-                  aria-hidden="true"
-                >
-                  <div className={styles.thumbnail}>
-                    <div className={styles.thumbnailFrame}>
-                      <div className={styles.loadingThumbnail}>
-                        <span className="loading-spinner" aria-hidden="true" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.cardBody}>
-                    <div className={styles.loadingLineShort} />
-                    <div className={styles.loadingLineLong} />
-                    <div className={styles.loadingLineMedium} />
-                  </div>
-                </article>
-              ))}
-            </section>
-          ) : (
-            <section className={styles.listView} aria-label="Loading saved designs list">
-              <div className={styles.listHeader}>
-                <span className={styles.listHeaderName}>Name</span>
-                <span>Size</span>
-                <span>Colors</span>
-                <span>Last Edited</span>
-                <span className={styles.listHeaderActions} aria-hidden="true" />
-              </div>
-              <div className={styles.listBody}>
-                {loadingCards.map((card) => (
-                  <article
-                    key={`initial-list-loading-${card}`}
-                    className={`${styles.listRow} ${styles.loadingCard}`}
-                    aria-hidden="true"
-                  >
-                    <div className={styles.listNameCell}>
-                      <span className={styles.listThumbnailFrame}>
-                        <span className={styles.loadingThumbnail}>
-                          <span className="loading-spinner" aria-hidden="true" />
-                        </span>
-                      </span>
-                      <div className={styles.listLoadingText}>
-                        <div className={styles.loadingLineLong} />
-                      </div>
-                    </div>
-                    <div className={styles.loadingLineMedium} />
-                    <div className={styles.loadingLineShort} />
-                    <div className={styles.loadingLineMedium} />
-                    <div />
-                  </article>
-                ))}
-              </div>
-            </section>
-          )
         ) : (
           <section className={styles.emptyState}>
             <h2 className={styles.emptyStateTitle}>
@@ -2236,6 +2278,8 @@ export function LibraryPageClient({
                   ? "Trash is empty"
                   : currentFolder
                     ? "This folder is empty"
+                    : folders.length > 0
+                      ? "No designs at the top level"
                   : "No designs yet"}
             </h2>
             <p className={styles.emptyStateBody}>
@@ -2245,7 +2289,9 @@ export function LibraryPageClient({
                   ? "Designs you delete will stay here for 30 days before they are permanently removed."
                   : currentFolder
                     ? `Move designs into ${currentFolder.name} or create a new design here later.`
-                  : "Your saved needlepoint designs will show up here once you create one."}
+                    : folders.length > 0
+                      ? "Your folders are above. Create a new design here or open a folder to keep browsing."
+                    : "Your saved needlepoint designs will show up here once you create one."}
             </p>
             {loadMoreError ? (
               <p className={styles.loadMoreError}>{loadMoreError}</p>
