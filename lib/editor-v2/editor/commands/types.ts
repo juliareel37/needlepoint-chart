@@ -385,7 +385,7 @@ export type CancelIconPlacementCommand = BaseEditorCommand<
 
 export type BeginTraceRepositionCommand = BaseEditorCommand<
   "trace.beginReposition",
-  { origin: "panel" | "toolbar" }
+  { origin: "upload" | "replace" | "panel" | "toolbar" }
 >;
 
 export type PreviewTraceRepositionCommand = BaseEditorCommand<

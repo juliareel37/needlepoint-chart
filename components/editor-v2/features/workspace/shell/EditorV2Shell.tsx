@@ -523,6 +523,8 @@ export function EditorV2Shell({
         : "none";
   const traceImageEditingActive =
     traceEditModeActive || traceEditSubmode !== "none";
+  const allowTraceModeSwitchesWhileRepositioning =
+    traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace";
   const repositionModeActive =
     traceImageEditingActive ||
     traceRepositionActive ||
@@ -900,6 +902,9 @@ export function EditorV2Shell({
     }
 
     if (traceRepositionActive) {
+      if (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") {
+        setTraceEditModeActive(false);
+      }
       handleCancelTraceReposition();
     }
   }, [
@@ -908,6 +913,7 @@ export function EditorV2Shell({
     handleCancelTraceReposition,
     traceCropEditing,
     traceEraserEditing,
+    traceRepositionOrigin,
     traceRepositionActive,
   ]);
   const handleActivateTraceEditSubmode = useCallback(
@@ -923,11 +929,16 @@ export function EditorV2Shell({
         return;
       }
 
+      const preserveUploadRepositionSession =
+        traceRepositionActive &&
+        (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") &&
+        mode !== "reposition";
+
       if (traceCropEditing) {
         handleCommitTraceCrop();
       } else if (traceEraserEditing) {
         await handleCommitTraceEraser();
-      } else if (traceRepositionActive) {
+      } else if (traceRepositionActive && !preserveUploadRepositionSession) {
         handleCommitTraceReposition();
       }
 
@@ -955,6 +966,7 @@ export function EditorV2Shell({
       traceCropEditing,
       traceEditSubmode,
       traceEraserEditing,
+      traceRepositionOrigin,
       traceRepositionActive,
     ],
   );
@@ -1016,6 +1028,9 @@ export function EditorV2Shell({
     }
 
     if (traceRepositionActive) {
+      if (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") {
+        setTraceEditModeActive(false);
+      }
       handleCommitTraceReposition();
     }
   }, [
@@ -1024,6 +1039,7 @@ export function EditorV2Shell({
     handleCommitTraceReposition,
     traceCropEditing,
     traceEraserEditing,
+    traceRepositionOrigin,
     traceRepositionActive,
   ]);
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
@@ -3328,6 +3344,10 @@ export function EditorV2Shell({
                     ) : traceImageEditingActive && trace ? (
                       <TraceRepositionToolbar
                         activeMode={traceEditSubmode}
+                        allowModeSwitchesWhileRepositioning={
+                          traceEditSubmode === "reposition" &&
+                          allowTraceModeSwitchesWhileRepositioning
+                        }
                         cropEditing={traceCropEditing}
                         cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
                         brushSize={traceEraserBrushSize}

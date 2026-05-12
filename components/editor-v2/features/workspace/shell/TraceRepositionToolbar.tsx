@@ -137,6 +137,7 @@ interface TraceRepositionToolbarProps {
   canUndo?: boolean;
   brushSize?: number;
   eraserMode?: "erase" | "restore";
+  allowModeSwitchesWhileRepositioning?: boolean;
   onFitHeight?: () => void;
   onFitWidth?: () => void;
   onBeginCrop?: () => void;
@@ -282,6 +283,7 @@ export function TraceRepositionToolbar({
   canUndo = false,
   brushSize = 1,
   eraserMode = "erase",
+  allowModeSwitchesWhileRepositioning = false,
   onFitHeight,
   onFitWidth,
   onBeginCrop,
@@ -350,6 +352,19 @@ export function TraceRepositionToolbar({
                   <ToolbarIcon icon="/icons/lucide/fold-horizontal.svg" />
                   Fit width
                 </ToolbarButton>
+
+                {allowModeSwitchesWhileRepositioning ? (
+                  <>
+                    <ToolbarButton type="button" labelled onClick={onBeginEraser}>
+                      <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                      Erase
+                    </ToolbarButton>
+                    <ToolbarButton type="button" labelled onClick={onBeginCrop}>
+                      <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                      Crop
+                    </ToolbarButton>
+                  </>
+                ) : null}
               </>
             ) : null}
 

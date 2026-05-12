@@ -568,7 +568,21 @@ export function TraceControls({
           </Button>
         </div>
       ) : (
-        <TraceSection title="Uploaded File">
+        <TraceSection
+          title="Uploaded File"
+          action={(
+            <Button
+              type="button"
+              variant={editModeActive ? "secondary" : "ghostV2"}
+              size="sm"
+              disabled={!trace || conversionPreviewActive}
+              onClick={onToggleEditMode}
+            >
+              <ButtonIcon icon="/icons/lucide/sliders-horizontal.svg" />
+
+            </Button>
+          )}
+        >
           <div className={styles.traceAttachmentSummary}>
             <button
               type="button"
@@ -758,29 +772,6 @@ export function TraceControls({
           {/* // title="Positioning" */}
           {/* > */}
             <>
-              <Field>
-                <div className={styles.traceInlineFieldRow}>
-                  <span
-                    className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
-                  >
-                    Edit image
-                  </span>
-                  <div className={styles.traceInlineActionControl}>
-                    <Button
-                      type="button"
-                      variant={editModeActive ? "primary" : "secondary"}
-                      size="sm"
-                      disabled={!trace || conversionPreviewActive}
-                      onClick={onToggleEditMode}
-                    >
-                      {/* <ButtonIcon icon="/icons/lucide/image-upscale.svg" /> */}
-                      {editModeActive ? "Edit" : "Edit"}
-                    </Button>
-                  </div>
-                </div>
-              </Field>
-
               {/* {cropEditing && cropDraft ? (
                 <div style={{ display: "grid", gap: 10 }}>
                   <div

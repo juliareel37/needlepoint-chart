@@ -578,7 +578,7 @@ export function createCancelIconPlacementCommand(): EditorCommand {
 }
 
 export function createBeginTraceRepositionCommand(
-  origin: "panel" | "toolbar",
+  origin: "upload" | "replace" | "panel" | "toolbar",
 ): EditorCommand {
   return createCommand(
     "trace.beginReposition",
