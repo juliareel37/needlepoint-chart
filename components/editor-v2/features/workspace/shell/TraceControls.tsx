@@ -535,13 +535,14 @@ export function TraceControls({
             disabled={traceUploadStatus === "uploading"}
             onClick={() => fileInputRef.current?.click()}
           >
+               <ButtonIcon icon="/icons/lucide/upload.svg" />
             {traceUploadStatus === "uploading" ? (
               <>
                 <span className={styles.saveButtonSpinner} aria-hidden="true" />
                 Uploading...
               </>
             ) : (
-              "Browse file"
+              "Upload image"
             )}
           </Button>
         </div>
