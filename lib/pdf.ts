@@ -91,10 +91,20 @@ export function exportPatternPdf(opts: {
     symbolsOnly: true,
   });
 
-  const filename = `${sanitizeFilename(title || "needlepoint-pattern")}.pdf`;
+  pdf.setDocumentProperties({
+    title: `${titleText} (${width}x${height} stitches)`,
+  });
+
+  const filename = buildPdfFilename(title, width, height);
   const blob = pdf.output("blob");
 
   return { filename, blob };
+}
+
+export function buildPdfFilename(title: string, width: number, height: number): string {
+  const normalizedTitle = sanitizeFilename(title || "needlepoint-pattern");
+  const dimensionLabel = `${Math.max(0, Math.floor(width))}x${Math.max(0, Math.floor(height))}`;
+  return `${normalizedTitle}-${dimensionLabel}.pdf`;
 }
 
 function drawLegendTablePages(opts: {

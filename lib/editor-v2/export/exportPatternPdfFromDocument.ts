@@ -7,7 +7,6 @@ const PDF_EXPORT_CELL_SIZE = 28;
 export function exportPatternPdfFromDocument(
   document: EditorDocumentState,
 ): void {
-  const pendingPdfWindow = openPendingPdfWindow();
   const paletteEntries = Object.values(document.palette.colorsById);
   const legacyPaletteByEditorId = new Map<string, Color>();
   const paletteByLegacyId = new Map<number, Color>();
@@ -68,7 +67,7 @@ export function exportPatternPdfFromDocument(
     cellSize: PDF_EXPORT_CELL_SIZE,
   });
 
-  openPdfInNewTab(blob, filename, pendingPdfWindow);
+  downloadPdf(blob, filename);
 }
 
 function createLegacyColor(
@@ -83,46 +82,19 @@ function createLegacyColor(
   };
 }
 
-function openPendingPdfWindow(): Window | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const openedWindow = window.open("", "_blank");
-
-  if (!openedWindow) {
-    return null;
-  }
-
-  try {
-    openedWindow.opener = null;
-  } catch {
-    // Some browsers may not allow this assignment.
-  }
-
-  openedWindow.document.title = "Preparing PDF...";
-  openedWindow.document.body.textContent = "Preparing PDF...";
-  return openedWindow;
-}
-
-function openPdfInNewTab(
+function downloadPdf(
   blob: Blob,
   filename: string,
-  pendingPdfWindow: Window | null,
 ): void {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return;
   }
 
-  const objectUrl = URL.createObjectURL(blob);
-
-  if (pendingPdfWindow) {
-    pendingPdfWindow.location.replace(objectUrl);
-    window.setTimeout(() => {
-      URL.revokeObjectURL(objectUrl);
-    }, 60_000);
-    return;
-  }
+  const pdfFile =
+    typeof File === "function"
+      ? new File([blob], filename, { type: blob.type || "application/pdf" })
+      : blob;
+  const objectUrl = URL.createObjectURL(pdfFile);
 
   const link = document.createElement("a");
   link.href = objectUrl;
