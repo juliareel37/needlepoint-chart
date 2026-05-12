@@ -14,6 +14,47 @@ type SharpRawResult = {
   };
 };
 
+type SharpMetadata = {
+  width?: number;
+  height?: number;
+};
+
+type SharpLike = (input: Buffer) => {
+  metadata(): Promise<SharpMetadata>;
+  resize(options: {
+    width: number;
+    height: number;
+    fit: "inside";
+    withoutEnlargement: boolean;
+  }): {
+    ensureAlpha(): {
+      raw(): {
+        toBuffer(options: { resolveWithObject: true }): Promise<SharpRawResult>;
+      };
+    };
+  };
+};
+
+export async function getRasterImageDimensions(
+  input: Buffer,
+  absolutePath: string,
+): Promise<{ width: number; height: number }> {
+  const sharp = await loadSharp();
+  if (!sharp) {
+    throw new Error(`sharp is unavailable for raster icon metadata: ${absolutePath}`);
+  }
+
+  const metadata = await sharp(input).metadata();
+  const width = metadata.width ?? 0;
+  const height = metadata.height ?? 0;
+
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    throw new Error(`Unable to read raster dimensions from ${absolutePath}`);
+  }
+
+  return { width, height };
+}
+
 export async function extractIconColorSlotsFromRaster(
   input: Buffer,
   maxColors = DEFAULT_RASTER_SLOT_LIMIT,
@@ -22,24 +63,7 @@ export async function extractIconColorSlotsFromRaster(
     return [];
   }
 
-  const sharpModule = await import("sharp");
-  const sharp = ("default" in sharpModule ? sharpModule.default : sharpModule) as
-    | ((input: Buffer) => {
-        resize(options: {
-          width: number;
-          height: number;
-          fit: "inside";
-          withoutEnlargement: boolean;
-        }): {
-          ensureAlpha(): {
-            raw(): {
-              toBuffer(options: { resolveWithObject: true }): Promise<SharpRawResult>;
-            };
-          };
-        };
-      })
-    | undefined;
-
+  const sharp = await loadSharp();
   if (!sharp) {
     return [];
   }
@@ -132,4 +156,11 @@ function getRgbDistanceSquared(left: Rgb, right: Rgb): number {
   const dg = left.g - right.g;
   const db = left.b - right.b;
   return dr * dr + dg * dg + db * db;
+}
+
+async function loadSharp(): Promise<SharpLike | undefined> {
+  const sharpModule = await import("sharp");
+  return ("default" in sharpModule ? sharpModule.default : sharpModule) as
+    | SharpLike
+    | undefined;
 }

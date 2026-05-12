@@ -8,11 +8,14 @@ import iconSearchKeywords from "@/components/editor-v2/features/workspace/shell/
 import {
   extractIconColorSlotsFromSvg,
 } from "./iconColorSlots";
-import { extractIconColorSlotsFromRaster } from "./iconRasterColorSlots.server";
+import {
+  extractIconColorSlotsFromRaster,
+  getRasterImageDimensions,
+} from "./iconRasterColorSlots.server";
 import { getPrimitiveDefaultColorSlots, getPrimitiveIconKind } from "./primitiveIcon";
 
 const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
-const SUPPORTED_EXTENSIONS = new Set([".svg", ".png"]);
+const SUPPORTED_EXTENSIONS = new Set([".svg", ".png", ".jpg", ".jpeg", ".webp"]);
 const iconSearchKeywordMap = iconSearchKeywords as Record<string, string[]>;
 const SHAPES_CATEGORY = "Shapes";
 const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
@@ -214,10 +217,10 @@ async function buildIconAsset(
     };
   }
 
-  if (extension === ".png") {
-    const { width, height } = getPngDimensions(fileContents, absolutePath);
+  if (isSupportedRasterExtension(extension)) {
+    const { width, height } = await getRasterImageDimensions(fileContents, absolutePath);
     return {
-      src: buildBinaryDataUrl(fileContents, "image/png"),
+      src: buildBinaryDataUrl(fileContents, getRasterMimeType(extension)),
       width,
       height,
       colorSlots: await extractIconColorSlotsFromRaster(fileContents),
@@ -279,21 +282,6 @@ function getSvgDimensions(svg: string): { width: number; height: number } {
   };
 }
 
-function getPngDimensions(
-  fileContents: Buffer,
-  absolutePath: string,
-): { width: number; height: number } {
-  const pngSignature = "89504e470d0a1a0a";
-  if (fileContents.length < 24 || fileContents.subarray(0, 8).toString("hex") !== pngSignature) {
-    throw new Error(`Invalid PNG file: ${absolutePath}`);
-  }
-
-  return {
-    width: fileContents.readUInt32BE(16),
-    height: fileContents.readUInt32BE(20),
-  };
-}
-
 function parseSvgLength(value: string | undefined): number {
   if (!value) {
     return 0;
@@ -301,6 +289,24 @@ function parseSvgLength(value: string | undefined): number {
 
   const parsed = parseFloat(value.replace(/[^\d.\\-]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isSupportedRasterExtension(extension: string): boolean {
+  return [".png", ".jpg", ".jpeg", ".webp"].includes(extension);
+}
+
+function getRasterMimeType(extension: string): string {
+  switch (extension) {
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".webp":
+      return "image/webp";
+    default:
+      throw new Error(`Unsupported raster icon extension: ${extension}`);
+  }
 }
 
 function humanizeIconName(fileName: string): string {
