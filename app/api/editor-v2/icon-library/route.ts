@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  buildUploadedShapeIconLibraryItem,
   getShapeIconLibrary,
   getShapeIconLibraryByCategory,
   getShapeIconLibraryOverview,
@@ -37,6 +38,58 @@ export async function GET(request: Request) {
     console.error("Failed to load icon library", error);
     return NextResponse.json(
       { error: "Failed to load icon library" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      return NextResponse.json(
+        { error: "Missing file upload" },
+        { status: 400 },
+      );
+    }
+
+    const fileName = file.name?.trim() || "uploaded-graphic";
+    const extension = fileName.includes(".")
+      ? fileName.slice(fileName.lastIndexOf(".")).toLowerCase()
+      : "";
+
+    if (![".svg", ".png", ".jpg", ".jpeg", ".webp"].includes(extension)) {
+      return NextResponse.json(
+        { error: "Unsupported file type. Upload SVG, PNG, JPG, JPEG, or WEBP." },
+        { status: 400 },
+      );
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const item = await buildUploadedShapeIconLibraryItem({
+      fileContents: Buffer.from(arrayBuffer),
+      fileName,
+    });
+
+    return NextResponse.json({
+      item: {
+        id: item.id,
+        name: item.name,
+        src: item.src,
+        intrinsicWidth: item.intrinsicWidth,
+        intrinsicHeight: item.intrinsicHeight,
+        colorSlots: item.colorSlots,
+        primitiveKind: item.primitiveKind,
+        lockAspectRatio: item.lockAspectRatio,
+        supportsStrokeWidth: item.supportsStrokeWidth,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to analyze uploaded graphic", error);
+    return NextResponse.json(
+      { error: "Failed to process uploaded graphic" },
       { status: 500 },
     );
   }

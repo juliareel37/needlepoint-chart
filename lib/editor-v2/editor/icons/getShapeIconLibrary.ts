@@ -68,6 +68,42 @@ export async function getShapeIconLibraryByCategory(
   return Promise.all(matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
 }
 
+export async function buildUploadedShapeIconLibraryItem(options: {
+  fileContents: Buffer;
+  fileName: string;
+}): Promise<ShapeIconLibraryItem> {
+  const normalizedFileName = path.basename(options.fileName);
+  const extension = path.extname(normalizedFileName).toLowerCase();
+
+  if (!SUPPORTED_EXTENSIONS.has(extension)) {
+    throw new Error(`Unsupported icon file extension: ${normalizedFileName}`);
+  }
+
+  const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } =
+    await buildIconAsset(
+      options.fileContents,
+      normalizedFileName,
+      extension,
+      `uploads/${normalizedFileName}`,
+    );
+
+  const baseName = path.basename(normalizedFileName, extension) || "uploaded-graphic";
+
+  return {
+    id: `upload-${crypto.randomUUID()}`,
+    name: humanizeIconName(baseName),
+    category: "Uploads",
+    src,
+    intrinsicWidth: width,
+    intrinsicHeight: height,
+    colorSlots,
+    primitiveKind,
+    lockAspectRatio,
+    supportsStrokeWidth,
+    searchKeywords: normalizeSearchKeywords([baseName, normalizedFileName]),
+  };
+}
+
 async function getSortedShapeIconDescriptors(): Promise<ShapeIconLibraryDescriptor[]> {
   const files = await collectIconFiles(SHAPES_ROOT);
   return files

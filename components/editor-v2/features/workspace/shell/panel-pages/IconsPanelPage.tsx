@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
@@ -19,7 +19,11 @@ import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { createBeginIconPlacementCommand } from "../../workspaceCommands";
 import { getInitialPlacementTransform } from "./getInitialPlacementTransform";
-import type { ShapeIconLibraryItem, ShapeIconLibraryOverviewGroup } from "./iconLibrary";
+import type {
+  ShapeIconLibraryItem,
+  ShapeIconLibraryOverviewGroup,
+  UploadedShapeIconLibraryItem,
+} from "./iconLibrary";
 import styles from "../EditorV2Shell.module.css";
 
 const DEFAULT_INITIAL_WIDTH_RATIO = 0.42;
@@ -100,12 +104,16 @@ export function IconsPanelPage({
   }));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingGraphic, setUploadingGraphic] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const primitivePreviewStrokeColor = useMemo(
     () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
     [resolvedThemeMode],
   );
+  const uploadInputId = useId();
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const selectedCategory = view.type === "category" ? view.category : null;
   const handledBackRequestKeyRef = useRef(backRequestKey);
@@ -119,6 +127,113 @@ export function IconsPanelPage({
         ? { overviewScrollTop: content.scrollTop }
         : undefined,
     );
+  };
+
+  const beginPlacement = (item: {
+    id: string;
+    name: string;
+    src: string;
+    intrinsicWidth: number;
+    intrinsicHeight: number;
+    colorSlots: ShapeIconLibraryItem["colorSlots"];
+    primitiveKind: ShapeIconLibraryItem["primitiveKind"];
+    lockAspectRatio: boolean;
+    supportsStrokeWidth: boolean;
+  }) => {
+    const baseRect = getContainedRect(
+      item.intrinsicWidth,
+      item.intrinsicHeight,
+      gridMetrics.surfaceWidth,
+      gridMetrics.surfaceHeight,
+    );
+    const initialTransform = isPrimitiveFrameKind(item.primitiveKind)
+      ? getInitialFramePlacementTransform({
+          baseRect,
+          metrics: gridMetrics,
+          viewportCenter,
+          sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
+        })
+      : getInitialPlacementTransform({
+          intrinsicWidth: item.intrinsicWidth,
+          intrinsicHeight: item.intrinsicHeight,
+          metrics: gridMetrics,
+          viewportCenter,
+          viewportWidth,
+          widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+          clampReferenceToSurface: false,
+          minScale: ICON_INITIAL_MIN_SCALE,
+          maxScale: ICON_INITIAL_MAX_SCALE,
+        });
+    const initialReferenceSize = item.primitiveKind
+      ? Math.min(
+          baseRect.width * ("scaleX" in initialTransform ? initialTransform.scaleX : initialTransform.scale),
+          baseRect.height *
+            ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
+        )
+      : null;
+    const themedPrimitiveColorSlots = item.primitiveKind
+      ? getThemedPrimitiveColorSlots(item.colorSlots, resolvedThemeMode)
+      : item.colorSlots;
+
+    dispatch(
+      createBeginIconPlacementCommand({
+        iconId: item.id,
+        name: item.name,
+        src: item.src,
+        intrinsicWidth: item.intrinsicWidth,
+        intrinsicHeight: item.intrinsicHeight,
+        colorSlots: themedPrimitiveColorSlots,
+        primitiveKind: item.primitiveKind,
+        lockAspectRatio: item.lockAspectRatio,
+        primitiveStrokeReferenceSize: initialReferenceSize,
+        supportsStrokeWidth: item.supportsStrokeWidth,
+        strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(
+          item.primitiveKind,
+          initialReferenceSize,
+        ),
+        primitivePatternScale: 1,
+        primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
+        selectedColorSlotId: item.colorSlots[0]?.id ?? null,
+        ...initialTransform,
+      }),
+    );
+  };
+
+  const handleUploadedGraphicSelected = async (file: File) => {
+    setUploadError(null);
+    setUploadingGraphic(true);
+
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+
+      const response = await fetch("/api/editor-v2/icon-library", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        item?: UploadedShapeIconLibraryItem;
+      };
+
+      if (!response.ok || !payload.item) {
+        throw new Error(payload.error ?? `Graphic upload failed with ${response.status}`);
+      }
+
+      beginPlacement({
+        ...payload.item,
+        src: payload.item.src,
+      });
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Unable to process this uploaded graphic.",
+      );
+    } finally {
+      setUploadingGraphic(false);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+      }
+    }
   };
 
   useEffect(() => {
@@ -348,64 +463,7 @@ export function IconsPanelPage({
         aria-label={item.name}
         title={item.name}
         disabled={placementActive}
-        onClick={() => {
-          const baseRect = getContainedRect(
-            item.intrinsicWidth,
-            item.intrinsicHeight,
-            gridMetrics.surfaceWidth,
-            gridMetrics.surfaceHeight,
-          );
-          const initialTransform = isPrimitiveFrameKind(item.primitiveKind)
-            ? getInitialFramePlacementTransform({
-                baseRect,
-                metrics: gridMetrics,
-                viewportCenter,
-                sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
-              })
-            : getInitialPlacementTransform({
-                intrinsicWidth: item.intrinsicWidth,
-                intrinsicHeight: item.intrinsicHeight,
-                metrics: gridMetrics,
-                viewportCenter,
-                viewportWidth,
-                widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
-                clampReferenceToSurface: false,
-                minScale: ICON_INITIAL_MIN_SCALE,
-                maxScale: ICON_INITIAL_MAX_SCALE,
-              });
-          const initialReferenceSize = item.primitiveKind
-            ? Math.min(
-                baseRect.width * ("scaleX" in initialTransform ? initialTransform.scaleX : initialTransform.scale),
-                baseRect.height *
-                  ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
-              )
-            : null;
-          const themedPrimitiveColorSlots = item.primitiveKind
-            ? getThemedPrimitiveColorSlots(item.colorSlots, resolvedThemeMode)
-            : item.colorSlots;
-          dispatch(
-            createBeginIconPlacementCommand({
-              iconId: item.id,
-              name: item.name,
-              src: item.src,
-              intrinsicWidth: item.intrinsicWidth,
-              intrinsicHeight: item.intrinsicHeight,
-              colorSlots: themedPrimitiveColorSlots,
-              primitiveKind: item.primitiveKind,
-              lockAspectRatio: item.lockAspectRatio,
-              primitiveStrokeReferenceSize: initialReferenceSize,
-              supportsStrokeWidth: item.supportsStrokeWidth,
-              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(
-                item.primitiveKind,
-                initialReferenceSize,
-              ),
-              primitivePatternScale: 1,
-              primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
-              selectedColorSlotId: item.colorSlots[0]?.id ?? null,
-              ...initialTransform,
-            }),
-          );
-        }}
+        onClick={() => beginPlacement(item)}
       >
         <span
           className={[
@@ -474,19 +532,61 @@ export function IconsPanelPage({
     <section className={[styles.sidebarSection, styles.iconsPanelSection].join(" ")}>
       <div className={styles.iconsPanelPageBody}>
         <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSearchField}>
-            <span aria-hidden="true" className={styles.sidebarSearchIcon} />
-            <FieldInput
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search icons"
-              aria-label="Search icons"
-              className={styles.sidebarSearchInput}
-            />
-          </div>
-        </div>
+          <div className={styles.iconsPanelTools}>
 
+
+            <div className={styles.iconsPanelUploadRow}>
+              <input
+                id={uploadInputId}
+                ref={uploadInputRef}
+                type="file"
+                accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+                className={styles.iconsPanelUploadInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) {
+                    return;
+                  }
+
+                  void handleUploadedGraphicSelected(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={placementActive || uploadingGraphic}
+                className={styles.iconsPanelUploadButton}
+                onClick={() => uploadInputRef.current?.click()}
+              >
+                <ButtonIcon icon="/icons/lucide/upload.svg" />
+                {uploadingGraphic ? "Processing..." : "Upload graphic"}
+              </Button>
+            </div>
+          </div>
+
+          {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
+            library graphics.
+          </p> */}
+
+          {uploadError ? (
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              {uploadError}
+            </p>
+          ) : null}
+        </div>
+            <div className={styles.sidebarSearchField}>
+              <span aria-hidden="true" className={styles.sidebarSearchIcon} />
+              <FieldInput
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search graphics"
+                aria-label="Search graphics"
+                className={styles.sidebarSearchInput}
+              />
+            </div>
         <div
           key={
             view.type === "category"

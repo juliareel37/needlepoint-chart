@@ -267,6 +267,27 @@
   min-height: 0;
 }
 
+.iconsPanelTools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.iconsPanelUploadRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconsPanelUploadInput {
+  display: none;
+}
+
+.iconsPanelUploadButton {
+  width: 100%;
+  justify-content: center;
+}
+
 .iconsPanelPageContent {
   display: flex;
   flex-direction: column;

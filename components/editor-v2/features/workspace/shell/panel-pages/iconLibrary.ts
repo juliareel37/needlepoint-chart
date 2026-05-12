@@ -20,3 +20,6 @@ export interface ShapeIconLibraryOverviewGroup {
   count: number;
   previewItems: ShapeIconLibraryItem[];
 }
+
+export interface UploadedShapeIconLibraryItem
+  extends Omit<ShapeIconLibraryItem, "category" | "searchKeywords"> {}
