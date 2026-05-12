@@ -79,6 +79,8 @@ function createSavedDocumentRecord(
   return {
     storageId: savedRecord.storageId,
     title: savedRecord.title,
+    folderId: null,
+    folderName: null,
     gridWidth: savedRecord.gridWidth,
     gridHeight: savedRecord.gridHeight,
     updatedAt: savedRecord.updatedAt,

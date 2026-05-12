@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   ButtonIcon,
+  Field,
   FieldInput,
+  FieldSelect,
   Modal,
   Notification,
   SegmentedControl,
@@ -17,11 +19,17 @@ import {
   type EditorV2DesignConfigNew,
 } from "@/components/editor-v2/app/EditorV2SetupModal";
 import {
+  createEditorV2Folder,
+  deleteEditorV2Folder,
+  moveEditorV2DesignToFolder,
+  moveEditorV2DesignsToFolder,
+  renameEditorV2Folder,
   deleteSavedEditorV2Document,
   loadSavedEditorV2Document,
   renameSavedEditorV2Document,
   restoreDeletedEditorV2Document,
   saveEditorV2Document,
+  type SavedEditorV2DesignFolder,
   type SavedEditorV2DocumentView,
 } from "@/components/editor-v2/app/editorV2ServerPersistence";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
@@ -38,6 +46,8 @@ const DESIGN_OPEN_TRANSITION_MS = 70;
 const activeCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  { id: "move-to-folder", label: "Move to folder", icon: "/icons/lucide/folder-plus.svg" },
+  { id: "move-to-root", label: "Move to root", icon: "/icons/lucide/undo.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
   { id: "delete", label: "Move to Trash", icon: "/icons/lucide/trash.svg" },
 ] as const;
@@ -91,6 +101,19 @@ type PendingPermanentDeletion = {
   previousDeletedCount: number;
   count: number;
 };
+type FolderDialogState =
+  | { mode: "create" }
+  | { mode: "rename"; folder: SavedEditorV2DesignFolder }
+  | { mode: "delete"; folder: SavedEditorV2DesignFolder }
+  | null;
+type MoveDialogState =
+  | {
+      designIds: string[];
+      source: "single" | "bulk";
+      title: string;
+      initialFolderId: string | null;
+    }
+  | null;
 type NavigableDesignClickEvent = Pick<
   MouseEvent,
   "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "preventDefault"
@@ -104,6 +127,7 @@ async function fetchLibraryPage(
   offset: number,
   view: LibraryCollectionView,
   search: string,
+  folderId: string | null,
 ) {
   const searchParams = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -113,6 +137,9 @@ async function fetchLibraryPage(
   if (search.trim().length > 0) {
     searchParams.set("search", search.trim());
   }
+  if (view === "active" && folderId) {
+    searchParams.set("folder", folderId);
+  }
   const response = await fetch(`/api/editor-v2/designs?${searchParams.toString()}`, {
     method: "GET",
     credentials: "same-origin",
@@ -121,6 +148,9 @@ async function fetchLibraryPage(
   const body = (await response.json().catch(() => null)) as
     | {
         designs?: LibraryDesignRecord[];
+        folders?: SavedEditorV2DesignFolder[];
+        selectedFolder?: SavedEditorV2DesignFolder | null;
+        rootDesignCount?: number;
         totalCount?: number;
         activeCount?: number;
         deletedCount?: number;
@@ -136,6 +166,12 @@ async function fetchLibraryPage(
 
   return {
     designs: Array.isArray(body?.designs) ? body.designs : [],
+    folders: Array.isArray(body?.folders) ? body.folders : [],
+    selectedFolder:
+      body?.selectedFolder && typeof body.selectedFolder === "object"
+        ? body.selectedFolder
+        : null,
+    rootDesignCount: typeof body?.rootDesignCount === "number" ? body.rootDesignCount : 0,
     totalCount: typeof body?.totalCount === "number" ? body.totalCount : 0,
     activeCount: typeof body?.activeCount === "number" ? body.activeCount : 0,
     deletedCount: typeof body?.deletedCount === "number" ? body.deletedCount : 0,
@@ -150,6 +186,7 @@ export function LibraryPageClient({
   initialHasMore = false,
   initialNextOffset = null,
   deferInitialLoad = false,
+  initialFolderId = null,
   initialViewMode = "active",
   initialLayoutMode = "grid",
   initialNotice = null,
@@ -159,13 +196,19 @@ export function LibraryPageClient({
   initialHasMore?: boolean;
   initialNextOffset?: number | null;
   deferInitialLoad?: boolean;
+  initialFolderId?: string | null;
   initialViewMode?: LibraryCollectionView;
   initialLayoutMode?: LibraryViewMode;
   initialNotice?: string | null;
 }) {
   const { isSignedIn } = useAuthStatus();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [designs, setDesigns] = useState(initialDesigns);
+  const [folders, setFolders] = useState<SavedEditorV2DesignFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId);
+  const [rootDesignCount, setRootDesignCount] = useState(0);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [activeCount, setActiveCount] = useState(
     initialViewMode === "active" ? initialTotalCount : 0,
@@ -214,6 +257,14 @@ export function LibraryPageClient({
   const [touchSelectionMode, setTouchSelectionMode] = useState(false);
   const [renamingDesignId, setRenamingDesignId] = useState<string | null>(null);
   const [renameDraftTitle, setRenameDraftTitle] = useState("");
+  const [folderDialog, setFolderDialog] = useState<FolderDialogState>(null);
+  const [folderNameDraft, setFolderNameDraft] = useState("");
+  const [folderDialogPending, setFolderDialogPending] = useState(false);
+  const [folderDialogError, setFolderDialogError] = useState<string | null>(null);
+  const [moveDialog, setMoveDialog] = useState<MoveDialogState>(null);
+  const [moveTargetFolderId, setMoveTargetFolderId] = useState<string>("");
+  const [moveDialogPending, setMoveDialogPending] = useState(false);
+  const [moveDialogError, setMoveDialogError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const designOpenTimeoutRef = useRef<number | null>(null);
   const touchMenuInteractionBlockUntilRef = useRef(0);
@@ -222,7 +273,7 @@ export function LibraryPageClient({
   const renameCommitOnBlurRef = useRef(true);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const normalizedSearchQuery = deferredSearchQuery.trim();
-  const requestKey = `${collectionView}:${normalizedSearchQuery.toLowerCase()}`;
+  const requestKey = `${collectionView}:${selectedFolderId ?? "root"}:${normalizedSearchQuery.toLowerCase()}`;
   const requestKeyRef = useRef(requestKey);
 
   const loadingCards = useMemo(
@@ -282,6 +333,10 @@ export function LibraryPageClient({
   const allLoadedDesignsSelected =
     designs.length > 0 && selectedDesignCount === designs.length;
   const isInitialLoading = initialLoadPending && designs.length === 0;
+  const currentFolder =
+    selectedFolderId === null
+      ? null
+      : folders.find((folder) => folder.id === selectedFolderId) ?? null;
 
   async function loadInitialPage() {
     const currentRequestKey = requestKey;
@@ -289,11 +344,19 @@ export function LibraryPageClient({
     setLoadMoreError(null);
 
     try {
-      const result = await fetchLibraryPage(0, collectionView, normalizedSearchQuery);
+      const result = await fetchLibraryPage(
+        0,
+        collectionView,
+        normalizedSearchQuery,
+        collectionView === "active" ? selectedFolderId : null,
+      );
       if (requestKeyRef.current !== currentRequestKey) {
         return;
       }
       setDesigns(result.designs);
+      setFolders(result.folders);
+      setRootDesignCount(result.rootDesignCount);
+      setSelectedFolderId(collectionView === "active" ? result.selectedFolder?.id ?? null : null);
       setTotalCount(result.totalCount);
       setActiveCount(result.activeCount);
       setDeletedCount(result.deletedCount);
@@ -302,6 +365,10 @@ export function LibraryPageClient({
     } catch (error) {
       if (requestKeyRef.current !== currentRequestKey) {
         return;
+      }
+      if (error instanceof Error && error.message === "Folder not found.") {
+        setSelectedFolderId(null);
+        updateLibraryUrl({ view: "active", folderId: null, notice: null });
       }
       setLoadMoreError(
         error instanceof Error ? error.message : "Couldn't load designs.",
@@ -318,12 +385,35 @@ export function LibraryPageClient({
   }, [requestKey]);
 
   useEffect(() => {
+    const viewParam = searchParams.get("view");
+    const nextView = viewParam === "deleted" ? "deleted" : "active";
+    if (nextView !== collectionView) {
+      setCollectionView(nextView);
+      setSelectedDesignIds(new Set<string>());
+      setTouchSelectionMode(false);
+      setNextOffset(null);
+    }
+  }, [collectionView, searchParams]);
+
+  useEffect(() => {
+    const folderParam = searchParams.get("folder");
+    const nextFolderId =
+      collectionView === "deleted" ? null : folderParam && folderParam.length > 0 ? folderParam : null;
+    if (nextFolderId !== selectedFolderId) {
+      setSelectedFolderId(nextFolderId);
+      setSelectedDesignIds(new Set<string>());
+      setTouchSelectionMode(false);
+      setNextOffset(null);
+    }
+  }, [collectionView, searchParams, selectedFolderId]);
+
+  useEffect(() => {
     if (!deferInitialLoad) {
       return;
     }
 
     void loadInitialPage();
-  }, [collectionView, deferInitialLoad, normalizedSearchQuery]);
+  }, [collectionView, deferInitialLoad, normalizedSearchQuery, selectedFolderId]);
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError || initialLoadPending) {
@@ -347,7 +437,12 @@ export function LibraryPageClient({
 
         const currentRequestKey = requestKey;
 
-        void fetchLibraryPage(nextOffset ?? designs.length, collectionView, normalizedSearchQuery)
+        void fetchLibraryPage(
+          nextOffset ?? designs.length,
+          collectionView,
+          normalizedSearchQuery,
+          collectionView === "active" ? selectedFolderId : null,
+        )
           .then((result) => {
             if (requestKeyRef.current !== currentRequestKey) {
               return;
@@ -358,6 +453,8 @@ export function LibraryPageClient({
                 (candidate) => !existing.some((record) => record.id === candidate.id),
               ),
             ]);
+            setFolders(result.folders);
+            setRootDesignCount(result.rootDesignCount);
             setTotalCount(result.totalCount);
             setActiveCount(result.activeCount);
             setDeletedCount(result.deletedCount);
@@ -395,6 +492,7 @@ export function LibraryPageClient({
     nextOffset,
     normalizedSearchQuery,
     requestKey,
+    selectedFolderId,
   ]);
 
   useEffect(
@@ -487,6 +585,38 @@ export function LibraryPageClient({
       description: initialNotice,
     });
   }, [initialNotice]);
+
+  function updateLibraryUrl(next: {
+    view?: LibraryCollectionView;
+    folderId?: string | null;
+    notice?: string | null;
+  }) {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextView = next.view ?? collectionView;
+    const nextFolderId =
+      nextView === "deleted" ? null : next.folderId !== undefined ? next.folderId : selectedFolderId;
+
+    if (nextView === "deleted") {
+      params.set("view", "deleted");
+    } else {
+      params.delete("view");
+    }
+
+    if (nextFolderId) {
+      params.set("folder", nextFolderId);
+    } else {
+      params.delete("folder");
+    }
+
+    if (next.notice) {
+      params.set("notice", next.notice);
+    } else {
+      params.delete("notice");
+    }
+
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+  }
 
   function navigateToDesign(
     event: NavigableDesignClickEvent,
@@ -654,6 +784,124 @@ export function LibraryPageClient({
     }
   }
 
+  function openCreateFolderDialog() {
+    setFolderDialog({ mode: "create" });
+    setFolderNameDraft("");
+    setFolderDialogError(null);
+  }
+
+  function openRenameFolderDialog(folder: SavedEditorV2DesignFolder) {
+    setFolderDialog({ mode: "rename", folder });
+    setFolderNameDraft(folder.name);
+    setFolderDialogError(null);
+  }
+
+  function openDeleteFolderDialog(folder: SavedEditorV2DesignFolder) {
+    setFolderDialog({ mode: "delete", folder });
+    setFolderNameDraft(folder.name);
+    setFolderDialogError(null);
+  }
+
+  async function handleConfirmFolderDialog() {
+    if (!folderDialog) {
+      return;
+    }
+
+    setFolderDialogPending(true);
+    setFolderDialogError(null);
+
+    try {
+      if (folderDialog.mode === "create") {
+        const folder = await createEditorV2Folder(folderNameDraft);
+        setFolderDialog(null);
+        setSuccessNotification({
+          title: "Folder created",
+          description: `"${folder.name}" is ready for your designs.`,
+        });
+        updateLibraryUrl({ folderId: folder.id, view: "active", notice: null });
+        return;
+      }
+
+      if (folderDialog.mode === "rename") {
+        const folder = await renameEditorV2Folder(folderDialog.folder.id, folderNameDraft);
+        setFolderDialog(null);
+        setFolders((existing) =>
+          existing.map((candidate) => (candidate.id === folder.id ? folder : candidate)),
+        );
+        setSuccessNotification({
+          title: "Folder renamed",
+          description: `"${folder.name}" was updated.`,
+        });
+        void loadInitialPage();
+        return;
+      }
+
+      const deletedFolder = folderDialog.folder;
+      await deleteEditorV2Folder(deletedFolder.id);
+      setFolderDialog(null);
+      if (selectedFolderId === deletedFolder.id) {
+        updateLibraryUrl({ folderId: null, view: "active", notice: null });
+      } else {
+        void loadInitialPage();
+      }
+      setSuccessNotification({
+        title: "Folder deleted",
+        description: `"${deletedFolder.name}" was removed. Its designs are back in All Designs.`,
+      });
+    } catch (error) {
+      setFolderDialogError(
+        error instanceof Error ? error.message : "Couldn't update folder.",
+      );
+    } finally {
+      setFolderDialogPending(false);
+    }
+  }
+
+  function openMoveDialog(designIds: string[], source: "single" | "bulk", title: string, initialFolderId: string | null) {
+    setMoveDialog({
+      designIds,
+      source,
+      title,
+      initialFolderId,
+    });
+    setMoveTargetFolderId(initialFolderId ?? "");
+    setMoveDialogError(null);
+  }
+
+  async function handleConfirmMoveDialog() {
+    if (!moveDialog) {
+      return;
+    }
+
+    setMoveDialogPending(true);
+    setMoveDialogError(null);
+
+    try {
+      const targetFolderId = moveTargetFolderId || null;
+      if (moveDialog.source === "single") {
+        await moveEditorV2DesignToFolder(moveDialog.designIds[0]!, targetFolderId);
+      } else {
+        await moveEditorV2DesignsToFolder(moveDialog.designIds, targetFolderId);
+        setSelectedDesignIds(new Set<string>());
+      }
+
+      setMoveDialog(null);
+      setSuccessNotification({
+        title: targetFolderId ? "Moved to folder" : "Moved to All Designs",
+        description: targetFolderId
+          ? `${moveDialog.designIds.length === 1 ? "Design" : "Designs"} moved successfully.`
+          : `${moveDialog.designIds.length === 1 ? "Design" : "Designs"} moved back to All Designs.`,
+      });
+      void loadInitialPage();
+    } catch (error) {
+      setMoveDialogError(
+        error instanceof Error ? error.message : "Couldn't move design.",
+      );
+    } finally {
+      setMoveDialogPending(false);
+    }
+  }
+
   async function handleCardMenuAction(action: string, design: LibraryDesignRecord) {
     const menuAction = action as CardMenuAction;
     setCardActionError(null);
@@ -672,6 +920,33 @@ export function LibraryPageClient({
       renameCommitOnBlurRef.current = true;
       setRenameDraftTitle(design.title);
       setRenamingDesignId(design.id);
+      return;
+    }
+
+    if (menuAction === "move-to-folder") {
+      openMoveDialog([design.id], "single", design.title, design.folderId);
+      return;
+    }
+
+    if (menuAction === "move-to-root") {
+      setPendingCardAction({ designId: design.id, action: menuAction });
+
+      try {
+        await moveEditorV2DesignToFolder(design.id, null);
+        setSuccessNotification({
+          title: "Moved to All Designs",
+          description: `"${design.title}" is back in All Designs.`,
+        });
+        void loadInitialPage();
+      } catch (error) {
+        setCardActionError(
+          error instanceof Error ? error.message : "Couldn't move design.",
+        );
+      } finally {
+        setPendingCardAction((current) =>
+          current?.designId === design.id ? null : current,
+        );
+      }
       return;
     }
 
@@ -695,8 +970,11 @@ export function LibraryPageClient({
         setActiveCount((current) => current + 1);
         setSuccessNotification({
           title: "Design restored",
-          description: `"${design.title}" is back in All Designs.`,
+          description: design.folderName
+            ? `"${design.title}" is back in ${design.folderName}.`
+            : `"${design.title}" is back in All Designs.`,
         });
+        void loadInitialPage();
       } catch (error) {
         setCardActionError(
           error instanceof Error ? error.message : "Couldn't restore design.",
@@ -724,12 +1002,17 @@ export function LibraryPageClient({
       if (menuAction === "duplicate") {
         const loaded = await loadSavedEditorV2Document(design.id);
         const saved = await saveEditorV2Document(loaded.document);
+        if (design.folderId) {
+          await moveEditorV2DesignToFolder(saved.storageId, design.folderId);
+        }
 
         setDesigns((existing) => [
           {
             id: saved.storageId,
             state: "active",
             title: saved.title,
+            folderId: design.folderId,
+            folderName: design.folderName,
             gridWidth: saved.gridWidth,
             gridHeight: saved.gridHeight,
             createdAt: saved.createdAt,
@@ -767,8 +1050,11 @@ export function LibraryPageClient({
         setActiveCount((current) => current + 1);
         setSuccessNotification({
           title: "Design duplicated",
-          description: `"${saved.title}" was added to All Designs.`,
+          description: design.folderName
+            ? `"${saved.title}" was added to ${design.folderName}.`
+            : `"${saved.title}" was added to All Designs.`,
         });
+        void loadInitialPage();
         return;
       }
 
@@ -820,6 +1106,26 @@ export function LibraryPageClient({
         .map((design) => design.id),
       mode: collectionView === "deleted" ? "permanent" : "trash",
     });
+  }
+
+  function handleRequestMoveSelectedDesigns() {
+    if (selectedDesignIds.size === 0) {
+      return;
+    }
+
+    const selectedDesigns = designs.filter((design) => selectedDesignIds.has(design.id));
+    const sharedFolderId =
+      selectedDesigns.length > 0 &&
+      selectedDesigns.every((design) => design.folderId === selectedDesigns[0]?.folderId)
+        ? selectedDesigns[0]?.folderId ?? null
+        : null;
+
+    openMoveDialog(
+      selectedDesigns.map((design) => design.id),
+      "bulk",
+      `${selectedDesigns.length} designs`,
+      sharedFolderId,
+    );
   }
 
   function restoreDesignSnapshot(previousDesigns: LibraryDesignRecord[]) {
@@ -955,6 +1261,7 @@ export function LibraryPageClient({
               ? `"${deleteConfirmation.design.title}" can be restored for 30 days.`
               : "The selected designs can be restored for 30 days.",
         });
+        void loadInitialPage();
         return;
       }
 
@@ -1047,9 +1354,19 @@ export function LibraryPageClient({
 
     const baseCardMenuItems =
       collectionView === "deleted" ? deletedCardMenuItems : activeCardMenuItems;
+    const filteredCardMenuItems =
+      collectionView === "deleted"
+        ? baseCardMenuItems
+        : baseCardMenuItems.filter((item) => {
+            if (item.id === "move-to-root") {
+              return design.folderId !== null;
+            }
+
+            return true;
+          });
     const cardMenuItems = touchPrimaryInput
-      ? [touchSelectionCardMenuItem, ...baseCardMenuItems]
-      : [...baseCardMenuItems];
+      ? [touchSelectionCardMenuItem, ...filteredCardMenuItems]
+      : [...filteredCardMenuItems];
 
     return (
       <div className={styles.cardMenuAnchor} data-card-menu="true">
@@ -1193,7 +1510,20 @@ export function LibraryPageClient({
       >
         <header className={styles.header}>
           <div className={styles.headerCopy}>
-            <h1 className={styles.title}>My Designs</h1>
+            <h1 className={styles.title}>
+              {collectionView === "deleted"
+                ? "Trash"
+                : currentFolder
+                  ? currentFolder.name
+                  : "My Designs"}
+            </h1>
+            <p className={styles.subtitle}>
+              {collectionView === "deleted"
+                ? "Deleted designs stay here for 30 days."
+                : currentFolder
+                  ? `${currentFolder.designCount} design${currentFolder.designCount === 1 ? "" : "s"} in this folder`
+                  : `${rootDesignCount} design${rootDesignCount === 1 ? "" : "s"} at the top level`}
+            </p>
           </div>
 
           <div className={styles.actions}>
@@ -1208,11 +1538,15 @@ export function LibraryPageClient({
               />
             </label> */}
 
-            {/* <Button type="button" variant="secondary" size="md">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={openCreateFolderDialog}
+            >
               <ButtonIcon icon="/icons/lucide/folder-plus.svg" />
-              
               New folder
-            </Button> */}
+            </Button>
             <Button
               type="button"
               variant="primary"
@@ -1228,6 +1562,97 @@ export function LibraryPageClient({
           </div>
         </header>
 
+        <div className={styles.folderTabs} aria-label="Folder navigation">
+          <Button
+            type="button"
+            variant={collectionView === "active" && selectedFolderId === null ? "primary" : "secondary"}
+            size="md"
+            onClick={() => {
+              setCollectionView("active");
+              setSelectedFolderId(null);
+              setSelectedDesignIds(new Set<string>());
+              setTouchSelectionMode(false);
+              setNextOffset(null);
+              updateLibraryUrl({ view: "active", folderId: null, notice: null });
+            }}
+          >
+            All Designs ({rootDesignCount})
+          </Button>
+          {folders.map((folder) => (
+            <div key={folder.id} className={styles.folderTabGroup}>
+              <Button
+                type="button"
+                variant={
+                  collectionView === "active" && selectedFolderId === folder.id
+                    ? "primary"
+                    : "secondary"
+                }
+                size="md"
+                onClick={() => {
+                  setCollectionView("active");
+                  setSelectedFolderId(folder.id);
+                  setSelectedDesignIds(new Set<string>());
+                  setTouchSelectionMode(false);
+                  setNextOffset(null);
+                  updateLibraryUrl({ view: "active", folderId: folder.id, notice: null });
+                }}
+              >
+                {folder.name} ({folder.designCount})
+              </Button>
+              <SingleSelectDropdown
+                ariaLabel={`Folder actions for ${folder.name}`}
+                items={[
+                  { id: "rename", label: "Rename folder", icon: "/icons/lucide/pencil.svg" },
+                  { id: "delete", label: "Delete folder", icon: "/icons/lucide/trash.svg" },
+                ]}
+                value=""
+                placeholder="Folder actions"
+                triggerLabel={<span className={styles.cardMenuDots}>⋮</span>}
+                triggerVariant="ghost"
+                showChevron={false}
+                menuPortalToViewport
+                menuPlacement="bottom-end"
+                menuShowTrailingCheck={false}
+                minWidth="auto"
+                getItemValue={(item) => item.id}
+                getItemLabel={(item) => (
+                  <span className={styles.cardMenuItemLabel}>
+                    <ButtonIcon icon={item.icon} className={styles.cardMenuItemIcon} />
+                    <span>{item.label}</span>
+                  </span>
+                )}
+                onValueChange={(value) => {
+                  if (value === "rename") {
+                    openRenameFolderDialog(folder);
+                    return;
+                  }
+
+                  openDeleteFolderDialog(folder);
+                }}
+                wrapperClassName={styles.folderTabMenuWrapper}
+                triggerClassName={styles.cardMenuTrigger}
+                menuClassName={styles.cardMenuSurface}
+                triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+              />
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant={collectionView === "deleted" ? "primary" : "secondary"}
+            size="md"
+            onClick={() => {
+              setCollectionView("deleted");
+              setSelectedFolderId(null);
+              setSelectedDesignIds(new Set<string>());
+              setTouchSelectionMode(false);
+              setNextOffset(null);
+              updateLibraryUrl({ view: "deleted", folderId: null, notice: null });
+            }}
+          >
+            Trash ({deletedCount})
+          </Button>
+        </div>
+
         <div className={styles.viewRow}>
           <SegmentedControl<LibraryCollectionView>
             ariaLabel="Design collection view"
@@ -1236,9 +1661,15 @@ export function LibraryPageClient({
             value={collectionView}
             onChange={(value) => {
               setCollectionView(value);
+              setSelectedFolderId(value === "deleted" ? null : selectedFolderId);
               setSelectedDesignIds(new Set<string>());
               setTouchSelectionMode(false);
               setNextOffset(null);
+              updateLibraryUrl({
+                view: value,
+                folderId: value === "deleted" ? null : selectedFolderId,
+                notice: null,
+              });
             }}
             options={[
               {
@@ -1803,6 +2234,8 @@ export function LibraryPageClient({
                 ? "No matching designs"
                 : collectionView === "deleted"
                   ? "Trash is empty"
+                  : currentFolder
+                    ? "This folder is empty"
                   : "No designs yet"}
             </h2>
             <p className={styles.emptyStateBody}>
@@ -1810,6 +2243,8 @@ export function LibraryPageClient({
                 ? `No designs found for "${normalizedSearchQuery}".`
                 : collectionView === "deleted"
                   ? "Designs you delete will stay here for 30 days before they are permanently removed."
+                  : currentFolder
+                    ? `Move designs into ${currentFolder.name} or create a new design here later.`
                   : "Your saved needlepoint designs will show up here once you create one."}
             </p>
             {loadMoreError ? (
@@ -1929,6 +2364,104 @@ export function LibraryPageClient({
         dismissDisabled={bulkDeletePending}
       />
 
+      <Modal
+        isOpen={folderDialog !== null}
+        title={
+          folderDialog?.mode === "create"
+            ? "Create folder"
+            : folderDialog?.mode === "rename"
+              ? "Rename folder"
+              : "Delete folder"
+        }
+        description={
+          folderDialog?.mode === "delete" ? (
+            `Delete "${folderDialog.folder.name}"? Designs in this folder will move back to All Designs.`
+          ) : (
+            <div className={styles.folderModalContent}>
+              <Field label="Folder name">
+                <FieldInput
+                  value={folderNameDraft}
+                  onChange={(event) => setFolderNameDraft(event.target.value)}
+                  placeholder="Enter folder name"
+                  disabled={folderDialogPending}
+                />
+              </Field>
+              {folderDialogError ? (
+                <p className={styles.loadMoreError}>{folderDialogError}</p>
+              ) : null}
+            </div>
+          )
+        }
+        dismissLabel="Cancel"
+        confirmLabel={
+          folderDialogPending
+            ? folderDialog?.mode === "delete"
+              ? "Deleting..."
+              : "Saving..."
+            : folderDialog?.mode === "create"
+              ? "Create folder"
+              : folderDialog?.mode === "rename"
+                ? "Save changes"
+                : "Delete folder"
+        }
+        confirmVariant={folderDialog?.mode === "delete" ? "destructive" : "primary"}
+        tone={folderDialog?.mode === "delete" ? "fail" : "none"}
+        onDismiss={() => {
+          if (folderDialogPending) {
+            return;
+          }
+
+          setFolderDialog(null);
+          setFolderDialogError(null);
+        }}
+        onConfirm={() => {
+          void handleConfirmFolderDialog();
+        }}
+        confirmDisabled={folderDialogPending}
+        dismissDisabled={folderDialogPending}
+      />
+
+      <Modal
+        isOpen={moveDialog !== null}
+        title={moveDialog ? `Move ${moveDialog.title}` : "Move design"}
+        description={
+          <div className={styles.folderModalContent}>
+            <Field label="Destination">
+              <FieldSelect
+                value={moveTargetFolderId}
+                onChange={(event) => setMoveTargetFolderId(event.target.value)}
+                disabled={moveDialogPending}
+              >
+                <option value="">All Designs</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </FieldSelect>
+            </Field>
+            {moveDialogError ? (
+              <p className={styles.loadMoreError}>{moveDialogError}</p>
+            ) : null}
+          </div>
+        }
+        dismissLabel="Cancel"
+        confirmLabel={moveDialogPending ? "Moving..." : "Move"}
+        onDismiss={() => {
+          if (moveDialogPending) {
+            return;
+          }
+
+          setMoveDialog(null);
+          setMoveDialogError(null);
+        }}
+        onConfirm={() => {
+          void handleConfirmMoveDialog();
+        }}
+        confirmDisabled={moveDialogPending}
+        dismissDisabled={moveDialogPending}
+      />
+
       {successNotification ? (
         <div className={styles.notificationOverlayTop}>
           <div className={styles.notificationStack} data-auto-dismiss="true">
@@ -1976,6 +2509,18 @@ export function LibraryPageClient({
                 <ButtonIcon icon="/icons/lucide/square-check.svg" />
               <span>Select All</span>
             </button>
+
+            {collectionView === "active" ? (
+              <button
+                type="button"
+                className={styles.bulkBarAction}
+                onClick={handleRequestMoveSelectedDesigns}
+                disabled={selectedDesignCount === 0}
+              >
+                <ButtonIcon icon="/icons/lucide/folder-plus.svg" />
+                <span>Move</span>
+              </button>
+            ) : null}
 
             <button
               type="button"

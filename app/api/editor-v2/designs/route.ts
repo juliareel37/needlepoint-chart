@@ -12,9 +12,12 @@ import {
   hashPersistedEditorV2Design,
 } from "@/lib/editor-v2/server/versioning";
 import { claimGuestTraceAssetsForDesign } from "@/lib/editor-v2/server/guestTraceAssets";
-import type { LibraryDesignView } from "@/lib/library/designs";
 import { deleteBlobIfExists } from "@/lib/blob";
-import { loadLibraryDesignPage } from "@/lib/library/designs";
+import {
+  LibraryFolderNotFoundError,
+  loadLibraryDesignPage,
+  type LibraryDesignView,
+} from "@/lib/library/designs";
 
 export const runtime = "nodejs";
 
@@ -38,6 +41,7 @@ export async function GET(req: Request) {
   const requestedOffsetParam = url.searchParams.get("offset");
   const requestedViewParam = url.searchParams.get("view");
   const requestedSearchParam = url.searchParams.get("search") ?? "";
+  const requestedFolderParam = url.searchParams.get("folder");
   const requestedLimit =
     requestedLimitParam === null ? Number.NaN : Number(requestedLimitParam);
   const requestedOffset =
@@ -51,15 +55,24 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  return NextResponse.json(
-    await loadLibraryDesignPage({
-      appUserId,
-      view,
-      limit,
-      offset,
-      search: requestedSearchParam,
-    }),
-  );
+  try {
+    return NextResponse.json(
+      await loadLibraryDesignPage({
+        appUserId,
+        view,
+        limit,
+        offset,
+        search: requestedSearchParam,
+        folderId: requestedFolderParam,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof LibraryFolderNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(req: Request) {

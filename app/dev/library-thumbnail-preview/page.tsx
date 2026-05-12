@@ -33,6 +33,8 @@ function createTestDesign(id: string, title: string): LibraryDesignRecord {
     id,
     state: "active",
     title,
+    folderId: null,
+    folderName: null,
     gridWidth: GRID_WIDTH,
     gridHeight: GRID_HEIGHT,
     createdAt: "2026-04-30T12:00:00.000Z",

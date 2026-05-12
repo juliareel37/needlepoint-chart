@@ -17,7 +17,12 @@ export default async function LibraryPage({
   }
 
   const requestedView = resolvedSearchParams?.view;
+  const requestedFolder = resolvedSearchParams?.folder;
   const initialViewMode = requestedView === "deleted" ? "deleted" : "active";
+  const initialFolderId =
+    typeof requestedFolder === "string" && requestedFolder.length > 0
+      ? requestedFolder
+      : null;
   const initialNotice =
     resolvedSearchParams?.notice === "deleted-design"
       ? "This design is in Trash. Restore it to open it again."
@@ -26,6 +31,7 @@ export default async function LibraryPage({
   return (
     <LibraryPageClient
       deferInitialLoad
+      initialFolderId={initialViewMode === "deleted" ? null : initialFolderId}
       initialViewMode={initialViewMode}
       initialNotice={initialNotice}
     />

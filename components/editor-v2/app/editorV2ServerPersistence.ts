@@ -12,6 +12,8 @@ import {
 export interface SavedEditorV2DocumentRecord {
   storageId: string;
   title: string;
+  folderId: string | null;
+  folderName: string | null;
   gridWidth: number;
   gridHeight: number;
   updatedAt: string;
@@ -32,10 +34,21 @@ export type SavedEditorV2DocumentView = "active" | "deleted";
 
 export interface ListSavedEditorV2DocumentsResult {
   documents: SavedEditorV2DocumentRecord[];
+  folders: SavedEditorV2DesignFolder[];
+  selectedFolder: SavedEditorV2DesignFolder | null;
+  rootDesignCount: number;
   activeCount: number;
   deletedCount: number;
   hasMore: boolean;
   nextOffset: number | null;
+}
+
+export interface SavedEditorV2DesignFolder {
+  id: string;
+  name: string;
+  designCount: number;
+  updatedAt: string;
+  createdAt?: string;
 }
 
 export interface SaveEditorV2DocumentResult {
@@ -121,10 +134,12 @@ export async function listSavedEditorV2Documents({
   limit,
   offset,
   view = "active",
+  folderId,
 }: {
   limit?: number;
   offset?: number;
   view?: SavedEditorV2DocumentView;
+  folderId?: string | null;
 } = {}): Promise<ListSavedEditorV2DocumentsResult> {
   const searchParams = new URLSearchParams();
 
@@ -137,6 +152,9 @@ export async function listSavedEditorV2Documents({
   }
 
   searchParams.set("view", view);
+  if (typeof folderId === "string" && folderId.length > 0) {
+    searchParams.set("folder", folderId);
+  }
 
   const response = await fetch(
     `/api/editor-v2/designs${searchParams.size ? `?${searchParams.toString()}` : ""}`,
@@ -150,6 +168,8 @@ export async function listSavedEditorV2Documents({
         designs?: Array<{
           id: string;
           title: string;
+          folderId?: string | null;
+          folderName?: string | null;
           gridWidth: number;
           gridHeight: number;
           updatedAt: string;
@@ -158,6 +178,9 @@ export async function listSavedEditorV2Documents({
           tracePlacement?: LibraryTracePlacement | null;
           stitchSnapshot?: LibraryStitchSnapshot | null;
         }>;
+        folders?: SavedEditorV2DesignFolder[];
+        selectedFolder?: SavedEditorV2DesignFolder | null;
+        rootDesignCount?: number;
         activeCount?: number;
         deletedCount?: number;
         hasMore?: boolean;
@@ -178,6 +201,8 @@ export async function listSavedEditorV2Documents({
       ? body.designs.map((design) => ({
           storageId: design.id,
           title: design.title,
+          folderId: design.folderId ?? null,
+          folderName: design.folderName ?? null,
           gridWidth: design.gridWidth,
           gridHeight: design.gridHeight,
           updatedAt: design.updatedAt,
@@ -187,10 +212,167 @@ export async function listSavedEditorV2Documents({
           stitchSnapshot: design.stitchSnapshot ?? null,
         }))
       : [],
+    folders: Array.isArray(body?.folders) ? body.folders : [],
+    selectedFolder:
+      body?.selectedFolder && typeof body.selectedFolder === "object"
+        ? body.selectedFolder
+        : null,
+    rootDesignCount:
+      typeof body?.rootDesignCount === "number" ? body.rootDesignCount : 0,
     activeCount: typeof body?.activeCount === "number" ? body.activeCount : 0,
     deletedCount: typeof body?.deletedCount === "number" ? body.deletedCount : 0,
     hasMore: body?.hasMore === true,
     nextOffset: typeof body?.nextOffset === "number" ? body.nextOffset : null,
+  };
+}
+
+export async function listEditorV2Folders(): Promise<SavedEditorV2DesignFolder[]> {
+  const response = await fetch("/api/editor-v2/folders", {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { folders?: SavedEditorV2DesignFolder[]; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't load folders.",
+      response.status,
+    );
+  }
+
+  return Array.isArray(body?.folders) ? body.folders : [];
+}
+
+export async function createEditorV2Folder(
+  name: string,
+): Promise<SavedEditorV2DesignFolder> {
+  const response = await fetch("/api/editor-v2/folders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ name }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { folder?: SavedEditorV2DesignFolder; error?: string }
+    | null;
+
+  if (!response.ok || !body?.folder) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't create folder.",
+      response.status,
+    );
+  }
+
+  return body.folder;
+}
+
+export async function renameEditorV2Folder(
+  folderId: string,
+  name: string,
+): Promise<SavedEditorV2DesignFolder> {
+  const response = await fetch(`/api/editor-v2/folders/${folderId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ name }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { folder?: SavedEditorV2DesignFolder; error?: string }
+    | null;
+
+  if (!response.ok || !body?.folder) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't rename folder.",
+      response.status,
+    );
+  }
+
+  return body.folder;
+}
+
+export async function deleteEditorV2Folder(folderId: string): Promise<{ id: string; name: string }> {
+  const response = await fetch(`/api/editor-v2/folders/${folderId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { id?: string; name?: string; error?: string }
+    | null;
+
+  if (!response.ok || !body?.id || !body.name) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't delete folder.",
+      response.status,
+    );
+  }
+
+  return {
+    id: body.id,
+    name: body.name,
+  };
+}
+
+export async function moveEditorV2DesignToFolder(
+  storageId: string,
+  folderId: string | null,
+): Promise<{ storageId: string; folderId: string | null }> {
+  const response = await fetch(`/api/editor-v2/designs/${storageId}/folder`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ folderId }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { id?: string; folderId?: string | null; error?: string }
+    | null;
+
+  if (!response.ok || !body?.id) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't move design.",
+      response.status,
+    );
+  }
+
+  return {
+    storageId: body.id,
+    folderId: body.folderId ?? null,
+  };
+}
+
+export async function moveEditorV2DesignsToFolder(
+  designIds: string[],
+  folderId: string | null,
+): Promise<{ designIds: string[]; folderId: string | null }> {
+  const response = await fetch("/api/editor-v2/designs/move", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ designIds, folderId }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { designIds?: string[]; folderId?: string | null; error?: string }
+    | null;
+
+  if (!response.ok || !Array.isArray(body?.designIds)) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn't move designs.",
+      response.status,
+    );
+  }
+
+  return {
+    designIds: body.designIds,
+    folderId: body.folderId ?? null,
   };
 }
 

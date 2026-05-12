@@ -78,11 +78,40 @@
   color: var(--text-primary);
 }
 
+.subtitle {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
 .actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
+  gap: 12px;
+}
+
+.folderTabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.folderTabGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.folderTabMenuWrapper {
+  flex: 0 0 auto;
+}
+
+.folderModalContent {
+  display: grid;
   gap: 12px;
 }
 
