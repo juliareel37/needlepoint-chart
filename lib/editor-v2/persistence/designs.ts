@@ -83,6 +83,8 @@ export interface PersistedEditorV2DesignRecord {
 export function serializeEditorV2Document(
   document: EditorDocumentState,
 ): PersistedEditorV2Design {
+  const normalizedPalette = normalizePersistedPalette(document.palette);
+
   return {
     schemaVersion: PERSISTED_EDITOR_V2_SCHEMA_VERSION,
     project: {
@@ -98,10 +100,10 @@ export function serializeEditorV2Document(
       cells: [...document.grid.cells],
     },
     palette: {
-      colorsById: document.palette.colorsById,
-      customPalettesById: document.palette.customPalettesById,
-      extractedPaletteIds: [...document.palette.extractedPaletteIds],
-      symbolAssignments: document.palette.symbolAssignments,
+      colorsById: normalizedPalette.colorsById,
+      customPalettesById: normalizedPalette.customPalettesById,
+      extractedPaletteIds: [...normalizedPalette.extractedPaletteIds],
+      symbolAssignments: normalizedPalette.symbolAssignments,
     },
     canvasPreferences: {
       showGridlines: document.canvasPreferences.showGridlines,
@@ -141,6 +143,8 @@ export function serializeEditorV2Document(
 export function hydrateEditorV2Document(
   record: PersistedEditorV2DesignRecord,
 ): EditorDocumentState {
+  const normalizedPalette = normalizePersistedPalette(record.data.palette);
+
   return {
     project: {
       id: record.id,
@@ -159,10 +163,10 @@ export function hydrateEditorV2Document(
       cells: [...record.data.grid.cells],
     },
     palette: {
-      colorsById: record.data.palette.colorsById,
-      customPalettesById: record.data.palette.customPalettesById,
-      extractedPaletteIds: [...record.data.palette.extractedPaletteIds],
-      symbolAssignments: record.data.palette.symbolAssignments,
+      colorsById: normalizedPalette.colorsById,
+      customPalettesById: normalizedPalette.customPalettesById,
+      extractedPaletteIds: [...normalizedPalette.extractedPaletteIds],
+      symbolAssignments: normalizedPalette.symbolAssignments,
     },
     canvasPreferences: normalizePersistedCanvasPreferences(record.data.canvasPreferences),
     trace: record.data.trace
@@ -226,6 +230,7 @@ export function parsePersistedEditorV2Design(
       candidate.grid.sizingMode !== "inches") ||
     !candidate.palette ||
     typeof candidate.palette !== "object" ||
+    !isPersistedPalette(candidate.palette) ||
     !candidate.text ||
     typeof candidate.text !== "object"
   ) {
@@ -249,6 +254,7 @@ export function parsePersistedEditorV2Design(
 
   return {
     ...candidate,
+    palette: normalizePersistedPalette(candidate.palette),
     canvasPreferences: normalizePersistedCanvasPreferences(candidate.canvasPreferences),
     trace: candidate.trace ? normalizePersistedTrace(candidate.trace) : null,
   } as PersistedEditorV2Design;
@@ -324,6 +330,73 @@ function isPersistedCanvasPreferences(
   );
 }
 
+function isPersistedPalette(value: unknown): value is PersistedEditorV2Palette {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PersistedEditorV2Palette>;
+
+  return (
+    isObjectRecord(candidate.colorsById) &&
+    isStringArray(candidate.extractedPaletteIds) &&
+    isStringRecord(candidate.symbolAssignments) &&
+    isPersistedCustomPalettes(candidate.customPalettesById)
+  );
+}
+
+function isPersistedCustomPalettes(
+  value: unknown,
+): value is PersistedEditorV2Palette["customPalettesById"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((palette) => {
+    if (!palette || typeof palette !== "object") {
+      return false;
+    }
+
+    const candidate = palette as Partial<PaletteDocument["customPalettesById"][string]>;
+    return (
+      typeof candidate.id === "string" &&
+      typeof candidate.name === "string" &&
+      isStringArray(candidate.colorIds)
+    );
+  });
+}
+
+function normalizePersistedPalette(
+  palette: PersistedEditorV2Palette,
+): PersistedEditorV2Palette {
+  const colorsById = (
+    isObjectRecord(palette.colorsById) ? palette.colorsById : {}
+  ) as PersistedEditorV2Palette["colorsById"];
+  const customPalettesById = Object.fromEntries(
+    Object.entries(
+      isPersistedCustomPalettes(palette.customPalettesById)
+        ? palette.customPalettesById
+        : {},
+    ).map(([paletteId, customPalette]) => [
+      paletteId,
+      {
+        id: customPalette.id || paletteId,
+        name: normalizePaletteName(customPalette.name),
+        colorIds: dedupeStringArray(customPalette.colorIds),
+      },
+    ]),
+  );
+
+  return {
+    colorsById,
+    customPalettesById,
+    extractedPaletteIds: dedupeStringArray(palette.extractedPaletteIds),
+    symbolAssignments: isStringRecord(palette.symbolAssignments)
+      ? palette.symbolAssignments
+      : {},
+  };
+}
+
 function normalizePersistedCanvasPreferences(
   value: PersistedEditorV2CanvasPreferences | undefined,
 ): PersistedEditorV2CanvasPreferences {
@@ -349,4 +422,33 @@ function getLegacyCompatibleTraceUrl(
   }
 
   throw new Error(`Missing ${field}`);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isStringRecord(
+  value: unknown,
+): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isObjectRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function dedupeStringArray(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function normalizePaletteName(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "Untitled Palette";
 }

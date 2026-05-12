@@ -5,6 +5,13 @@ import {
   gridApplyTraceConversionCommandHandler,
   previewTraceConversionCommandHandler,
 } from "./handlers/gridApplyTraceConversion";
+import {
+  addColorToCustomPaletteCommandHandler,
+  createCustomPaletteCommandHandler,
+  deleteCustomPaletteCommandHandler,
+  removeColorFromCustomPaletteCommandHandler,
+  renameCustomPaletteCommandHandler,
+} from "./handlers/customPalettes";
 import { gridClearCommandHandler } from "./handlers/gridClear";
 import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
@@ -105,6 +112,11 @@ export const commandHandlers: EditorCommandHandler[] = [
   paletteSwapColorCommandHandler,
   paletteDeleteUsedColorsCommandHandler,
   paletteMergeUsedColorsCommandHandler,
+  createCustomPaletteCommandHandler,
+  renameCustomPaletteCommandHandler,
+  deleteCustomPaletteCommandHandler,
+  addColorToCustomPaletteCommandHandler,
+  removeColorFromCustomPaletteCommandHandler,
   beginIconPlacementCommandHandler,
   updateIconPlacementCommandHandler,
   previewIconPlacementCommandHandler,

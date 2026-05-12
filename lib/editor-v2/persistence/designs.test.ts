@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import {
   hydrateEditorV2Document,
+  parsePersistedEditorV2Design,
   serializeEditorV2Document,
 } from "./designs";
 
@@ -265,6 +266,61 @@ describe("editor-v2 persisted designs", () => {
       cropY: 0,
       cropWidth: 400,
       cropHeight: 300,
+    });
+  });
+
+  it("normalizes persisted custom palettes during parse and hydrate", () => {
+    const persisted = parsePersistedEditorV2Design({
+      schemaVersion: 1,
+      project: {
+        title: "Palette test",
+      },
+      grid: {
+        width: 1,
+        height: 1,
+        sizingMode: "stitches",
+        meshCount: null,
+        widthInches: null,
+        heightInches: null,
+        cells: [null],
+      },
+      palette: {
+        colorsById: {},
+        customPalettesById: {
+          custom_1: {
+            id: "custom_1",
+            name: "   ",
+            colorIds: ["dmc-310", "dmc-310", "dmc-321"],
+          },
+        },
+        extractedPaletteIds: ["dmc-310", "dmc-310"],
+        symbolAssignments: {},
+      },
+      trace: null,
+      text: {
+        mode: "destructive-grid",
+        entities: [],
+      },
+    });
+
+    expect(persisted?.palette.customPalettesById.custom_1).toEqual({
+      id: "custom_1",
+      name: "Untitled Palette",
+      colorIds: ["dmc-310", "dmc-321"],
+    });
+    expect(persisted?.palette.extractedPaletteIds).toEqual(["dmc-310"]);
+
+    const hydrated = hydrateEditorV2Document({
+      id: "design_custom_palette",
+      createdAt: "2026-04-16T12:00:00.000Z",
+      updatedAt: "2026-04-16T12:15:00.000Z",
+      data: persisted!,
+    });
+
+    expect(hydrated.palette.customPalettesById.custom_1).toEqual({
+      id: "custom_1",
+      name: "Untitled Palette",
+      colorIds: ["dmc-310", "dmc-321"],
     });
   });
 });

@@ -1,5 +1,6 @@
 import type {
   CanvasPreferencesDocument,
+  CustomPalette,
   GridCellValue,
   ProjectDocument,
   TextEntity,
@@ -12,6 +13,8 @@ export type DocumentPatch =
   | ReplaceColorPatch
   | SetExtractedPaletteIdsPatch
   | AssignPaletteSymbolsPatch
+  | UpsertCustomPalettePatch
+  | RemoveCustomPalettePatch
   | UpsertTracePatch
   | UpdateTracePatch
   | RemoveTracePatch
@@ -46,6 +49,16 @@ export interface SetExtractedPaletteIdsPatch {
 export interface AssignPaletteSymbolsPatch {
   type: "palette.assignSymbols";
   assignments: Record<string, string>;
+}
+
+export interface UpsertCustomPalettePatch {
+  type: "palette.upsertCustomPalette";
+  palette: CustomPalette;
+}
+
+export interface RemoveCustomPalettePatch {
+  type: "palette.removeCustomPalette";
+  paletteId: string;
 }
 
 export interface UpsertTracePatch {

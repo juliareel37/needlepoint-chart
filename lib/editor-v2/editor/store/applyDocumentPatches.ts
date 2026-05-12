@@ -63,6 +63,36 @@ function applyDocumentPatch(
           },
         },
       };
+    case "palette.upsertCustomPalette":
+      return {
+        ...document,
+        palette: {
+          ...document.palette,
+          customPalettesById: {
+            ...document.palette.customPalettesById,
+            [patch.palette.id]: {
+              ...patch.palette,
+              colorIds: [...patch.palette.colorIds],
+            },
+          },
+        },
+      };
+    case "palette.removeCustomPalette": {
+      if (!document.palette.customPalettesById[patch.paletteId]) {
+        return document;
+      }
+
+      const customPalettesById = { ...document.palette.customPalettesById };
+      delete customPalettesById[patch.paletteId];
+
+      return {
+        ...document,
+        palette: {
+          ...document.palette,
+          customPalettesById,
+        },
+      };
+    }
     case "trace.upsert":
       return {
         ...document,

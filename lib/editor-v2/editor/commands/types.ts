@@ -36,6 +36,11 @@ export type EditorCommandKind =
   | "palette.swapColor"
   | "palette.deleteUsedColors"
   | "palette.mergeUsedColors"
+  | "palette.createCustomPalette"
+  | "palette.renameCustomPalette"
+  | "palette.deleteCustomPalette"
+  | "palette.addColorToCustomPalette"
+  | "palette.removeColorFromCustomPalette"
   | "selection.start"
   | "selection.update"
   | "selection.commit"
@@ -166,6 +171,31 @@ export type DeleteUsedColorsCommand = BaseEditorCommand<
 export type MergeUsedColorsCommand = BaseEditorCommand<
   "palette.mergeUsedColors",
   { fromColorIds: string[]; toColorId: string }
+>;
+
+export type CreateCustomPaletteCommand = BaseEditorCommand<
+  "palette.createCustomPalette",
+  { paletteId: string; name: string; colorIds?: string[] }
+>;
+
+export type RenameCustomPaletteCommand = BaseEditorCommand<
+  "palette.renameCustomPalette",
+  { paletteId: string; name: string }
+>;
+
+export type DeleteCustomPaletteCommand = BaseEditorCommand<
+  "palette.deleteCustomPalette",
+  { paletteId: string }
+>;
+
+export type AddColorToCustomPaletteCommand = BaseEditorCommand<
+  "palette.addColorToCustomPalette",
+  { paletteId: string; colorId: string }
+>;
+
+export type RemoveColorFromCustomPaletteCommand = BaseEditorCommand<
+  "palette.removeColorFromCustomPalette",
+  { paletteId: string; colorId: string }
 >;
 
 export type StartSelectionCommand = BaseEditorCommand<
@@ -502,6 +532,11 @@ export type EditorCommand =
   | SwapPaletteColorCommand
   | DeleteUsedColorsCommand
   | MergeUsedColorsCommand
+  | CreateCustomPaletteCommand
+  | RenameCustomPaletteCommand
+  | DeleteCustomPaletteCommand
+  | AddColorToCustomPaletteCommand
+  | RemoveColorFromCustomPaletteCommand
   | StartSelectionCommand
   | UpdateSelectionCommand
   | CommitSelectionCommand

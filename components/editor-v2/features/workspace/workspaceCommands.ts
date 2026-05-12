@@ -230,6 +230,66 @@ export function createMergeUsedColorsCommand(
   );
 }
 
+export function createCustomPaletteCommand(
+  paletteId: string,
+  name: string,
+  colorIds?: string[],
+): EditorCommand {
+  return createCommand(
+    "palette.createCustomPalette",
+    { paletteId, name, colorIds },
+    "toolbar",
+    { mode: "push", label: "Create Palette" },
+  );
+}
+
+export function createRenameCustomPaletteCommand(
+  paletteId: string,
+  name: string,
+): EditorCommand {
+  return createCommand(
+    "palette.renameCustomPalette",
+    { paletteId, name },
+    "toolbar",
+    { mode: "push", label: "Rename Palette" },
+  );
+}
+
+export function createDeleteCustomPaletteCommand(
+  paletteId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.deleteCustomPalette",
+    { paletteId },
+    "toolbar",
+    { mode: "push", label: "Delete Palette" },
+  );
+}
+
+export function createAddColorToCustomPaletteCommand(
+  paletteId: string,
+  colorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.addColorToCustomPalette",
+    { paletteId, colorId },
+    "toolbar",
+    { mode: "push", label: "Add Color to Palette" },
+  );
+}
+
+export function createRemoveColorFromCustomPaletteCommand(
+  paletteId: string,
+  colorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.removeColorFromCustomPalette",
+    { paletteId, colorId },
+    "toolbar",
+    { mode: "push", label: "Remove Color from Palette" },
+  );
+}
+
 export function createSelectionStartCommand(point: SelectionPoint): EditorCommand {
   return createCommand(
     "selection.start",
