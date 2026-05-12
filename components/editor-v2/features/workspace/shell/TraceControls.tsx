@@ -521,7 +521,7 @@ export function TraceControls({
           }}
         >
           <ButtonIcon
-            icon="/icons/upload.svg"
+            icon="/icons/legacy/upload.svg"
             aria-hidden="true"
             style={{ width: 18, height: 18 }}
           />

@@ -895,7 +895,7 @@ export function FloatingToolbar({
             dispatch(createBeginMirrorFromSelectionCommand());
           }}
         >
-          <ToolbarIcon icon="/icons/flip.svg" />
+          <ToolbarIcon icon="/icons/legacy/flip.svg" />
           <ToolbarLabel>Mirror</ToolbarLabel>
         </ToolbarButton> */}
 

@@ -39,9 +39,9 @@ import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import styles from "./editor-v2-design-system.module.css";
 
 const railItems = [
-  { id: "document", label: "Document", icon: "/icons/file.svg" },
-  { id: "color", label: "Color", icon: "/icons/grid_view.svg" },
-  { id: "trace", label: "Trace", icon: "/icons/photo.svg" },
+  { id: "document", label: "Document", icon: "/icons/legacy/file.svg" },
+  { id: "color", label: "Color", icon: "/icons/legacy/grid_view.svg" },
+  { id: "trace", label: "Trace", icon: "/icons/legacy/photo.svg" },
 ];
 
 const savedDesigns = [
