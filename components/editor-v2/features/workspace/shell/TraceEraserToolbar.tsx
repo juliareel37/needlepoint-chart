@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   SegmentedControl,
   Slider,
@@ -29,7 +28,12 @@ export function TraceEraserToolbar({
   onCommit,
   onModeChange,
 }: TraceEraserToolbarProps) {
-  const brushLabel = useMemo(() => `${Math.round(brushSize)} px`, [brushSize]);
+  const normalizedBrushSize = Number.isFinite(brushSize)
+    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
+    : 1;
+  const brushSizeSliderValue = brushSize;
+  const brushSizePercent = Math.round(1 + ((brushSizeSliderValue - 1) / 9) * 99);
+  const brushSizeTooltipPercent = ((brushSizeSliderValue - 1) / 9) * 100;
 
   return (
     <div className={styles.selectionToolbarCluster}>
@@ -46,18 +50,38 @@ export function TraceEraserToolbar({
               ]}
             />
             <ToolbarDivider />
-            <div className={styles.traceEraserToolbarSlider}>
-              <ToolbarIcon icon="/icons/lucide/brush_thick.svg" />
-              <Slider
-                className={styles.traceEraserToolbarSliderInput}
-                min="4"
-                max="96"
-                step="1"
-                value={brushSize}
-                aria-label="Eraser brush size"
-                onChange={(event) => onBrushSizeChange(Number(event.currentTarget.value))}
-              />
-              <span className={styles.traceEraserToolbarSliderValue}>{brushLabel}</span>
+            <div
+              style={{
+                display: "flex",
+                gap: 15,
+                alignItems: "center",
+                flexWrap: "nowrap",
+                padding: "6px 8px",
+              }}
+            >
+              <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+              <div className={styles.traceSliderTooltipWrap} style={{ width: 80, flexShrink: 0 }}>
+                <Slider
+                  min={1}
+                  max={10}
+                  step={0.05}
+                  value={brushSizeSliderValue}
+                  aria-label="Eraser brush size"
+                  aria-valuetext={`${brushSizePercent}% image-size erase area`}
+                  onChange={(event) => {
+                    const nextSliderValue = Number(event.currentTarget.value);
+                    const nextBrushSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
+
+                    if (nextBrushSize === normalizedBrushSize) {
+                      return;
+                    }
+
+                    onBrushSizeChange(nextBrushSize);
+                  }}
+                  style={{ width: "100%", maxWidth: "none" }}
+                />
+              </div>
+              <span className={styles.traceEraserToolbarSliderValue}>{brushSizePercent}%</span>
             </div>
             <ToolbarDivider />
             <ToolbarButton type="button" variant="secondary" textOnly onClick={onCancel}>

@@ -99,7 +99,7 @@ export function GridWorldSurface({
   traceCropAspectRatio = null,
   traceCropEditing = false,
   traceCropBase = null,
-  traceEraserBrushSize = 24,
+  traceEraserBrushSize = 1,
   traceEraserEditing = false,
   traceEraserMaskUrl = null,
   traceEraserMode = "erase",
@@ -121,10 +121,18 @@ export function GridWorldSurface({
   const renderedCellSize = metrics.cellSize * viewport.zoom;
   const gridOverlayStep = getGridOverlayStep(renderedCellSize);
   const traceVisible = Boolean(trace?.visible) && !previewMode;
-  const traceBlendMode = traceVisible ? trace?.blendMode ?? "image" : "image";
   const tracePositioningEnabled = Boolean(trace && traceVisible && !trace.locked);
   const traceCropActive = Boolean(trace && traceVisible && traceCropEditing);
   const traceEraserActive = Boolean(trace && traceVisible && traceEraserEditing);
+  const effectiveTrace =
+    trace && traceEraserActive
+      ? {
+          ...trace,
+          blendMode: "crossfade" as const,
+          opacity: 1,
+        }
+      : trace;
+  const traceBlendMode = traceVisible ? effectiveTrace?.blendMode ?? "image" : "image";
   const showTraceOverlay = Boolean(
     trace && traceVisible && (tracePositioningEnabled || traceCropActive || traceEraserActive),
   );
@@ -136,12 +144,12 @@ export function GridWorldSurface({
       !traceEraserActive,
   );
   const traceImageOpacity =
-    trace && traceVisible && traceBlendMode === "crossfade"
-      ? trace.opacity
-      : trace?.opacity ?? 0;
+    effectiveTrace && traceVisible && traceBlendMode === "crossfade"
+      ? effectiveTrace.opacity
+      : effectiveTrace?.opacity ?? 0;
   const gridOpacity =
-    trace && traceVisible && traceBlendMode === "crossfade"
-      ? 1 - trace.opacity
+    effectiveTrace && traceVisible && traceBlendMode === "crossfade"
+      ? 1 - effectiveTrace.opacity
       : 1;
   const effectiveShowGridlines = showGridlines && !previewMode;
   const effectiveShowSymbols = showSymbols && !previewMode;
@@ -623,7 +631,7 @@ export function GridWorldSurface({
               positioningEnabled={tracePositioningEnabled}
               portalHost={stageRef.current}
               stageBounds={stageBounds}
-              trace={trace}
+              trace={effectiveTrace ?? trace}
               traceAsset={
                 loadedTraceAsset?.previewUrl === trace.previewUrl
                   ? loadedTraceAsset
@@ -671,7 +679,7 @@ export function GridWorldSurface({
               displayTraceOverride={traceDisplayOverride}
               paintOpacity={gridOpacity}
               previewMode={previewMode}
-              displayTrace={showDisplayTrace ? trace : null}
+              displayTrace={showDisplayTrace ? effectiveTrace : null}
               frameOrigin={frameOrigin}
               getGridPointFromClient={getGridPointFromClient}
               getSelectionPointFromClient={getSelectionPointFromClient}

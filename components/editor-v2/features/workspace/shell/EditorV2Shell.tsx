@@ -444,7 +444,7 @@ export function EditorV2Shell({
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
     useState<TraceCropAspectRatioId>("freehand");
   const [traceEraserActive, setTraceEraserActive] = useState(false);
-  const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(24);
+  const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(1);
   const [traceEraserMode, setTraceEraserMode] = useState<"erase" | "restore">("erase");
   const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
   const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);

@@ -40,6 +40,8 @@ import type { TraceDisplayOverride } from "./GridCanvasStage.shared";
 
 const DESKTOP_TRACE_DRAG_PROXY_MODE: "off" | "solid-rect" = "off";
 const MIN_VISIBLE_TRACE_PX = 24;
+const TRACE_ERASER_MIN_IMAGE_FRACTION = 0.01;
+const TRACE_ERASER_MAX_IMAGE_FRACTION = 0.35;
 
 function traceEraserDebugEnabled(): boolean {
   if (typeof window === "undefined") {
@@ -60,6 +62,28 @@ function traceEraserDebugLog(event: string, payload: Record<string, unknown>): v
   }
 
   console.debug(`[trace-eraser:overlay:${event}]`, payload);
+}
+
+function getTraceEraserBrushDiameter(
+  sliderValue: number,
+  trace: Pick<TraceDocument, "cropWidth" | "cropHeight" | "imageWidth" | "imageHeight">,
+): number {
+  const normalizedSliderValue = Number.isFinite(sliderValue)
+    ? Math.min(Math.max(sliderValue, 1), 10)
+    : 1;
+  const normalizedPercent = (normalizedSliderValue - 1) / 9;
+  const imageFraction =
+    TRACE_ERASER_MIN_IMAGE_FRACTION +
+    normalizedPercent * (TRACE_ERASER_MAX_IMAGE_FRACTION - TRACE_ERASER_MIN_IMAGE_FRACTION);
+  const maxImageDimension = Math.max(
+    trace.cropWidth,
+    trace.cropHeight,
+    trace.imageWidth ?? 0,
+    trace.imageHeight ?? 0,
+    1,
+  );
+
+  return Math.max(4, Math.round(maxImageDimension * imageFraction));
 }
 
 interface TraceImageLayerProps {
@@ -94,7 +118,7 @@ export function TraceImageLayer({
   cropBase = null,
   cropEditing = false,
   dispatch,
-  eraserBrushSize = 24,
+  eraserBrushSize = 1,
   eraserEditing = false,
   eraserMaskUrl = null,
   eraserMode = "erase",
@@ -1049,7 +1073,8 @@ function TraceEraserEditorOverlay({
         x: trace.cropX + localPoint.x * scaleX,
         y: trace.cropY + localPoint.y * scaleY,
       };
-      const brushRadius = (brushSize * Math.max(scaleX, scaleY)) / 2;
+      const brushDiameter = getTraceEraserBrushDiameter(brushSize, trace);
+      const brushRadius = (brushDiameter * Math.max(scaleX, scaleY)) / 2;
 
       context.save();
       context.lineCap = "round";
@@ -1078,6 +1103,7 @@ function TraceEraserEditorOverlay({
         pointX: point.x,
         pointY: point.y,
         brushRadius,
+        brushDiameter,
         draftMaskUrl,
         maskSeedSourceKey,
       });
@@ -1145,7 +1171,7 @@ function TraceEraserEditorOverlay({
         width: `${surfaceWidth}px`,
         height: `${surfaceHeight}px`,
         touchAction: "none",
-        cursor: mode === "erase" ? "crosshair" : "copy",
+        cursor: "url('/paint-brush-cursor.cur') 0 24, crosshair",
       }}
     />
   );
