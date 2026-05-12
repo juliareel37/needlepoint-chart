@@ -1730,6 +1730,8 @@ export function LibraryPageClient({
                 triggerClassName={styles.sortTrigger}
                 wrapperClassName={styles.sortDropdown}
                 menuClassName={styles.sortMenu}
+                menuHeader="Sort by:"
+                menuHeaderClassName={styles.sortMenuHeader}
                 minWidth="auto"
                 menuPlacement="bottom-end"
                 menuPortalToViewport
