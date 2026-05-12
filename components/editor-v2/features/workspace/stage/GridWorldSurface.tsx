@@ -72,6 +72,12 @@ interface GridWorldSurfaceProps {
   traceCropAspectRatio?: number | null;
   traceCropEditing?: boolean;
   traceCropBase?: TraceCropRect | null;
+  iconEraserBrushSize?: number;
+  iconEraserBrushPreviewVisible?: boolean;
+  iconEraserDraftRevision?: number;
+  iconEraserEditing?: boolean;
+  iconEraserMaskUrl?: string | null;
+  iconEraserMode?: "erase" | "restore";
   traceEraserBrushSize?: number;
   traceEraserBrushPreviewVisible?: boolean;
   traceEraserEditing?: boolean;
@@ -79,6 +85,7 @@ interface GridWorldSurfaceProps {
   traceEraserDraftRevision?: number;
   traceEraserMode?: "erase" | "restore";
   traceDisplayOverride?: TraceCropRect | null;
+  onIconEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   onTraceCropPreviewChange?: (crop: TraceCropRect | null) => void;
   onTraceEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   zoomAnchor: { x: number; y: number } | null;
@@ -104,6 +111,12 @@ export function GridWorldSurface({
   traceCropAspectRatio = null,
   traceCropEditing = false,
   traceCropBase = null,
+  iconEraserBrushSize = 1,
+  iconEraserBrushPreviewVisible = false,
+  iconEraserDraftRevision = 0,
+  iconEraserEditing = false,
+  iconEraserMaskUrl = null,
+  iconEraserMode = "erase",
   traceEraserBrushSize = 1,
   traceEraserBrushPreviewVisible = false,
   traceEraserEditing = false,
@@ -111,6 +124,7 @@ export function GridWorldSurface({
   traceEraserDraftRevision = 0,
   traceEraserMode = "erase",
   traceDisplayOverride = null,
+  onIconEraserDraftChange,
   onTraceCropPreviewChange,
   onTraceEraserDraftChange,
   zoomAnchor,
@@ -780,8 +794,15 @@ export function GridWorldSurface({
           {iconPlacement ? (
             <IconPlacementLayer
               dispatch={dispatch}
+              eraserBrushPreviewVisible={iconEraserBrushPreviewVisible}
+              eraserBrushSize={iconEraserBrushSize}
+              eraserDraftRevision={iconEraserDraftRevision}
+              eraserEditing={iconEraserEditing}
+              eraserMaskUrl={iconEraserMaskUrl}
+              eraserMode={iconEraserMode}
               getWorldPointFromClient={getWorldPointFromClient}
               metrics={metrics}
+              onEraserDraftChange={onIconEraserDraftChange}
               paletteById={colorsById}
               placement={iconPlacement}
               portalHost={stageRef.current}

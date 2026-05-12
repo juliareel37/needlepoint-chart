@@ -133,10 +133,12 @@ export function IconsPanelPage({
     id: string;
     name: string;
     src: string;
+    mimeType: string | null;
     intrinsicWidth: number;
     intrinsicHeight: number;
     colorSlots: ShapeIconLibraryItem["colorSlots"];
     primitiveKind: ShapeIconLibraryItem["primitiveKind"];
+    isUserUploaded: boolean;
     lockAspectRatio: boolean;
     supportsStrokeWidth: boolean;
   }) => {
@@ -180,10 +182,12 @@ export function IconsPanelPage({
         iconId: item.id,
         name: item.name,
         src: item.src,
+        mimeType: item.mimeType,
         intrinsicWidth: item.intrinsicWidth,
         intrinsicHeight: item.intrinsicHeight,
         colorSlots: themedPrimitiveColorSlots,
         primitiveKind: item.primitiveKind,
+        isUserUploaded: item.isUserUploaded,
         lockAspectRatio: item.lockAspectRatio,
         primitiveStrokeReferenceSize: initialReferenceSize,
         supportsStrokeWidth: item.supportsStrokeWidth,
@@ -554,7 +558,7 @@ export function IconsPanelPage({
               <Button
                 type="button"
                 variant="primary"
-                size="sm"
+                size="md"
                 disabled={placementActive || uploadingGraphic}
                 className={styles.iconsPanelUploadButton}
                 onClick={() => uploadInputRef.current?.click()}

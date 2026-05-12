@@ -28,12 +28,20 @@ import {
 import { SHOW_CELL_SAMPLED_PLACEMENT_PREVIEW } from "./placementPreviewMode";
 import { createUpdateIconPlacementCommand } from "../workspaceCommands";
 import { IconPlacementBoxOverlay } from "./overlays/IconPlacementBoxOverlay";
+import { IconPlacementEraserOverlay } from "./IconPlacementEraserOverlay";
 import styles from "../shell/EditorV2Shell.module.css";
 
 interface IconPlacementLayerProps {
   dispatch: EditorStore["dispatch"];
+  eraserBrushPreviewVisible?: boolean;
+  eraserBrushSize?: number;
+  eraserDraftRevision?: number;
+  eraserEditing?: boolean;
+  eraserMaskUrl?: string | null;
+  eraserMode?: "erase" | "restore";
   getWorldPointFromClient: (clientX: number, clientY: number) => WorldPoint | null;
   metrics: GridWorldMetrics;
+  onEraserDraftChange?: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
   paletteById: Record<string, PaletteColor>;
   placement: IconPlacementSession;
   portalHost?: HTMLElement | null;
@@ -49,8 +57,15 @@ const MAX_CELL_SAMPLED_PREVIEW_PIXELS = 8_388_608;
 
 export function IconPlacementLayer({
   dispatch,
+  eraserBrushPreviewVisible = false,
+  eraserBrushSize = 1,
+  eraserDraftRevision = 0,
+  eraserEditing = false,
+  eraserMaskUrl = null,
+  eraserMode = "erase",
   getWorldPointFromClient,
   metrics,
+  onEraserDraftChange,
   paletteById,
   placement,
   portalHost = null,
@@ -614,10 +629,49 @@ export function IconPlacementLayer({
       )
     : null;
 
+  const eraserOverlayContent =
+    eraserEditing && previewSrc && onEraserDraftChange
+      ? (
+          <IconPlacementEraserOverlay
+            bounds={portalHost ? overlayBounds : displayBounds}
+            brushPreviewVisible={eraserBrushPreviewVisible}
+            brushSize={eraserBrushSize}
+            displaySrc={previewSrc}
+            draftMaskUrl={eraserMaskUrl}
+            draftRevision={eraserDraftRevision}
+            imageOpacity={1}
+            intrinsicHeight={placement.intrinsicHeight}
+            intrinsicWidth={placement.intrinsicWidth}
+            mode={eraserMode}
+            onMaskChange={onEraserDraftChange}
+            rotation={displayTransform.rotation}
+            stageHeight={portalHost ? stageBounds.height : metrics.surfaceHeight}
+            stageWidth={portalHost ? stageBounds.width : metrics.surfaceWidth}
+          />
+        )
+      : null;
+  const eraserOverlay =
+    eraserOverlayContent && portalHost
+      ? createPortal(
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              zIndex: 10,
+            }}
+          >
+            {eraserOverlayContent}
+          </div>,
+          portalHost,
+        )
+      : eraserOverlayContent;
+
   return (
     <>
-      {portalOverlay}
-      {!portalHost ? (
+      {eraserOverlay}
+      {!eraserEditing ? portalOverlay : null}
+      {!portalHost && !eraserEditing ? (
         <div
           style={{
             position: "absolute",

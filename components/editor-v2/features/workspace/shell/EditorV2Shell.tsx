@@ -80,6 +80,7 @@ import {
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createUpdateIconPlacementCommand,
   createUpdateTraceCommand,
   createUndoCommand,
 } from "../workspaceCommands";
@@ -93,6 +94,7 @@ import {
 import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
+import { TraceEraserToolbar } from "./TraceEraserToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
 import { ConversionPreviewToolbar } from "./ConversionPreviewToolbar";
 import {
@@ -105,6 +107,7 @@ import { ViewportToolbar } from "./ViewportToolbar";
 import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
 import { getWorkspaceEscapeAction } from "./escapeKeyBehavior";
+import { composeMaskedImageDataUrl } from "@/lib/editor-v2/editor/imageMasking";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
@@ -124,6 +127,10 @@ const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
 interface TraceEraserHistoryEntry {
   maskUrl: string | null;
   isFullyVisible: boolean;
+}
+
+interface IconPlacementEraserInitialState extends TraceEraserHistoryEntry {
+  sourceSrc: string;
 }
 
 function traceEraserDebugEnabled(): boolean {
@@ -465,6 +472,18 @@ export function EditorV2Shell({
     useState<TraceEraserHistoryEntry | null>(null);
   const [traceEraserUndoStack, setTraceEraserUndoStack] = useState<TraceEraserHistoryEntry[]>([]);
   const [traceEraserRedoStack, setTraceEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [iconEraserActive, setIconEraserActive] = useState(false);
+  const [iconEraserBrushSize, setIconEraserBrushSize] = useState(1);
+  const [iconEraserMode, setIconEraserMode] = useState<"erase" | "restore">("erase");
+  const [iconEraserDraftMaskUrl, setIconEraserDraftMaskUrl] = useState<string | null>(null);
+  const [iconEraserDraftRevision, setIconEraserDraftRevision] = useState(0);
+  const [iconEraserBrushPreviewVisible, setIconEraserBrushPreviewVisible] = useState(false);
+  const [iconEraserMaskFullyVisible, setIconEraserMaskFullyVisible] = useState(true);
+  const [iconEraserDirty, setIconEraserDirty] = useState(false);
+  const [iconEraserInitialState, setIconEraserInitialState] =
+    useState<IconPlacementEraserInitialState | null>(null);
+  const [iconEraserUndoStack, setIconEraserUndoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [iconEraserRedoStack, setIconEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -503,6 +522,19 @@ export function EditorV2Shell({
   }, [trace?.previewUrl]);
 
   useEffect(() => {
+    setIconEraserActive(false);
+    setIconEraserMode("erase");
+    setIconEraserDraftMaskUrl(null);
+    setIconEraserDraftRevision(0);
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserMaskFullyVisible(true);
+    setIconEraserDirty(false);
+    setIconEraserInitialState(null);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+  }, [iconPlacement?.iconId]);
+
+  useEffect(() => {
     if (activeTool === "paint" || activeTool === "erase") {
       return;
     }
@@ -512,8 +544,11 @@ export function EditorV2Shell({
 
   const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
   const traceEraserEditing = traceEraserActive;
+  const iconEraserEditing = iconEraserActive;
   const traceEraserCanUndo = traceEraserUndoStack.length > 0;
   const traceEraserCanRedo = traceEraserRedoStack.length > 0;
+  const iconEraserCanUndo = iconEraserUndoStack.length > 0;
+  const iconEraserCanRedo = iconEraserRedoStack.length > 0;
   const traceEditSubmode = traceCropEditing
     ? "crop"
     : traceEraserEditing
@@ -530,6 +565,7 @@ export function EditorV2Shell({
     traceRepositionActive ||
     traceCropEditing ||
     traceEraserEditing ||
+    iconEraserEditing ||
     textPlacement !== null ||
     iconPlacement !== null;
   const canUndoFromToolbar = canUndo && !repositionModeActive;
@@ -730,6 +766,165 @@ export function EditorV2Shell({
     traceEraserDirty,
     traceEraserDraftMaskUrl,
     traceEraserMaskFullyVisible,
+  ]);
+
+  const handleBeginIconEraser = useCallback(() => {
+    if (!iconPlacement) {
+      return;
+    }
+
+    const nextInitialState = {
+      maskUrl: null,
+      isFullyVisible: true,
+      sourceSrc: iconPlacement.src,
+    };
+
+    setIconEraserInitialState(nextInitialState);
+    setIconEraserDraftMaskUrl(nextInitialState.maskUrl);
+    setIconEraserDraftRevision((current) => current + 1);
+    setIconEraserMaskFullyVisible(nextInitialState.isFullyVisible);
+    setIconEraserMode("erase");
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserDirty(false);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+    setIconEraserActive(true);
+  }, [iconPlacement]);
+
+  const applyIconEraserHistoryEntry = useCallback(
+    (entry: TraceEraserHistoryEntry) => {
+      setIconEraserDraftMaskUrl(entry.maskUrl);
+      setIconEraserDraftRevision((current) => current + 1);
+      setIconEraserMaskFullyVisible(entry.isFullyVisible);
+      setIconEraserDirty(
+        iconEraserInitialState === null
+          ? false
+          : entry.maskUrl !== iconEraserInitialState.maskUrl ||
+              entry.isFullyVisible !== iconEraserInitialState.isFullyVisible,
+      );
+    },
+    [iconEraserInitialState],
+  );
+
+  const handleIconEraserDraftChange = useCallback(
+    (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      if (
+        nextMaskUrl === iconEraserDraftMaskUrl &&
+        isFullyVisible === iconEraserMaskFullyVisible
+      ) {
+        return;
+      }
+
+      setIconEraserUndoStack((current) => [
+        ...current,
+        {
+          maskUrl: iconEraserDraftMaskUrl,
+          isFullyVisible: iconEraserMaskFullyVisible,
+        },
+      ]);
+      setIconEraserRedoStack([]);
+      setIconEraserDraftMaskUrl(nextMaskUrl);
+      setIconEraserMaskFullyVisible(isFullyVisible);
+      setIconEraserDirty(
+        iconEraserInitialState === null
+          ? true
+          : nextMaskUrl !== iconEraserInitialState.maskUrl ||
+              isFullyVisible !== iconEraserInitialState.isFullyVisible,
+      );
+    },
+    [iconEraserDraftMaskUrl, iconEraserInitialState, iconEraserMaskFullyVisible],
+  );
+
+  const handleIconEraserUndo = useCallback(() => {
+    if (iconEraserUndoStack.length === 0) {
+      return;
+    }
+
+    const previousEntry = iconEraserUndoStack[iconEraserUndoStack.length - 1];
+    setIconEraserUndoStack((current) => current.slice(0, -1));
+    setIconEraserRedoStack((current) => [
+      {
+        maskUrl: iconEraserDraftMaskUrl,
+        isFullyVisible: iconEraserMaskFullyVisible,
+      },
+      ...current,
+    ]);
+    applyIconEraserHistoryEntry(previousEntry);
+  }, [
+    applyIconEraserHistoryEntry,
+    iconEraserDraftMaskUrl,
+    iconEraserMaskFullyVisible,
+    iconEraserUndoStack,
+  ]);
+
+  const handleIconEraserRedo = useCallback(() => {
+    if (iconEraserRedoStack.length === 0) {
+      return;
+    }
+
+    const [nextEntry, ...remainingEntries] = iconEraserRedoStack;
+    setIconEraserRedoStack(remainingEntries);
+    setIconEraserUndoStack((current) => [
+      ...current,
+      {
+        maskUrl: iconEraserDraftMaskUrl,
+        isFullyVisible: iconEraserMaskFullyVisible,
+      },
+    ]);
+    applyIconEraserHistoryEntry(nextEntry);
+  }, [
+    applyIconEraserHistoryEntry,
+    iconEraserDraftMaskUrl,
+    iconEraserMaskFullyVisible,
+    iconEraserRedoStack,
+  ]);
+
+  const handleCancelIconEraser = useCallback(() => {
+    setIconEraserActive(false);
+    setIconEraserDraftMaskUrl(null);
+    setIconEraserDraftRevision(0);
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserMaskFullyVisible(true);
+    setIconEraserDirty(false);
+    setIconEraserMode("erase");
+    setIconEraserInitialState(null);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+  }, []);
+
+  const handleCommitIconEraser = useCallback(async () => {
+    if (!iconPlacement || !iconEraserInitialState) {
+      handleCancelIconEraser();
+      return;
+    }
+
+    if (iconEraserDirty) {
+      const nextSourceSrc =
+        iconEraserMaskFullyVisible || !iconEraserDraftMaskUrl
+          ? iconEraserInitialState.sourceSrc
+          : await composeMaskedImageDataUrl({
+              sourceSrc: iconEraserInitialState.sourceSrc,
+              maskSrc: iconEraserDraftMaskUrl,
+              width: iconPlacement.intrinsicWidth,
+              height: iconPlacement.intrinsicHeight,
+            });
+
+      dispatch(
+        createUpdateIconPlacementCommand({
+          src: nextSourceSrc,
+        }),
+      );
+    }
+
+    handleCancelIconEraser();
+  }, [
+    dispatch,
+    handleCancelIconEraser,
+    iconEraserDirty,
+    iconEraserDraftMaskUrl,
+    iconEraserInitialState,
+    iconEraserMaskFullyVisible,
+    iconPlacement,
   ]);
 
   const handleCancelTraceCrop = useCallback(() => {
@@ -1855,6 +2050,18 @@ export function EditorV2Shell({
         return;
       }
 
+      if (iconEraserEditing && isUndoShortcut && iconEraserCanUndo) {
+        event.preventDefault();
+        handleIconEraserUndo();
+        return;
+      }
+
+      if (iconEraserEditing && isRedoShortcut && iconEraserCanRedo) {
+        event.preventDefault();
+        handleIconEraserRedo();
+        return;
+      }
+
       if (isUndoShortcut && canUndo) {
         event.preventDefault();
         dispatch(createUndoCommand());
@@ -1873,8 +2080,13 @@ export function EditorV2Shell({
     canRedo,
     canUndo,
     dispatch,
+    handleIconEraserRedo,
+    handleIconEraserUndo,
     handleTraceEraserRedo,
     handleTraceEraserUndo,
+    iconEraserCanRedo,
+    iconEraserCanUndo,
+    iconEraserEditing,
     traceEraserCanRedo,
     traceEraserCanUndo,
     traceEraserEditing,
@@ -1903,6 +2115,11 @@ export function EditorV2Shell({
       }
 
       event.preventDefault();
+
+      if (iconEraserEditing) {
+        handleCancelIconEraser();
+        return;
+      }
 
       if (escapeAction === "exit-trace-conversion-preview") {
         handleExitTraceConversionPreviewFromToolbar();
@@ -1953,11 +2170,13 @@ export function EditorV2Shell({
     clearHighlightedColor,
     dispatch,
     exitPreviewMode,
+    handleCancelIconEraser,
     handleCancelTraceCrop,
     handleCancelTraceEraser,
     handleCancelTraceReposition,
     handleExitTraceConversionPreviewFromToolbar,
     highlightedColorId,
+    iconEraserEditing,
     iconPlacement,
     previewMode,
     textPlacement,
@@ -3396,6 +3615,22 @@ export function EditorV2Shell({
                         showSymbols={showSymbols}
                         symbolAssignments={document.palette.symbolAssignments}
                       />
+                    ) : iconEraserEditing && iconPlacement ? (
+                      <TraceEraserToolbar
+                        brushSize={iconEraserBrushSize}
+                        canRedo={iconEraserCanRedo}
+                        canUndo={iconEraserCanUndo}
+                        mode={iconEraserMode}
+                        onBrushSizeChange={setIconEraserBrushSize}
+                        onCancel={handleCancelIconEraser}
+                        onCommit={() => {
+                          void handleCommitIconEraser();
+                        }}
+                        onModeChange={setIconEraserMode}
+                        onPreviewVisibilityChange={setIconEraserBrushPreviewVisible}
+                        onRedo={handleIconEraserRedo}
+                        onUndo={handleIconEraserUndo}
+                      />
                     ) : iconPlacement ? (
                       <IconPlacementToolbar
                         activeColorHex={activeColor?.hex ?? null}
@@ -3404,6 +3639,7 @@ export function EditorV2Shell({
                         featuredColorIds={featuredColorIds}
                         grid={document.grid}
                         gridMetrics={gridMetrics}
+                        onBeginEraser={handleBeginIconEraser}
                         palette={palette}
                         placement={iconPlacement}
                         showSymbols={showSymbols}
@@ -3494,6 +3730,12 @@ export function EditorV2Shell({
                     showSymbols={showSymbols}
                     touchSnappingEnabled={touchSnappingEnabled}
                     state={state}
+                    iconEraserBrushSize={iconEraserBrushSize}
+                    iconEraserBrushPreviewVisible={iconEraserBrushPreviewVisible}
+                    iconEraserEditing={iconEraserEditing}
+                    iconEraserMaskUrl={iconEraserDraftMaskUrl}
+                    iconEraserDraftRevision={iconEraserDraftRevision}
+                    iconEraserMode={iconEraserMode}
                     traceCropBase={traceCropSnapshot}
                     traceCropAspectRatio={traceCropAspectRatio}
                     traceCropEditing={traceCropEditing}
@@ -3504,6 +3746,7 @@ export function EditorV2Shell({
                     traceEraserDraftRevision={traceEraserDraftRevision}
                     traceEraserMode={traceEraserMode}
                     traceDisplayOverride={tracePreviewCrop}
+                    onIconEraserDraftChange={handleIconEraserDraftChange}
                     onTraceCropPreviewChange={handlePreviewTraceCropChange}
                     onTraceEraserDraftChange={handleTraceEraserDraftChange}
                     zoomAnchor={zoomAnchor}

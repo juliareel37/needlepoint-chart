@@ -496,10 +496,12 @@ export function createBeginIconPlacementCommand(payload: {
   iconId: string;
   name: string;
   src: string;
+  mimeType: string | null;
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  isUserUploaded: boolean;
   lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
@@ -542,10 +544,12 @@ export function createUpdateIconPlacementCommand(payload: {
   iconId?: string;
   name?: string;
   src?: string;
+  mimeType?: string | null;
   intrinsicWidth?: number;
   intrinsicHeight?: number;
   colorSlots?: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind?: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  isUserUploaded?: boolean;
   lockAspectRatio?: boolean;
   primitiveStrokeReferenceSize?: number | null;
   supportsStrokeWidth?: boolean;

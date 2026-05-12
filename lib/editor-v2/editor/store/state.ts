@@ -326,10 +326,12 @@ export interface IconPlacementSession {
   iconId: string;
   name: string;
   src: string;
+  mimeType: string | null;
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
   primitiveKind: PrimitiveIconKind | null;
+  isUserUploaded: boolean;
   lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;

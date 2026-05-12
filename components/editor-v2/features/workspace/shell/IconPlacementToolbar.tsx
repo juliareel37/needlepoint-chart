@@ -256,6 +256,7 @@ interface IconPlacementToolbarProps {
   featuredColorIds: string[];
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
+  onBeginEraser?: () => void;
   palette: PaletteColor[];
   placement: IconPlacementSession;
   showSymbols: boolean;
@@ -269,6 +270,7 @@ export function IconPlacementToolbar({
   featuredColorIds,
   grid,
   gridMetrics,
+  onBeginEraser,
   palette,
   placement,
   showSymbols,
@@ -338,6 +340,10 @@ export function IconPlacementToolbar({
   );
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
   const supportsSpacingScale = placement.primitiveKind === "double-rectangle-frame";
+  const canEraseUploadedGraphic =
+    placement.isUserUploaded &&
+    placement.mimeType !== "image/svg+xml" &&
+    typeof onBeginEraser === "function";
   const normalizedSpacingScale = placement.primitiveSpacingScale;
   const spacingTooltipPercent = Math.max(
     0,
@@ -814,8 +820,18 @@ export function IconPlacementToolbar({
             </>
           ) : null}
 
+          {canEraseUploadedGraphic ? (
+            <>
+              <ToolbarDivider />
+              <ToolbarGroup>
+                <ToolbarButton type="button" labelled onClick={onBeginEraser}>
+                  <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                  <ToolbarLabel>Erase</ToolbarLabel>
+                </ToolbarButton>
+              </ToolbarGroup>
+            </>
+          ) : null}
 
-                      
           <ToolbarDivider />
 
           <ToolbarButton
