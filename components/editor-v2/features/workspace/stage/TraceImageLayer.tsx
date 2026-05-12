@@ -266,6 +266,25 @@ export function TraceImageLayer({
       height: mobileDisplayStageBounds.height,
     };
   }, [mobileDisplayStageBounds, stageBounds.left, stageBounds.top]);
+  const desktopTraceStageBounds = useMemo(() => {
+    if (!traceBounds) {
+      return null;
+    }
+
+    return {
+      left: worldBounds.left - stageBounds.left + traceBounds.left * viewport.zoom,
+      top: worldBounds.top - stageBounds.top + traceBounds.top * viewport.zoom,
+      width: traceBounds.width * viewport.zoom,
+      height: traceBounds.height * viewport.zoom,
+    };
+  }, [
+    stageBounds.left,
+    stageBounds.top,
+    traceBounds,
+    viewport.zoom,
+    worldBounds.left,
+    worldBounds.top,
+  ]);
   const cropAssetWidth = traceAsset?.width ?? mobilePreviewSize?.width ?? trace.imageWidth ?? 0;
   const cropAssetHeight = traceAsset?.height ?? mobilePreviewSize?.height ?? trace.imageHeight ?? 0;
 
@@ -608,11 +627,40 @@ export function TraceImageLayer({
     trace.imageWidth &&
     trace.imageHeight &&
     onEraserDraftChange
-      ? (
+      ? portalHost
+        ? createPortal(
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                overflow: "hidden",
+                zIndex,
+              }}
+            >
+              <TraceEraserEditorOverlay
+                assetHeight={trace.imageHeight}
+                assetWidth={trace.imageWidth}
+                bounds={desktopTraceStageBounds ?? traceBounds}
+                brushSize={eraserBrushSize}
+                brushPreviewVisible={eraserBrushPreviewVisible}
+                draftRevision={eraserDraftRevision}
+                draftMaskUrl={eraserMaskUrl}
+                editMode={eraserEditMode}
+                imageOpacity={imageOpacity}
+                mode={eraserMode}
+                onMaskChange={onEraserDraftChange}
+                stageHeight={stageBounds.height}
+                stageWidth={stageBounds.width}
+                trace={renderTrace}
+                traceAsset={traceAsset}
+              />
+            </div>,
+            portalHost,
+          )
+        : (
           <TraceEraserEditorOverlay
             assetHeight={trace.imageHeight}
             assetWidth={trace.imageWidth}
-            baseRect={traceBaseRect}
             bounds={traceBounds}
             brushSize={eraserBrushSize}
             brushPreviewVisible={eraserBrushPreviewVisible}
@@ -622,8 +670,8 @@ export function TraceImageLayer({
             imageOpacity={imageOpacity}
             mode={eraserMode}
             onMaskChange={onEraserDraftChange}
-            surfaceHeight={metrics.surfaceHeight}
-            surfaceWidth={metrics.surfaceWidth}
+            stageHeight={metrics.surfaceHeight}
+            stageWidth={metrics.surfaceWidth}
             trace={renderTrace}
             traceAsset={traceAsset}
           />
@@ -721,7 +769,6 @@ export function TraceImageLayer({
 interface TraceEraserEditorOverlayProps {
   assetHeight: number;
   assetWidth: number;
-  baseRect: { left: number; top: number; width: number; height: number };
   bounds: { left: number; top: number; width: number; height: number };
   brushSize: number;
   brushPreviewVisible: boolean;
@@ -731,8 +778,8 @@ interface TraceEraserEditorOverlayProps {
   imageOpacity: number;
   mode: EraserMode;
   onMaskChange: (nextMaskUrl: string | null, isFullyVisible: boolean) => void;
-  surfaceHeight: number;
-  surfaceWidth: number;
+  stageHeight: number;
+  stageWidth: number;
   trace: TraceDocument;
   traceAsset: LoadedTraceAsset | null;
 }
@@ -740,7 +787,6 @@ interface TraceEraserEditorOverlayProps {
 function TraceEraserEditorOverlay({
   assetHeight,
   assetWidth,
-  baseRect,
   bounds,
   brushSize,
   brushPreviewVisible,
@@ -750,8 +796,8 @@ function TraceEraserEditorOverlay({
   imageOpacity,
   mode,
   onMaskChange,
-  surfaceHeight,
-  surfaceWidth,
+  stageHeight,
+  stageWidth,
   trace,
   traceAsset,
 }: TraceEraserEditorOverlayProps) {
@@ -849,22 +895,22 @@ function TraceEraserEditorOverlay({
     }
 
     const devicePixelRatio = window.devicePixelRatio || 1;
-    const canvasWidth = Math.max(1, Math.round(surfaceWidth * devicePixelRatio));
-    const canvasHeight = Math.max(1, Math.round(surfaceHeight * devicePixelRatio));
+    const canvasWidth = Math.max(1, Math.round(stageWidth * devicePixelRatio));
+    const canvasHeight = Math.max(1, Math.round(stageHeight * devicePixelRatio));
 
     if (overlayCanvas.width !== canvasWidth || overlayCanvas.height !== canvasHeight) {
       overlayCanvas.width = canvasWidth;
       overlayCanvas.height = canvasHeight;
-      overlayCanvas.style.width = `${surfaceWidth}px`;
-      overlayCanvas.style.height = `${surfaceHeight}px`;
+      overlayCanvas.style.width = `${stageWidth}px`;
+      overlayCanvas.style.height = `${stageHeight}px`;
       context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     } else {
       context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     }
 
-    context.clearRect(0, 0, surfaceWidth, surfaceHeight);
+    context.clearRect(0, 0, stageWidth, stageHeight);
     context.fillStyle = "rgba(190, 24, 24, 0.28)";
-    context.fillRect(0, 0, surfaceWidth, surfaceHeight);
+    context.fillRect(0, 0, stageWidth, stageHeight);
 
     if (!traceAsset?.ready || !traceAsset.image) {
       return;
@@ -957,8 +1003,8 @@ function TraceEraserEditorOverlay({
     imageOpacity,
     matchingLoadedMask,
     maskSeeded,
-    surfaceHeight,
-    surfaceWidth,
+    stageHeight,
+    stageWidth,
     trace,
     traceAsset,
   ]);
@@ -1387,8 +1433,8 @@ function TraceEraserEditorOverlay({
           position: "absolute",
           inset: 0,
           zIndex: 4,
-          width: `${surfaceWidth}px`,
-          height: `${surfaceHeight}px`,
+          width: `${stageWidth}px`,
+          height: `${stageHeight}px`,
           touchAction: "none",
           cursor:
             editMode === "brush"
