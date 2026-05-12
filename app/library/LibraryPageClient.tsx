@@ -43,6 +43,7 @@ import styles from "./page.module.css";
 const PAGE_SIZE = 12;
 const LOADING_CARD_COUNT = PAGE_SIZE;
 const DESIGN_OPEN_TRANSITION_MS = 70;
+const LIBRARY_FOLDERS_UI_ENABLED = false;
 const activeCardMenuItems = [
   { id: "open", label: "Open", icon: "/icons/lucide/file.svg" },
   { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
@@ -207,7 +208,9 @@ export function LibraryPageClient({
   const searchParams = useSearchParams();
   const [designs, setDesigns] = useState(initialDesigns);
   const [folders, setFolders] = useState<SavedEditorV2DesignFolder[]>([]);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+    LIBRARY_FOLDERS_UI_ENABLED ? initialFolderId : null,
+  );
   const [rootDesignCount, setRootDesignCount] = useState(0);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [activeCount, setActiveCount] = useState(
@@ -334,7 +337,7 @@ export function LibraryPageClient({
     designs.length > 0 && selectedDesignCount === designs.length;
   const isInitialLoading = initialLoadPending && designs.length === 0;
   const currentFolder =
-    selectedFolderId === null
+    !LIBRARY_FOLDERS_UI_ENABLED || selectedFolderId === null
       ? null
       : folders.find((folder) => folder.id === selectedFolderId) ?? null;
 
@@ -407,7 +410,15 @@ export function LibraryPageClient({
   useEffect(() => {
     const folderParam = searchParams.get("folder");
     const nextFolderId =
-      collectionView === "deleted" ? null : folderParam && folderParam.length > 0 ? folderParam : null;
+      !LIBRARY_FOLDERS_UI_ENABLED || collectionView === "deleted"
+        ? null
+        : folderParam && folderParam.length > 0
+          ? folderParam
+          : null;
+    if (!LIBRARY_FOLDERS_UI_ENABLED && folderParam) {
+      updateLibraryUrl({ view: "active", folderId: null, notice: null });
+      return;
+    }
     if (nextFolderId !== selectedFolderId) {
       setSelectedFolderId(nextFolderId);
       setSelectedDesignIds(new Set<string>());
@@ -1430,6 +1441,13 @@ export function LibraryPageClient({
       collectionView === "deleted"
         ? baseCardMenuItems
         : baseCardMenuItems.filter((item) => {
+            if (
+              !LIBRARY_FOLDERS_UI_ENABLED &&
+              (item.id === "move-to-folder" || item.id === "move-to-root")
+            ) {
+              return false;
+            }
+
             if (item.id === "move-to-root") {
               return design.folderId !== null;
             }
@@ -1567,7 +1585,9 @@ export function LibraryPageClient({
   const selectedSortOption =
     sortOptions.find((option) => option.id === sortMode) ?? sortOptions[0];
   const visibleFolderItems =
-    collectionView === "active" && selectedFolderId === null
+    LIBRARY_FOLDERS_UI_ENABLED &&
+    collectionView === "active" &&
+    selectedFolderId === null
       ? folders.filter((folder) =>
           normalizedSearchQuery.length === 0
             ? true
@@ -1591,7 +1611,7 @@ export function LibraryPageClient({
       >
         <header className={styles.header}>
           <div className={styles.headerCopy}>
-            {collectionView === "active" && currentFolder ? (
+            {LIBRARY_FOLDERS_UI_ENABLED && collectionView === "active" && currentFolder ? (
               <div className={styles.scopedHeader}>
                 <div className={styles.breadcrumbs} aria-label="Library breadcrumbs">
                   <button
@@ -1645,15 +1665,17 @@ export function LibraryPageClient({
                 Trash ({deletedCount})
               </Button>
             ) : null}
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              onClick={openCreateFolderDialog}
-            >
-              <ButtonIcon icon="/icons/lucide/folder-plus.svg" />
-              New folder
-            </Button>
+            {LIBRARY_FOLDERS_UI_ENABLED ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={openCreateFolderDialog}
+              >
+                <ButtonIcon icon="/icons/lucide/folder-plus.svg" />
+                New folder
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="primary"
@@ -2278,7 +2300,7 @@ export function LibraryPageClient({
                   ? "Trash is empty"
                   : currentFolder
                     ? "This folder is empty"
-                    : folders.length > 0
+                    : LIBRARY_FOLDERS_UI_ENABLED && folders.length > 0
                       ? "No designs at the top level"
                   : "No designs yet"}
             </h2>
@@ -2289,7 +2311,7 @@ export function LibraryPageClient({
                   ? "Designs you delete will stay here for 30 days before they are permanently removed."
                   : currentFolder
                     ? `Move designs into ${currentFolder.name} or create a new design here later.`
-                    : folders.length > 0
+                    : LIBRARY_FOLDERS_UI_ENABLED && folders.length > 0
                       ? "Your folders are above. Create a new design here or open a folder to keep browsing."
                     : "Your saved needlepoint designs will show up here once you create one."}
             </p>
@@ -2411,7 +2433,7 @@ export function LibraryPageClient({
       />
 
       <Modal
-        isOpen={folderDialog !== null}
+        isOpen={LIBRARY_FOLDERS_UI_ENABLED && folderDialog !== null}
         title={
           folderDialog?.mode === "create"
             ? "Create folder"
@@ -2468,7 +2490,7 @@ export function LibraryPageClient({
       />
 
       <Modal
-        isOpen={moveDialog !== null}
+        isOpen={LIBRARY_FOLDERS_UI_ENABLED && moveDialog !== null}
         title={moveDialog ? `Move ${moveDialog.title}` : "Move design"}
         description={
           <div className={styles.folderModalContent}>
@@ -2556,7 +2578,7 @@ export function LibraryPageClient({
               <span>Select All</span>
             </button>
 
-            {collectionView === "active" ? (
+            {LIBRARY_FOLDERS_UI_ENABLED && collectionView === "active" ? (
               <button
                 type="button"
                 className={styles.bulkBarAction}
