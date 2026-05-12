@@ -194,7 +194,7 @@ async function buildIconAsset(
   supportsStrokeWidth: boolean;
 }> {
   const primitiveKind = getPrimitiveIconKind(normalizedRelativePath);
-  const lockAspectRatio = primitiveKind === "star";
+  const lockAspectRatio = false;
   const primitiveColorSlots = primitiveKind
     ? getPrimitiveDefaultColorSlots(primitiveKind)
     : [];
