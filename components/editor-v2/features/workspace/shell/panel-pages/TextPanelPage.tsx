@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button } from "@/components/design-system";
+import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
   EditorStore,
@@ -48,16 +48,16 @@ export function TextPanelPage({
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
         <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
+          {/* <div className={styles.sidebarSubsectionHeader}>
             <h3 style={typographyStyles.h5}>Text to pattern</h3>
-            {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
               Add a text box, edit it on canvas, then convert it to stitches.
-            </p> */}
+            </p>
           </div>
 
           <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
             {helperText}
-          </p>
+          </p> */}
 
           <Button
             type="button"
@@ -89,7 +89,9 @@ export function TextPanelPage({
               );
             }}
           >
-            Add text box
+          <ButtonIcon icon="/icons/lucide/plus.svg" />
+
+            Add text
           </Button>
         </div>
       </div>

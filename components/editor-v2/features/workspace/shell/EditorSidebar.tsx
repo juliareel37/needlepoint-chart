@@ -272,7 +272,7 @@ export function EditorSidebar({
                     : activeSection === "text"
                       ? "Text"
                       : activeSection === "icons"
-                        ? "Icons"
+                        ? "Graphics"
                         : "Settings"}
             </h2>
           )}
