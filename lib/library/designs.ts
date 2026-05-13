@@ -1,18 +1,35 @@
 import { normalizeProjectTitle, parsePersistedEditorV2Design } from "@/lib/editor-v2/persistence/designs";
 import { prisma } from "@/lib/db";
+import {
+  getActiveEditorDesignWhere,
+  getDeletedEditorDesignWhere,
+} from "@/lib/editor-v2/server/designDeletion";
 import { buildLibraryStitchSnapshot, type LibraryStitchSnapshot } from "./stitchSnapshot";
 
 export const LIBRARY_PAGE_SIZE = 12;
 const MAX_LIBRARY_PAGE_SIZE = 24;
+export type LibraryDesignView = "active" | "deleted";
+
+export interface LibraryFolderRecord {
+  id: string;
+  name: string;
+  designCount: number;
+  updatedAt: string;
+}
 
 export interface LibraryDesignRecord {
   id: string;
+  state: LibraryDesignView;
   title: string;
+  folderId: string | null;
+  folderName: string | null;
   gridWidth: number;
   gridHeight: number;
   createdAt: string;
   updatedAt: string;
   updatedLabel: string;
+  deletedAt: string | null;
+  purgeAfterAt: string | null;
   colorCount: number | null;
   previewUrl: string | null;
   thumbnailUrl: string | null;
@@ -23,6 +40,10 @@ export interface LibraryDesignRecord {
 export interface LibraryTracePlacement {
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   offsetX: number;
   offsetY: number;
   scale: number;
@@ -31,43 +52,156 @@ export interface LibraryTracePlacement {
 
 export interface LibraryDesignPage {
   designs: LibraryDesignRecord[];
+  folders: LibraryFolderRecord[];
+  selectedFolder: LibraryFolderRecord | null;
+  rootDesignCount: number;
   totalCount: number;
+  activeCount: number;
+  deletedCount: number;
   hasMore: boolean;
   nextOffset: number | null;
 }
 
+export class LibraryFolderNotFoundError extends Error {
+  constructor() {
+    super("Folder not found.");
+    this.name = "LibraryFolderNotFoundError";
+  }
+}
+
 export async function loadLibraryDesignPage({
   appUserId,
+  view = "active",
   limit = LIBRARY_PAGE_SIZE,
   offset = 0,
+  search = "",
+  folderId = null,
 }: {
   appUserId: string;
+  view?: LibraryDesignView;
   limit?: number;
   offset?: number;
+  search?: string;
+  folderId?: string | null;
 }): Promise<LibraryDesignPage> {
   const normalizedLimit = Math.max(1, Math.min(MAX_LIBRARY_PAGE_SIZE, Math.floor(limit)));
   const normalizedOffset = Math.max(0, Math.floor(offset));
+  const normalizedSearch = search.trim();
+  const normalizedFolderId = view === "active" && folderId ? folderId : null;
 
-  const [totalCount, designs] = await Promise.all([
-    prisma.editorDesign.count({
-      where: { appUserId },
-    }),
-    prisma.editorDesign.findMany({
-      where: { appUserId },
-      orderBy: { updatedAt: "desc" },
-      skip: normalizedOffset,
-      take: normalizedLimit + 1,
-      select: {
-        id: true,
-        title: true,
-        gridWidth: true,
-        gridHeight: true,
-        createdAt: true,
-        updatedAt: true,
-        data: true,
-      },
-    }),
-  ]);
+  const selectedFolderRecord = normalizedFolderId
+    ? await prisma.editorDesignFolder.findFirst({
+        where: {
+          id: normalizedFolderId,
+          appUserId,
+        },
+        select: {
+          id: true,
+          name: true,
+          updatedAt: true,
+        },
+      })
+    : null;
+
+  if (normalizedFolderId && !selectedFolderRecord) {
+    throw new LibraryFolderNotFoundError();
+  }
+
+  const baseWhere =
+    view === "deleted"
+      ? getDeletedEditorDesignWhere({ appUserId })
+      : getActiveEditorDesignWhere({
+          appUserId,
+          ...(normalizedFolderId ? { folderId: normalizedFolderId } : { folderId: null }),
+        });
+  const where =
+    normalizedSearch.length > 0
+      ? {
+          ...baseWhere,
+          title: {
+            contains: normalizedSearch,
+            mode: "insensitive" as const,
+          },
+        }
+      : baseWhere;
+
+  const [activeCount, deletedCount, rootDesignCount, folderCounts, designs] =
+    await Promise.all([
+      prisma.editorDesign.count({
+        where: getActiveEditorDesignWhere({ appUserId }),
+      }),
+      prisma.editorDesign.count({
+        where: getDeletedEditorDesignWhere({ appUserId }),
+      }),
+      prisma.editorDesign.count({
+        where: getActiveEditorDesignWhere({
+          appUserId,
+          folderId: null,
+        }),
+      }),
+      prisma.editorDesignFolder.findMany({
+        where: { appUserId },
+        orderBy: [
+          { updatedAt: "desc" },
+          { name: "asc" },
+        ],
+        select: {
+          id: true,
+          name: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              designs: {
+                where: {
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.editorDesign.findMany({
+        where,
+        orderBy: view === "deleted" ? { deletedAt: "desc" } : { updatedAt: "desc" },
+        skip: normalizedOffset,
+        take: normalizedLimit + 1,
+        select: {
+          id: true,
+          title: true,
+          folderId: true,
+          gridWidth: true,
+          gridHeight: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          purgeAfterAt: true,
+          data: true,
+          folder: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+  const folders = folderCounts.map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    designCount: folder._count.designs,
+    updatedAt: folder.updatedAt.toISOString(),
+  }));
+  const selectedFolder =
+    selectedFolderRecord == null
+      ? null
+      : {
+          id: selectedFolderRecord.id,
+          name: selectedFolderRecord.name,
+          designCount:
+            folders.find((folder) => folder.id === selectedFolderRecord.id)?.designCount ?? 0,
+          updatedAt: selectedFolderRecord.updatedAt.toISOString(),
+        };
 
   const hasMore = designs.length > normalizedLimit;
   const visibleDesigns = hasMore ? designs.slice(0, normalizedLimit) : designs;
@@ -78,14 +212,21 @@ export async function loadLibraryDesignPage({
 
       return {
         id: design.id,
+        state: design.deletedAt ? "deleted" : "active",
         title: parsed
           ? normalizeProjectTitle(parsed.project.title)
           : normalizeProjectTitle(design.title),
+        folderId: design.folderId,
+        folderName: design.folder?.name ?? null,
         gridWidth: design.gridWidth,
         gridHeight: design.gridHeight,
         createdAt: design.createdAt.toISOString(),
         updatedAt: design.updatedAt.toISOString(),
-        updatedLabel: formatUpdatedLabel(design.updatedAt),
+        updatedLabel: design.deletedAt
+          ? formatDeletedLabel(design.deletedAt, design.purgeAfterAt)
+          : formatUpdatedLabel(design.updatedAt),
+        deletedAt: design.deletedAt?.toISOString() ?? null,
+        purgeAfterAt: design.purgeAfterAt?.toISOString() ?? null,
         colorCount: parsed ? countUsedColors(parsed.grid.cells) : null,
         previewUrl: parsed?.trace?.previewUrl ?? null,
         thumbnailUrl: parsed?.trace?.thumbnailUrl ?? null,
@@ -93,6 +234,10 @@ export async function loadLibraryDesignPage({
           ? {
               imageWidth: parsed.trace.imageWidth,
               imageHeight: parsed.trace.imageHeight,
+              cropX: parsed.trace.cropX,
+              cropY: parsed.trace.cropY,
+              cropWidth: parsed.trace.cropWidth,
+              cropHeight: parsed.trace.cropHeight,
               offsetX: parsed.trace.offsetX,
               offsetY: parsed.trace.offsetY,
               scale: parsed.trace.scale,
@@ -109,7 +254,17 @@ export async function loadLibraryDesignPage({
           : null,
       };
     }),
-    totalCount,
+    folders,
+    selectedFolder,
+    rootDesignCount,
+    totalCount:
+      view === "deleted"
+        ? deletedCount
+        : selectedFolder
+          ? selectedFolder.designCount
+          : rootDesignCount,
+    activeCount,
+    deletedCount,
     hasMore,
     nextOffset: hasMore ? normalizedOffset + visibleDesigns.length : null,
   };
@@ -154,4 +309,19 @@ function formatUpdatedLabel(updatedAt: Date) {
     day: "numeric",
     year: updatedAt.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
   })}`;
+}
+
+function formatDeletedLabel(deletedAt: Date | null, purgeAfterAt: Date | null) {
+  if (!deletedAt || !purgeAfterAt) {
+    return "In Trash";
+  }
+
+  const remainingMs = purgeAfterAt.getTime() - Date.now();
+  const remainingDays = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+
+  if (remainingDays <= 1) {
+    return "Deletes permanently in 1 day";
+  }
+
+  return `Deletes permanently in ${remainingDays} days`;
 }

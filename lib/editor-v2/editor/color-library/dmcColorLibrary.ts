@@ -9,6 +9,7 @@ import {
 import type { PaletteColor, PaletteDocument } from "../store/state";
 
 export const DEFAULT_DMC_COLOR_ID = "dmc-310";
+const DISCONTINUED_DMC_COLOR_IDS = new Set(["dmc-776"]);
 
 export type DmcMatrixCell = {
   column: DmcMatrixColumn;
@@ -37,12 +38,12 @@ export const DMC_COLOR_LIBRARY_MATRIX: DmcMatrixColumnData[] =
 export function addDmcColorLibraryToPalette(
   palette: PaletteDocument,
 ): PaletteDocument {
+  const sanitizedPalette = removeDiscontinuedDmcColorsFromPalette(palette);
+  const colorsById = mergeDmcColorLibraryMetadata(sanitizedPalette.colorsById);
+
   return {
-    ...palette,
-    colorsById: {
-      ...DMC_COLOR_LIBRARY_BY_ID,
-      ...palette.colorsById,
-    },
+    ...sanitizedPalette,
+    colorsById,
   };
 }
 
@@ -104,11 +105,69 @@ function toPaletteColor(color: DmcColor): PaletteColor {
     code: color.code,
     name: color.name,
     hex: color.hex,
+    family: color.family,
+    searchAliases: color.nameMaxx ? [color.nameMaxx] : [],
   };
 }
 
 function getDmcColorId(code: string): string {
   return `dmc-${code.toLowerCase()}`;
+}
+
+function removeDiscontinuedDmcColorsFromPalette(
+  palette: PaletteDocument,
+): PaletteDocument {
+  const colorsById = Object.fromEntries(
+    Object.entries(palette.colorsById).filter(
+      ([colorId]) => !DISCONTINUED_DMC_COLOR_IDS.has(colorId),
+    ),
+  );
+  const customPalettesById = Object.fromEntries(
+    Object.entries(palette.customPalettesById).map(([paletteId, customPalette]) => [
+      paletteId,
+      {
+        ...customPalette,
+        colorIds: customPalette.colorIds.filter(
+          (colorId) => !DISCONTINUED_DMC_COLOR_IDS.has(colorId),
+        ),
+      },
+    ]),
+  );
+
+  return {
+    ...palette,
+    colorsById,
+    customPalettesById,
+    extractedPaletteIds: palette.extractedPaletteIds.filter(
+      (colorId) => !DISCONTINUED_DMC_COLOR_IDS.has(colorId),
+    ),
+    symbolAssignments: Object.fromEntries(
+      Object.entries(palette.symbolAssignments).filter(
+        ([colorId]) => !DISCONTINUED_DMC_COLOR_IDS.has(colorId),
+      ),
+    ),
+  };
+}
+
+function mergeDmcColorLibraryMetadata(
+  colorsById: PaletteDocument["colorsById"],
+): PaletteDocument["colorsById"] {
+  const mergedColorsById: PaletteDocument["colorsById"] = {
+    ...DMC_COLOR_LIBRARY_BY_ID,
+  };
+
+  for (const [colorId, color] of Object.entries(colorsById)) {
+    const libraryColor = DMC_COLOR_LIBRARY_BY_ID[colorId];
+
+    if (libraryColor && color.brand === "dmc") {
+      mergedColorsById[colorId] = libraryColor;
+      continue;
+    }
+
+    mergedColorsById[colorId] = color;
+  }
+
+  return mergedColorsById;
 }
 
 function getMatrixPlacement(color: DmcColor): MatrixPlacement {

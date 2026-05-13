@@ -19,6 +19,7 @@ import type {
   EditorStore,
   GridDocument,
   PaletteColor,
+  TraceConversionPreviewState,
   TraceBlendMode,
   TraceDocument,
   TraceRepositionOrigin,
@@ -28,12 +29,13 @@ import {
   convertTraceImageToPattern,
   loadTraceImage,
 } from "@/lib/editor-v2/editor/trace/convertTraceImageToPattern";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   createApplyTraceConversionCommand,
   createAttachTraceCommand,
-  createBeginTraceRepositionCommand,
-  createCancelTraceRepositionCommand,
-  createCommitTraceRepositionCommand,
+  createCancelTraceConversionPreviewCommand,
+  createCommitTraceConversionPreviewCommand,
+  createPreviewTraceConversionCommand,
   createRemoveTraceCommand,
   createUpdateTraceCommand,
 } from "../workspaceCommands";
@@ -46,21 +48,45 @@ import styles from "./EditorV2Shell.module.css";
 const TRACE_UPLOAD_ERROR_NOTIFICATION_DURATION_MS = 8000;
 
 interface TraceControlsProps {
+  guestDraftId?: string | null;
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
   palette: PaletteColor[];
+  previewState?: TraceConversionPreviewState | null;
   trace: TraceDocument | null;
   dispatch?: EditorStore["dispatch"];
+  cropDraft?: TraceCropRect | null;
+  editModeActive?: boolean;
+  cropEditing?: boolean;
+  eraserEditing?: boolean;
+  onBeginCrop?: () => void;
+  onBeginEraser?: () => void;
+  onCancelCrop?: () => void;
+  onCommitCrop?: () => void;
+  onResetCrop?: () => void;
+  onToggleEditMode?: () => void;
   repositionActive?: boolean;
   repositionOrigin?: TraceRepositionOrigin | null;
 }
 
 export function TraceControls({
+  guestDraftId = null,
   grid,
   gridMetrics,
   palette,
+  previewState = null,
   trace,
   dispatch,
+  cropDraft = null,
+  editModeActive = false,
+  cropEditing = false,
+  eraserEditing = false,
+  onBeginCrop,
+  onBeginEraser,
+  onCancelCrop,
+  onCommitCrop,
+  onResetCrop,
+  onToggleEditMode,
   repositionActive = false,
   repositionOrigin = null,
 }: TraceControlsProps) {
@@ -73,6 +99,10 @@ export function TraceControls({
     visible: boolean;
     userOverrode: boolean;
   } | null>(null);
+  const conversionPreviewBlendModeRef = useRef<{
+    previewUrl: string;
+    blendMode: TraceBlendMode;
+  } | null>(null);
   const [opacityTooltipVisible, setOpacityTooltipVisible] = useState(false);
   const [convertMaxColors, setConvertMaxColors] = useState(20);
   const [convertSmoothing, setConvertSmoothing] = useState(0.25);
@@ -81,6 +111,7 @@ export function TraceControls({
   const [pendingConversion, setPendingConversion] = useState<{
     replacements: Array<{ index: number; value: string | null }>;
     extractedColorIds: string[];
+    mode: "apply" | "preview";
   } | null>(null);
   const [overwriteCount, setOverwriteCount] = useState(0);
   const [skipWarningForOneDay, setSkipWarningForOneDay] = useState(false);
@@ -92,13 +123,23 @@ export function TraceControls({
     "idle" | "uploading" | "error"
   >("idle");
   const positioningEnabled = Boolean(trace && repositionActive);
+  const traceEditingPreviewActive =
+    editModeActive || positioningEnabled || cropEditing || eraserEditing;
+  const conversionPreviewActive = previewState !== null;
   const preservePositioningSectionLayout =
     repositionOrigin === "upload" || repositionOrigin === "replace";
   const traceFileName = trace ? getTraceDisplayName(trace) : null;
   const traceFileNameParts = traceFileName
     ? splitFileNameForDisplay(traceFileName)
     : null;
-  const canConvert = Boolean(trace && !repositionActive);
+  const canConvert = Boolean(
+    trace &&
+      !editModeActive &&
+      !repositionActive &&
+      !cropEditing &&
+      !eraserEditing &&
+      !conversionPreviewActive,
+  );
   const conversionSmoothingPercent = Math.round(convertSmoothing * 100);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -111,7 +152,7 @@ export function TraceControls({
     setTraceUploadErrorMessage(null);
 
     try {
-      const uploadedTrace = await uploadTraceFile(file);
+      const uploadedTrace = await uploadTraceFile(file, { guestDraftId });
 
       if (sequence !== traceUploadSequenceRef.current) {
         return;
@@ -146,16 +187,20 @@ export function TraceControls({
       return;
     }
 
+    const payload = {
+      replacements: conversion.replacements,
+      extractedColorIds: conversion.extractedColorIds,
+      activeColorId: conversion.extractedColorIds[0] ?? null,
+    };
+
     dispatch(
-      createApplyTraceConversionCommand({
-        replacements: conversion.replacements,
-        extractedColorIds: conversion.extractedColorIds,
-        activeColorId: conversion.extractedColorIds[0] ?? null,
-      }),
+      conversion.mode === "preview"
+        ? createPreviewTraceConversionCommand(payload)
+        : createApplyTraceConversionCommand(payload),
     );
   };
 
-  const handleConvertToPattern = async () => {
+  const runConversion = async (mode: "apply" | "preview") => {
     if (!dispatch || !trace || convertingImage) {
       return;
     }
@@ -165,8 +210,18 @@ export function TraceControls({
 
     try {
       const traceImage = await loadTraceImage(trace.previewUrl);
+      const traceMaskImage = trace.maskUrl
+        ? await loadTraceImage(trace.maskUrl)
+        : null;
       const result = convertTraceImageToPattern({
         traceImage,
+        traceMaskImage: traceMaskImage
+          ? {
+              image: traceMaskImage,
+              width: traceMaskImage.naturalWidth || traceMaskImage.width,
+              height: traceMaskImage.naturalHeight || traceMaskImage.height,
+            }
+          : null,
         trace,
         metrics: gridMetrics,
         palette,
@@ -200,9 +255,14 @@ export function TraceControls({
       const conversion = {
         replacements,
         extractedColorIds: result.usedColorIds,
+        mode,
       };
 
-      if (nextOverwriteCount > 0 && shouldShowOverwriteWarning()) {
+      if (
+        mode === "apply" &&
+        nextOverwriteCount > 0 &&
+        shouldShowOverwriteWarning()
+      ) {
         setOverwriteCount(nextOverwriteCount);
         setPendingConversion(conversion);
         return;
@@ -220,6 +280,9 @@ export function TraceControls({
       setConvertingImage(false);
     }
   };
+
+  const handlePreviewConversion = () => void runConversion("preview");
+  const handleConvertToPattern = () => void runConversion("apply");
 
   useEffect(() => {
     if (!opacityTooltipVisible) {
@@ -274,7 +337,7 @@ export function TraceControls({
       return;
     }
 
-    if (positioningEnabled) {
+    if (traceEditingPreviewActive) {
       if (positioningPreviewRef.current?.previewUrl !== trace.previewUrl) {
         positioningPreviewRef.current = {
           previewUrl: trace.previewUrl,
@@ -355,7 +418,68 @@ export function TraceControls({
         },
       ),
     );
-  }, [dispatch, positioningEnabled, trace]);
+  }, [dispatch, trace, traceEditingPreviewActive]);
+
+  useEffect(() => {
+    if (!dispatch) {
+      return;
+    }
+
+    if (!trace) {
+      conversionPreviewBlendModeRef.current = null;
+      return;
+    }
+
+    if (conversionPreviewActive) {
+      if (conversionPreviewBlendModeRef.current?.previewUrl !== trace.previewUrl) {
+        conversionPreviewBlendModeRef.current = {
+          previewUrl: trace.previewUrl,
+          blendMode: trace.blendMode,
+        };
+      }
+
+      if (trace.blendMode !== "image") {
+        dispatch(
+          createUpdateTraceCommand(
+            {
+              blendMode: "image",
+            },
+            {
+              history: { mode: "skip" },
+              source: "system",
+            },
+          ),
+        );
+      }
+
+      return;
+    }
+
+    const previewSnapshot = conversionPreviewBlendModeRef.current;
+
+    if (!previewSnapshot || previewSnapshot.previewUrl !== trace.previewUrl) {
+      conversionPreviewBlendModeRef.current = null;
+      return;
+    }
+
+    conversionPreviewBlendModeRef.current = null;
+
+    if (trace.blendMode === previewSnapshot.blendMode) {
+      return;
+    }
+
+    dispatch(
+      createUpdateTraceCommand(
+        {
+          blendMode: previewSnapshot.blendMode,
+        },
+        {
+          history: { mode: "skip" },
+          source: "system",
+        },
+      ),
+    );
+  }, [conversionPreviewActive, dispatch, trace]);
 
   if (!dispatch) {
     return trace ? (
@@ -418,7 +542,7 @@ export function TraceControls({
           }}
         >
           <ButtonIcon
-            icon="/icons/upload.svg"
+            icon="/icons/legacy/upload.svg"
             aria-hidden="true"
             style={{ width: 18, height: 18 }}
           />
@@ -432,18 +556,33 @@ export function TraceControls({
             disabled={traceUploadStatus === "uploading"}
             onClick={() => fileInputRef.current?.click()}
           >
+               <ButtonIcon icon="/icons/lucide/upload.svg" />
             {traceUploadStatus === "uploading" ? (
               <>
                 <span className={styles.saveButtonSpinner} aria-hidden="true" />
                 Uploading...
               </>
             ) : (
-              "Browse file"
+              "Upload image"
             )}
           </Button>
         </div>
       ) : (
-        <TraceSection title="Uploaded File">
+        <TraceSection
+          title="Uploaded File"
+          action={(
+            <Button
+              type="button"
+              variant={editModeActive ? "secondary" : "ghostV2"}
+              size="sm"
+              disabled={!trace || conversionPreviewActive}
+              onClick={onToggleEditMode}
+            >
+              <ButtonIcon icon="/icons/lucide/sliders-horizontal.svg" />
+
+            </Button>
+          )}
+        >
           <div className={styles.traceAttachmentSummary}>
             <button
               type="button"
@@ -464,22 +603,6 @@ export function TraceControls({
               <span className={styles.traceAttachmentThumbFrame}>
                 {traceUploadStatus === "uploading" ? (
                   <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                ) : positioningEnabled ? (
-                  <span
-                    aria-hidden="true"
-                    className={styles.traceAttachmentThumbOverlay}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "var(--surface-subtle, rgba(148, 163, 184, 0.14))",
-                      opacity: 1,
-                    }}
-                  >
-                    <ButtonIcon icon="/icons/lucide/image.svg" />
-                  </span>
                 ) : (
                   <>
                     <img
@@ -591,7 +714,7 @@ export function TraceControls({
         )}
         tone="warning"
         dismissLabel="Cancel"
-        confirmLabel="Convert"
+        confirmLabel={pendingConversion?.mode === "preview" ? "Preview" : "Convert"}
         onDismiss={() => {
           setPendingConversion(null);
           setOverwriteCount(0);
@@ -619,85 +742,73 @@ export function TraceControls({
 
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
-          <TraceSection title="Settings">
+          <TraceSection
+            title="Display settings"
+            action={(
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={styles.traceSectionHeaderActionButton}
+                aria-label={trace.visible ? "Hide image" : "Show image"}
+                aria-pressed={trace.visible}
+                onClick={() =>
+                  dispatch(
+                    createUpdateTraceCommand(
+                      { visible: !trace.visible },
+                      { history: { mode: "skip" } },
+                    ),
+                  )
+                }
+              >
+                <ButtonIcon
+                  icon={trace.visible ? "/icons/lucide/eye.svg" : "/icons/lucide/eye-off.svg"}
+                />
+              </Button>
+            )}
+          >
 
           {/* <TraceSection  */}
           {/* // title="Positioning" */}
           {/* > */}
-            {positioningEnabled && !preservePositioningSectionLayout ? (
-              <div className={styles.panelRow}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => dispatch(createCancelTraceRepositionCommand())}
-                   style={{ width: "47%"}}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => dispatch(createCommitTraceRepositionCommand())}
-                   style={{ width: "47%"}}
-                >
-                  Done
-                </Button>
-              </div>
-            ) : (
-              <Field>
-                <div className={styles.traceInlineFieldRow}>
-                  <span
-                    className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
+            <>
+              {/* {cropEditing && cropDraft ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div
+                    className={styles.panelRow}
+                    style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
                   >
-                    Position
-                  </span>
-                  <div className={styles.traceInlineActionControl}>
+                    <Button
+                      type="button"
+                      variant="ghostV2"
+                      size="sm"
+                      onClick={onResetCrop}
+                    >
+                      Reset
+                    </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
-                      disabled={!trace || positioningEnabled}
-                      onClick={() => dispatch(createBeginTraceRepositionCommand("panel"))}
+                      style={{ minWidth: 96, flexShrink: 0 }}
+                      onClick={onCancelCrop}
                     >
-                      <ButtonIcon icon="/icons/lucide/vector_square.svg" />
-                      Reposition
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      style={{ minWidth: 96, flexShrink: 0 }}
+                      onClick={onCommitCrop}
+                    >
+                      Done
                     </Button>
                   </div>
                 </div>
-              </Field>
-            )}
+              ) : null} */}
+            </>
           {/* </TraceSection> */}
-
-
-
-            <Field>
-              <div className={styles.traceInlineFieldRow}>
-                <span
-                  className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
-                >
-                  Image
-                </span>
-                <SegmentedControl
-                  ariaLabel="Image visibility"
-                  value={trace.visible ? "show" : "hide"}
-                  onChange={(next) =>
-                    dispatch(
-                      createUpdateTraceCommand(
-                        { visible: next === "show" },
-                        { history: { mode: "skip" } },
-                      ),
-                    )
-                  }
-                  options={[
-                    { label: "Show", value: "show" },
-                    { label: "Hide", value: "hide" },
-                  ]}
-                />
-              </div>
-            </Field>
-
             <div
               className={styles.traceOpacityControls}
               data-disabled={trace.visible ? "false" : "true"}
@@ -710,25 +821,27 @@ export function TraceControls({
                   >
                     Blending
                   </span>
-                  <SegmentedControl
-                    ariaLabel="Opacity blending mode"
-                    disabled={!trace.visible}
-                    value={trace.blendMode ?? "image"}
-                    onChange={(mode) =>
-                      dispatch(
-                        createUpdateTraceCommand(
-                          {
-                            blendMode: mode,
-                          },
-                          { history: { mode: "skip" } },
-                        ),
-                      )
-                    }
-                    options={[
-                      { label: "Crossfade", value: "crossfade" },
-                      { label: "Image only", value: "image" },
-                    ]}
-                  />
+                  <div className={styles.traceInlineActionControl}>
+                    <SegmentedControl
+                      ariaLabel="Opacity blending mode"
+                      disabled={!trace.visible}
+                      value={trace.blendMode ?? "image"}
+                      onChange={(mode) =>
+                        dispatch(
+                          createUpdateTraceCommand(
+                            {
+                              blendMode: mode,
+                            },
+                            { history: { mode: "skip" } },
+                          ),
+                        )
+                      }
+                      options={[
+                        { label: "Crossfade", value: "crossfade" },
+                        { label: "Image only", value: "image" },
+                      ]}
+                    />
+                  </div>
                 </div>
               </Field>
 
@@ -786,7 +899,7 @@ export function TraceControls({
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection
-            title="Convert to Pattern"
+            title="Convert to stitches"
             // hint="Sample the image onto the stitch grid using your thread palette."
           >
             <Field>
@@ -798,7 +911,10 @@ export function TraceControls({
                   Max colors
                 </span>
                 <div className={styles.traceSliderControl}>
-                  <div className={styles.traceSliderRow}>
+                  <div
+                    className={styles.traceSliderRow}
+                    data-disabled={conversionPreviewActive ? "true" : "false"}
+                  >
                     <Slider
                       className={styles.traceSliderFullWidth}
                       min="2"
@@ -828,7 +944,10 @@ export function TraceControls({
                   Smoothing
                 </span>
                 <div className={styles.traceSliderControl}>
-                  <div className={styles.traceSliderRow}>
+                  <div
+                    className={styles.traceSliderRow}
+                    data-disabled={conversionPreviewActive ? "true" : "false"}
+                  >
                     <Slider
                       className={styles.traceSliderFullWidth}
                       min="0"
@@ -851,21 +970,74 @@ export function TraceControls({
               </div>
             </Field>
 
-            <Button
-              type="button"
-              variant="primary"
-              disabled={!canConvert || convertingImage}
-              onClick={handleConvertToPattern}
-            >
-              {convertingImage ? (
-                <>
-                  <span className={styles.saveButtonSpinner} aria-hidden="true" />
-                  Converting...
-                </>
-              ) : (
-                "Convert image"
-              )}
-            </Button>
+            {conversionPreviewActive ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                {/* <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  Preview active. Use the toolbar to apply the conversion or exit preview.
+                </p> */}
+                <div className={styles.traceConversionActionRow}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className={styles.traceConversionActionButton}
+                    onClick={() => dispatch(createCancelTraceConversionPreviewCommand())}
+                  >
+                    Exit preview
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className={styles.traceConversionActionButton}
+                    onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
+                  >
+                    Apply to canvas
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div className={styles.traceConversionActionRow}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className={styles.traceConversionActionButton}
+                    disabled={!canConvert || convertingImage}
+                    onClick={handlePreviewConversion}
+                  >
+                    {/* {convertingImage ? (
+                      <>
+                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                        Converting...
+                      </>
+                    ) : (
+                      "Preview"
+                    )} */}
+                    Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className={styles.traceConversionActionButton}
+                    disabled={!canConvert || convertingImage}
+                    onClick={handleConvertToPattern}
+                  >
+                    {/* {convertingImage ? (
+                      <>
+                        <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                        Converting...
+                      </>
+                    ) : (
+                      "Apply"
+                    )} */}
+                    Apply to canvas
+                  </Button>
+                  
+                </div>
+                {/* <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  Preview is temporary and won&apos;t stick until you apply it.
+                </p> */}
+              </div>
+            )}
           </TraceSection>
         </>
       ) : (
@@ -878,7 +1050,10 @@ export function TraceControls({
   );
 }
 
-async function uploadTraceFile(file: File): Promise<{
+async function uploadTraceFile(
+  file: File,
+  options: { guestDraftId?: string | null } = {},
+): Promise<{
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
@@ -902,6 +1077,7 @@ async function uploadTraceFile(file: File): Promise<{
     },
     body: JSON.stringify({
       fileName: file.name,
+      guestDraftId: options.guestDraftId ?? null,
       mimeType: file.type || null,
       originalPathname: uploadedOriginal.pathname,
       originalUrl: uploadedOriginal.url,
@@ -1043,10 +1219,12 @@ function splitFileNameForDisplay(fileName: string): {
 }
 
 function TraceSection({
+  action,
   children,
   hint,
   title,
 }: {
+  action?: ReactNode;
   children: ReactNode;
   hint?: string;
   title: string;
@@ -1054,9 +1232,12 @@ function TraceSection({
   return (
     <section className={styles.traceSection}>
       <div className={styles.traceSectionHeader}>
-        <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>
-          {title}
-        </h3>
+        <div className={styles.traceSectionTitleRow}>
+          <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>
+            {title}
+          </h3>
+          {action}
+        </div>
         {hint ? (
           <p className={styles.traceSectionHint} style={typographyStyles.s}>
             {hint}

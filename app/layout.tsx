@@ -6,6 +6,9 @@ import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
 import { AuthProvider } from "@/lib/auth/client";
+import AppHeaderNav from "@/components/app/AppHeaderNav";
+import { getCurrentUserThemePreference } from "@/lib/auth/server";
+import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
 
 const uiSans = Manrope({
   variable: "--font-ui",
@@ -53,39 +56,31 @@ const appShellStyle: CSSProperties &
   "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
 };
 
-const headerUtilityLinkStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: 28,
-  padding: "6px 10px",
-  borderRadius: 12,
-  color: "var(--text-secondary)",
-  textDecoration: "none",
-  fontSize: 10,
-  lineHeight: "14px",
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  transition: "background-color 140ms ease, color 140ms ease",
-};
-
-const themeBootstrapScript = `
+function createThemeBootstrapScript(profileThemeMode: string | null) {
+  return `
 (() => {
   try {
+    const profileTheme = ${JSON.stringify(profileThemeMode)};
     const saved = window.localStorage.getItem("wippa:theme");
-    const resolved = saved === "system"
+    const nextTheme = profileTheme === "light" || profileTheme === "dark" || profileTheme === "system"
+      ? profileTheme
+      : (saved === "light" || saved === "dark" || saved === "system" ? saved : "light");
+    const resolved = nextTheme === "system"
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-      : saved;
+      : nextTheme;
+    document.documentElement.setAttribute(${JSON.stringify(THEME_MODE_ATTRIBUTE)}, nextTheme);
     if (resolved === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
     } else {
       document.documentElement.removeAttribute("data-theme");
     }
+    window.localStorage.setItem("wippa:theme", nextTheme);
   } catch {}
 })();
 `;
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
@@ -138,6 +133,9 @@ export default function RootLayout({
     );
   }
 
+  const profileThemeMode = await getCurrentUserThemePreference();
+  const themeBootstrapScript = createThemeBootstrapScript(profileThemeMode);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -150,31 +148,21 @@ export default function RootLayout({
             <div
               className="app-shell-header"
               style={{
-                height: 52,
-                minHeight: 52,
-                flex: "0 0 52px",
+                height: 64,
+                minHeight: 64,
+                flex: "0 0 64px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "0 28px 0 16px",
+                padding: "0 14px 0 14px",
                 background: "var(--surface-primary)",
                 borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
                 zIndex: "var(--z-app-header)",
               }}
             >
-              <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-                {/* <img
-                  src={assetPath("/wippa_logo.png")}
-                  alt="Wippa"
-                  style={{ height: 24, width: "auto", display: "block" }}
-                /> */}
-                {/* <Link
-                  href="/editor/design-system"
-                  style={headerUtilityLinkStyle}
-                >
-                  V2 DS
-                </Link> */}
+              <div className="app-shell-header-left" style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1, minWidth: 0, flex: "1 1 auto" }}>
+                <AppHeaderNav />
                 <div id="app-header-history" />
                 <div id="app-header-autosave" />
                 <div id="app-header-file-left" />
@@ -186,7 +174,7 @@ export default function RootLayout({
                   position: "absolute",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  zIndex: 0,
+                  zIndex: 4,
                 }}
               />
               <div className="app-shell-header-right" style={{ display: "flex", alignItems: "center", gap: 16, position: "relative", zIndex: 3 }}>

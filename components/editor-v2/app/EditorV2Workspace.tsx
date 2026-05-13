@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { exportPatternPdfFromDocument } from "@/lib/editor-v2/export";
+import { useAuthStatus } from "@/lib/auth/client";
+import { useEditorStoreSelector } from "./editorStoreContext";
+import { writeStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import type {
   EditorDesignVersionListItem,
   LoadEditorV2VersionResult,
@@ -28,6 +31,7 @@ export interface EditorV2SuccessNotification {
 
 export function EditorV2Workspace({
   canvasLoading,
+  authResolved,
   hasSavedDesignAccess,
   onCanvasReady,
   currentStorageId,
@@ -39,6 +43,7 @@ export function EditorV2Workspace({
   isVersionPreview,
   versionPreviewMeta,
   saveMode,
+  onLocalDraftPersisted,
   savedDocuments,
   savedDocumentsLoading,
   savedDocumentsHasMore,
@@ -58,6 +63,7 @@ export function EditorV2Workspace({
   onRestoreVersion,
   onRestoreVersionAsCopy,
   onDeleteCurrentDesign,
+  onClearLocalBrowserData,
   onStartOver,
   persistentSuccessNotification,
   onDismissPersistentSuccessNotification,
@@ -67,6 +73,7 @@ export function EditorV2Workspace({
   setupModalOpen,
 }: {
   canvasLoading: boolean;
+  authResolved: boolean;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   currentStorageId: string;
@@ -82,6 +89,7 @@ export function EditorV2Workspace({
     saveSource: LoadEditorV2VersionResult["saveSource"];
   } | null;
   saveMode: "manual" | "autosave";
+  onLocalDraftPersisted?: (draftId: string) => void;
   savedDocuments: SavedEditorV2DocumentRecord[];
   savedDocumentsLoading: boolean;
   savedDocumentsHasMore: boolean;
@@ -117,6 +125,7 @@ export function EditorV2Workspace({
     versionId: string,
   ) => Promise<RestoreEditorV2VersionResult>;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   onStartOver: () => void;
   persistentSuccessNotification: EditorV2SuccessNotification | null;
   onDismissPersistentSuccessNotification: () => void;
@@ -125,6 +134,10 @@ export function EditorV2Workspace({
   setupModalMode: "full" | "new-only";
   setupModalOpen: boolean;
 }) {
+  const { isSignedIn } = useAuthStatus();
+  const canvasPreferences = useEditorStoreSelector(
+    (state) => state.document.canvasPreferences,
+  );
   const [exportButtonState, setExportButtonState] =
     useState<ExportButtonState>("idle");
   const [deleteButtonState, setDeleteButtonState] =
@@ -146,13 +159,23 @@ export function EditorV2Workspace({
     isVersionHistoryMode,
     isVersionPreview,
     saveMode,
+    onLocalDraftPersisted,
     onSaveDocument,
   });
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      return;
+    }
+
+    writeStickyCanvasPreferences(canvasPreferences);
+  }, [canvasPreferences, isSignedIn]);
 
   return (
     <div>
       <EditorV2Shell
         canvasLoading={canvasLoading}
+        authResolved={authResolved}
         hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={onCanvasReady}
         onExportDocument={async (document) => {
@@ -246,8 +269,8 @@ export function EditorV2Workspace({
           try {
             await onDeleteCurrentDesign(document);
             setSuccessNotification({
-              title: "Design deleted",
-              description: "The design was removed and the editor has been reset.",
+              title: "Moved to Trash",
+              description: "The design can be restored for 30 days from My Designs.",
             });
             setErrorNotification(null);
           } catch (error) {
@@ -261,12 +284,14 @@ export function EditorV2Workspace({
           }
         }}
         onStartOver={onStartOver}
+        onClearLocalBrowserData={onClearLocalBrowserData}
         currentStorageId={currentStorageId}
         deleteButtonState={deleteButtonState}
         errorNotification={errorNotification}
         onDismissErrorNotification={() => setErrorNotification(null)}
         exportButtonState={exportButtonState}
         hasPersistableUnsavedChanges={controllerState.hasPersistableUnsavedChanges}
+        lastSaveConfirmedAt={controllerState.lastSaveConfirmedAt}
         recoveredLocalChanges={controllerState.recoveredLocalChanges}
         saveButtonState={controllerState.saveButtonState}
         saveMessage={controllerState.saveMessage}

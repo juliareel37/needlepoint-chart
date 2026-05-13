@@ -18,6 +18,7 @@ import type {
   RemoveTraceCommand,
   UpdateTraceCommand,
 } from "../types";
+import { createFullTraceCrop } from "../../trace/crop";
 
 export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand> = {
   canHandle(command): command is AttachTraceCommand {
@@ -28,11 +29,16 @@ export const attachTraceCommandHandler: EditorCommandHandler<AttachTraceCommand>
       previewUrl: command.payload.previewUrl,
       thumbnailUrl: command.payload.thumbnailUrl,
       originalUrl: command.payload.originalUrl,
+      maskUrl: null,
       fileName: command.payload.fileName,
       byteSize: command.payload.byteSize,
       mimeType: command.payload.mimeType,
       imageWidth: command.payload.imageWidth,
       imageHeight: command.payload.imageHeight,
+      ...createFullTraceCrop(
+        command.payload.imageWidth,
+        command.payload.imageHeight,
+      ),
       blendMode: "image",
       opacity: 0.35,
       offsetX: 0,
@@ -249,6 +255,10 @@ export const commitTraceRepositionCommandHandler: EditorCommandHandler<CommitTra
       offsetY: currentTrace.offsetY,
       scale: currentTrace.scale,
       rotation: currentTrace.rotation,
+      cropX: currentTrace.cropX,
+      cropY: currentTrace.cropY,
+      cropWidth: currentTrace.cropWidth,
+      cropHeight: currentTrace.cropHeight,
       locked: true,
     };
 
@@ -334,6 +344,10 @@ function buildTraceRepositionSnapshot(
     offsetY: trace.offsetY,
     scale: trace.scale,
     rotation: trace.rotation,
+    cropX: trace.cropX,
+    cropY: trace.cropY,
+    cropWidth: trace.cropWidth,
+    cropHeight: trace.cropHeight,
     locked: true,
   };
 }

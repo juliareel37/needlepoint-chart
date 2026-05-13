@@ -18,8 +18,11 @@ import {
   ToolbarSubtoolGroup,
   ToolbarSwatch,
 } from "@/components/design-system";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import type {
   ActiveTool,
+  CustomPalette,
+  EditorSidebarSection,
   EditorStore,
   GridPoint,
   GridRect,
@@ -28,8 +31,10 @@ import type {
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createBeginCutPlacementCommand,
+  createBeginDuplicatePlacementCommand,
+  createCancelDuplicatePlacementCommand,
   createCancelMirrorCommand,
-  createBeginTraceRepositionCommand,
   createBeginMirrorFromSelectionCommand,
   createClearCanvasCommand,
   createClearSelectionCommand,
@@ -51,6 +56,13 @@ import {
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
+
+export interface ColorLibraryDismissGesture {
+  clientX: number;
+  clientY: number;
+  pointerType: string;
+  timeStamp: number;
+}
 
 const selectionShapeOptions: Array<{
   shape: SelectionState["shape"];
@@ -81,9 +93,11 @@ function FloatingToolbarPortalPopover({
   align = "start",
   children,
   clampToViewport = true,
+  closeOnInteractOutside = true,
   dockedToBottom = false,
   ignoreRefs = [],
   matchAnchorMinWidth = false,
+  onInteractOutsidePointerDown,
   onRequestClose,
   subtoolbar = false,
   verticalPlacement = "bottom",
@@ -92,9 +106,11 @@ function FloatingToolbarPortalPopover({
   anchorRef: React.RefObject<HTMLDivElement | null>;
   align?: "start" | "center";
   clampToViewport?: boolean;
+  closeOnInteractOutside?: boolean;
   dockedToBottom?: boolean;
   ignoreRefs?: Array<React.RefObject<HTMLElement | null>>;
   matchAnchorMinWidth?: boolean;
+  onInteractOutsidePointerDown?: (event: PointerEvent) => void;
   onRequestClose?: () => void;
   verticalPlacement?: "bottom" | "top";
 }) {
@@ -204,7 +220,7 @@ function FloatingToolbarPortalPopover({
   }, [mounted, updatePosition]);
 
   useEffect(() => {
-    if (!mounted || !onRequestClose) {
+    if (!mounted || !onRequestClose || !closeOnInteractOutside) {
       return;
     }
 
@@ -223,12 +239,20 @@ function FloatingToolbarPortalPopover({
         return;
       }
 
+      onInteractOutsidePointerDown?.(event);
       onRequestClose?.();
     }
 
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [anchorRef, ignoreRefs, mounted, onRequestClose]);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    return () => window.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [
+    anchorRef,
+    closeOnInteractOutside,
+    ignoreRefs,
+    mounted,
+    onInteractOutsidePointerDown,
+    onRequestClose,
+  ]);
 
   if (!mounted) {
     return null;
@@ -278,6 +302,7 @@ interface FloatingToolbarProps {
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
+  customPalettesById: Record<string, CustomPalette>;
   dispatch: EditorStore["dispatch"];
   eyedropperReturnTool: ActiveTool | null;
   hasPaintedCells: boolean;
@@ -287,9 +312,19 @@ interface FloatingToolbarProps {
   selectionCommitted: boolean;
   selectionMode: SelectionState["mode"];
   selectionShape: SelectionState["shape"];
+  activeSidebarSection: EditorSidebarSection;
+  sidebarCollapsed: boolean;
   trace: TraceDocument | null;
+  duplicatePlacementActive: boolean;
+  duplicatePlacementOperation: "duplicate" | "cut" | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
+  onOpenCustomPalettesPanel: () => void;
+  onOpenSelectionColorsPanel: () => void;
+  onToggleTraceEditMode: () => void;
+  onToolbarSelectionIntent: () => void;
+  onColorLibraryDismissPointerDown?: (gesture: ColorLibraryDismissGesture) => void;
+  onBrushPreviewVisibilityChange?: (visible: boolean) => void;
   selectionRequestKey: number;
   showSymbols: boolean;
   symbolAssignments: Record<string, string>;
@@ -302,6 +337,7 @@ export function FloatingToolbar({
   brushSize,
   canRedo,
   canUndo,
+  customPalettesById,
   dispatch,
   eyedropperReturnTool,
   hasPaintedCells,
@@ -311,9 +347,19 @@ export function FloatingToolbar({
   selectionCommitted,
   selectionMode,
   selectionShape,
+  activeSidebarSection,
+  sidebarCollapsed,
   trace,
+  duplicatePlacementActive,
+  duplicatePlacementOperation,
   mirrorSessionActive,
   isBottomPanelLayout,
+  onOpenCustomPalettesPanel,
+  onOpenSelectionColorsPanel,
+  onToggleTraceEditMode,
+  onToolbarSelectionIntent,
+  onColorLibraryDismissPointerDown,
+  onBrushPreviewVisibilityChange,
   selectionRequestKey,
   showSymbols,
   symbolAssignments,
@@ -356,8 +402,16 @@ export function FloatingToolbar({
   const brushSizeTooltipPercent =
     ((brushSizeSliderValue - 1) / 9) * 100;
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
+  const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
+  const duplicatePlacementSelected = duplicatePlacementOperation === "duplicate";
+  const cutPlacementSelected = duplicatePlacementOperation === "cut";
+  const canDuplicateSelection =
+    duplicatePlacementSelected || (selectionCommitted && !duplicatePlacementActive);
+  const canCutSelection =
+    cutPlacementSelected || (selectionCommitted && !duplicatePlacementActive);
+  const traceSidebarOpen = !sidebarCollapsed && activeSidebarSection === "trace";
   const canEraseSelection = Boolean(selectionCommitted && selectionBounds);
   const mobileSelectionDocked =
     ENABLE_MOBILE_SELECTION_DOCK && isBottomPanelLayout && (selectionVisible || selectOpen);
@@ -371,6 +425,11 @@ export function FloatingToolbar({
 
   const updateTooltipPosition = useCallback((target: HTMLButtonElement) => {
     if (!toolbarTooltipsEnabled) {
+      setActiveTooltip(null);
+      return;
+    }
+
+    if (!toolbarRef.current?.contains(target)) {
       setActiveTooltip(null);
       return;
     }
@@ -528,17 +587,26 @@ export function FloatingToolbar({
     function handlePointerUp() {
       setBrushSizeSliderDragging(false);
       setBrushSizeTooltipVisible(false);
+      onBrushPreviewVisibilityChange?.(false);
     }
 
     window.addEventListener("pointerup", handlePointerUp);
     return () => window.removeEventListener("pointerup", handlePointerUp);
-  }, [brushSizeTooltipVisible]);
+  }, [brushSizeTooltipVisible, onBrushPreviewVisibilityChange]);
 
   useEffect(() => {
     if (!selectionVisible) {
       closeSelectMenu();
     }
   }, [selectionVisible]);
+
+  useEffect(() => {
+    if (!duplicatePlacementActive) {
+      return;
+    }
+
+    setSelectionShapeMenuOpen(false);
+  }, [duplicatePlacementActive]);
 
   useEffect(() => {
     if (selectionRequestKey === handledSelectionRequestKeyRef.current) {
@@ -612,6 +680,7 @@ export function FloatingToolbar({
     setDrawPopoverTool(null);
     setBrushSizeSliderDragging(false);
     setBrushSizeTooltipVisible(false);
+    onBrushPreviewVisibilityChange?.(false);
   }
 
   function closeColorLibrary(): void {
@@ -624,6 +693,11 @@ export function FloatingToolbar({
   }
 
   function handleSelectionButtonClick() {
+    if (duplicatePlacementActive) {
+      return;
+    }
+
+    onToolbarSelectionIntent();
     closeColorLibrary();
     closeDrawMenu();
     closeImageMenu();
@@ -662,6 +736,7 @@ export function FloatingToolbar({
   }
 
   function handleNewSelection() {
+    onToolbarSelectionIntent();
     dispatch(createClearSelectionCommand());
     dispatch(createSetToolCommand("lasso"));
     setSelectOpen(true);
@@ -712,10 +787,22 @@ export function FloatingToolbar({
           onPointerDown={() => {
             setBrushSizeSliderDragging(true);
             setBrushSizeTooltipVisible(true);
+            onBrushPreviewVisibilityChange?.(true);
+          }}
+          onPointerUp={() => {
+            setBrushSizeSliderDragging(false);
+            setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
+          }}
+          onPointerCancel={() => {
+            setBrushSizeSliderDragging(false);
+            setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
           }}
           onBlur={() => {
             setBrushSizeSliderDragging(false);
             setBrushSizeTooltipVisible(false);
+            onBrushPreviewVisibilityChange?.(false);
           }}
           onChange={(e) => {
             const nextSliderValue = Number(e.currentTarget.value);
@@ -766,6 +853,7 @@ export function FloatingToolbar({
             active={selectionShapeMenuOpen}
             aria-expanded={selectionShapeMenuOpen}
             aria-haspopup="menu"
+            disabled={duplicatePlacementActive}
             onClick={() => setSelectionShapeMenuOpen((open) => !open)}
             className={styles.selectionShapeTrigger}
           >
@@ -811,14 +899,14 @@ export function FloatingToolbar({
 
         <ToolbarDivider />
 
-        <ToolbarButton
+        {/* <ToolbarButton
           type="button"
           labelled
           active={mirrorSessionActive}
           aria-pressed={mirrorSessionActive}
-          disabled={!canMirrorSelection}
+          disabled={!canMirrorSelection || duplicatePlacementActive}
           onClick={() => {
-            if (!canMirrorSelection) {
+            if (!canMirrorSelection || duplicatePlacementActive) {
               return;
             }
 
@@ -831,19 +919,65 @@ export function FloatingToolbar({
             dispatch(createBeginMirrorFromSelectionCommand());
           }}
         >
-          <ToolbarIcon icon="/icons/flip.svg" />
+          <ToolbarIcon icon="/icons/legacy/flip.svg" />
           <ToolbarLabel>Mirror</ToolbarLabel>
+        </ToolbarButton> */}
+
+        <ToolbarButton
+          type="button"
+          labelled
+          active={duplicatePlacementSelected}
+          aria-pressed={duplicatePlacementActive}
+          disabled={!canDuplicateSelection}
+          onClick={() => {
+            if (!canDuplicateSelection) {
+              return;
+            }
+
+            if (duplicatePlacementSelected) {
+              dispatch(createCancelDuplicatePlacementCommand());
+              return;
+            }
+
+            dispatch(createBeginDuplicatePlacementCommand());
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/copy.svg" />
+          <ToolbarLabel>Copy</ToolbarLabel>
+        </ToolbarButton>
+
+        <ToolbarButton
+          type="button"
+          labelled
+          active={cutPlacementSelected}
+          aria-pressed={duplicatePlacementActive}
+          disabled={!canCutSelection}
+          onClick={() => {
+            if (!canCutSelection) {
+              return;
+            }
+
+            if (cutPlacementSelected) {
+              dispatch(createCancelDuplicatePlacementCommand());
+              return;
+            }
+
+            dispatch(createBeginCutPlacementCommand());
+          }}
+        >
+          <ToolbarIcon icon="/icons/lucide/cut.svg" />
+          <ToolbarLabel>Cut</ToolbarLabel>
         </ToolbarButton>
       </ToolbarGroup>
 
-      <ToolbarDivider />
+      {/* <ToolbarDivider /> */}
 
       <ToolbarButton
         type="button"
         labelled
-        disabled={!canEraseSelection}
+        disabled={!canEraseSelection || duplicatePlacementActive}
         onClick={() => {
-          if (!selectionBounds) {
+          if (!selectionBounds || duplicatePlacementActive) {
             return;
           }
 
@@ -855,10 +989,28 @@ export function FloatingToolbar({
         }}
       >
         <ToolbarIcon icon="/icons/lucide/eraser.svg" />
-        <ToolbarLabel>Erase all</ToolbarLabel>
+        <ToolbarLabel>Erase</ToolbarLabel>
       </ToolbarButton>
 
-      {selectionDrawTool ? (
+      <ToolbarDivider />
+
+      <ToolbarButton
+        type="button"
+        labelled
+        disabled={!canEraseSelection || duplicatePlacementActive}
+        onClick={() => {
+          if (!canEraseSelection || duplicatePlacementActive) {
+            return;
+          }
+
+          onOpenSelectionColorsPanel();
+        }}
+      >
+        <ToolbarIcon icon="/icons/lucide/palette.svg" />
+        <ToolbarLabel>Edit</ToolbarLabel>
+      </ToolbarButton>
+
+      {selectionDrawTool && !duplicatePlacementActive ? (
         <>
           <ToolbarDivider />
           <ToolbarSubtoolGroup>
@@ -884,6 +1036,10 @@ export function FloatingToolbar({
             : null;
 
           if (!(target instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          if (!event.currentTarget.contains(target)) {
             return;
           }
 
@@ -915,6 +1071,10 @@ export function FloatingToolbar({
             : null;
 
           if (!(target instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          if (!event.currentTarget.contains(target)) {
             return;
           }
 
@@ -964,6 +1124,14 @@ export function FloatingToolbar({
           {colorLibraryOpen ? (
             <FloatingToolbarPortalPopover
               anchorRef={colorAnchorRef}
+              onInteractOutsidePointerDown={(event) => {
+                onColorLibraryDismissPointerDown?.({
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  pointerType: event.pointerType,
+                  timeStamp: event.timeStamp,
+                });
+              }}
               onRequestClose={closeColorLibrary}
               role="dialog"
               aria-label="Color library"
@@ -975,6 +1143,13 @@ export function FloatingToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 featuredColorIds={featuredColorIds}
+                onManagePalettes={() => {
+                  closeColorLibrary();
+                  onOpenCustomPalettesPanel();
+                }}
+                paletteSections={paletteSections}
+                persistenceKey="floating-toolbar-color-library"
+                scrollActiveColorIntoView
                 showFeaturedSymbols={showSymbols}
                 symbolAssignments={symbolAssignments}
                 onColorSelect={(colorId) => {
@@ -1020,6 +1195,7 @@ export function FloatingToolbar({
             aria-label="Select"
             data-tooltip="Select"
             title="Select"
+            disabled={duplicatePlacementActive}
             onClick={handleSelectionButtonClick}
           >
             <ToolbarIcon icon="/icons/lucide/selection.svg" />
@@ -1049,6 +1225,7 @@ export function FloatingToolbar({
                       type="button"
                       variant="ghost"
                       iconOnly
+                      disabled={duplicatePlacementActive}
                       className={styles.selectionToolbarCloseButton}
                       onClick={handleExitSelection}
                     >
@@ -1211,6 +1388,7 @@ export function FloatingToolbar({
             <FloatingToolbarPortalPopover
               align="center"
               anchorRef={drawPopoverTool === "erase" ? eraseAnchorRef : paintAnchorRef}
+              closeOnInteractOutside={false}
               onRequestClose={closeDrawMenu}
               role="dialog"
               aria-label="Draw size"
@@ -1235,23 +1413,24 @@ export function FloatingToolbar({
         <ToolbarAnchor ref={imageAnchorRef}>
           <ToolbarButton
             type="button"
-          active={imageOpen}
-          aria-pressed={imageOpen}
-          aria-label="Image"
-          data-tooltip="Image"
-          title="Image"
-          disabled={Boolean(selectionCommitted && selectionBounds)}
-          onClick={() => {
-              closeColorLibrary();
-              if (imageOpen) {
-                closeImageMenu();
-              } else {
-                setImageOpen(true);
-              }
-              closeDrawMenu();
-            }}
-          >
-            <ToolbarIcon icon="/icons/lucide/image.svg" />
+            popoverTrigger
+            active={imageOpen}
+            aria-pressed={imageOpen}
+            aria-label="Image"
+            data-tooltip="Image"
+            title="Image"
+            disabled={Boolean(selectionCommitted && selectionBounds)}
+            onClick={() => {
+                closeColorLibrary();
+                if (imageOpen) {
+                  closeImageMenu();
+                } else {
+                  setImageOpen(true);
+                }
+                closeDrawMenu();
+              }}
+            >
+              <ToolbarIcon icon="/icons/lucide/image.svg" />
           </ToolbarButton>
 
           {imageOpen ? (
@@ -1267,14 +1446,17 @@ export function FloatingToolbar({
               {trace ? (
                 <>
                   <ToolbarButton
-                  labelled
+                    labelled
                     type="button"
+                    active={traceSidebarOpen}
+                    inertWhenActive
+                    aria-pressed={traceSidebarOpen}
                     onClick={() => {
                       openSidebarSection("trace");
-                      closeImageMenu();
+                      // closeImageMenu();
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+                    <ToolbarIcon icon="/icons/lucide/eye.svg" />
                     <ToolbarLabel>Display settings</ToolbarLabel>
                   </ToolbarButton>
 
@@ -1284,18 +1466,15 @@ export function FloatingToolbar({
                   <ToolbarButton
                     type="button"
                     labelled
-                    aria-label="Reposition trace"
-                    title="Reposition trace"
+                    aria-label="Edit image"
+                    title="Edit image"
                     onClick={() => {
-                      openSidebarSection("trace");
                       closeImageMenu();
-                      dispatch(
-                        createBeginTraceRepositionCommand("toolbar"),
-                      );
+                      onToggleTraceEditMode();
                     }}
                   >
-                    <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
-                    Reposition
+                    <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
+                    Edit image
                   </ToolbarButton>
 
                 </>

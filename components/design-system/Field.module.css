@@ -40,6 +40,19 @@
   opacity: 0.72;
 }
 
+.control:disabled {
+  border-color: var(--control-disabled-border);
+  background: var(--control-disabled-bg);
+  color: var(--control-disabled-text);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.control:disabled::placeholder {
+  color: var(--control-disabled-text);
+  opacity: 1;
+}
+
 .control:focus {
   outline: none;
 }
@@ -47,7 +60,6 @@
 .control:focus-visible,
 .control:focus-within {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px var(--brand-200);
 }
 
 .inputWithSuffix {
@@ -72,10 +84,4 @@
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .control:hover {
-    border-color: var(--brand-primary);
-  }
 }

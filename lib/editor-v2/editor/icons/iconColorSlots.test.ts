@@ -3,6 +3,7 @@ import {
   extractIconColorSlotsFromSvg,
   findNearestIconColorSlot,
 } from "./iconColorSlots";
+import { extractIconColorSlotsFromRaster } from "./iconRasterColorSlots.server";
 
 describe("extractIconColorSlotsFromSvg", () => {
   it("collects unique fill and stroke colors and normalizes rgb values", () => {
@@ -47,5 +48,35 @@ describe("findNearestIconColorSlot", () => {
     );
 
     expect(slot?.id).toBe("slot-2");
+  });
+});
+
+describe("extractIconColorSlotsFromRaster", () => {
+  it("extracts dominant visible raster colors", async () => {
+    const sharpModule = await import("sharp");
+    const sharp = "default" in sharpModule ? sharpModule.default : sharpModule;
+    const rgbaPixels = Uint8Array.from([
+      255, 0, 0, 255,
+      255, 0, 0, 255,
+      0, 0, 255, 255,
+      0, 0, 255, 255,
+    ]);
+
+    const buffer = await sharp(rgbaPixels, {
+      raw: {
+        width: 2,
+        height: 2,
+        channels: 4,
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const slots = await extractIconColorSlotsFromRaster(buffer, 4);
+
+    expect(slots.map((slot) => slot.sourceHex)).toEqual(
+      expect.arrayContaining(["#ff0000", "#0000ff"]),
+    );
+    expect(slots.every((slot) => typeof slot.paletteColorId === "string")).toBe(true);
   });
 });

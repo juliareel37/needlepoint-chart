@@ -1,5 +1,17 @@
 import type { EditorCommandHandler } from "./handlers/types";
-import { gridApplyTraceConversionCommandHandler } from "./handlers/gridApplyTraceConversion";
+import {
+  cancelTraceConversionPreviewCommandHandler,
+  commitTraceConversionPreviewCommandHandler,
+  gridApplyTraceConversionCommandHandler,
+  previewTraceConversionCommandHandler,
+} from "./handlers/gridApplyTraceConversion";
+import {
+  addColorToCustomPaletteCommandHandler,
+  createCustomPaletteCommandHandler,
+  deleteCustomPaletteCommandHandler,
+  removeColorFromCustomPaletteCommandHandler,
+  renameCustomPaletteCommandHandler,
+} from "./handlers/customPalettes";
 import { gridClearCommandHandler } from "./handlers/gridClear";
 import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
@@ -22,13 +34,20 @@ import { setGridlinesVisibleCommandHandler } from "./handlers/setGridlinesVisibl
 import { setPreviewModeCommandHandler } from "./handlers/setPreviewMode";
 import { setRulerVisibleCommandHandler } from "./handlers/setRulerVisible";
 import { setSymbolsVisibleCommandHandler } from "./handlers/setSymbolsVisible";
+import { setTouchSnappingEnabledCommandHandler } from "./handlers/setTouchSnappingEnabled";
 import {
   setActiveSidebarSectionCommandHandler,
   setSidebarCollapsedCommandHandler,
 } from "./handlers/sidebarShell";
 import {
+  beginCutPlacementCommandHandler,
+  beginDuplicatePlacementCommandHandler,
+  cancelDuplicatePlacementCommandHandler,
+  commitDuplicatePlacementCommandHandler,
   clearSelectionCommandHandler,
   commitSelectionCommandHandler,
+  moveSelectionCommandHandler,
+  resizeSelectionCommandHandler,
   setSelectionShapeCommandHandler,
   startSelectionCommandHandler,
   updateSelectionCommandHandler,
@@ -67,10 +86,19 @@ export const commandHandlers: EditorCommandHandler[] = [
   gridEraseCommandHandler,
   gridClearCommandHandler,
   gridApplyTraceConversionCommandHandler,
+  previewTraceConversionCommandHandler,
+  commitTraceConversionPreviewCommandHandler,
+  cancelTraceConversionPreviewCommandHandler,
   setProjectTitleCommandHandler,
   startSelectionCommandHandler,
   updateSelectionCommandHandler,
   commitSelectionCommandHandler,
+  moveSelectionCommandHandler,
+  resizeSelectionCommandHandler,
+  beginDuplicatePlacementCommandHandler,
+  beginCutPlacementCommandHandler,
+  cancelDuplicatePlacementCommandHandler,
+  commitDuplicatePlacementCommandHandler,
   clearSelectionCommandHandler,
   setSelectionShapeCommandHandler,
   beginMirrorFromSelectionCommandHandler,
@@ -84,6 +112,11 @@ export const commandHandlers: EditorCommandHandler[] = [
   paletteSwapColorCommandHandler,
   paletteDeleteUsedColorsCommandHandler,
   paletteMergeUsedColorsCommandHandler,
+  createCustomPaletteCommandHandler,
+  renameCustomPaletteCommandHandler,
+  deleteCustomPaletteCommandHandler,
+  addColorToCustomPaletteCommandHandler,
+  removeColorFromCustomPaletteCommandHandler,
   beginIconPlacementCommandHandler,
   updateIconPlacementCommandHandler,
   previewIconPlacementCommandHandler,
@@ -107,6 +140,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   setGridlinesVisibleCommandHandler,
   setRulerVisibleCommandHandler,
   setSymbolsVisibleCommandHandler,
+  setTouchSnappingEnabledCommandHandler,
   setPreviewModeCommandHandler,
   openPanelCommandHandler,
 ];

@@ -145,10 +145,11 @@ export function buildPrimitiveIconDataUrl({
   let shapeMarkup = "";
   switch (kind) {
     case "circle": {
-      const radius = Math.max(0, Math.min(normalizedWidth, normalizedHeight) / 2 - halfStroke);
+      const radiusX = Math.max(0, normalizedWidth / 2 - halfStroke);
+      const radiusY = Math.max(0, normalizedHeight / 2 - halfStroke);
       shapeMarkup = `<ellipse cx="${(normalizedWidth / 2).toFixed(3)}" cy="${(
         normalizedHeight / 2
-      ).toFixed(3)}" rx="${radius.toFixed(3)}" ry="${radius.toFixed(
+      ).toFixed(3)}" rx="${radiusX.toFixed(3)}" ry="${radiusY.toFixed(
         3,
       )}" fill="${escapedFill}" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
         3,

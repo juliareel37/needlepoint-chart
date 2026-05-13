@@ -30,6 +30,7 @@ interface TextPlacementLayerProps {
   portalHost?: HTMLElement | null;
   previewColor: string;
   stageBounds: { left: number; top: number; width: number; height: number };
+  touchSnappingEnabled: boolean;
   viewport: ViewportState;
   worldBounds: { left: number; top: number; width: number; height: number };
   zoom: number;
@@ -43,6 +44,7 @@ export function TextPlacementLayer({
   portalHost = null,
   previewColor,
   stageBounds,
+  touchSnappingEnabled,
   viewport,
   worldBounds,
   zoom,
@@ -397,6 +399,7 @@ export function TextPlacementLayer({
             snapGuideContainerBounds={mobileSnapGuideContainerBounds}
             snapGuideZoom={1}
             snapZoom={viewport.zoom}
+            touchSnappingEnabled={touchSnappingEnabled}
             transactionKeyPrefix="text-drag"
             transform={transform}
             zoom={1}
@@ -570,6 +573,7 @@ export function TextPlacementLayer({
               snapGuideContainerBounds={snapContainerBounds}
               snapGuideZoom={zoom}
               snapZoom={viewport.zoom}
+              touchSnappingEnabled={touchSnappingEnabled}
               transactionKeyPrefix="text-drag"
               transform={displayTransform}
               zoom={zoom}

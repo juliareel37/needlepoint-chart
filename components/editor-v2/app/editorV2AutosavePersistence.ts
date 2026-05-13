@@ -8,7 +8,10 @@ const AUTOSAVE_DB_VERSION = 1;
 const AUTOSAVE_STORE_NAME = "snapshots";
 const GRID_CHUNK_SIZE = 32;
 const SYNCED_RETENTION_MS = 1000 * 60 * 60 * 24 * 7;
+const GUEST_DRAFT_RETENTION_MS = 1000 * 60 * 60 * 24 * 7;
 const TEMP_RETENTION_MS = 1000 * 60 * 60 * 24;
+
+export type LocalSnapshotPersistenceScope = "server-recovery" | "guest-draft";
 
 export type AutosaveSyncStatus =
   | "idle"
@@ -20,7 +23,9 @@ export type AutosaveSyncStatus =
 export interface EditorV2LocalSnapshotRecord {
   key: string;
   storageId: string | null;
+  persistenceScope: LocalSnapshotPersistenceScope;
   document: EditorDocumentState;
+  activeColorId: string | null;
   dirtyChunks: string[];
   serializedHash: string | null;
   latestLocalSequenceId: number;
@@ -43,7 +48,9 @@ export interface RecoveryDecisionInput {
 export function createAutosaveSnapshotRecord(input: {
   key: string;
   storageId: string | null;
+  persistenceScope?: LocalSnapshotPersistenceScope;
   document: EditorDocumentState;
+  activeColorId?: string | null;
   dirtyChunks?: Iterable<string>;
   serializedHash?: string | null;
   latestLocalSequenceId?: number;
@@ -59,7 +66,13 @@ export function createAutosaveSnapshotRecord(input: {
   return {
     key: input.key,
     storageId: input.storageId,
+    persistenceScope: getLocalSnapshotPersistenceScope({
+      key: input.key,
+      storageId: input.storageId,
+      persistenceScope: input.persistenceScope,
+    }),
     document: input.document,
+    activeColorId: input.activeColorId ?? null,
     dirtyChunks: Array.from(input.dirtyChunks ?? []),
     serializedHash: input.serializedHash ?? null,
     latestLocalSequenceId: input.latestLocalSequenceId ?? 0,
@@ -73,6 +86,37 @@ export function createAutosaveSnapshotRecord(input: {
     recoveredLocalChanges: input.recoveredLocalChanges ?? false,
     degradedLocalRecovery: input.degradedLocalRecovery ?? false,
   };
+}
+
+export function getLocalSnapshotPersistenceScope(input: {
+  key: string;
+  storageId: string | null;
+  persistenceScope?: LocalSnapshotPersistenceScope;
+}): LocalSnapshotPersistenceScope {
+  if (input.persistenceScope) {
+    return input.persistenceScope;
+  }
+
+  return input.key.startsWith("local_") && !input.storageId
+    ? "guest-draft"
+    : "server-recovery";
+}
+
+export function getLocalSnapshotRetentionMs(
+  snapshot: Pick<EditorV2LocalSnapshotRecord, "key" | "storageId"> &
+    Partial<Pick<EditorV2LocalSnapshotRecord, "persistenceScope">>,
+): number {
+  const persistenceScope = getLocalSnapshotPersistenceScope({
+    key: snapshot.key,
+    storageId: snapshot.storageId,
+    persistenceScope: snapshot.persistenceScope,
+  });
+
+  if (persistenceScope === "guest-draft") {
+    return GUEST_DRAFT_RETENTION_MS;
+  }
+
+  return snapshot.storageId ? SYNCED_RETENTION_MS : TEMP_RETENTION_MS;
 }
 
 export function getAutosaveDocumentKey(
@@ -113,6 +157,9 @@ export function getDirtyChunksFromPatches(
         break;
       case "project.metadata.update":
         chunks.add("project");
+        break;
+      case "canvasPreferences.update":
+        chunks.add("canvasPreferences");
         break;
       case "text.upsertEntity":
       case "text.removeEntity":
@@ -191,6 +238,42 @@ export async function readLocalSnapshot(
   return result ?? null;
 }
 
+export async function readMostRecentGuestLocalSnapshot(): Promise<EditorV2LocalSnapshotRecord | null> {
+  if (typeof indexedDB === "undefined") {
+    return null;
+  }
+
+  await pruneLocalSnapshots();
+
+  const db = await openAutosaveDb();
+  const transaction = db.transaction(AUTOSAVE_STORE_NAME, "readonly");
+  const store = transaction.objectStore(AUTOSAVE_STORE_NAME);
+  const snapshots = await requestToPromise<EditorV2LocalSnapshotRecord[]>(store.getAll());
+
+  const guestDrafts = snapshots
+    .filter((snapshot) => getLocalSnapshotPersistenceScope(snapshot) === "guest-draft")
+    .sort((left, right) => right.lastModifiedAt.localeCompare(left.lastModifiedAt));
+
+  return guestDrafts[0] ?? null;
+}
+
+export async function readGuestLocalDraftIds(): Promise<string[]> {
+  if (typeof indexedDB === "undefined") {
+    return [];
+  }
+
+  await pruneLocalSnapshots();
+
+  const db = await openAutosaveDb();
+  const transaction = db.transaction(AUTOSAVE_STORE_NAME, "readonly");
+  const store = transaction.objectStore(AUTOSAVE_STORE_NAME);
+  const snapshots = await requestToPromise<EditorV2LocalSnapshotRecord[]>(store.getAll());
+
+  return snapshots
+    .filter((snapshot) => getLocalSnapshotPersistenceScope(snapshot) === "guest-draft")
+    .map((snapshot) => snapshot.key);
+}
+
 export async function writeLocalSnapshot(
   snapshot: EditorV2LocalSnapshotRecord,
 ): Promise<{ degradedLocalRecovery: boolean }> {
@@ -248,6 +331,25 @@ export async function deleteLocalSnapshot(key: string): Promise<void> {
   await transactionDone(transaction);
 }
 
+export async function deleteGuestLocalSnapshots(): Promise<void> {
+  if (typeof indexedDB === "undefined") {
+    return;
+  }
+
+  const db = await openAutosaveDb();
+  const transaction = db.transaction(AUTOSAVE_STORE_NAME, "readwrite");
+  const store = transaction.objectStore(AUTOSAVE_STORE_NAME);
+  const snapshots = await requestToPromise<EditorV2LocalSnapshotRecord[]>(store.getAll());
+
+  for (const snapshot of snapshots) {
+    if (getLocalSnapshotPersistenceScope(snapshot) === "guest-draft") {
+      store.delete(snapshot.key);
+    }
+  }
+
+  await transactionDone(transaction);
+}
+
 export async function pruneLocalSnapshots(options?: {
   preserveKeys?: string[];
   now?: number;
@@ -272,7 +374,7 @@ export async function pruneLocalSnapshots(options?: {
     const isSynced =
       snapshot.latestLocalSequenceId <= snapshot.latestSyncAppliedSequenceId &&
       snapshot.latestSyncAppliedSequenceId > 0;
-    const maxAge = snapshot.storageId ? SYNCED_RETENTION_MS : TEMP_RETENTION_MS;
+    const maxAge = getLocalSnapshotRetentionMs(snapshot);
 
     if (!Number.isFinite(lastModified) || now - lastModified < maxAge) {
       continue;

@@ -1,0 +1,250 @@
+"use client";
+
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ButtonIcon,
+  Toolbar,
+  ToolbarAnchor,
+  ToolbarButton,
+  ToolbarIcon,
+  ToolbarPopover,
+} from "@/components/design-system";
+import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
+import { useAuthStatus } from "@/lib/auth/client";
+import type { EditorStore } from "@/lib/editor-v2/editor/store";
+import {
+  getToolbarPopoverMeasuredWidth,
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
+import { CanvasAidsControls, SegmentedChoiceSetting } from "./CanvasAidsControls";
+import styles from "./EditorV2Shell.module.css";
+
+interface CanvasAidsFloatingToolbarProps {
+  dispatch: EditorStore["dispatch"];
+  showGridlines: boolean;
+  showRuler: boolean;
+  showSymbols: boolean;
+  touchSnappingEnabled: boolean;
+}
+
+export function CanvasAidsFloatingToolbar({
+  dispatch,
+  showGridlines,
+  showRuler,
+  showSymbols,
+  touchSnappingEnabled,
+}: CanvasAidsFloatingToolbarProps) {
+  const { isSignedIn } = useAuthStatus();
+  const { themeMode, setThemeMode } = useThemeMode();
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number | "auto";
+    right: number | "auto";
+    transform: string;
+  } | null>(null);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      setPosition(null);
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const popoverWidth = getToolbarPopoverMeasuredWidth(popoverRef.current);
+    const popoverHeight = popoverRef.current?.getBoundingClientRect().height ?? 0;
+    const horizontalPosition = getToolbarPopoverHorizontalPosition({
+      align: "end",
+      anchorRect: rect,
+      popoverWidth,
+    });
+    const transform =
+      horizontalPosition.transform === "none"
+        ? "none"
+        : horizontalPosition.transform;
+
+    setPosition({
+      top: Math.max(TOOLBAR_POPOVER_VIEWPORT_PADDING, rect.top - 8),
+      left: horizontalPosition.left,
+      right: horizontalPosition.right,
+      transform,
+    });
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!mounted || !open) {
+      return;
+    }
+
+    updatePosition();
+  }, [mounted, open, updatePosition]);
+
+  useEffect(() => {
+    if (!mounted || !open || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const popover = popoverRef.current;
+
+    if (!popover) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      window.requestAnimationFrame(updatePosition);
+    });
+
+    observer.observe(popover);
+
+    return () => observer.disconnect();
+  }, [mounted, open, updatePosition]);
+
+  useEffect(() => {
+    if (!mounted || !open) {
+      return;
+    }
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [mounted, open, updatePosition]);
+
+  useEffect(() => {
+    if (!mounted || !open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target) || anchorRef.current?.contains(target)) {
+        return;
+      }
+
+      setOpen(false);
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [mounted, open]);
+
+  return (
+    <>
+      <Toolbar
+        className={styles.canvasAidsToolbar}
+        data-open={open ? "true" : "false"}
+      >
+        <ToolbarAnchor ref={anchorRef}>
+          <ToolbarButton
+            className={styles.canvasAidsToolbarButton}
+            type="button"
+            variant="ghostNeutral"
+            iconOnly
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            aria-label="Canvas aids settings"
+            title="Canvas aids settings"
+            onClick={() => setOpen((current) => !current)}
+          >
+            <ToolbarIcon icon="/icons/lucide/settings.svg" />
+          </ToolbarButton>
+        </ToolbarAnchor>
+      </Toolbar>
+      {mounted && open
+        ? createPortal(
+            <ToolbarPopover
+              ref={popoverRef}
+              className={styles.canvasAidsPopover}
+              style={{
+                position: "fixed",
+                top: position?.top ?? 0,
+                left: position?.left ?? 0,
+                right: position?.right ?? "auto",
+                zIndex: "var(--z-editor-popover)",
+                padding: "12px 16px",
+                transform:
+                  !position || position.transform === "none"
+                    ? "translateY(-100%)"
+                    : `translateY(-100%) ${position.transform}`,
+                minWidth: "240px",
+                maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
+                visibility: position ? "visible" : "hidden",
+              }}
+            >
+              <div className={styles.canvasAidsPopoverCard}>
+                {!isSignedIn ? (
+                  <div>
+                    <SegmentedChoiceSetting
+                      label="Theme"
+                      value={themeMode}
+                      ariaLabel="Application theme"
+                      options={[
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/sun.svg" />
+                              <span className={styles.screenReaderOnly}>Light</span>
+                            </>
+                          ),
+                          value: "light",
+                        },
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/monitor.svg" />
+                              <span className={styles.screenReaderOnly}>System</span>
+                            </>
+                          ),
+                          value: "system",
+                        },
+                        {
+                          label: (
+                            <>
+                              <ButtonIcon icon="/icons/lucide/moon.svg" />
+                              <span className={styles.screenReaderOnly}>Dark</span>
+                            </>
+                          ),
+                          value: "dark",
+                        },
+                      ]}
+                      className={styles.themeControl}
+                      itemClassName={styles.themeControlItem}
+                      onChange={(nextValue) => setThemeMode(nextValue)}
+                    />
+                  </div>
+                ) : null}
+                {!isSignedIn ? <div className={styles.sidebarDivider} /> : null}
+                <CanvasAidsControls
+                  dispatch={dispatch}
+                  showGridlines={showGridlines}
+                  showRuler={showRuler}
+                  showSymbols={showSymbols}
+                  touchSnappingEnabled={touchSnappingEnabled}
+                />
+              </div>
+            </ToolbarPopover>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}

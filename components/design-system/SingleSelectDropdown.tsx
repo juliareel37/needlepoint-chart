@@ -37,6 +37,8 @@ export interface SingleSelectDropdownProps<TItem> {
   items: TItem[];
   label?: ReactNode;
   menuClassName?: string;
+  menuHeader?: ReactNode;
+  menuHeaderClassName?: string;
   menuMaxHeight?: number;
   menuMaxWidth?: string | number;
   menuMatchTriggerWidth?: boolean;
@@ -75,6 +77,8 @@ export function SingleSelectDropdown<TItem>({
   items,
   label,
   menuClassName,
+  menuHeader,
+  menuHeaderClassName,
   menuMaxHeight = 300,
   menuMaxWidth = "min(320px, calc(100vw - 32px))",
   menuMatchTriggerWidth = false,
@@ -414,6 +418,15 @@ export function SingleSelectDropdown<TItem>({
     >
       {orderedItems.length ? (
         <>
+          {menuHeader ? (
+            <MenuItem
+              type="button"
+              disabled
+              className={menuHeaderClassName}
+            >
+              {menuHeader}
+            </MenuItem>
+          ) : null}
           {orderedItems.map((item) => {
             const itemValue = getItemValue(item);
 

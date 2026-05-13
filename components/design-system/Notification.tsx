@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { assetPath } from "@/lib/assetPath";
-import { Button, ButtonIcon } from "./Button";
+import { Button, ButtonIcon, type ButtonVariant } from "./Button";
 import styles from "./Notification.module.css";
 
 export type NotificationTone = "info" | "success" | "warning" | "destructive";
@@ -11,32 +11,24 @@ export type NotificationLayout = "default" | "compact";
 
 const toneConfig: Record<
   NotificationTone,
-  { background: string; border: string; icon: string; badge: string; badgeForeground: string }
+  { icon: string; badge: string; badgeForeground: string }
 > = {
   info: {
-    background: "var(--brand-lightest)",
-    border: "var(--brand-200)",
     icon: "/icons/lucide/info.svg",
     badge: "var(--brand-200)",
     badgeForeground: "var(--brand-600)",
   },
   success: {
-    background: "var(--status-success-soft)",
-    border: "var(--status-success-base)",
     icon: "/icons/lucide/check.svg",
     badge: "var(--status-success-base)",
     badgeForeground: "var(--neutral-0)",
   },
   warning: {
-    background: "var(--status-warning-soft)",
-    border: "var(--status-warning-base)",
     icon: "/icons/lucide/alert.svg",
     badge: "var(--status-warning-base)",
     badgeForeground: "var(--neutral-900)",
   },
   destructive: {
-    background: "var(--status-destructive-soft)",
-    border: "var(--status-destructive-base)",
     icon: "/icons/lucide/alert.svg",
     badge: "var(--status-destructive-base)",
     badgeForeground: "var(--neutral-0)",
@@ -49,6 +41,7 @@ export interface NotificationProps {
   description?: ReactNode;
   layout?: NotificationLayout;
   actionLabel?: ReactNode;
+  actionVariant?: ButtonVariant;
   onAction?: () => void;
   onDismiss?: () => void;
   dismissLabel?: string;
@@ -61,6 +54,7 @@ export function Notification({
   description,
   layout = "default",
   actionLabel,
+  actionVariant = "secondary",
   onAction,
   onDismiss,
   dismissLabel,
@@ -74,10 +68,6 @@ export function Notification({
       className={[styles.card, layout === "compact" ? styles.compact : null]
         .filter(Boolean)
         .join(" ")}
-      style={{
-        background: neutralSurface ? "var(--surface-card)" : toneStyles.background,
-        borderColor: neutralSurface ? "var(--ui-border-subtle)" : toneStyles.border,
-      }}
     >
       <span
         className={styles.iconBadge}
@@ -106,7 +96,7 @@ export function Notification({
 
       {hasAction ? (
         <div className={styles.controls}>
-          <Button type="button" variant="secondary" size="md" onClick={onAction}>
+          <Button type="button" variant={actionVariant} size="md" onClick={onAction}>
             {actionLabel}
           </Button>
           {onDismiss ? (

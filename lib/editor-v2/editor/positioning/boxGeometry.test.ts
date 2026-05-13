@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   getCenterSnappedPosition,
+  getPinchSnappedBounds,
+  getRotationSnapTarget,
+  getSnappedRotationDegrees,
   getResizeSnappedBounds,
   type PositioningMoveSnapState,
   type PositioningRect,
@@ -313,6 +316,108 @@ describe("getResizeSnappedBounds", () => {
         centerY: null,
       },
     });
+  });
+});
+
+describe("getPinchSnappedBounds", () => {
+  it("snaps pinch-resized bounds to the nearest canvas edge", () => {
+    const bounds: PositioningRect = {
+      left: 73,
+      top: 14,
+      width: 20,
+      height: 20,
+    };
+
+    expect(getPinchSnappedBounds(bounds, CONTAINER, emptySnap(), 1)).toEqual({
+      bounds: {
+        left: 80,
+        top: 14,
+        width: 20,
+        height: 20,
+      },
+      snap: {
+        left: null,
+        right: 100,
+        top: null,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("snaps pinch-resized bounds to the canvas midline", () => {
+    const bounds: PositioningRect = {
+      left: 28,
+      top: 18,
+      width: 40,
+      height: 20,
+    };
+
+    expect(getPinchSnappedBounds(bounds, CONTAINER, emptySnap(), 1)).toEqual({
+      bounds: {
+        left: 30,
+        top: 18,
+        width: 40,
+        height: 20,
+      },
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
+        centerX: 50,
+        centerY: null,
+      },
+    });
+  });
+
+  it("keeps a pinch snap latched until it moves beyond the unsnap threshold", () => {
+    const bounds: PositioningRect = {
+      left: 20,
+      top: 19,
+      width: 40,
+      height: 20,
+    };
+    const snap: PositioningMoveSnapState = {
+      left: null,
+      right: null,
+      top: null,
+      bottom: null,
+      centerX: 50,
+      centerY: 40,
+    };
+
+    expect(getPinchSnappedBounds(bounds, CONTAINER, snap, 1)).toEqual({
+      bounds: {
+        left: 30,
+        top: 30,
+        width: 40,
+        height: 20,
+      },
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
+        centerX: 50,
+        centerY: 40,
+      },
+    });
+  });
+});
+
+describe("rotation snapping", () => {
+  it("snaps rotations that move within the snap tolerance of a quarter turn", () => {
+    const snap = getRotationSnapTarget(88, null);
+
+    expect(snap).toBe(90);
+    expect(getSnappedRotationDegrees(88, snap)).toBe(90);
+  });
+
+  it("keeps a snapped quarter turn latched until leaving the unsnap threshold", () => {
+    expect(getRotationSnapTarget(94, 90)).toBe(90);
+    expect(getRotationSnapTarget(96, 90)).toBeNull();
   });
 });
 

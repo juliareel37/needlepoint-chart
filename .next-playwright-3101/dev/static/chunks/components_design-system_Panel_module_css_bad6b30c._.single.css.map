@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/components/design-system/Panel.module.css"],"sourcesContent":[".panel {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 16px;\n  border-radius: 16px;\n  border: 1px solid var(--ui-border-subtle);\n  background: var(--surface-card);\n  box-shadow: var(--ui-shadow-sm);\n}\n\n.header {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n\n.title {\n  margin: 0;\n}\n\n.description {\n  margin: 0;\n  color: var(--text-secondary);\n}\n"],"names":[],"mappings":"AAAA;;;;;;;;;;;AAWA;;;;;;AAMA;;;;AAIA"}}]
-}

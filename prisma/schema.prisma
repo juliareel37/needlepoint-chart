@@ -14,12 +14,20 @@ enum SaveSource {
   RESTORE
 }
 
+enum AppThemePreference {
+  LIGHT
+  SYSTEM
+  DARK
+}
+
 model AppUser {
-  id           String         @id @default(cuid())
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  identities   AuthIdentity[]
-  editorDesigns EditorDesign[]
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  themePreference AppThemePreference?
+  identities      AuthIdentity[]
+  editorDesigns   EditorDesign[]
+  editorDesignFolders EditorDesignFolder[]
 }
 
 model AuthIdentity {
@@ -70,6 +78,7 @@ model PatternVersion {
 model EditorDesign {
   id              String              @id @default(cuid())
   appUserId       String
+  folderId        String?
   userId          String
   title           String
   data            Json
@@ -78,14 +87,35 @@ model EditorDesign {
   lastSaveSource  SaveSource?
   lastVersionAt   DateTime?
   lastVersionHash String?
+  deletedAt       DateTime?
+  purgeAfterAt    DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   versions        EditorDesignVersion[]
+  guestTraceAssets GuestTraceAsset[]
   appUser         AppUser             @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  folder          EditorDesignFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([appUserId])
+  @@index([folderId])
   @@index([userId])
   @@index([updatedAt])
+  @@index([appUserId, deletedAt, updatedAt])
+  @@index([appUserId, folderId, deletedAt, updatedAt])
+  @@index([deletedAt, purgeAfterAt])
+}
+
+model EditorDesignFolder {
+  id        String         @id @default(cuid())
+  appUserId String
+  name      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  appUser   AppUser        @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  designs   EditorDesign[]
+
+  @@unique([appUserId, name])
+  @@index([appUserId])
 }
 
 model EditorDesignVersion {
@@ -100,4 +130,28 @@ model EditorDesignVersion {
 
   @@index([designId])
   @@index([designId, createdAt])
+}
+
+model GuestTraceAsset {
+  id              String       @id @default(cuid())
+  guestDraftId    String
+  originalUrl     String       @unique
+  previewUrl      String       @unique
+  thumbnailUrl    String       @unique
+  fileName        String?
+  byteSize        Int?
+  mimeType        String?
+  imageWidth      Int?
+  imageHeight     Int?
+  claimedDesignId String?
+  claimedAt       DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  claimedDesign   EditorDesign? @relation(fields: [claimedDesignId], references: [id], onDelete: SetNull)
+
+  @@index([guestDraftId])
+  @@index([expiresAt])
+  @@index([claimedDesignId])
+  @@index([claimedAt])
 }

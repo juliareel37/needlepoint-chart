@@ -1,9 +1,11 @@
 import type {
+  CanvasPreferencesDocument,
   EditorDocumentState,
   GridDocument,
   PaletteDocument,
   TextDocument,
 } from "@/lib/editor-v2/editor/store";
+import { getNormalizedTraceCrop } from "@/lib/editor-v2/editor/trace/crop";
 
 export const PERSISTED_EDITOR_V2_SCHEMA_VERSION = 1;
 
@@ -28,15 +30,27 @@ export interface PersistedEditorV2Trace {
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
+  maskUrl: string | null;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   offsetX: number;
   offsetY: number;
   scale: number;
   rotation: number;
+}
+
+export interface PersistedEditorV2CanvasPreferences {
+  showGridlines: CanvasPreferencesDocument["showGridlines"];
+  showRuler: CanvasPreferencesDocument["showRuler"];
+  showSymbols: CanvasPreferencesDocument["showSymbols"];
+  touchSnappingEnabled: CanvasPreferencesDocument["touchSnappingEnabled"];
 }
 
 export interface PersistedEditorV2Design {
@@ -46,6 +60,7 @@ export interface PersistedEditorV2Design {
   };
   grid: PersistedEditorV2Grid;
   palette: PersistedEditorV2Palette;
+  canvasPreferences?: PersistedEditorV2CanvasPreferences;
   trace: PersistedEditorV2Trace | null;
   text: TextDocument;
 }
@@ -68,6 +83,8 @@ export interface PersistedEditorV2DesignRecord {
 export function serializeEditorV2Document(
   document: EditorDocumentState,
 ): PersistedEditorV2Design {
+  const normalizedPalette = normalizePersistedPalette(document.palette);
+
   return {
     schemaVersion: PERSISTED_EDITOR_V2_SCHEMA_VERSION,
     project: {
@@ -83,26 +100,41 @@ export function serializeEditorV2Document(
       cells: [...document.grid.cells],
     },
     palette: {
-      colorsById: document.palette.colorsById,
-      customPalettesById: document.palette.customPalettesById,
-      extractedPaletteIds: [...document.palette.extractedPaletteIds],
-      symbolAssignments: document.palette.symbolAssignments,
+      colorsById: normalizedPalette.colorsById,
+      customPalettesById: normalizedPalette.customPalettesById,
+      extractedPaletteIds: [...normalizedPalette.extractedPaletteIds],
+      symbolAssignments: normalizedPalette.symbolAssignments,
+    },
+    canvasPreferences: {
+      showGridlines: document.canvasPreferences.showGridlines,
+      showRuler: document.canvasPreferences.showRuler,
+      showSymbols: document.canvasPreferences.showSymbols,
+      touchSnappingEnabled: document.canvasPreferences.touchSnappingEnabled,
     },
     trace: document.trace
-      ? {
-          previewUrl: document.trace.previewUrl,
-          thumbnailUrl: document.trace.thumbnailUrl,
-          originalUrl: document.trace.originalUrl,
-          fileName: document.trace.fileName,
-          byteSize: document.trace.byteSize,
-          mimeType: document.trace.mimeType,
-          imageWidth: document.trace.imageWidth,
-          imageHeight: document.trace.imageHeight,
-          offsetX: document.trace.offsetX,
-          offsetY: document.trace.offsetY,
-          scale: document.trace.scale,
-          rotation: document.trace.rotation,
-        }
+      ? (() => {
+          const normalizedCrop = getNormalizedTraceCrop(document.trace);
+
+          return {
+            previewUrl: document.trace.previewUrl,
+            thumbnailUrl: document.trace.thumbnailUrl,
+            originalUrl: document.trace.originalUrl,
+            maskUrl: document.trace.maskUrl,
+            fileName: document.trace.fileName,
+            byteSize: document.trace.byteSize,
+            mimeType: document.trace.mimeType,
+            imageWidth: document.trace.imageWidth,
+            imageHeight: document.trace.imageHeight,
+            cropX: normalizedCrop.cropX,
+            cropY: normalizedCrop.cropY,
+            cropWidth: normalizedCrop.cropWidth,
+            cropHeight: normalizedCrop.cropHeight,
+            offsetX: document.trace.offsetX,
+            offsetY: document.trace.offsetY,
+            scale: document.trace.scale,
+            rotation: document.trace.rotation,
+          };
+        })()
       : null,
     text: document.text,
   };
@@ -111,6 +143,8 @@ export function serializeEditorV2Document(
 export function hydrateEditorV2Document(
   record: PersistedEditorV2DesignRecord,
 ): EditorDocumentState {
+  const normalizedPalette = normalizePersistedPalette(record.data.palette);
+
   return {
     project: {
       id: record.id,
@@ -129,11 +163,12 @@ export function hydrateEditorV2Document(
       cells: [...record.data.grid.cells],
     },
     palette: {
-      colorsById: record.data.palette.colorsById,
-      customPalettesById: record.data.palette.customPalettesById,
-      extractedPaletteIds: [...record.data.palette.extractedPaletteIds],
-      symbolAssignments: record.data.palette.symbolAssignments,
+      colorsById: normalizedPalette.colorsById,
+      customPalettesById: normalizedPalette.customPalettesById,
+      extractedPaletteIds: [...normalizedPalette.extractedPaletteIds],
+      symbolAssignments: normalizedPalette.symbolAssignments,
     },
+    canvasPreferences: normalizePersistedCanvasPreferences(record.data.canvasPreferences),
     trace: record.data.trace
       ? (() => {
           const normalizedTrace = normalizePersistedTrace(record.data.trace);
@@ -142,11 +177,16 @@ export function hydrateEditorV2Document(
             previewUrl: normalizedTrace.previewUrl,
             thumbnailUrl: normalizedTrace.thumbnailUrl,
             originalUrl: normalizedTrace.originalUrl,
+            maskUrl: normalizedTrace.maskUrl,
             fileName: normalizedTrace.fileName,
             byteSize: normalizedTrace.byteSize,
             mimeType: normalizedTrace.mimeType,
             imageWidth: normalizedTrace.imageWidth,
             imageHeight: normalizedTrace.imageHeight,
+            cropX: normalizedTrace.cropX,
+            cropY: normalizedTrace.cropY,
+            cropWidth: normalizedTrace.cropWidth,
+            cropHeight: normalizedTrace.cropHeight,
             offsetX: normalizedTrace.offsetX,
             offsetY: normalizedTrace.offsetY,
             scale: normalizedTrace.scale,
@@ -190,6 +230,7 @@ export function parsePersistedEditorV2Design(
       candidate.grid.sizingMode !== "inches") ||
     !candidate.palette ||
     typeof candidate.palette !== "object" ||
+    !isPersistedPalette(candidate.palette) ||
     !candidate.text ||
     typeof candidate.text !== "object"
   ) {
@@ -204,8 +245,17 @@ export function parsePersistedEditorV2Design(
     return null;
   }
 
+  if (
+    candidate.canvasPreferences !== undefined &&
+    !isPersistedCanvasPreferences(candidate.canvasPreferences)
+  ) {
+    return null;
+  }
+
   return {
     ...candidate,
+    palette: normalizePersistedPalette(candidate.palette),
+    canvasPreferences: normalizePersistedCanvasPreferences(candidate.canvasPreferences),
     trace: candidate.trace ? normalizePersistedTrace(candidate.trace) : null,
   } as PersistedEditorV2Design;
 }
@@ -228,6 +278,7 @@ function isPersistedTrace(value: unknown): value is PersistedEditorV2Trace {
     typeof getLegacyCompatibleTraceUrl(trace, "previewUrl") === "string" &&
     typeof getLegacyCompatibleTraceUrl(trace, "thumbnailUrl") === "string" &&
     typeof getLegacyCompatibleTraceUrl(trace, "originalUrl") === "string" &&
+    (trace.maskUrl === null || trace.maskUrl === undefined || typeof trace.maskUrl === "string") &&
     typeof trace.offsetX === "number" &&
     typeof trace.offsetY === "number" &&
     typeof trace.scale === "number" &&
@@ -238,20 +289,122 @@ function isPersistedTrace(value: unknown): value is PersistedEditorV2Trace {
 function normalizePersistedTrace(
   trace: PersistedEditorV2Trace | (Partial<PersistedEditorV2Trace> & { assetUrl?: unknown }),
 ): PersistedEditorV2Trace {
+  const normalizedCrop = getNormalizedTraceCrop(trace);
+
   return {
     ...trace,
     previewUrl: getLegacyCompatibleTraceUrl(trace, "previewUrl"),
     thumbnailUrl: getLegacyCompatibleTraceUrl(trace, "thumbnailUrl"),
     originalUrl: getLegacyCompatibleTraceUrl(trace, "originalUrl"),
+    maskUrl: trace.maskUrl ?? null,
     fileName: trace.fileName ?? null,
     byteSize: trace.byteSize ?? null,
     mimeType: trace.mimeType ?? null,
     imageWidth: trace.imageWidth ?? null,
     imageHeight: trace.imageHeight ?? null,
+    cropX: normalizedCrop.cropX,
+    cropY: normalizedCrop.cropY,
+    cropWidth: normalizedCrop.cropWidth,
+    cropHeight: normalizedCrop.cropHeight,
     offsetX: trace.offsetX ?? 0,
     offsetY: trace.offsetY ?? 0,
     scale: trace.scale ?? 1,
     rotation: trace.rotation ?? 0,
+  };
+}
+
+function isPersistedCanvasPreferences(
+  value: unknown,
+): value is PersistedEditorV2CanvasPreferences {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PersistedEditorV2CanvasPreferences>;
+
+  return (
+    typeof candidate.showGridlines === "boolean" &&
+    typeof candidate.showRuler === "boolean" &&
+    typeof candidate.showSymbols === "boolean" &&
+    typeof candidate.touchSnappingEnabled === "boolean"
+  );
+}
+
+function isPersistedPalette(value: unknown): value is PersistedEditorV2Palette {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PersistedEditorV2Palette>;
+
+  return (
+    isObjectRecord(candidate.colorsById) &&
+    isStringArray(candidate.extractedPaletteIds) &&
+    isStringRecord(candidate.symbolAssignments) &&
+    isPersistedCustomPalettes(candidate.customPalettesById)
+  );
+}
+
+function isPersistedCustomPalettes(
+  value: unknown,
+): value is PersistedEditorV2Palette["customPalettesById"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((palette) => {
+    if (!palette || typeof palette !== "object") {
+      return false;
+    }
+
+    const candidate = palette as Partial<PaletteDocument["customPalettesById"][string]>;
+    return (
+      typeof candidate.id === "string" &&
+      typeof candidate.name === "string" &&
+      isStringArray(candidate.colorIds)
+    );
+  });
+}
+
+function normalizePersistedPalette(
+  palette: PersistedEditorV2Palette,
+): PersistedEditorV2Palette {
+  const colorsById = (
+    isObjectRecord(palette.colorsById) ? palette.colorsById : {}
+  ) as PersistedEditorV2Palette["colorsById"];
+  const customPalettesById = Object.fromEntries(
+    Object.entries(
+      isPersistedCustomPalettes(palette.customPalettesById)
+        ? palette.customPalettesById
+        : {},
+    ).map(([paletteId, customPalette]) => [
+      paletteId,
+      {
+        id: customPalette.id || paletteId,
+        name: normalizePaletteName(customPalette.name),
+        colorIds: dedupeStringArray(customPalette.colorIds),
+      },
+    ]),
+  );
+
+  return {
+    colorsById,
+    customPalettesById,
+    extractedPaletteIds: dedupeStringArray(palette.extractedPaletteIds),
+    symbolAssignments: isStringRecord(palette.symbolAssignments)
+      ? palette.symbolAssignments
+      : {},
+  };
+}
+
+function normalizePersistedCanvasPreferences(
+  value: PersistedEditorV2CanvasPreferences | undefined,
+): PersistedEditorV2CanvasPreferences {
+  return {
+    showGridlines: value?.showGridlines ?? true,
+    showRuler: value?.showRuler ?? true,
+    showSymbols: value?.showSymbols ?? true,
+    touchSnappingEnabled: value?.touchSnappingEnabled ?? true,
   };
 }
 
@@ -269,4 +422,33 @@ function getLegacyCompatibleTraceUrl(
   }
 
   throw new Error(`Missing ${field}`);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isStringRecord(
+  value: unknown,
+): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isObjectRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function dedupeStringArray(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function normalizePaletteName(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "Untitled Palette";
 }

@@ -53,8 +53,9 @@
 .secondary {
   color: var(--text-primary);
   background: var(--button-secondary-default);
-  box-shadow: var(--ui-shadow-sm);
-
+  border: 1px solid var(--button-secondary-border);
+  /* box-shadow: var(--ui-shadow-sm); */
+  font-weight: 500;
 }
 
 .secondary[data-active="true"] {
@@ -65,25 +66,28 @@
 }
 
 
-.secondary2 {
-  background: var(--button-secondary2-default);
-  box-shadow: var(--ui-shadow-sm);
+.outlined {
+  background: var(--button-outlined-default);
+  /* box-shadow: var(--ui-shadow-sm); */
+  font-weight: 500;
+  border: 1px solid var(--button-outlined-default-border);
+  color: var(--button-outlined-default-text);
   /* color: var(--text-secondary); */
-  border: 1px solid var(--button-secondary2-default-border);
+  border: 1px solid var(--button-outlined-default-border);
 }
 
-.secondary2[data-active="true"] {
-  color: var(--button-secondary2-active-text);
-  background: var(--button-secondary2-active);
-  box-shadow: var(--ui-shadow-sm);
+.outlined[data-active="true"] {
+  color: var(--button-outlined-active-text);
+  background: var(--button-outlined-active);
+  box-shadow: none;
   font-weight: 600;
-  border:1px solid var(--brand-500);
+  border: 1px solid var(--button-outlined-active-border);
 }
 
-.secondary2[data-active="true"]:hover:not(:disabled) {
-  color: var(--button-secondary2-active-text);
-  background: var(--button-secondary2-active);
-  box-shadow: var(--ui-shadow-sm);
+.outlined[data-active="true"]:hover:not(:disabled) {
+  color: var(--button-outlined-active-text);
+  background: var(--button-outlined-active);
+  box-shadow: none;
 }
 
 .destructive {
@@ -171,13 +175,14 @@
 
   }
 
-  .secondary2:hover:not(:disabled) {
-    background: var(--button-secondary2-hover);
+  .outlined:hover:not(:disabled) {
+    background: var(--button-outlined-hover);
+    box-shadow: var(--ui-shadow-sm);
   }
 
-  .secondary2[data-active="true"]:hover:not(:disabled) {
-    background: var(--button-secondary2-active);
-    color: var(--button-secondary2-active-text);
+  .outlined[data-active="true"]:hover:not(:disabled) {
+    background: var(--button-outlined-active);
+    color: var(--button-outlined-active-text);
   }
 
   .destructive:hover:not(:disabled) {

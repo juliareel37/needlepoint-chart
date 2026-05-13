@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import {
   hydrateEditorV2Document,
+  parsePersistedEditorV2Design,
   serializeEditorV2Document,
 } from "./designs";
 
@@ -29,15 +30,26 @@ describe("editor-v2 persisted designs", () => {
       "dmc:310": "!",
       "custom:red": "@",
     };
+    state.document.canvasPreferences = {
+      showGridlines: false,
+      showRuler: false,
+      showSymbols: true,
+      touchSnappingEnabled: false,
+    };
     state.document.trace = {
       previewUrl: "https://blob.example.com/trace-preview.webp",
       thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
       originalUrl: "https://blob.example.com/trace.png",
+      maskUrl: null,
       fileName: "trace.png",
       byteSize: 12345,
       mimeType: "image/png",
       imageWidth: 900,
       imageHeight: 700,
+      cropX: 120,
+      cropY: 40,
+      cropWidth: 600,
+      cropHeight: 500,
       offsetX: 4,
       offsetY: 8,
       scale: 1.5,
@@ -66,6 +78,12 @@ describe("editor-v2 persisted designs", () => {
         colorIds: ["custom:red"],
       },
     });
+    expect(persisted.canvasPreferences).toEqual({
+      showGridlines: false,
+      showRuler: false,
+      showSymbols: true,
+      touchSnappingEnabled: false,
+    });
     expect(persisted.trace).toEqual({
       previewUrl: "https://blob.example.com/trace-preview.webp",
       thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
@@ -75,6 +93,10 @@ describe("editor-v2 persisted designs", () => {
       mimeType: "image/png",
       imageWidth: 900,
       imageHeight: 700,
+      cropX: 120,
+      cropY: 40,
+      cropWidth: 600,
+      cropHeight: 500,
       offsetX: 4,
       offsetY: 8,
       scale: 1.5,
@@ -125,11 +147,16 @@ describe("editor-v2 persisted designs", () => {
           previewUrl: "https://blob.example.com/trace-preview.webp",
           thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
           originalUrl: "https://blob.example.com/trace.png",
+          maskUrl: null,
           fileName: "trace.png",
           byteSize: 12345,
           mimeType: "image/png",
           imageWidth: 900,
           imageHeight: 700,
+          cropX: 120,
+          cropY: 40,
+          cropWidth: 600,
+          cropHeight: 500,
           offsetX: 4,
           offsetY: 8,
           scale: 1.5,
@@ -145,6 +172,12 @@ describe("editor-v2 persisted designs", () => {
     expect(hydrated.project.id).toBe("design_123");
     expect(hydrated.project.createdAt).toBe("2026-04-16T12:00:00.000Z");
     expect(hydrated.project.updatedAt).toBe("2026-04-16T12:15:00.000Z");
+    expect(hydrated.canvasPreferences).toEqual({
+      showGridlines: true,
+      showRuler: true,
+      showSymbols: true,
+      touchSnappingEnabled: true,
+    });
     expect(hydrated.trace).toMatchObject({
       previewUrl: "https://blob.example.com/trace-preview.webp",
       thumbnailUrl: "https://blob.example.com/trace-thumb.webp",
@@ -154,6 +187,10 @@ describe("editor-v2 persisted designs", () => {
       mimeType: "image/png",
       imageWidth: 900,
       imageHeight: 700,
+      cropX: 120,
+      cropY: 40,
+      cropWidth: 600,
+      cropHeight: 500,
       offsetX: 4,
       offsetY: 8,
       scale: 1.5,
@@ -190,6 +227,12 @@ describe("editor-v2 persisted designs", () => {
           extractedPaletteIds: [],
           symbolAssignments: {},
         },
+        canvasPreferences: {
+          showGridlines: false,
+          showRuler: true,
+          showSymbols: false,
+          touchSnappingEnabled: true,
+        },
         trace: {
           assetUrl: "https://blob.example.com/legacy.png",
           fileName: "legacy.png",
@@ -209,10 +252,75 @@ describe("editor-v2 persisted designs", () => {
       },
     });
 
+    expect(hydrated.canvasPreferences).toEqual({
+      showGridlines: false,
+      showRuler: true,
+      showSymbols: false,
+      touchSnappingEnabled: true,
+    });
     expect(hydrated.trace).toMatchObject({
       previewUrl: "https://blob.example.com/legacy.png",
       thumbnailUrl: "https://blob.example.com/legacy.png",
       originalUrl: "https://blob.example.com/legacy.png",
+      cropX: 0,
+      cropY: 0,
+      cropWidth: 400,
+      cropHeight: 300,
+    });
+  });
+
+  it("normalizes persisted custom palettes during parse and hydrate", () => {
+    const persisted = parsePersistedEditorV2Design({
+      schemaVersion: 1,
+      project: {
+        title: "Palette test",
+      },
+      grid: {
+        width: 1,
+        height: 1,
+        sizingMode: "stitches",
+        meshCount: null,
+        widthInches: null,
+        heightInches: null,
+        cells: [null],
+      },
+      palette: {
+        colorsById: {},
+        customPalettesById: {
+          custom_1: {
+            id: "custom_1",
+            name: "   ",
+            colorIds: ["dmc-310", "dmc-310", "dmc-321"],
+          },
+        },
+        extractedPaletteIds: ["dmc-310", "dmc-310"],
+        symbolAssignments: {},
+      },
+      trace: null,
+      text: {
+        mode: "destructive-grid",
+        entities: [],
+      },
+    });
+
+    expect(persisted?.palette.customPalettesById.custom_1).toEqual({
+      id: "custom_1",
+      name: "Untitled Palette",
+      colorIds: ["dmc-310", "dmc-321"],
+    });
+    expect(persisted?.palette.extractedPaletteIds).toEqual(["dmc-310"]);
+
+    const hydrated = hydrateEditorV2Document({
+      id: "design_custom_palette",
+      createdAt: "2026-04-16T12:00:00.000Z",
+      updatedAt: "2026-04-16T12:15:00.000Z",
+      data: persisted!,
+    });
+
+    expect(hydrated.palette.customPalettesById.custom_1).toEqual({
+      id: "custom_1",
+      name: "Untitled Palette",
+      colorIds: ["dmc-310", "dmc-321"],
     });
   });
 });

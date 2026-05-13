@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { FieldInput } from "@/components/design-system/Field";
+import { DMC_COLOR_LIBRARY_BY_ID } from "@/lib/editor-v2/editor/color-library";
+import { findClosestPaletteColorId, hexToRgb, type Rgb } from "@/lib/editor-v2/editor/color-utils";
+import type { IconColorSlot } from "@/lib/editor-v2/editor/icons/iconColorSlots";
 import {
   buildPrimitiveIconDataUrl,
   getPrimitiveDefaultSpacingScale,
@@ -16,7 +19,11 @@ import { getContainedRect } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import { createBeginIconPlacementCommand } from "../../workspaceCommands";
 import { getInitialPlacementTransform } from "./getInitialPlacementTransform";
-import type { ShapeIconLibraryItem } from "./iconLibrary";
+import type {
+  ShapeIconLibraryItem,
+  ShapeIconLibraryOverviewGroup,
+  UploadedShapeIconLibraryItem,
+} from "./iconLibrary";
 import styles from "../EditorV2Shell.module.css";
 
 const DEFAULT_INITIAL_WIDTH_RATIO = 0.42;
@@ -29,20 +36,38 @@ const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
 const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
 const ICON_INITIAL_MIN_SCALE = 0.005;
 const ICON_INITIAL_MAX_SCALE = 64;
+const ICON_SKELETON_MIN_DURATION_MS = 220;
+const ICON_SKELETON_CATEGORY_COUNT = 4;
+const ICON_SKELETON_OVERVIEW_CARD_COUNT = ICON_PREVIEW_LIMIT;
+const ICON_SKELETON_CATEGORY_CARD_COUNT = 12;
 const CATEGORY_ORDER_PRIORITY: Record<string, number> = {
   Shapes: 0,
   Frames: 1,
 };
+
+let iconOverviewCache: ShapeIconLibraryOverviewGroup[] | null = null;
+let iconOverviewPromise: Promise<ShapeIconLibraryOverviewGroup[]> | null = null;
+let iconFullLibraryCache: ShapeIconLibraryItem[] | null = null;
+let iconFullLibraryPromise: Promise<ShapeIconLibraryItem[]> | null = null;
+const iconCategoryCache = new Map<string, ShapeIconLibraryItem[]>();
+const iconCategoryPromises = new Map<string, Promise<ShapeIconLibraryItem[]>>();
 
 export type IconsPanelView =
   | { type: "overview" }
   | { type: "category"; category: string };
 
 interface IconsPanelPageProps {
+  backRequestKey?: number;
   dispatch: EditorStore["dispatch"];
   gridMetrics: GridWorldMetrics;
-  onViewChange: (view: IconsPanelView) => void;
+  onBackRequestHandled?: () => void;
+  onScrollPositionChange?: (scrollTop: number, view: IconsPanelView) => void;
+  onViewChange: (
+    view: IconsPanelView,
+    options?: { overviewScrollTop?: number },
+  ) => void;
   placement: IconPlacementSession | null;
+  persistedScrollTop?: number;
   view: IconsPanelView;
   viewportCenter: WorldPoint | null;
   viewportWidth: number | null;
@@ -50,63 +75,254 @@ interface IconsPanelPageProps {
 }
 
 export function IconsPanelPage({
+  backRequestKey = 0,
   dispatch,
   gridMetrics,
+  onBackRequestHandled,
+  onScrollPositionChange,
   onViewChange,
   placement,
+  persistedScrollTop = 0,
   view,
   viewportCenter,
   viewportWidth,
   viewportHeight,
 }: IconsPanelPageProps) {
-  const { themeMode } = useThemeMode();
-  const [icons, setIcons] = useState<ShapeIconLibraryItem[]>([]);
+  const { resolvedThemeMode } = useThemeMode();
+  const [overviewGroups, setOverviewGroups] = useState<ShapeIconLibraryOverviewGroup[]>(
+    () => iconOverviewCache ?? [],
+  );
+  const [searchIcons, setSearchIcons] = useState<ShapeIconLibraryItem[] | null>(
+    () => iconFullLibraryCache,
+  );
+  const [loadedCategoryState, setLoadedCategoryState] = useState<{
+    category: string | null;
+    icons: ShapeIconLibraryItem[];
+  }>(() => ({
+    category: view.type === "category" ? view.category : null,
+    icons: view.type === "category" ? iconCategoryCache.get(view.category) ?? [] : [],
+  }));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingGraphic, setUploadingGraphic] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const primitivePreviewStrokeColor = useMemo(
-    () => resolvePrimitivePreviewStrokeColor(),
-    [themeMode],
+    () => resolvePrimitivePreviewStrokeColor(resolvedThemeMode),
+    [resolvedThemeMode],
   );
+  const uploadInputId = useId();
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const selectedCategory = view.type === "category" ? view.category : null;
+  const handledBackRequestKeyRef = useRef(backRequestKey);
+
+  const handleViewChange = (nextView: IconsPanelView) => {
+    const content = contentRef.current;
+
+    onViewChange(
+      nextView,
+      content && view.type === "overview"
+        ? { overviewScrollTop: content.scrollTop }
+        : undefined,
+    );
+  };
+
+  const beginPlacement = (item: {
+    id: string;
+    name: string;
+    src: string;
+    mimeType: string | null;
+    intrinsicWidth: number;
+    intrinsicHeight: number;
+    colorSlots: ShapeIconLibraryItem["colorSlots"];
+    primitiveKind: ShapeIconLibraryItem["primitiveKind"];
+    isUserUploaded: boolean;
+    lockAspectRatio: boolean;
+    supportsStrokeWidth: boolean;
+  }) => {
+    const baseRect = getContainedRect(
+      item.intrinsicWidth,
+      item.intrinsicHeight,
+      gridMetrics.surfaceWidth,
+      gridMetrics.surfaceHeight,
+    );
+    const initialTransform = isPrimitiveFrameKind(item.primitiveKind)
+      ? getInitialFramePlacementTransform({
+          baseRect,
+          metrics: gridMetrics,
+          viewportCenter,
+          sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
+        })
+      : getInitialPlacementTransform({
+          intrinsicWidth: item.intrinsicWidth,
+          intrinsicHeight: item.intrinsicHeight,
+          metrics: gridMetrics,
+          viewportCenter,
+          viewportWidth,
+          widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
+          clampReferenceToSurface: false,
+          minScale: ICON_INITIAL_MIN_SCALE,
+          maxScale: ICON_INITIAL_MAX_SCALE,
+        });
+    const initialReferenceSize = item.primitiveKind
+      ? Math.min(
+          baseRect.width * ("scaleX" in initialTransform ? initialTransform.scaleX : initialTransform.scale),
+          baseRect.height *
+            ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
+        )
+      : null;
+    const themedPrimitiveColorSlots = item.primitiveKind
+      ? getThemedPrimitiveColorSlots(item.colorSlots, resolvedThemeMode)
+      : item.colorSlots;
+
+    dispatch(
+      createBeginIconPlacementCommand({
+        iconId: item.id,
+        name: item.name,
+        src: item.src,
+        mimeType: item.mimeType,
+        intrinsicWidth: item.intrinsicWidth,
+        intrinsicHeight: item.intrinsicHeight,
+        colorSlots: themedPrimitiveColorSlots,
+        primitiveKind: item.primitiveKind,
+        isUserUploaded: item.isUserUploaded,
+        lockAspectRatio: item.lockAspectRatio,
+        primitiveStrokeReferenceSize: initialReferenceSize,
+        supportsStrokeWidth: item.supportsStrokeWidth,
+        strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(
+          item.primitiveKind,
+          initialReferenceSize,
+        ),
+        primitivePatternScale: 1,
+        primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
+        selectedColorSlotId: item.colorSlots[0]?.id ?? null,
+        ...initialTransform,
+      }),
+    );
+  };
+
+  const handleUploadedGraphicSelected = async (file: File) => {
+    setUploadError(null);
+    setUploadingGraphic(true);
+
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+
+      const response = await fetch("/api/editor-v2/icon-library", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        item?: UploadedShapeIconLibraryItem;
+      };
+
+      if (!response.ok || !payload.item) {
+        throw new Error(payload.error ?? `Graphic upload failed with ${response.status}`);
+      }
+
+      beginPlacement({
+        ...payload.item,
+        src: payload.item.src,
+      });
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Unable to process this uploaded graphic.",
+      );
+    } finally {
+      setUploadingGraphic(false);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (backRequestKey === handledBackRequestKeyRef.current) {
+      return;
+    }
+
+    handledBackRequestKeyRef.current = backRequestKey;
+    handleViewChange({ type: "overview" });
+    onBackRequestHandled?.();
+  }, [backRequestKey, onBackRequestHandled]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadLibrary() {
+    async function loadIconsForCurrentView() {
+      const loadStartedAt = performance.now();
+      const shouldApplySkeletonDelay =
+        view.type === "overview"
+          ? normalizedSearchQuery.length > 0
+            ? iconFullLibraryCache === null
+            : iconOverviewCache === null
+          : !iconCategoryCache.has(view.category) && iconFullLibraryCache === null;
       setLoading(true);
       setLoadError(null);
 
       try {
-        const response = await fetch("/api/editor-v2/icon-library");
-        if (!response.ok) {
-          throw new Error(`Icon library request failed with ${response.status}`);
-        }
+        if (view.type === "overview") {
+          const groups = await loadIconOverview();
+          if (!cancelled) {
+            setOverviewGroups(groups);
+          }
 
-        const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
-        if (!cancelled) {
-          setIcons(Array.isArray(payload.icons) ? payload.icons : []);
+          if (normalizedSearchQuery.length > 0) {
+            const icons = await loadFullIconLibrary();
+            if (!cancelled) {
+              setSearchIcons(icons);
+            }
+          }
+        } else {
+          const icons = await loadIconCategory(view.category);
+          if (!cancelled) {
+            setLoadedCategoryState({
+              category: view.category,
+              icons,
+            });
+          }
         }
       } catch (error) {
         if (!cancelled) {
-          setIcons([]);
+          if (view.type === "overview") {
+            setOverviewGroups([]);
+            if (normalizedSearchQuery.length > 0) {
+              setSearchIcons([]);
+            }
+          } else {
+            setLoadedCategoryState({
+              category: view.category,
+              icons: [],
+            });
+          }
           setLoadError(error instanceof Error ? error.message : "Unable to load icons.");
         }
       } finally {
+        if (shouldApplySkeletonDelay) {
+          const elapsed = performance.now() - loadStartedAt;
+          const remainingDelay = Math.max(ICON_SKELETON_MIN_DURATION_MS - elapsed, 0);
+
+          if (remainingDelay > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remainingDelay));
+          }
+        }
+
         if (!cancelled) {
           setLoading(false);
         }
       }
     }
 
-    void loadLibrary();
+    void loadIconsForCurrentView();
 
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const selectedCategory = view.type === "category" ? view.category : null;
+  }, [normalizedSearchQuery, view]);
 
   useEffect(() => {
     setSearchQuery("");
@@ -115,19 +331,23 @@ export function IconsPanelPage({
   const filteredIcons = useMemo(
     () =>
       normalizedSearchQuery
-        ? icons.filter((icon) => {
+        ? (searchIcons ?? []).filter((icon) => {
             if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
               return true;
             }
 
             return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
           })
-        : icons,
-    [icons, normalizedSearchQuery],
+        : searchIcons ?? [],
+    [normalizedSearchQuery, searchIcons],
   );
 
   const iconGroups = useMemo(
     () => {
+      if (normalizedSearchQuery.length === 0) {
+        return overviewGroups;
+      }
+
       const groups = new Map<string, ShapeIconLibraryItem[]>();
 
       for (const icon of filteredIcons) {
@@ -142,7 +362,8 @@ export function IconsPanelPage({
       return Array.from(groups.entries())
         .map(([category, items]) => ({
           category,
-          items,
+          count: items.length,
+          previewItems: items,
         }))
         .sort((left, right) => {
           const leftPriority = CATEGORY_ORDER_PRIORITY[left.category] ?? Number.POSITIVE_INFINITY;
@@ -155,40 +376,78 @@ export function IconsPanelPage({
           return left.category.localeCompare(right.category);
         });
     },
-    [filteredIcons],
+    [filteredIcons, normalizedSearchQuery, overviewGroups],
   );
-  const categoryIcons = useMemo(
-    () =>
-      selectedCategory
-        ? icons.filter((icon) => icon.category === selectedCategory)
-        : [],
-    [icons, selectedCategory],
-  );
-  const filteredCategoryIcons = useMemo(
+  const visibleCategoryIcons = useMemo(
     () =>
       normalizedSearchQuery
-        ? categoryIcons.filter((icon) => {
+        ? loadedCategoryState.icons.filter((icon) => {
             if (icon.name.toLowerCase().includes(normalizedSearchQuery)) {
               return true;
             }
 
             return icon.searchKeywords.some((keyword) => keyword.includes(normalizedSearchQuery));
           })
-        : categoryIcons,
-    [categoryIcons, normalizedSearchQuery],
+        : loadedCategoryState.icons,
+    [loadedCategoryState.icons, normalizedSearchQuery],
   );
+  const categoryContentReady =
+    view.type === "category" && loadedCategoryState.category === view.category;
+  const canRestoreScroll =
+    !loading && (view.type !== "category" || categoryContentReady);
   const placementActive = Boolean(placement);
   const hasSearchResults = iconGroups.length > 0;
-  const hasCategorySearchResults = filteredCategoryIcons.length > 0;
+  const hasCategorySearchResults = categoryContentReady && visibleCategoryIcons.length > 0;
+  const iconItemsForPreview = useMemo(() => {
+    if (view.type === "category" && categoryContentReady) {
+      return visibleCategoryIcons;
+    }
+
+    if (normalizedSearchQuery.length > 0) {
+      return filteredIcons;
+    }
+
+    return overviewGroups.flatMap((group) => group.previewItems);
+  }, [
+    filteredIcons,
+    normalizedSearchQuery,
+    overviewGroups,
+    view,
+    categoryContentReady,
+    visibleCategoryIcons,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!canRestoreScroll) {
+      return;
+    }
+
+    const content = contentRef.current;
+
+    if (!content) {
+      return;
+    }
+
+    content.scrollTop = persistedScrollTop;
+  }, [canRestoreScroll, persistedScrollTop, view.type]);
   const iconPreviewSrcById = useMemo(
     () =>
-      icons.reduce<Record<string, string>>((accumulator, icon) => {
+      iconItemsForPreview.reduce<Record<string, string>>((accumulator, icon) => {
+        const themedPrimitiveColorSlots = icon.primitiveKind
+          ? getThemedPrimitiveColorSlots(icon.colorSlots, resolvedThemeMode)
+          : icon.colorSlots;
+        const themedPrimitiveColors = icon.primitiveKind
+          ? resolvePrimitivePreviewColors(themedPrimitiveColorSlots)
+          : null;
+
         accumulator[icon.id] = icon.primitiveKind
           ? buildPrimitiveIconDataUrl({
               kind: icon.primitiveKind,
               width: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
-              strokeColor: primitivePreviewStrokeColor,
+              strokeColor: themedPrimitiveColors?.stroke ?? primitivePreviewStrokeColor,
+              secondaryStrokeColor: themedPrimitiveColors?.shadow,
+              fillColor: themedPrimitiveColors?.fill,
               strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
               spacingScale: getPrimitiveDefaultSpacingScale(icon.primitiveKind),
@@ -196,7 +455,7 @@ export function IconsPanelPage({
           : icon.src;
         return accumulator;
       }, {}),
-    [icons, primitivePreviewStrokeColor],
+    [iconItemsForPreview, primitivePreviewStrokeColor, resolvedThemeMode],
   );
 
   function renderIconButton(item: ShapeIconLibraryItem) {
@@ -208,61 +467,7 @@ export function IconsPanelPage({
         aria-label={item.name}
         title={item.name}
         disabled={placementActive}
-        onClick={() => {
-          const baseRect = getContainedRect(
-            item.intrinsicWidth,
-            item.intrinsicHeight,
-            gridMetrics.surfaceWidth,
-            gridMetrics.surfaceHeight,
-          );
-          const initialTransform = isPrimitiveFrameKind(item.primitiveKind)
-            ? getInitialFramePlacementTransform({
-                baseRect,
-                metrics: gridMetrics,
-                viewportCenter,
-                sizeRatio: DEFAULT_FRAME_INITIAL_SIZE_RATIO,
-              })
-            : getInitialPlacementTransform({
-                intrinsicWidth: item.intrinsicWidth,
-                intrinsicHeight: item.intrinsicHeight,
-                metrics: gridMetrics,
-                viewportCenter,
-                viewportWidth,
-                widthRatio: DEFAULT_INITIAL_WIDTH_RATIO,
-                clampReferenceToSurface: false,
-                minScale: ICON_INITIAL_MIN_SCALE,
-                maxScale: ICON_INITIAL_MAX_SCALE,
-              });
-          const initialReferenceSize = item.primitiveKind
-            ? Math.min(
-                baseRect.width * ("scaleX" in initialTransform ? initialTransform.scaleX : initialTransform.scale),
-                baseRect.height *
-                  ("scaleY" in initialTransform ? initialTransform.scaleY : initialTransform.scale),
-              )
-            : null;
-          dispatch(
-            createBeginIconPlacementCommand({
-              iconId: item.id,
-              name: item.name,
-              src: item.src,
-              intrinsicWidth: item.intrinsicWidth,
-              intrinsicHeight: item.intrinsicHeight,
-              colorSlots: item.colorSlots,
-              primitiveKind: item.primitiveKind,
-              lockAspectRatio: item.lockAspectRatio,
-              primitiveStrokeReferenceSize: initialReferenceSize,
-              supportsStrokeWidth: item.supportsStrokeWidth,
-              strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(
-                item.primitiveKind,
-                initialReferenceSize,
-              ),
-              primitivePatternScale: 1,
-              primitiveSpacingScale: getPrimitiveDefaultSpacingScale(item.primitiveKind),
-              selectedColorSlotId: item.colorSlots[0]?.id ?? null,
-              ...initialTransform,
-            }),
-          );
-        }}
+        onClick={() => beginPlacement(item)}
       >
         <span
           className={[
@@ -285,121 +490,340 @@ export function IconsPanelPage({
     );
   }
 
-  return (
-    <section className={styles.sidebarSection}>
-      <div className={styles.iconsPanelPageBody}>
+  function renderIconSkeletonCard(key: string) {
+    return (
+      <div
+        key={key}
+        className={[styles.iconLibraryCard, styles.iconLibraryCardSkeleton].join(" ")}
+        aria-hidden="true"
+      />
+    );
+  }
 
-        <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSearchField}>
-            <span aria-hidden="true" className={styles.sidebarSearchIcon} />
-            <FieldInput
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search icons"
-              aria-label="Search icons"
-              className={styles.sidebarSearchInput}
-            />
+  function renderOverviewSkeleton() {
+    return Array.from({ length: ICON_SKELETON_CATEGORY_COUNT }, (_, sectionIndex) => (
+      <div key={`overview-skeleton-${sectionIndex}`} className={styles.sidebarSubsection}>
+        <div className={styles.sidebarSubsectionHeaderRow} aria-hidden="true">
+          <div className={styles.sidebarSubsectionHeader}>
+            <span className={styles.iconLibrarySkeletonHeading} />
+            <span className={styles.iconLibrarySkeletonMeta} />
           </div>
+          <span className={styles.iconLibrarySkeletonAction} />
         </div>
 
-        {view.type === "category" ? (
-          <>
-            {!loading && !loadError && !hasCategorySearchResults ? (
+        <div className={styles.iconLibraryGrid} aria-hidden="true">
+          {Array.from({ length: ICON_SKELETON_OVERVIEW_CARD_COUNT }, (_, cardIndex) =>
+            renderIconSkeletonCard(`overview-skeleton-${sectionIndex}-${cardIndex}`),
+          )}
+        </div>
+      </div>
+    ));
+  }
+
+  function renderCategorySkeleton() {
+    return (
+      <div className={styles.sidebarSubsection}>
+        <div className={styles.iconLibraryGrid} aria-hidden="true">
+          {Array.from({ length: ICON_SKELETON_CATEGORY_CARD_COUNT }, (_, cardIndex) =>
+            renderIconSkeletonCard(`category-skeleton-${cardIndex}`),
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <section className={[styles.sidebarSection, styles.iconsPanelSection].join(" ")}>
+      <div className={styles.iconsPanelPageBody}>
+        <div
+          key={
+            view.type === "category"
+              ? `icons-category-${selectedCategory ?? "none"}`
+              : `icons-overview-${normalizedSearchQuery.length > 0 ? "search" : "default"}`
+          }
+          ref={contentRef}
+          className={styles.iconsPanelPageContent}
+          onScroll={() => {
+            const content = contentRef.current;
+
+            if (!content) {
+              return;
+            }
+
+            onScrollPositionChange?.(content.scrollTop, view);
+          }}
+        >
+          <div className={styles.iconsPanelStickySearch}>
+            <div className={styles.sidebarSearchField}>
+              <span aria-hidden="true" className={styles.sidebarSearchIcon} />
+              <FieldInput
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search graphics"
+                aria-label="Search graphics"
+                className={styles.sidebarSearchInput}
+              />
+            </div>
+          </div>
+          <div className={styles.sidebarSubsection}>
+            <div className={styles.iconsPanelTools}>
+              <div className={styles.iconsPanelUploadRow}>
+                <input
+                  id={uploadInputId}
+                  ref={uploadInputRef}
+                  type="file"
+                  accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+                  className={styles.iconsPanelUploadInput}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) {
+                      return;
+                    }
+
+                    void handleUploadedGraphicSelected(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={placementActive || uploadingGraphic}
+                  className={styles.iconsPanelUploadButton}
+                  onClick={() => uploadInputRef.current?.click()}
+                >
+                  <ButtonIcon icon="/icons/lucide/upload.svg" />
+                  {uploadingGraphic ? "Processing..." : "Upload graphic"}
+                </Button>
+              </div>
+            </div>
+
+            {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
+              library graphics.
+            </p> */}
+
+            {uploadError ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                {uploadError}
+              </p>
+            ) : null}
+          </div>
+          {view.type === "category" ? (
+            <>
+            {loading ? renderCategorySkeleton() : null}
+
+            {!loading && !loadError && categoryContentReady && !hasCategorySearchResults ? (
               <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
                 No icons found in {selectedCategory} for "{searchQuery.trim()}".
               </p>
             ) : null}
 
-            {!loading && !loadError && hasCategorySearchResults ? (
+            {!loading && !loadError && categoryContentReady && hasCategorySearchResults ? (
               <div className={styles.sidebarSubsection}>
                 <div className={styles.iconLibraryGrid}>
-                  {filteredCategoryIcons.map((item) => renderIconButton(item))}
+                  {visibleCategoryIcons.map((item) => renderIconButton(item))}
                 </div>
               </div>
             ) : null}
-          </>
-        ) : null}
+            </>
+          ) : null}
 
-        {loading ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            Loading icons...
-          </p>
-        ) : null}
+          {view.type === "overview" ? (
+            <>
+            {loading ? renderOverviewSkeleton() : null}
 
-        {!loading && loadError ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            {loadError}
-          </p>
-        ) : null}
+            {!loading && loadError ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                {loadError}
+              </p>
+            ) : null}
 
-        {!loading && !loadError && view.type === "overview" && !hasSearchResults ? (
-          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-            No icons found for "{searchQuery.trim()}".
-          </p>
-        ) : null}
+            {!loading && !loadError && !hasSearchResults ? (
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                No icons found for "{searchQuery.trim()}".
+              </p>
+            ) : null}
 
-        {view.type === "overview"
-          ? iconGroups.map((group) => {
-              const previewItems = normalizedSearchQuery
-                ? group.items
-                : group.items.slice(
-                    0,
-                    group.items.length > ICON_PREVIEW_VISIBLE_ICONS
-                      ? ICON_PREVIEW_VISIBLE_ICONS
-                      : ICON_PREVIEW_LIMIT,
-                  );
-              const hiddenCount = normalizedSearchQuery
-                ? 0
-                : Math.max(group.items.length - ICON_PREVIEW_VISIBLE_ICONS, 0);
+            {!loading && !loadError
+              ? iconGroups.map((group) => {
+                  const previewItems = normalizedSearchQuery
+                    ? group.previewItems
+                    : group.previewItems.slice(
+                        0,
+                        group.count > ICON_PREVIEW_VISIBLE_ICONS
+                          ? ICON_PREVIEW_VISIBLE_ICONS
+                          : ICON_PREVIEW_LIMIT,
+                      );
+                  const hiddenCount = normalizedSearchQuery
+                    ? 0
+                    : Math.max(group.count - ICON_PREVIEW_VISIBLE_ICONS, 0);
 
-              return (
-                <div key={group.category} className={styles.sidebarSubsection}>
-                  <div className={styles.sidebarSubsectionHeaderRow}>
-                    <div className={styles.sidebarSubsectionHeader}>
-                      <h3 style={typographyStyles.h5}>{group.category}</h3>
-                      {!normalizedSearchQuery && hiddenCount > 0 ? (
-                        <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                          {group.items.length} icons
-                        </p>
-                      ) : null}
+                  return (
+                    <div key={group.category} className={styles.sidebarSubsection}>
+                      <div className={styles.sidebarSubsectionHeaderRow}>
+                        <div className={styles.sidebarSubsectionHeader}>
+                          <h3 style={typographyStyles.h5}>{group.category}</h3>
+                          {!normalizedSearchQuery ? (
+                            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                              {group.count} icons
+                            </p>
+                          ) : null}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghostV2"
+                          size="sm"
+                          className={styles.sidebarHeaderAction}
+                          aria-label={`View all icons in ${group.category}`}
+                          title={`View all icons in ${group.category}`}
+                          onClick={() =>
+                            handleViewChange({ type: "category", category: group.category })
+                          }
+                        >
+                          <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                        </Button>
+                      </div>
+
+                      <div className={styles.iconLibraryGrid}>
+                        {previewItems.map((item) => renderIconButton(item))}
+                        {!normalizedSearchQuery && hiddenCount > 0 ? (
+                          <Button
+                            type="button"
+                            variant="ghostV2"
+                            size="sm"
+                            className={styles.iconLibraryMoreButton}
+                            aria-label={`View ${hiddenCount} more icons in ${group.category}`}
+                            title={`View ${hiddenCount} more icons in ${group.category}`}
+                            onClick={() =>
+                              handleViewChange({ type: "category", category: group.category })
+                            }
+                          >
+                            + {hiddenCount} more
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghostV2"
-                      size="sm"
-                      className={styles.sidebarHeaderAction}
-                      aria-label={`View all icons in ${group.category}`}
-                      title={`View all icons in ${group.category}`}
-                      onClick={() => onViewChange({ type: "category", category: group.category })}
-                    >
-                      <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                    </Button>
-                  </div>
+                  );
+                })
+              : null}
+            </>
+          ) : null}
 
-                  <div className={styles.iconLibraryGrid}>
-                    {previewItems.map((item) => renderIconButton(item))}
-                    {!normalizedSearchQuery && hiddenCount > 0 ? (
-                      <Button
-                        type="button"
-                        variant="ghostV2"
-                        size="sm"
-                        className={styles.iconLibraryMoreButton}
-                        aria-label={`View ${hiddenCount} more icons in ${group.category}`}
-                        title={`View ${hiddenCount} more icons in ${group.category}`}
-                        onClick={() => onViewChange({ type: "category", category: group.category })}
-                      >
-                        + {hiddenCount} more
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })
-          : null}
+          {view.type === "category" && !loading && loadError ? (
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              {loadError}
+            </p>
+          ) : null}
+        </div>
       </div>
     </section>
   );
+}
+
+async function loadIconOverview(): Promise<ShapeIconLibraryOverviewGroup[]> {
+  if (iconOverviewCache) {
+    return iconOverviewCache;
+  }
+
+  if (iconOverviewPromise) {
+    return iconOverviewPromise;
+  }
+
+  iconOverviewPromise = fetch("/api/editor-v2/icon-library?mode=overview&previewLimit=6")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { groups?: ShapeIconLibraryOverviewGroup[] };
+      iconOverviewCache = Array.isArray(payload.groups) ? payload.groups : [];
+      return iconOverviewCache;
+    })
+    .finally(() => {
+      iconOverviewPromise = null;
+    });
+
+  return iconOverviewPromise;
+}
+
+async function loadIconCategory(category: string): Promise<ShapeIconLibraryItem[]> {
+  if (iconCategoryCache.has(category)) {
+    return iconCategoryCache.get(category) ?? [];
+  }
+
+  if (iconFullLibraryCache) {
+    const icons = iconFullLibraryCache.filter((icon) => icon.category === category);
+    iconCategoryCache.set(category, icons);
+    return icons;
+  }
+
+  const pendingPromise = iconCategoryPromises.get(category);
+  if (pendingPromise) {
+    return pendingPromise;
+  }
+
+  const requestPromise = fetch(
+    `/api/editor-v2/icon-library?mode=category&category=${encodeURIComponent(category)}`,
+  )
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
+      const icons = Array.isArray(payload.icons) ? payload.icons : [];
+      iconCategoryCache.set(category, icons);
+      return icons;
+    })
+    .finally(() => {
+      iconCategoryPromises.delete(category);
+    });
+
+  iconCategoryPromises.set(category, requestPromise);
+  return requestPromise;
+}
+
+async function loadFullIconLibrary(): Promise<ShapeIconLibraryItem[]> {
+  if (iconFullLibraryCache) {
+    return iconFullLibraryCache;
+  }
+
+  if (iconFullLibraryPromise) {
+    return iconFullLibraryPromise;
+  }
+
+  iconFullLibraryPromise = fetch("/api/editor-v2/icon-library")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icon library request failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { icons?: ShapeIconLibraryItem[] };
+      const icons = Array.isArray(payload.icons) ? payload.icons : [];
+      iconFullLibraryCache = icons;
+
+      const iconsByCategory = new Map<string, ShapeIconLibraryItem[]>();
+      for (const icon of icons) {
+        const existing = iconsByCategory.get(icon.category);
+        if (existing) {
+          existing.push(icon);
+        } else {
+          iconsByCategory.set(icon.category, [icon]);
+        }
+      }
+
+      for (const [category, categoryIcons] of iconsByCategory.entries()) {
+        iconCategoryCache.set(category, categoryIcons);
+      }
+
+      return icons;
+    })
+    .finally(() => {
+      iconFullLibraryPromise = null;
+    });
+
+  return iconFullLibraryPromise;
 }
 
 function getInitialFramePlacementTransform(options: {
@@ -437,67 +861,52 @@ function clampInitialFrameScale(value: number): number {
   return Math.min(ICON_INITIAL_MAX_SCALE, Math.max(ICON_INITIAL_MIN_SCALE, Number(value.toFixed(4))));
 }
 
-function resolvePrimitivePreviewStrokeColor(): string {
-  if (typeof document === "undefined") {
-    return "#121923";
-  }
+function resolvePrimitivePreviewStrokeColor(resolvedThemeMode: "light" | "dark"): string {
+  return resolvedThemeMode === "dark" ? "#ffffff" : "#000000";
+}
 
-  const styles = window.getComputedStyle(document.documentElement);
-  const textPrimary = styles
-    .getPropertyValue("--text-primary")
-    .trim();
-  const textSecondary = styles
-    .getPropertyValue("--text-secondary")
-    .trim();
+function getThemedPrimitiveColorSlots(
+  slots: IconColorSlot[],
+  resolvedThemeMode: "light" | "dark",
+): IconColorSlot[] {
+  const strokeColor = resolvePrimitivePreviewStrokeColor(resolvedThemeMode);
+  const shadowColor = resolvedThemeMode === "dark" ? "#d4d4d8" : "#6b7280";
 
-  if (textPrimary && textSecondary) {
-    const mixed = mixCssColors(textPrimary, textSecondary, 0.72);
-    if (mixed) {
-      return mixed;
+  return slots.map((slot) => {
+    if (slot.id === "stroke") {
+      return {
+        ...slot,
+        sourceHex: strokeColor,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb(strokeColor) as Rgb,
+        ),
+      };
     }
-  }
 
-  return textPrimary || "#121923";
+    if (slot.id === "shadow") {
+      return {
+        ...slot,
+        sourceHex: shadowColor,
+        paletteColorId: findClosestPaletteColorId(
+          DMC_COLOR_LIBRARY_BY_ID,
+          hexToRgb(shadowColor) as Rgb,
+        ),
+      };
+    }
+
+    return slot;
+  });
 }
 
-function mixCssColors(primary: string, secondary: string, primaryWeight: number): string | null {
-  const left = parseCssColor(primary);
-  const right = parseCssColor(secondary);
-
-  if (!left || !right) {
-    return null;
-  }
-
-  const clampedWeight = Math.min(Math.max(primaryWeight, 0), 1);
-  const mix = (leftChannel: number, rightChannel: number) =>
-    Math.round(leftChannel * clampedWeight + rightChannel * (1 - clampedWeight));
-
-  return `rgb(${mix(left.r, right.r)} ${mix(left.g, right.g)} ${mix(left.b, right.b)})`;
-}
-
-function parseCssColor(value: string): { r: number; g: number; b: number } | null {
-  const normalized = value.trim();
-
-  const hexMatch = normalized.match(/^#([0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1];
-    return {
-      r: Number.parseInt(hex.slice(0, 2), 16),
-      g: Number.parseInt(hex.slice(2, 4), 16),
-      b: Number.parseInt(hex.slice(4, 6), 16),
-    };
-  }
-
-  const rgbMatch = normalized.match(
-    /^rgba?\(\s*(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*,\s*|\s+)(\d{1,3})(?:\s*[,/]\s*[\d.]+)?\s*\)$/i,
-  );
-  if (rgbMatch) {
-    return {
-      r: Number.parseInt(rgbMatch[1] ?? "0", 10),
-      g: Number.parseInt(rgbMatch[2] ?? "0", 10),
-      b: Number.parseInt(rgbMatch[3] ?? "0", 10),
-    };
-  }
-
-  return null;
+function resolvePrimitivePreviewColors(slots: IconColorSlot[]): {
+  fill: string | null;
+  shadow: string | null;
+  stroke: string | null;
+} {
+  return {
+    stroke: slots.find((slot) => slot.id === "stroke")?.sourceHex ?? null,
+    shadow: slots.find((slot) => slot.id === "shadow")?.sourceHex ?? null,
+    fill: slots.find((slot) => slot.id === "fill")?.sourceHex ?? null,
+  };
 }

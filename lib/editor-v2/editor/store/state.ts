@@ -17,6 +17,7 @@ export interface EditorDocumentState {
   palette: PaletteDocument;
   trace: TraceDocument | null;
   text: TextDocument;
+  canvasPreferences: CanvasPreferencesDocument;
   metadata: DocumentMetadata;
 }
 
@@ -51,6 +52,8 @@ export interface PaletteColor {
   code: string;
   name: string;
   hex: string;
+  family?: string;
+  searchAliases?: string[];
 }
 
 export interface CustomPalette {
@@ -63,11 +66,16 @@ export interface TraceDocument {
   previewUrl: string;
   thumbnailUrl: string;
   originalUrl: string;
+  maskUrl: string | null;
   fileName: string | null;
   byteSize: number | null;
   mimeType: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   blendMode: TraceBlendMode;
   opacity: number;
   offsetX: number;
@@ -108,6 +116,7 @@ export interface EditorSessionState {
   eyedropperReturnTool: ActiveTool | null;
   viewport: ViewportState;
   selection: SelectionState;
+  duplicatePlacement: DuplicatePlacementSession | null;
   mirrorInteraction: MirrorInteractionState;
   history: HistoryState;
   persistence: PersistenceSessionState;
@@ -188,6 +197,20 @@ export interface SelectionPreviewState {
   liveRegion: GridRect | null;
 }
 
+export interface DuplicatePlacementSession {
+  operation: "duplicate" | "cut";
+  sourceRect: GridRect;
+  selectionMode: Extract<SelectionState["mode"], "rect" | "circle" | "lasso">;
+  outlinePoints: SelectionPoint[];
+  cells: DuplicatePlacementCell[];
+}
+
+export interface DuplicatePlacementCell {
+  x: number;
+  y: number;
+  colorId: string;
+}
+
 export interface HistoryState {
   past: HistoryEntry[];
   future: HistoryEntry[];
@@ -233,6 +256,14 @@ export interface TraceInteractionState {
   replacedTrace: TraceDocument | null;
   repositionSnapshot: TraceRepositionSnapshot | null;
   runtimeImageRefId: string | null;
+  conversionPreview: TraceConversionPreviewState | null;
+}
+
+export interface TraceConversionPreviewState {
+  forwardPatches: DocumentPatch[];
+  inversePatches: DocumentPatch[];
+  previousActiveColorId: string | null;
+  previewActiveColorId: string | null;
 }
 
 export type TraceRepositionOrigin =
@@ -243,7 +274,15 @@ export type TraceRepositionOrigin =
 
 export type TraceRepositionSnapshot = Pick<
   TraceDocument,
-  "offsetX" | "offsetY" | "scale" | "rotation" | "locked"
+  | "offsetX"
+  | "offsetY"
+  | "scale"
+  | "rotation"
+  | "locked"
+  | "cropX"
+  | "cropY"
+  | "cropWidth"
+  | "cropHeight"
 >;
 
 export interface TextInteractionState {
@@ -276,14 +315,23 @@ export interface TextPlacementSession {
   rotation: number;
 }
 
+export interface CanvasPreferencesDocument {
+  showGridlines: boolean;
+  showRuler: boolean;
+  showSymbols: boolean;
+  touchSnappingEnabled: boolean;
+}
+
 export interface IconPlacementSession {
   iconId: string;
   name: string;
   src: string;
+  mimeType: string | null;
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
   primitiveKind: PrimitiveIconKind | null;
+  isUserUploaded: boolean;
   lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
@@ -364,11 +412,19 @@ export interface UiPreferenceState {
   showMajorGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
   previewMode: boolean;
   threadView: boolean;
   darkCanvas: boolean;
   gridMajorInterval: number;
 }
+
+export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferencesDocument = {
+  showGridlines: true,
+  showRuler: true,
+  showSymbols: true,
+  touchSnappingEnabled: true,
+};
 
 export function createInitialEditorStoreState(): EditorStoreState {
   return {
@@ -400,6 +456,9 @@ export function createInitialEditorStoreState(): EditorStoreState {
         mode: "destructive-grid",
         entities: [],
       },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
+      },
       metadata: {
         legacyDraftId: null,
         persistedVersionId: null,
@@ -428,6 +487,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },
@@ -454,6 +514,7 @@ export function createInitialEditorStoreState(): EditorStoreState {
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",
@@ -501,10 +562,11 @@ export function createInitialEditorStoreState(): EditorStoreState {
       },
       preferences: {
         darkMode: false,
-        showGridlines: true,
+        showGridlines: DEFAULT_CANVAS_PREFERENCES.showGridlines,
         showMajorGridlines: true,
-        showRuler: true,
-        showSymbols: true,
+        showRuler: DEFAULT_CANVAS_PREFERENCES.showRuler,
+        showSymbols: DEFAULT_CANVAS_PREFERENCES.showSymbols,
+        touchSnappingEnabled: DEFAULT_CANVAS_PREFERENCES.touchSnappingEnabled,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

@@ -11,8 +11,13 @@ import {
   createEditorDesignVersionSnapshot,
   hashPersistedEditorV2Design,
 } from "@/lib/editor-v2/server/versioning";
+import { claimGuestTraceAssetsForDesign } from "@/lib/editor-v2/server/guestTraceAssets";
 import { deleteBlobIfExists } from "@/lib/blob";
-import { loadLibraryDesignPage } from "@/lib/library/designs";
+import {
+  LibraryFolderNotFoundError,
+  loadLibraryDesignPage,
+  type LibraryDesignView,
+} from "@/lib/library/designs";
 
 export const runtime = "nodejs";
 
@@ -34,10 +39,15 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const requestedLimitParam = url.searchParams.get("limit");
   const requestedOffsetParam = url.searchParams.get("offset");
+  const requestedViewParam = url.searchParams.get("view");
+  const requestedSearchParam = url.searchParams.get("search") ?? "";
+  const requestedFolderParam = url.searchParams.get("folder");
   const requestedLimit =
     requestedLimitParam === null ? Number.NaN : Number(requestedLimitParam);
   const requestedOffset =
     requestedOffsetParam === null ? Number.NaN : Number(requestedOffsetParam);
+  const view: LibraryDesignView =
+    requestedViewParam === "deleted" ? "deleted" : "active";
   const limit = Number.isFinite(requestedLimit)
     ? Math.max(1, Math.min(MAX_LIMIT, Math.floor(requestedLimit)))
     : DEFAULT_LIMIT;
@@ -45,7 +55,24 @@ export async function GET(req: Request) {
     ? Math.max(0, Math.floor(requestedOffset))
     : 0;
 
-  return NextResponse.json(await loadLibraryDesignPage({ appUserId, limit, offset }));
+  try {
+    return NextResponse.json(
+      await loadLibraryDesignPage({
+        appUserId,
+        view,
+        limit,
+        offset,
+        search: requestedSearchParam,
+        folderId: requestedFolderParam,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof LibraryFolderNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(req: Request) {
@@ -80,8 +107,12 @@ export async function POST(req: Request) {
         lastSaveSource: saveSource,
         lastVersionAt: now,
         lastVersionHash: dataHash,
+        deletedAt: null,
+        purgeAfterAt: null,
       },
     });
+
+    await claimGuestTraceAssetsForDesign(tx, createdDesign.id, data);
 
     const prunedVersions = await createEditorDesignVersionSnapshot(tx, {
       designId: createdDesign.id,

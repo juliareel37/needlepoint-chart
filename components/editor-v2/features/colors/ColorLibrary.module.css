@@ -1,26 +1,121 @@
+.libraryShell {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  min-height: 0;
+}
+
 .library {
   --color-library-track-size: 33px;
   --color-library-grid-gap: 6px;
+  --color-library-header-padding-top: 8px;
+  --color-library-header-padding-right: 16px;
+  --color-library-header-padding-bottom: 6px;
+  --color-library-header-padding-left: 16px;
+  --color-library-body-padding-top: 10px;
+  --color-library-body-padding-right: 16px;
+  --color-library-body-padding-bottom: 16px;
+  --color-library-body-padding-left: 16px;
   display: flex;
   flex-direction: column;
-  /* height: 250px; */
-  overflow: auto;
-  padding: 16px;
-  gap: 14px;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
   border-radius: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.stickyHeader {
+  z-index: var(--z-editor-popover-high);
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding:
+    var(--color-library-header-padding-top)
+    var(--color-library-header-padding-right)
+    var(--color-library-header-padding-bottom)
+    var(--color-library-header-padding-left);
+  background: var(--surface-primary);
+  box-shadow: 0 1px 0 var(--ui-border-subtle);
+}
+
+.libraryBody {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding:
+    var(--color-library-body-padding-top)
+    var(--color-library-body-padding-right)
+    var(--color-library-body-padding-bottom)
+    var(--color-library-body-padding-left);
+}
+
+.searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .searchField {
   position: relative;
+  min-width: 0;
   color: var(--text-primary);
+}
+
+.familyFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.familyFilterChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--button-outlined-default-border);
+  border-radius: 999px;
+  background: var(--button-outlined-default);
+  color: var(--button-outlined-default-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.familyFilterChip[data-selected="true"] {
+  border-color: var(--button-outlined-active-border);
+  background: var(--button-outlined-active);
+  color: var(--button-outlined-active-text);
+  font-weight: 600;
+}
+
+.familyFilterChip:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
 }
 
 .searchIcon {
   position: absolute;
   top: 50%;
-  left: 12px;
-  width: 16px;
-  height: 16px;
+  left: 10px;
+  width: 13px;
+  height: 13px;
   transform: translateY(-50%);
   opacity: 0.64;
   pointer-events: none;
@@ -30,7 +125,91 @@
 }
 
 .searchInput {
-  padding-left: 38px;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 34px !important;
+  padding-right: 12px !important;
+  box-shadow: none;
+}
+
+.searchControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.searchControlButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.searchControlButton[data-active="true"] {
+  background: var(--button-outlined-active);
+  color: var(--button-outlined-active-text);
+}
+
+.viewControl {
+  width: 100%;
+}
+
+.viewControlItem {
+  min-width: 0;
+}
+
+
+.searchControlButton:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 1px;
+}
+
+.searchControlIcon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+}
+
+.searchControlIcon > span {
+  width: 13px;
+  height: 13px;
+}
+
+.settingsPanel {
+  padding-top: 2px;
+}
+
+.settingsPanelContent {
+  display: grid;
+  gap: 10px;
+  /* padding-top: 10px; */
+}
+
+.settingsMenuSection {
+  display: grid;
+  gap: 8px;
+}
+
+.settingsMenuLabel {
+  margin: 0;
+  color: var(--neutral-500);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .section {
@@ -38,14 +217,114 @@
   flex-direction: column;
 }
 
+.library[data-featured-display="stacked"] .stickyHeader {
+  gap: 0;
+  padding-bottom: 8px;
+}
+
+.library[data-featured-display="stacked"] .searchRow {
+  padding-bottom: 2px;
+}
+
+.stackedFeaturedSection {
+  padding-top: 2px;
+}
+
+.stackedFeaturedSection .sectionContent {
+  gap: 8px;
+}
+
 .sectionContent {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
 .sectionHeader {
+  margin: 0;
+  padding: 0;
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stackedFeaturedSection .sectionHeaderRow {
+  margin-bottom: 2px;
+}
+
+.sectionHeaderAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.stackedFeaturedSection .sectionHeaderAction {
+  color: color-mix(in srgb, var(--text-secondary) 90%, white);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sectionHeaderAction:hover {
+  color: var(--text-primary);
+}
+
+.sectionHeaderAction:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--color-library-track-size), 1fr));
+  /* gap: var(--color-library-grid-gap); */
+  align-items: start;
+}
+
+.familySections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stackedLibrarySection {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, transparent);
+}
+
+.stackedLibrarySection .sectionContent {
+  gap: 12px;
+}
+
+.familySection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.libraryFamilySectionHeader {
   margin: 0;
   padding: 0;
   color: var(--neutral-500);
@@ -56,11 +335,21 @@
   text-transform: uppercase;
 }
 
-.sectionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--color-library-track-size), 1fr));
-  /* gap: var(--color-library-grid-gap); */
-  align-items: start;
+.paletteSectionHeader {
+  margin: 0;
+  padding: 0;
+  color: var(--neutral-500);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+.palettesManageButton {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .emptyState {
@@ -70,11 +359,137 @@
   line-height: 1.4;
 }
 
+.colorList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.colorListRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 1px 64px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.colorListRow:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+.colorListRow[data-active="true"] {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.colorListRowSwatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.colorListRowCode {
+  min-width: 64px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.colorListRowDivider {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--ui-border-reg);
+}
+
+.colorListRowName {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .colorButton {
+  position: relative;
   justify-content: center;
   width: 100%;
   min-width: 0;
   padding: 4px !important;
+}
+
+.tooltipLayer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-editor-tooltip);
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: var(--z-editor-tooltip);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-tooltip-shadow);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.tooltipDetail {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+}
+
+.tooltipArrow {
+  position: absolute;
+  z-index: var(--z-editor-tooltip);
+  width: 8px;
+  height: 8px;
+  background: var(--surface-card);
+  border-right: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-reg);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.tooltipArrow[data-placement="top"] {
+  transform: rotate(45deg);
+}
+
+.tooltipArrow[data-placement="bottom"] {
+  transform: rotate(225deg);
 }
 
 .colorButton[data-active="true"] {
@@ -82,11 +497,11 @@
 }
 
 .colorButton[data-active="true"] .swatch {
-  transform: scale(1.14);
+  transform: scale(1.08);
   border-color: var(--swatch-border-strong);
   box-shadow:
     0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 3px var(--swatch-ring-outer);
+    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
 }
 
 .swatch {
@@ -106,11 +521,11 @@
 }
 
 .colorButton:focus-visible .swatch {
-  transform: scale(1.14);
+  transform: scale(1.08);
   border-color: var(--swatch-border-strong);
   box-shadow:
     0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 3px var(--swatch-ring-outer);
+    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
 }
 
 .swatchCheck {
@@ -126,12 +541,40 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .searchControlButton:hover:not([data-active="true"]) {
+    background: var(--button-ghost2-hover);
+    color: var(--text-primary);
+  }
+
+  .searchControlButton[data-active="true"]:hover {
+    background: var(--button-outlined-active);
+    color: var(--button-outlined-active-text);
+  }
+
+  .familyFilterChip:hover {
+    border-color: var(--button-outlined-default-border);
+    background: var(--button-outlined-hover);
+    color: var(--button-outlined-default-text);
+  }
+
+  .familyFilterChip[data-selected="true"]:hover {
+    border-color: var(--button-outlined-active-border);
+    background: var(--button-outlined-active);
+    color: var(--button-outlined-active-text);
+  }
+
+  .colorListRow:hover:not(:disabled) {
+    background: var(--button-secondary-hover);
+    color: var(--text-primary);
+  }
+
   .colorButton:hover:not(:disabled),
   .colorButton[data-active="true"]:hover:not(:disabled),
   .colorButton[data-inert-active="true"]:hover:not(:disabled) {
     background: transparent;
   }
 
+  .colorListRow:hover:not(:disabled) .swatch,
   .colorButton:hover:not(:disabled) .swatch {
     transform: scale(1.14);
     border-color: var(--swatch-border-strong);

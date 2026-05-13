@@ -2,6 +2,7 @@
 
 import type {
   ActiveTool,
+  DuplicatePlacementSession,
   MirrorInteractionState,
   SelectionState,
   ViewportState,
@@ -16,9 +17,15 @@ const SELECTION_OUTER_STROKE = "rgba(8, 47, 73, 0.92)";
 const SELECTION_STROKE_DASH = "5 3";
 const SELECTION_INNER_STROKE_WIDTH = 1.5;
 const SELECTION_OUTER_STROKE_WIDTH = 3;
+const RECT_HANDLE_SIZE = 10;
+const RECT_HANDLE_BORDER_WIDTH = 2;
 
 interface SelectionOverlayProps {
   activeTool: ActiveTool;
+  duplicatePlacement: {
+    session: DuplicatePlacementSession;
+    offsetCells: { x: number; y: number };
+  } | null;
   metrics: GridWorldMetrics;
   mirrorInteraction: MirrorInteractionState;
   selection: SelectionState;
@@ -27,11 +34,13 @@ interface SelectionOverlayProps {
 
 export function SelectionOverlay({
   activeTool,
+  duplicatePlacement,
   metrics,
   mirrorInteraction,
   selection,
   viewport,
 }: SelectionOverlayProps) {
+  const cutPlacementActive = duplicatePlacement?.session.operation === "cut";
   const mirrorSession = mirrorInteraction.session;
   const mirrorSourceRect = mirrorSession?.sourceRect ?? null;
   const projectedCellSize = metrics.cellSize * viewport.zoom;
@@ -58,6 +67,12 @@ export function SelectionOverlay({
     hasCommittedCircleSelection;
   const isMirrorDragging = Boolean(mirrorSession?.dragAnchor);
   const hasCommittedMirrorSelection = Boolean(mirrorSourceRect && !mirrorSession?.dragAnchor);
+  const duplicateCutout = duplicatePlacement
+    ? buildDuplicateCutout({
+        duplicatePlacement,
+        projectedCellSize,
+      })
+    : null;
   const shouldDimCanvas =
     activeTool === "lasso" ||
     activeTool === "mirror" ||
@@ -75,11 +90,12 @@ export function SelectionOverlay({
     ? buildRectPath(mirrorSourceRect, projectedCellSize)
     : null;
   const dimmedCanvasCutoutPaths = [
-    hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
-    hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
-    hasCommittedCircleSelection && selection.rect
+    !cutPlacementActive && hasCommittedFreehandSelection ? `M ${lassoPoints} Z` : null,
+    !cutPlacementActive && hasCommittedRectSelection && selectionRectPath ? selectionRectPath : null,
+    !cutPlacementActive && hasCommittedCircleSelection && selection.rect
       ? buildEllipsePath(selection.rect, projectedCellSize)
       : null,
+    duplicateCutout,
     hasCommittedMirrorSelection &&
     mirrorCutoutPath &&
       mirrorCutoutPath !== selectionRectPath
@@ -142,7 +158,7 @@ export function SelectionOverlay({
         )
       ) : null}
 
-      {selection.mode === "lasso" && selection.lassoPoints.length > 0 ? (
+      {!cutPlacementActive && selection.mode === "lasso" && selection.lassoPoints.length > 0 ? (
         <svg
           aria-hidden="true"
           style={{
@@ -205,7 +221,7 @@ export function SelectionOverlay({
         </svg>
       ) : null}
 
-      {selection.mode === "rect" && selection.rect ? (
+      {!cutPlacementActive && selection.mode === "rect" && selection.rect ? (
         <svg
           aria-hidden="true"
           style={{
@@ -240,10 +256,26 @@ export function SelectionOverlay({
             strokeDasharray={SELECTION_STROKE_DASH}
             vectorEffect="non-scaling-stroke"
           />
+          {!selection.preview ? (
+            <>
+              {buildRectSelectionHandles(selection.rect, projectedCellSize).map((handle) => (
+                <circle
+                  key={handle.id}
+                  cx={handle.cx}
+                  cy={handle.cy}
+                  r={RECT_HANDLE_SIZE / 2}
+                  fill="#ffffff"
+                  stroke="#2563eb"
+                  strokeWidth={RECT_HANDLE_BORDER_WIDTH}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </>
+          ) : null}
         </svg>
       ) : null}
 
-      {selection.mode === "circle" && selection.rect ? (
+      {!cutPlacementActive && selection.mode === "circle" && selection.rect ? (
         <svg
           aria-hidden="true"
           style={{
@@ -278,6 +310,22 @@ export function SelectionOverlay({
             strokeDasharray={SELECTION_STROKE_DASH}
             vectorEffect="non-scaling-stroke"
           />
+          {!selection.preview ? (
+            <>
+              {buildRectSelectionHandles(selection.rect, projectedCellSize).map((handle) => (
+                <circle
+                  key={handle.id}
+                  cx={handle.cx}
+                  cy={handle.cy}
+                  r={RECT_HANDLE_SIZE / 2}
+                  fill="#ffffff"
+                  stroke="#2563eb"
+                  strokeWidth={RECT_HANDLE_BORDER_WIDTH}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </>
+          ) : null}
         </svg>
       ) : null}
 
@@ -340,6 +388,54 @@ export function SelectionOverlay({
   );
 }
 
+function buildRectSelectionHandles(
+  rect: NonNullable<SelectionState["rect"]>,
+  projectedCellSize: number,
+) {
+  return [
+    {
+      id: "nw",
+      cx: rect.x * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "n",
+      cx: (rect.x + rect.width / 2) * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "ne",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: rect.y * projectedCellSize,
+    },
+    {
+      id: "e",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: (rect.y + rect.height / 2) * projectedCellSize,
+    },
+    {
+      id: "se",
+      cx: (rect.x + rect.width) * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
+      id: "s",
+      cx: (rect.x + rect.width / 2) * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
+      id: "sw",
+      cx: rect.x * projectedCellSize,
+      cy: (rect.y + rect.height) * projectedCellSize,
+    },
+    {
+      id: "w",
+      cx: rect.x * projectedCellSize,
+      cy: (rect.y + rect.height / 2) * projectedCellSize,
+    },
+  ];
+}
+
 function buildRectPath(
   rect: { x: number; y: number; width: number; height: number },
   cellSize: number,
@@ -362,4 +458,36 @@ function buildEllipsePath(
   const ry = (rect.height * cellSize) / 2;
 
   return `M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
+}
+
+function buildDuplicateCutout(options: {
+  duplicatePlacement: {
+    session: DuplicatePlacementSession;
+    offsetCells: { x: number; y: number };
+  };
+  projectedCellSize: number;
+}): string | null {
+  const { session, offsetCells } = options.duplicatePlacement;
+  const translatedRect = {
+    ...session.sourceRect,
+    x: session.sourceRect.x + offsetCells.x,
+    y: session.sourceRect.y + offsetCells.y,
+  };
+
+  if (session.selectionMode === "lasso" && session.outlinePoints.length >= 3) {
+    const points = session.outlinePoints
+      .map(
+        (point) =>
+          `${(translatedRect.x + point.x) * options.projectedCellSize},${(translatedRect.y + point.y) * options.projectedCellSize}`,
+      )
+      .join(" ");
+
+    return `M ${points} Z`;
+  }
+
+  if (session.selectionMode === "circle") {
+    return buildEllipsePath(translatedRect, options.projectedCellSize);
+  }
+
+  return buildRectPath(translatedRect, options.projectedCellSize);
 }

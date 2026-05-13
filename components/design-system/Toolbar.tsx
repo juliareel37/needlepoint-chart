@@ -80,6 +80,8 @@ export function ToolbarButton({
   children,
   className,
   iconOnly = false,
+  textOnly = false,
+  popoverTrigger = false,
   inertWhenActive = false,
   labelled = false,
   onClick,
@@ -93,6 +95,8 @@ export function ToolbarButton({
   active?: boolean;
   children: ReactNode;
   iconOnly?: boolean;
+  textOnly?: boolean;
+  popoverTrigger?: boolean;
   inertWhenActive?: boolean;
   labelled?: boolean;
   primary?: boolean;
@@ -116,6 +120,8 @@ export function ToolbarButton({
         styles.button,
         styles[`buttonVariant${resolvedVariant[0].toUpperCase()}${resolvedVariant.slice(1)}`],
         iconOnly ? styles.buttonIconOnly : null,
+        textOnly ? styles.buttonTextOnly : null,
+        popoverTrigger ? styles.buttonPopoverTrigger : null,
         labelled ? styles.buttonLabelled : null,
         swatch ? styles.buttonSwatch : null,
         wide ? styles.buttonWide : null,

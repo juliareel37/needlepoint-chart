@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
@@ -10,6 +10,7 @@ import type {
   IconPlacementSession,
   PaletteColor,
   TextPlacementSession,
+  TraceConversionPreviewState,
   TraceDocument,
   TraceRepositionOrigin,
 } from "@/lib/editor-v2/editor/store";
@@ -17,6 +18,7 @@ import type { GridWorldMetrics, WorldPoint } from "@/lib/editor-v2/editor/viewpo
 import type {
   SavedEditorV2DocumentRecord,
 } from "../../../app/editorV2ServerPersistence";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import { ColorPanelPage, type ColorPanelView } from "./panel-pages/ColorPanelPage";
 import { DocumentPanelPage } from "./panel-pages/DocumentPanelPage";
 import { IconsPanelPage, type IconsPanelView } from "./panel-pages/IconsPanelPage";
@@ -53,23 +55,34 @@ interface EditorSidebarProps {
   onClose: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
+  onDuplicateDocument: () => void;
+  onDownloadDocument: () => void;
+  onSaveVersionSnapshot: () => void;
+  onOpenVersionHistory: () => void;
   onSignIn: () => void;
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   onStartOver: () => void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   previewMode: boolean;
+  snapshotSaving: boolean;
+  exportInProgress: boolean;
   previewModeDisabled?: boolean;
   selectionControlActive: boolean;
   selectionPromptVisible: boolean;
   showGridlines: boolean;
   showRuler: boolean;
   showSymbols: boolean;
+  touchSnappingEnabled: boolean;
   trace: TraceDocument | null;
+  traceConversionPreview: TraceConversionPreviewState | null;
+  traceEditModeActive?: boolean;
   traceRepositionActive: boolean;
   traceRepositionOrigin: TraceRepositionOrigin | null;
   usedColors: Array<{ colorId: string; count: number }>;
   document: EditorDocumentState;
   gridMetrics: GridWorldMetrics;
   highlightedColorId: string | null;
+  lastSaveConfirmedAt: number | null;
   recoveredLocalChanges: boolean;
   saveMessage: string;
   saveMode: "manual" | "autosave";
@@ -77,10 +90,21 @@ interface EditorSidebarProps {
   textPlacement: TextPlacementSession | null;
   iconPlacement: IconPlacementSession | null;
   isBottomPanelLayout: boolean;
+  requestedColorPanelView: ColorPanelView | null;
+  requestedColorPanelViewKey: number;
   onHighlightColorChange: (colorId: string | null) => void;
   textViewportCenter: WorldPoint | null;
   textViewportWidth: number | null;
   textViewportHeight: number | null;
+  traceCropDraft?: TraceCropRect | null;
+  traceCropEditing?: boolean;
+  traceEraserEditing?: boolean;
+  onBeginTraceCrop?: () => void;
+  onBeginTraceEraser?: () => void;
+  onCancelTraceCrop?: () => void;
+  onCommitTraceCrop?: () => void;
+  onResetTraceCrop?: () => void;
+  onToggleTraceEditMode?: () => void;
 }
 
 export function EditorSidebar({
@@ -111,23 +135,34 @@ export function EditorSidebar({
   onClose,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
+  onDuplicateDocument,
+  onDownloadDocument,
+  onSaveVersionSnapshot,
+  onOpenVersionHistory,
   onSignIn,
   onScopeModeChange,
   onStartOver,
+  onClearLocalBrowserData,
   previewMode,
+  snapshotSaving,
+  exportInProgress,
   previewModeDisabled = false,
   selectionControlActive,
   selectionPromptVisible,
   showGridlines,
   showRuler,
   showSymbols,
+  touchSnappingEnabled,
   trace,
+  traceConversionPreview,
+  traceEditModeActive = false,
   traceRepositionActive,
   traceRepositionOrigin,
   usedColors,
   document,
   gridMetrics,
   highlightedColorId,
+  lastSaveConfirmedAt,
   recoveredLocalChanges,
   saveMessage,
   saveMode,
@@ -135,45 +170,148 @@ export function EditorSidebar({
   textPlacement,
   iconPlacement,
   isBottomPanelLayout,
+  requestedColorPanelView,
+  requestedColorPanelViewKey,
   onHighlightColorChange,
   textViewportCenter,
   textViewportWidth,
   textViewportHeight,
+  traceCropDraft = null,
+  traceCropEditing = false,
+  traceEraserEditing = false,
+  onBeginTraceCrop,
+  onBeginTraceEraser,
+  onCancelTraceCrop,
+  onCommitTraceCrop,
+  onResetTraceCrop,
+  onToggleTraceEditMode,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
+  const [customPaletteDraftId, setCustomPaletteDraftId] = useState<string | null>(null);
+  const [customPaletteDraftColorIds, setCustomPaletteDraftColorIds] = useState<string[]>([]);
+  const [customPaletteDraftName, setCustomPaletteDraftName] = useState("");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
+  const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
+  const iconsOverviewScrollTopRef = useRef(0);
+  const iconsSubpageScrollRef = useRef<{ category: string | null; scrollTop: number }>({
+    category: null,
+    scrollTop: 0,
+  });
+  const previousActiveSectionRef = useRef(activeSection);
+  const shouldRestoreIconsSubpageScrollRef = useRef(false);
 
   useEffect(() => {
-    if (activeSection !== "color") {
-      setColorPanelView("overview");
+    if (!requestedColorPanelView) {
+      return;
     }
-  }, [activeSection]);
+
+    setColorPanelView(requestedColorPanelView);
+  }, [requestedColorPanelView, requestedColorPanelViewKey]);
 
   useEffect(() => {
-    if (activeSection !== "icons") {
-      setIconsPanelView({ type: "overview" });
+    const previousActiveSection = previousActiveSectionRef.current;
+
+    if (
+      previousActiveSection === "icons" &&
+      activeSection !== "icons" &&
+      iconsPanelView.type === "category"
+    ) {
+      shouldRestoreIconsSubpageScrollRef.current = true;
     }
-  }, [activeSection]);
+
+    previousActiveSectionRef.current = activeSection;
+  }, [activeSection, iconsPanelView]);
+
+  const handleIconsPanelViewChange = (
+    nextView: IconsPanelView,
+    options?: { overviewScrollTop?: number },
+  ) => {
+    if (typeof options?.overviewScrollTop === "number") {
+      iconsOverviewScrollTopRef.current = options.overviewScrollTop;
+    }
+
+    shouldRestoreIconsSubpageScrollRef.current = false;
+    setIconsPanelView(nextView);
+  };
+  const isColorSubpage = colorPanelView !== "overview";
+  const colorPanelBackTitle =
+    colorPanelView === "design-colors"
+      ? "Design colors"
+      : colorPanelView === "custom-palettes"
+        ? "Custom palettes"
+        : "Create palette";
+  const handleColorPanelBack = () => {
+    if (colorPanelView === "custom-palette-create") {
+      setColorPanelView("custom-palettes");
+      return;
+    }
+
+    setColorPanelView("overview");
+  };
+  const colorPanelBackLabel =
+    colorPanelView === "custom-palette-create"
+      ? "Back to custom palettes"
+      : "Back to color overview";
+  const handleCustomPaletteCreateOpen = () => {
+    setCustomPaletteDraftId(null);
+    setCustomPaletteDraftColorIds([]);
+    setCustomPaletteDraftName(buildNextCustomPaletteDefaultName(document.palette.customPalettesById));
+    setColorPanelView("custom-palette-create");
+  };
+  const handleCustomPaletteEditOpen = (paletteId: string) => {
+    const palette = document.palette.customPalettesById[paletteId];
+    if (!palette) {
+      return;
+    }
+
+    setCustomPaletteDraftId(palette.id);
+    setCustomPaletteDraftColorIds([...palette.colorIds]);
+    setCustomPaletteDraftName(palette.name);
+    setColorPanelView("custom-palette-create");
+  };
+  const handleCustomPaletteDraftColorToggle = (colorId: string) => {
+    setCustomPaletteDraftColorIds((current) =>
+      current.includes(colorId)
+        ? current.filter((entry) => entry !== colorId)
+        : [...current, colorId],
+    );
+  };
+  const handleCustomPaletteDraftReset = () => {
+    setCustomPaletteDraftColorIds([]);
+  };
+  const handleCustomPaletteDraftNameChange = (nextName: string) => {
+    setCustomPaletteDraftName(nextName);
+  };
+  const handleCustomPaletteDraftSelectAll = (colorIds: string[]) => {
+    setCustomPaletteDraftColorIds((current) => {
+      const next = new Set(current);
+      for (const colorId of colorIds) {
+        next.add(colorId);
+      }
+
+      return [...next];
+    });
+  };
 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarSurface}>
         <div className={styles.sidebarPanelHeader}>
-          {activeSection === "color" && colorPanelView === "design-colors" ? (
+          {activeSection === "color" && isColorSubpage ? (
             <div className={styles.sidebarPanelBackRow}>
               <Button
                 type="button"
                 variant="ghostV2"
                 size="sm"
                 className={styles.sidebarPanelBackButton}
-                aria-label="Back to color overview"
-                title="Back to color overview"
-                onClick={() => setColorPanelView("overview")}
+                aria-label={colorPanelBackLabel}
+                title={colorPanelBackLabel}
+                onClick={handleColorPanelBack}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
               </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
-                Design colors
+                {colorPanelBackTitle}
               </span>
             </div>
           ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
@@ -185,7 +323,7 @@ export function EditorSidebar({
                 className={styles.sidebarPanelBackButton}
                 aria-label="Back to icon categories"
                 title="Back to icon categories"
-                onClick={() => setIconsPanelView({ type: "overview" })}
+                onClick={() => setIconsPanelBackRequestKey((current) => current + 1)}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
               </Button>
@@ -204,7 +342,7 @@ export function EditorSidebar({
                     : activeSection === "text"
                       ? "Text"
                       : activeSection === "icons"
-                        ? "Icons"
+                        ? "Graphics"
                         : "Settings"}
             </h2>
           )}
@@ -228,63 +366,39 @@ export function EditorSidebar({
 
         <div className={styles.sidebarPanelBody}>
           {activeSection === "document" ? (
-            isBottomPanelLayout ? (
-              <DocumentPanelPage
-                autoSaveEnabled={autoSaveEnabled}
-                dispatch={dispatch}
-                documentTitle={documentTitle}
-                hasSavedDesignAccess={hasSavedDesignAccess}
-                hasUnsavedChanges={hasUnsavedChanges}
-                isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
-                onLoadSelected={onLoadSelected}
-                renameRequestToken={renameRequestToken}
-                onSignIn={onSignIn}
-                onStartOver={onStartOver}
-                recoveredLocalChanges={recoveredLocalChanges}
-                saveMessage={saveMessage}
-                saveMode={saveMode}
-                savedDocuments={savedDocuments}
-                savedDocumentsLoading={savedDocumentsLoading}
-                savedDocumentsHasMore={savedDocumentsHasMore}
-                savedDocumentsLoadingMore={savedDocumentsLoadingMore}
-                onOpenSavedDocuments={onOpenSavedDocuments}
-                onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
-                currentStorageId={currentStorageId}
-                onEnterVersionHistoryMode={onEnterVersionHistoryMode}
-                selectedStorageId={selectedStorageId}
-                setSelectedStorageId={setSelectedStorageId}
-              />
-            ) : (
-              <>
-                {/*
-                <DocumentPanelPage
-                  autoSaveEnabled={autoSaveEnabled}
-                  dispatch={dispatch}
-                  documentTitle={documentTitle}
-                  hasSavedDesignAccess={hasSavedDesignAccess}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
-                  onLoadSelected={onLoadSelected}
-                  renameRequestToken={renameRequestToken}
-                  onSignIn={onSignIn}
-                  onStartOver={onStartOver}
-                  recoveredLocalChanges={recoveredLocalChanges}
-                  saveMessage={saveMessage}
-                  saveMode={saveMode}
-                  savedDocuments={savedDocuments}
-                  savedDocumentsLoading={savedDocumentsLoading}
-                  savedDocumentsHasMore={savedDocumentsHasMore}
-                  savedDocumentsLoadingMore={savedDocumentsLoadingMore}
-                  onOpenSavedDocuments={onOpenSavedDocuments}
-                  onLoadMoreSavedDocuments={onLoadMoreSavedDocuments}
-                  currentStorageId={currentStorageId}
-                  onEnterVersionHistoryMode={onEnterVersionHistoryMode}
-                  selectedStorageId={selectedStorageId}
-                  setSelectedStorageId={setSelectedStorageId}
-                />
-                */}
-              </>
-            )
+            <DocumentPanelPage
+              autoSaveEnabled={autoSaveEnabled}
+              currentStorageId={currentStorageId}
+              dispatch={dispatch}
+              document={document}
+              documentTitle={documentTitle}
+              exportInProgress={exportInProgress}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isDocumentPanelStatusVisible={isDocumentPanelStatusVisible}
+              lastSaveConfirmedAt={lastSaveConfirmedAt}
+              onClearLocalBrowserData={onClearLocalBrowserData}
+              onDownloadDocument={onDownloadDocument}
+              onOpenAllDesigns={() => {
+                window.location.assign("/library");
+              }}
+              onOpenRecentDesign={(storageId) => {
+                window.location.assign(`/editor/designs/${storageId}`);
+              }}
+              onOpenSavedDocuments={onOpenSavedDocuments}
+              onDuplicateDocument={onDuplicateDocument}
+              onOpenVersionHistory={onOpenVersionHistory}
+              onSaveVersionSnapshot={onSaveVersionSnapshot}
+              onSignIn={onSignIn}
+              onStartOver={onStartOver}
+              recoveredLocalChanges={recoveredLocalChanges}
+              renameRequestToken={renameRequestToken}
+              savedDocuments={savedDocuments}
+              savedDocumentsLoading={savedDocumentsLoading}
+              saveMessage={saveMessage}
+              saveMode={saveMode}
+              snapshotSaving={snapshotSaving}
+            />
           ) : null}
 
           {activeSection === "color" ? (
@@ -292,11 +406,21 @@ export function EditorSidebar({
               activeColor={activeColor}
               activeColorId={activeColorId}
               colorsById={colorsById}
+              customPalettesById={document.palette.customPalettesById}
               dispatch={dispatch}
               highlightedColorId={highlightedColorId}
               isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
+              customPaletteDraftColorIds={customPaletteDraftColorIds}
+              customPaletteDraftId={customPaletteDraftId}
+              customPaletteDraftName={customPaletteDraftName}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
+              onCustomPaletteCreateOpen={handleCustomPaletteCreateOpen}
+              onCustomPaletteEditOpen={handleCustomPaletteEditOpen}
+              onCustomPaletteDraftColorToggle={handleCustomPaletteDraftColorToggle}
+              onCustomPaletteDraftNameChange={handleCustomPaletteDraftNameChange}
+              onCustomPaletteDraftReset={handleCustomPaletteDraftReset}
+              onCustomPaletteDraftSelectAll={handleCustomPaletteDraftSelectAll}
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
@@ -313,14 +437,26 @@ export function EditorSidebar({
           ) : null}
 
           {activeSection === "trace" ? (
-            <TracePanelPage
-              dispatch={dispatch}
-              grid={document.grid}
-              gridMetrics={gridMetrics}
-              palette={palette}
-              repositionActive={traceRepositionActive}
-              repositionOrigin={traceRepositionOrigin}
-              trace={trace}
+              <TracePanelPage
+                cropDraft={traceCropDraft}
+                cropEditing={traceCropEditing}
+                dispatch={dispatch}
+                editModeActive={traceEditModeActive}
+                eraserEditing={traceEraserEditing}
+                guestDraftId={currentStorageId ? null : document.project.id}
+                grid={document.grid}
+                gridMetrics={gridMetrics}
+                onBeginCrop={onBeginTraceCrop}
+                onBeginEraser={onBeginTraceEraser}
+                onCancelCrop={onCancelTraceCrop}
+                onCommitCrop={onCommitTraceCrop}
+                onResetCrop={onResetTraceCrop}
+                onToggleEditMode={onToggleTraceEditMode}
+                palette={palette}
+                previewState={traceConversionPreview}
+                repositionActive={traceRepositionActive}
+                repositionOrigin={traceRepositionOrigin}
+                trace={trace}
             />
           ) : null}
 
@@ -338,10 +474,31 @@ export function EditorSidebar({
 
           {activeSection === "icons" ? (
             <IconsPanelPage
+              backRequestKey={iconsPanelBackRequestKey}
               dispatch={dispatch}
               gridMetrics={gridMetrics}
-              onViewChange={setIconsPanelView}
+              onBackRequestHandled={() => {}}
+              onScrollPositionChange={(scrollTop, view) => {
+                if (view.type === "overview") {
+                  iconsOverviewScrollTopRef.current = scrollTop;
+                  return;
+                }
+
+                iconsSubpageScrollRef.current = {
+                  category: view.category,
+                  scrollTop,
+                };
+              }}
+              onViewChange={handleIconsPanelViewChange}
               placement={iconPlacement}
+              persistedScrollTop={
+                iconsPanelView.type === "overview"
+                  ? iconsOverviewScrollTopRef.current
+                  : shouldRestoreIconsSubpageScrollRef.current &&
+                      iconsSubpageScrollRef.current.category === iconsPanelView.category
+                    ? iconsSubpageScrollRef.current.scrollTop
+                    : 0
+              }
               view={iconsPanelView}
               viewportCenter={textViewportCenter}
               viewportWidth={textViewportWidth}
@@ -352,15 +509,37 @@ export function EditorSidebar({
           {activeSection === "settings" ? (
             <SettingsPanelPage
               dispatch={dispatch}
+              isBottomPanelLayout={isBottomPanelLayout}
               previewMode={previewMode}
               previewModeDisabled={previewModeDisabled}
               showGridlines={showGridlines}
               showRuler={showRuler}
               showSymbols={showSymbols}
+              touchSnappingEnabled={touchSnappingEnabled}
             />
           ) : null}
         </div>
       </div>
     </aside>
   );
+}
+
+function buildNextCustomPaletteDefaultName(
+  customPalettesById: EditorDocumentState["palette"]["customPalettesById"],
+): string {
+  const existingNames = new Set(
+    Object.values(customPalettesById).map((palette) => palette.name.trim().toLowerCase()),
+  );
+  const baseName = "My Palette";
+
+  if (!existingNames.has(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  let index = 2;
+  while (existingNames.has(`${baseName} ${index}`.toLowerCase())) {
+    index += 1;
+  }
+
+  return `${baseName} ${index}`;
 }

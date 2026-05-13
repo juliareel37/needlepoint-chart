@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEditorStore } from "../../store/createEditorStore";
-import type { EditorStoreState } from "../../store/state";
+import { DEFAULT_CANVAS_PREFERENCES, type EditorStoreState } from "../../store/state";
 import type { EditorCommand } from "../types";
 
 describe("paletteSwapColorCommandHandler", () => {
@@ -118,6 +118,9 @@ function createSwapTestState(
         mode: "destructive-grid",
         entities: [],
       },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
+      },
       metadata: {
         legacyDraftId: null,
         persistedVersionId: null,
@@ -146,6 +149,7 @@ function createSwapTestState(
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },
@@ -172,6 +176,7 @@ function createSwapTestState(
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",
@@ -223,6 +228,7 @@ function createSwapTestState(
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: false,
+        touchSnappingEnabled: true,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

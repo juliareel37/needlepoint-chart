@@ -17,9 +17,11 @@ import {
   ToolbarSwatch,
   ToolbarPopover,
 } from "@/components/design-system";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
 import { getPrimitiveStrokeWidthScaleRange } from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type {
+  CustomPalette,
   EditorStore,
   GridDocument,
   IconPlacementSession,
@@ -162,12 +164,14 @@ interface IconColorSlotSwatchPopoverProps {
   assignedColorHex: string;
   caption?: string | null;
   colors: PaletteColor[];
+  customPalettesById: Record<string, CustomPalette>;
   featuredColorIds: string[];
   isOpen: boolean;
   isSelected: boolean;
   isTransparentSelected?: boolean;
   label: string;
   onColorSelect: (colorId: string) => void;
+  onManagePalettes?: () => void;
   onTransparentSelect?: () => void;
   onOpenChange: (open: boolean) => void;
   showSymbols: boolean;
@@ -179,18 +183,21 @@ function IconColorSlotSwatchPopover({
   assignedColorHex,
   caption = null,
   colors,
+  customPalettesById,
   featuredColorIds,
   isOpen,
   isSelected,
   isTransparentSelected = false,
   label,
   onColorSelect,
+  onManagePalettes,
   onTransparentSelect,
   onOpenChange,
   showSymbols,
   symbolAssignments,
 }: IconColorSlotSwatchPopoverProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null);
+  const paletteSections = getColorLibraryPaletteSections(colors, customPalettesById);
 
   return (
     <ToolbarAnchor
@@ -231,6 +238,11 @@ function IconColorSlotSwatchPopover({
             colors={colors}
             featuredColorIds={featuredColorIds}
             includeTransparentSwatch={Boolean(onTransparentSelect)}
+            onManagePalettes={() => {
+              onOpenChange(false);
+              onManagePalettes?.();
+            }}
+            paletteSections={paletteSections}
             onTransparentSelect={() => {
               onTransparentSelect?.();
               onOpenChange(false);
@@ -252,10 +264,13 @@ function IconColorSlotSwatchPopover({
 interface IconPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
+  customPalettesById: Record<string, CustomPalette>;
   dispatch: EditorStore["dispatch"];
   featuredColorIds: string[];
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
+  onBeginEraser?: () => void;
+  onOpenCustomPalettesPanel: () => void;
   palette: PaletteColor[];
   placement: IconPlacementSession;
   showSymbols: boolean;
@@ -265,10 +280,13 @@ interface IconPlacementToolbarProps {
 export function IconPlacementToolbar({
   activeColorHex,
   activeColorId,
+  customPalettesById,
   dispatch,
   featuredColorIds,
   grid,
   gridMetrics,
+  onBeginEraser,
+  onOpenCustomPalettesPanel,
   palette,
   placement,
   showSymbols,
@@ -316,7 +334,7 @@ export function IconPlacementToolbar({
     !isConverting &&
     (placement.colorSlots.length > 0
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
-      : Boolean(activeColorId));
+      : palette.length > 0 || Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
   const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
     placement.primitiveKind,
@@ -338,6 +356,10 @@ export function IconPlacementToolbar({
   );
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
   const supportsSpacingScale = placement.primitiveKind === "double-rectangle-frame";
+  const canEraseUploadedGraphic =
+    placement.isUserUploaded &&
+    placement.mimeType !== "image/svg+xml" &&
+    typeof onBeginEraser === "function";
   const normalizedSpacingScale = placement.primitiveSpacingScale;
   const spacingTooltipPercent = Math.max(
     0,
@@ -351,6 +373,7 @@ export function IconPlacementToolbar({
   const showDividerAfterPattern = supportsSpacingScale || hasColorSlots;
   const showDividerAfterSpacing = hasColorSlots;
   const conversionSubject = getConversionSubjectLabel(placement);
+  const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
 
   function closeColorPickers() {
     setColorLibraryOpen(false);
@@ -446,7 +469,7 @@ export function IconPlacementToolbar({
 
   return (
     <div className={styles.selectionToolbarCluster}>
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -458,7 +481,7 @@ export function IconPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/x.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
 
       <div className={styles.selectionToolbarMainViewport}>
         <Toolbar className={styles.floatingToolbar}>
@@ -500,6 +523,11 @@ export function IconPlacementToolbar({
                         className={styles.toolbarColorLibrary}
                         colors={palette}
                         featuredColorIds={featuredColorIds}
+                        onManagePalettes={() => {
+                          setColorLibraryOpen(false);
+                          onOpenCustomPalettesPanel();
+                        }}
+                        paletteSections={paletteSections}
                         showFeaturedSymbols={showSymbols}
                         symbolAssignments={symbolAssignments}
                         onColorSelect={(colorId) => {
@@ -782,13 +810,15 @@ export function IconPlacementToolbar({
                         activeColorId={slot.paletteColorId ?? null}
                         assignedColorHex={assignedColor?.hex ?? slot.sourceHex}
                         caption={primitiveCaption}
-                        colors={palette}
-                        featuredColorIds={featuredColorIds}
-                        isOpen={openColorSlotId === slot.id}
+                colors={palette}
+                customPalettesById={customPalettesById}
+                featuredColorIds={featuredColorIds}
+                isOpen={openColorSlotId === slot.id}
                         isSelected={isSelected}
                         isTransparentSelected={transparentSelected}
                         label={`Edit ${slotLabel.toLowerCase()}`}
                         onColorSelect={(colorId) => updateSlotColor(slot.id, colorId)}
+                        onManagePalettes={onOpenCustomPalettesPanel}
                         onTransparentSelect={
                           allowTransparent ? () => clearSlotColor(slot.id) : undefined
                         }
@@ -813,10 +843,56 @@ export function IconPlacementToolbar({
               </ToolbarGroup>
             </>
           ) : null}
+
+          {canEraseUploadedGraphic ? (
+            <>
+              <ToolbarDivider />
+              <ToolbarGroup>
+                <ToolbarButton type="button" labelled onClick={onBeginEraser}>
+                  <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                  <ToolbarLabel>Erase</ToolbarLabel>
+                </ToolbarButton>
+              </ToolbarGroup>
+            </>
+          ) : null}
+
+          <ToolbarDivider />
+
+          <ToolbarButton
+            type="button"
+            variant="secondary"
+            textOnly
+            disabled={isConverting}
+            onClick={() => dispatch(createCancelIconPlacementCommand())}
+          >
+            Cancel
+          </ToolbarButton>
+          
+            <ToolbarButton
+            type="button"
+            variant="primary"
+            textOnly
+            // className={styles.selectionToolbarCloseButton}
+            disabled={!canConvert}
+            aria-busy={isConverting}
+            onClick={() => {
+              void handleConvert();
+            }}
+          >
+            {isConverting ? (
+              <>
+                <span className={styles.saveButtonSpinner} aria-hidden="true" />
+                Converting...
+              </>
+            ) : (
+              "Apply"
+            )}
+          </ToolbarButton>
+          
         </Toolbar>
       </div>
 
-      <div className={styles.selectionToolbarCloseViewport}>
+      {/* <div className={styles.selectionToolbarCloseViewport}>
         <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
           <ToolbarButton
             type="button"
@@ -831,7 +907,7 @@ export function IconPlacementToolbar({
             <ToolbarIcon icon="/icons/lucide/check.svg" />
           </ToolbarButton>
         </Toolbar>
-      </div>
+      </div> */}
       <Modal
         isOpen={pendingGroups !== null}
         title="Heads up!"

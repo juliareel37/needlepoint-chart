@@ -1,0 +1,489 @@
+id_dmc,hex_code,family_dmc,family_new,name_dmc,name_maxx,updated_dt
+150,#ab0249,red,pink,Raspberry,Dusty Rose Ultra Very Dark,5/7/2026
+21,#d79982,red,red,Prosciutto,Alizarin Light,5/7/2026
+22,#bc604e,red,red,Ruby,Alizarin,5/7/2026
+221,#883e43,red,red,Mars Red,Shell Pink Very Dark,5/7/2026
+304,#b71f33,red,red,Chinese Lacquer,Red Medium,5/7/2026
+309,#d62b5b,red,pink,Crushed Raspberry,Rose Dark,5/7/2026
+321,#c72b3b,red,red,Metallic Carmine Red,Red,5/7/2026
+326,#b33b4b,red,red,Rhubarb,Rose Very Dark,5/7/2026
+3328,#e36d6d,red,red,Amaranth,Salmon Dark,5/7/2026
+3340,#ff836f,red,orange,Hot Peach,Apricot Medium,5/7/2026
+3350,#bc4365,red,pink,Dragonfruit,Dusty Rose Ultra Dark,5/7/2026
+347,#bf2d2d,red,red,Egyptian Red,Salmon Very Dark,5/7/2026
+349,#d21035,red,red,Red Pepper,Coral Dark,5/7/2026
+350,#e04848,red,red,Vermillion,Coral Medium,5/7/2026
+351,#e96a67,red,red,Coral,Coral,5/7/2026
+3685,#881531,red,red,Metallic Bramble,Mauve Very Dark,5/7/2026
+3705,#ff7992,red,pink,Guava,Melon Dark,5/7/2026
+3801,#e74967,red,pink,Tulip Red,Melon Very Dark,5/7/2026
+3831,#b32f48,red,red,Wild Strawberry,Raspberry Dark,5/7/2026
+3832,#db556e,red,pink,Strawberry,Raspberry Medium,5/7/2026
+498,#a7132b,red,red,Red Kiss,Red Dark,5/7/2026
+600,#cd2f63,red,pink,Radish,Cranberry Very Dark,5/7/2026
+606,#fa3203,red,orange,Bright Red,Orange Red Bright,5/7/2026
+608,#fd5d35,red,orange,Poppy,Burnt Orange Bright,5/7/2026
+666,#e31d42,red,red,Scarlet,Bright Red,5/7/2026
+720,#e55c1f,red,orange,Rust,Orange Spice Dark,5/7/2026
+777,#913546,red,red,Wine,Raspberry Very Dark,5/7/2026
+814,#7b001b,red,red,Vin Rouge,Garnet Dark,5/7/2026
+815,#87071f,red,red,Metallic Black Cherry,Garnet Medium,5/7/2026
+816,#970b23,red,red,Cherry Red,Garnet,5/7/2026
+817,#bb051f,red,red,Japanese Red,Coral Red Very Dark,5/7/2026
+891,#ff5773,red,pink,Geranium,Carnation Dark,5/7/2026
+893,#fc90a2,red,pink,Dahlia,Carnation Light,5/7/2026
+900,#d15807,red,orange,Blood Orange,Burnt Orange Dark,5/7/2026
+902,#822637,red,red,Magenta Red,Garnet Very Dark,5/7/2026
+918,#82340a,red,brown,Rosewood,Red Copper Dark,5/7/2026
+919,#a64510,red,brown,Terracotta Brown,Red Copper,5/7/2026
+920,#ac5414,red,brown,Sienna Ochre,Copper Medium,5/7/2026
+921,#c66218,red,orange,Tuscan Ochre,Copper,5/7/2026
+946,#eb6307,red,orange,Fire,Burnt Orange Medium,5/7/2026
+947,#ff7b4d,red,orange,Sunset,Burnt Orange,5/7/2026
+223,#cc847c,PINK,pink,Granite Pink,Shell Pink Light,5/7/2026
+224,#ebb7af,PINK,pink,Earthworm,Shell Pink Very Light,5/7/2026
+225,#ffdfd5,PINK,pink,Cherry Blossom,Shell Pink Ultra Very Light,5/7/2026
+23,#ede2ed,PINK,purple,Sakura,Apple Blossom,5/7/2026
+3326,#fbadb4,PINK,pink,Wild Rose,Rose Light,5/7/2026
+335,#ee546e,PINK,pink,Dark Pink,Rose,5/7/2026
+3354,#e4a6ac,PINK,pink,Baker Miller Pink,Dusty Rose Light,5/7/2026
+353,#fed7cc,PINK,pink,Ballet Slippers,Peach,5/7/2026
+3689,#fbbfc2,PINK,pink,Pale Orchid,Mauve Light,5/7/2026
+3706,#ffadbc,PINK,pink,Flamingo,Melon Medium,5/7/2026
+3708,#ffcbd5,PINK,pink,Azalea,Melon Light,5/7/2026
+3712,#f18787,PINK,pink,Blush,Salmon Medium,5/7/2026
+3713,#ffe2e2,PINK,pink,Rose Quartz,Salmon Very Light,5/7/2026
+3716,#ffbdbd,PINK,pink,Peony,Dusty Rose Medium Very Light,5/7/2026
+3731,#da6783,PINK,pink,Pink Pepper,Dusty Rose Very Dark,5/7/2026
+3733,#e8879b,PINK,pink,Pink Hollyhock,Dusty Rose,5/7/2026
+3824,#fecdc2,PINK,pink,Strawberry Chew,Apricot Light,5/7/2026
+3833,#ea8699,PINK,pink,Strawberry Sorbet,Raspberry Light,5/7/2026
+602,#e24874,PINK,pink,Pink Verbena,Cranberry Medium,5/7/2026
+603,#ffa4be,PINK,pink,Macaroon Pink,Cranberry,5/7/2026
+604,#ffb0be,PINK,pink,Pink Hyacinth,Cranberry Light,5/7/2026
+760,#f5adad,PINK,pink,Dusty Pink,Salmon,5/7/2026
+761,#ffc9c9,PINK,pink,Rose Dawn,Salmon Light,5/7/2026
+778,#dfb3bb,PINK,pink,Amethyst Haze,Antique Mauve Very Light,5/7/2026
+818,#ffdfd9,PINK,pink,Pearlescent Powder Pink,Baby Pink,5/7/2026
+894,#ffb2bb,PINK,pink,Rose,Carnation Very Light,5/7/2026
+899,#f27688,PINK,pink,Watermelon,Rose Medium,5/7/2026
+956,#ff9191,PINK,pink,Hot Pink,Geranium,5/7/2026
+957,#fdb5b5,PINK,pink,Bubblegum Pink,Geranium Pale,5/7/2026
+961,#cf7373,PINK,pink,Rose Garden,Dusty Rose Dark,5/7/2026
+962,#e68a8a,PINK,pink,Antique Rose,Dusty Rose Medium,5/7/2026
+963,#ffd7d7,PINK,pink,Candy Pink,Dusty Rose Ultra Very Light,5/7/2026
+967,#ffded5,PINK,pink,Pearlescent Tutu,Apricot Very Light,5/7/2026
+153,#e6ccd9,purple,purple,Pink Lilac,Violet Very Light,5/7/2026
+154,#572433,purple,purple,Prune,Grape Very Dark,5/7/2026
+155,#9891b6,purple,purple,Metallic Mauve,Blue Violet Medium Dark,5/7/2026
+156,#a3aed1,purple,purple,Cornflower Blue,Blue Violet Medium Light,5/7/2026
+208,#835b8b,purple,purple,Pansy,Lavender Very Dark,5/7/2026
+209,#a37ba7,purple,purple,Lilac,Lavender Dark,5/7/2026
+210,#c39fc3,purple,purple,Parma Violet,Lavender Medium,5/7/2026
+211,#e3cbe3,purple,purple,Pearlescent Light Parma Violet,Lavender Light,5/7/2026
+24,#e0d7ee,purple,purple,Heather White,White Lavender,5/7/2026
+25,#dad2e9,purple,purple,Cornflower White,Lavender Ultra Light,5/7/2026
+26,#d7cae6,purple,purple,Lavender White,Lavender Pale,5/7/2026
+30,#7d77a5,purple,purple,Kitten Gray,Blueberry Medium Light,5/7/2026
+3041,#956f7c,purple,purple,Purple Slate,Antique Violet Medium,5/7/2026
+3042,#b79da7,purple,purple,Storm Clouds,Antique Violet Light,5/7/2026
+31,#50518d,purple,purple,Dusty Violet,Blueberry,5/7/2026
+315,#814952,purple,purple,Archil,Antique Mauve Medium Dark,5/7/2026
+316,#b7737f,purple,purple,Metallic Heather,Antique Mauve Medium,5/7/2026
+32,#4d2e8a,purple,purple,Antique Mauve,Blueberry Dark,5/7/2026
+327,#633666,purple,purple,Dark Purple,Violet Dark,5/7/2026
+33,#9c599c,purple,purple,Allium,Fuschia,5/7/2026
+333,#5c5478,purple,purple,Violet Blue,Blue Violet Very Dark,5/7/2026
+34,#7d3064,purple,purple,Tyrian,Fuschia Dark,5/7/2026
+340,#ada7c7,purple,purple,Wisteria Blue,Blue Violet Medium,5/7/2026
+35,#46052d,purple,purple,Plum,Fuschia Very Dark,5/7/2026
+3607,#c54989,purple,purple,Hibiscus,Plum Light,5/7/2026
+3608,#ea9cc4,purple,purple,Foxglove,Plum Very Light,5/7/2026
+3609,#f4aed5,purple,purple,Lotus Blossom,Plum Ultra Light,5/7/2026
+3687,#c96b70,purple,purple,Berry Smoothie,Mauve,5/7/2026
+3688,#e7a9ac,purple,pink,Pink Lupine,Mauve Medium,5/7/2026
+3722,#bc6c64,purple,pink,Dark Rosewood,Shell Pink Medium,5/7/2026
+3726,#9b5b66,purple,purple,Iced Plum,Antique Mauve Dark,5/7/2026
+3727,#dba9b2,purple,purple,Lycee,Antique Mauve Light,5/7/2026
+3740,#785762,purple,purple,Gun Metal,Antique Violet Dark,5/7/2026
+3743,#d7cbd3,purple,purple,Rose Mist,Antique Violet Very Light,5/7/2026
+3802,#714149,purple,purple,Aubergine,Antique Mauve Very Darkv,5/7/2026
+3803,#ab3357,purple,pink,Bordeaux,Mauve Dark,5/7/2026
+3804,#e02876,purple,pink,Bengal Rose,Cyclamen Pink Dark,5/7/2026
+3805,#f3478b,purple,pink,Fuschia,Cyclamen Pink,5/7/2026
+3806,#ff8cae,purple,pink,Carnation,Cyclamen Pink Light,5/7/2026
+3834,#72375d,purple,purple,Red Grape,Grape Dark,5/7/2026
+3835,#946083,purple,purple,Purple Violet,Grape Medium,5/7/2026
+3836,#ba91aa,purple,purple,Thyme Flower,Grape Light,5/7/2026
+3837,#6c3a6e,purple,purple,Metallic Purple,Lavender Ultra Dark,5/7/2026
+550,#5c184e,purple,purple,Passionflower,Violet Very Dark,5/7/2026
+552,#803a6b,purple,purple,Violet,Violet Medium,5/7/2026
+553,#a3638b,purple,purple,Violet Amethyst,Violet,5/7/2026
+554,#dbb3cb,purple,purple,Pastel Purple,Violet Light,5/7/2026
+718,#9c2462,purple,purple,Metallic Rose Magenta,Plum,5/7/2026
+915,#820043,purple,purple,Bougainvillea,Plum Dark,5/7/2026
+917,#9b1359,purple,purple,Dark Magenta,Plum Medium,5/7/2026
+157,#bbc3d9,blue,blue,Heliotrope,Cornflower Blue Very Light,5/7/2026
+158,#4c526e,blue,blue,Ultramarine Blue,Cornflower Blue Very Dark,5/7/2026
+159,#c7cad7,blue,blue,Stormy Sky,Blue Gray Light,5/7/2026
+160,#999fb7,blue,purple,Stormy Blue,Blue Gray Medium,5/7/2026
+161,#7880a4,blue,purple,Blue Ash,Blue Gray,5/7/2026
+162,#dbecf5,blue,purple,Blue Water,Blue Ultra Very Light,5/7/2026
+28,#9086a9,blue,purple,Lavender Gray,Eggplant Medium Light,5/7/2026
+311,#1c5066,blue,blue,Dark Polar Blue,Wedgewood Ultra Very Dark,5/7/2026
+312,#35668b,blue,blue,Midnight Blue,Baby Blue Very Dark,5/7/2026
+322,#5a8fb8,blue,blue,Delft Blue,Baby Blue Dark,5/7/2026
+3325,#b8d2e6,blue,blue,Arctic Blue,Baby Blue Light,5/7/2026
+334,#739fc1,blue,blue,Light Indigo,Baby Blue Medium,5/7/2026
+336,#253b73,blue,blue,Indigo Blue,Navy Blue,5/7/2026
+3750,#384c5e,blue,blue,Dark Petrol Blue,Antique Blue Very Dark,5/7/2026
+3752,#c7d1db,blue,grey,Light Porcelain Blue,Antique Blue Very Light,5/7/2026
+3753,#dbe2e9,blue,grey,Moonlight Blue,Antique Blue Ultra Very Light,5/7/2026
+3755,#93b4ce,blue,blue,Pastel Blue,Baby Blue,5/7/2026
+3760,#3e85a2,blue,blue,Fjord Blue,Wedgewood Medium,5/7/2026
+3761,#acd8e2,blue,blue,Aquamarine Blue,Sky Blue Light,5/7/2026
+3765,#347f8c,blue,blue,Blue Teal,Peacock Blue Very Dark,5/7/2026
+3766,#99cfd9,blue,blue,Blue Green,Peacock Blue Light,5/7/2026
+3768,#657f7f,blue,grey,Storm,Gray Green Dark,5/7/2026
+3799,#424242,blue,grey,Anthracite,Pewter Gray Very Dark,5/7/2026
+3807,#60678c,blue,blue,Tanzanite,Cornflower Blue,5/7/2026
+3808,#366970,blue,blue,Mallard,Turquoise Ultra Very Dark,5/7/2026
+3809,#3f7c85,blue,blue,Sea Cave,Turquoise Vy Dark,5/7/2026
+3810,#488e9a,blue,blue,Persian Blue,Turquoise Dark,5/7/2026
+3811,#bce3e6,blue,blue,Blue Waterfall,Turquoise Very Light,5/7/2026
+3838,#5c7294,blue,blue,Thistle Blue,Lavender Blue Dark,5/7/2026
+3839,#7b8eab,blue,blue,Mediterranean Blue,Lavender Blue Medium,5/7/2026
+3841,#cddfed,blue,blue,Igloo Blue,Baby Blue Pale,5/7/2026
+3843,#14aad0,blue,blue,Metallic Pool Blue,Electric Blue,5/7/2026
+3844,#12aeba,blue,blue,Lagoon,Turquoise Bright Dark,5/7/2026
+3845,#04c4ca,blue,blue,Turquoise,Turquoise Bright Medium,5/7/2026
+3846,#06e3e6,blue,blue,Navajo blue,Turquoise Bright Light,5/7/2026
+500,#044d33,blue,green,Ivy,Blue Green Very Dark,5/7/2026
+517,#3b768f,blue,blue,Nautical Blue,Wedgewood Dark,5/7/2026
+518,#4f93a7,blue,blue,Nattier Blue,Wedgewood Light,5/7/2026
+519,#7eb1c8,blue,blue,Bluish Spray,Sky Blue,5/7/2026
+597,#5ba3b3,blue,blue,Pack Ice Blue,Turquoise,5/7/2026
+598,#90c3cc,blue,blue,Pale Lagoon,Turquoise Light,5/7/2026
+747,#e5fcfd,blue,blue,Pearlescent Blue Sea Mist,Peacock Blue Very Light,5/7/2026
+775,#d9ebf1,blue,blue,Blue Summer Rain,Baby Blue Very Light,5/7/2026
+791,#464563,blue,blue,Lapis,Cornflower Blue Very Dark,5/7/2026
+792,#555b7b,blue,blue,China Blue,Cornflower Blue Dark,5/7/2026
+793,#707da2,blue,blue,Deep Ocean,Cornflower Blue Medium,5/7/2026
+794,#8f9cc1,blue,blue,Baby Blue,Cornflower Blue Light,5/7/2026
+796,#11416d,blue,blue,Sévres Blue,Royal Blue Dark,5/7/2026
+797,#13477d,blue,blue,French Blue,Royal Blue,5/7/2026
+798,#466a8e,blue,blue,Cobalt Blue,Delft Blue Dark,5/7/2026
+799,#748eb6,blue,blue,Horizon Blue,Delft Blue Medium,5/7/2026
+800,#c0ccde,blue,blue,Sky Blue,Delft Blue Pale,5/7/2026
+809,#94a8c6,blue,blue,Soft Blue,Delft Blue,5/7/2026
+813,#a1c2d7,blue,blue,Gallic Blue,Blue Light,5/7/2026
+820,#0e365c,blue,blue,Royal Blue,Royal Blue Very Dark,5/7/2026
+824,#396987,blue,blue,Marine Blue,Blue Very Dark,5/7/2026
+826,#6b9ebf,blue,blue,Tuareg Blue,Blue Medium,5/7/2026
+827,#bddded,blue,blue,Forget-Me-Knot,Blue Very Light,5/7/2026
+930,#455c71,blue,blue,Slate grey,Antique Blue Dark,5/7/2026
+932,#a2b5c6,blue,blue,Blue Gull,Antique Blue Light,5/7/2026
+995,#2696b6,blue,blue,Plunge pool,Electric Blue Dark,5/7/2026
+996,#30c2ec,blue,blue,Electric Blue,Electric Blue Medium,5/7/2026
+806,#3d95a5,blue,blue,806,Peacock Blue Dark,5/7/2026
+13,#bff6e0,green,green,Spearmint,Nile Green Medium Light,5/7/2026
+15,#d1eda4,green,green,Spring Onion,Apple Green,5/7/2026
+16,#c9c258,green,green,Sprout,Chartreuse Light,5/7/2026
+163,#4d8361,green,green,Eucalyptus,Celadon Green Medium,5/7/2026
+3011,#898a58,green,green,Deep Olive,Khaki Green Dark,5/7/2026
+3012,#a6a75d,green,green,Dried Moss,Khaki Green Medium,5/7/2026
+3013,#b9b982,green,green,Green Oyster,Khaki Green Light,5/7/2026
+3051,#5f6648,green,green,Forest Green,Green Gray Dark,5/7/2026
+319,#205f2e,green,green,Shaded Green,Pistachio Grn Very Dark,5/7/2026
+320,#69885a,green,green,Fern,Pistachio Green Medium,5/7/2026
+3345,#1b5915,green,green,Spinach,Hunter Green Dark,5/7/2026
+3346,#406a3a,green,green,Artichoke,Hunter Green,5/7/2026
+3347,#71935c,green,green,Asparagus,Yellow Green Medium,5/7/2026
+3348,#ccd9b1,green,green,Scallion,Yellow Green Light,5/7/2026
+3362,#5e6b47,green,green,Conifer,Pine Green Dark,5/7/2026
+3363,#728256,green,green,Bullfrog,Pine Green Medium,5/7/2026
+3364,#83975f,green,green,Sage,Pine Green,5/7/2026
+367,#617a52,green,green,Laurel,Pistachio Green Dark,5/7/2026
+368,#a6c298,green,green,Eau de Nile,Pistachio Green Light,5/7/2026
+369,#d7edcc,green,green,Bamboo Shoot Green,Pistachio Green Very Light,5/7/2026
+3781,#6b5743,green,green,Wrought Iron,Mocha Brown Dark,5/7/2026
+3787,#625d50,green,grey,grey Wolf,Brown Gray Dark,5/7/2026
+3812,#2f8c84,green,green,Viridian,Sea Green Very Dark,5/7/2026
+3813,#b2d4bd,green,green,Lichen Green,Blue Green Light,5/7/2026
+3814,#508b7d,green,green,Spruce,Aquamarine,5/7/2026
+3815,#477759,green,green,Almond Green,Celadon Green Dark,5/7/2026
+3817,#99c3aa,green,green,Poplar,Celadon Green Light,5/7/2026
+3818,#115a3b,green,green,Broccoli,Emerald Green Ultra Very Dark,5/7/2026
+3847,#347d75,green,green,Chinese Green,Teal Green Dark,5/7/2026
+3848,#559392,green,green,Mermaid’s Tail,Teal Green Medium,5/7/2026
+3849,#52b3a4,green,green,Metallic Turquoise Green,Teal Green Light,5/7/2026
+3851,#49b3a1,green,green,Emerald Shard,Green Bright Light,5/7/2026
+469,#72843c,green,green,Golden Moss Green,Avocado Green,5/7/2026
+470,#94ab4f,green,green,Olive Green,Avocado Grn Light,5/7/2026
+471,#aebf79,green,green,Tarragon,Avocado Grn Very Light,5/7/2026
+501,#396f52,green,green,Pond Green,Blue Green Dark,5/7/2026
+502,#5b9071,green,green,Almond Leaf,Blue Green,5/7/2026
+503,#7bac94,green,green,Thyme Green,Blue Green Medium,5/7/2026
+505,#338362,green,green,Pinewood,Jade Green,5/7/2026
+520,#666d4f,green,green,Wild Wood,Fern Green Dark,5/7/2026
+522,#969e7e,green,green,Lattice Green,Fern Green,5/7/2026
+524,#c4cdac,green,green,Pebble Green,Fern Green Very Light,5/7/2026
+561,#2c6a45,green,green,Cypress Green,Celadon Green VD,5/7/2026
+562,#53976a,green,green,Malachite,Jade Medium,5/7/2026
+563,#8fc098,green,green,Celedon,Jade Light,5/7/2026
+580,#888d33,green,green,Cactus,Moss Green Dark,5/7/2026
+581,#a7ae38,green,green,Grasshopper,Moss Green,5/7/2026
+640,#857b61,green,green,grey Cobblestone,Beige Gray Very Dark,5/7/2026
+642,#a49878,green,green,Umbra grey,Beige Gray Dark,5/7/2026
+645,#6e655c,green,grey,Reindeer grey,Beaver Gray Very Dark,5/7/2026
+646,#877d73,green,grey,Smoke grey,Beaver Gray Dark,5/7/2026
+699,#056517,green,green,Metallic Candied Fruit,Green,5/7/2026
+700,#07731b,green,green,Meadow Green,Green Bright,5/7/2026
+701,#3f8f29,green,green,Grass,Green Light,5/7/2026
+702,#47a72f,green,green,Spring Lawn,Kelly Green,5/7/2026
+703,#7bb547,green,green,Metallic Spring Green,Chartreuse,5/7/2026
+704,#9ecf34,green,green,Lime,Chartreuse Bright,5/7/2026
+730,#827b30,green,green,Khaki,Olive Green Very Dark,5/7/2026
+732,#948c36,green,green,Light Bronzed Green,Olive Green,5/7/2026
+733,#bcb34c,green,green,Golden Green,Olive Green Medium,5/7/2026
+734,#c7c077,green,green,Broken Olive,Olive Green Light,5/7/2026
+772,#e4ecd4,green,green,Celery,Yellow Green Very Light,5/7/2026
+890,#174923,green,green,Black Forest,Pistachio Grn Ultra Very Dark,5/7/2026
+895,#1b5300,green,green,Bottle Green,Hunter Green Very Dark,5/7/2026
+904,#557822,green,green,Kale,Parrot Green Very Dark,5/7/2026
+905,#628a28,green,green,Budgie Green,Parrot Green Dark,5/7/2026
+906,#7fb335,green,green,Mistletoe,Parrot Green Medium,5/7/2026
+907,#c7e666,green,green,Granny Smith,Parrot Green Light,5/7/2026
+909,#156f49,green,green,Croquet Lawn,Emerald Green Very Dark,5/7/2026
+910,#187e56,green,green,English Green,Emerald Green Dark,5/7/2026
+911,#189065,green,green,Golf Green,Emerald Green Medium,5/7/2026
+912,#1b9d6b,green,green,Watermint,Emerald Green Light,5/7/2026
+913,#6dab77,green,green,Jade,Nile Green Medium,5/7/2026
+924,#566a6a,green,grey,Tahitian Pearl,Gray Green Vy Dark,5/7/2026
+926,#98aeae,green,grey,Grey Green,Gray Green Medium,5/7/2026
+927,#bdcbcb,green,grey,Oyster,Gray Green Light,5/7/2026
+928,#dde3e3,green,grey,Oyster Shell,Gray Green Very Light,5/7/2026
+934,#313919,green,green,Seaweed,Avocado Grn Black,5/7/2026
+935,#424d21,green,green,Undergrowth,Avocado Green Dark,5/7/2026
+936,#4c5826,green,green,Oak Moss,Avocado Green Very Dark,5/7/2026
+937,#627133,green,green,Moss,Avocado Green Medium,5/7/2026
+954,#88ba91,green,green,Rice Field,Nile Green,5/7/2026
+955,#a2d6ad,green,green,Pale Green,Nile Green Light,5/7/2026
+958,#3eb6a1,green,green,Green Valley,Sea Green Dark,5/7/2026
+959,#59c7b4,green,green,Pale Viridian,Sea Green Medium,5/7/2026
+966,#b9d7c0,green,green,Pearlescent Soft Green,Jade Ultra Very Light,5/7/2026
+986,#405230,green,green,Boxwood,Forest Green Very Dark,5/7/2026
+987,#587141,green,green,Basil,Forest Green Dark,5/7/2026
+988,#738b5b,green,green,Verbena Stem,Forest Green Medium,5/7/2026
+989,#8da675,green,green,Fennel,Forest Green,5/7/2026
+992,#6fae9f,green,green,Mint,Aquamarine Light,5/7/2026
+993,#90c0b4,green,green,Peppermint,Aquamarine Very Light,5/7/2026
+10,#edfed9,yellow,green,Lemon Sherbert,Tender Green Very Light,5/7/2026
+11,#e2edb5,yellow,green,Lemon Drop,Tender Green Light,5/7/2026
+165,#eff4a4,yellow,yellow,Linden Green,Moss Green Very Light,5/7/2026
+166,#c0c840,yellow,green,Wormwood Green,Moss Green Medium Light,5/7/2026
+307,#fded54,yellow,yellow,Lemon,Lemon,5/7/2026
+3078,#fdf9cd,yellow,yellow,Buttermilk,Golden Yellow Very Light,5/7/2026
+3819,#e0e868,yellow,green,Aurous Green,Moss Green Light,5/7/2026
+3820,#dfb65f,yellow,yellow,Sunshine,Straw Dark,5/7/2026
+3821,#f3ce75,yellow,yellow,Metallic Mango,Straw,5/7/2026
+3822,#f6dc98,yellow,yellow,Corn Husk,Straw Light,5/7/2026
+3823,#fffde3,yellow,yellow,Moonshine,Yellow Ultra Pale,5/7/2026
+444,#ffd600,yellow,yellow,Bright Yellow,Lemon Dark,5/7/2026
+472,#d8e498,yellow,green,Green Bud,Avocado Green Ultra Light,5/7/2026
+727,#fff1af,yellow,yellow,Primrose,Topaz Very Light,5/7/2026
+728,#e4b468,yellow,yellow,Mustard,Topaz,5/7/2026
+19,#f7c95f,orange,orange,Soft Peach,Autumn Gold medium Light,5/7/2026
+20,#f7af93,orange,orange,Peach,Shrimp,5/7/2026
+3341,#fcab98,orange,orange,Kitten’s Nose,Apricot,5/7/2026
+352,#fd9c97,orange,pink,Salmon,Coral Light,5/7/2026
+3776,#cf7939,orange,orange,Nut Brittle,Mahogany Light,5/7/2026
+3825,#fdbd96,orange,orange,Muted Apricot,Pumpkin Pale,5/7/2026
+3827,#f7bb77,orange,orange,Coral Blush,Golden Brown Pale,5/7/2026
+3852,#cd9d37,orange,orange,Metallic Glitz,Straw Very Dark,5/7/2026
+3853,#f29746,orange,orange,Copper,Autumn Gold Dark,5/7/2026
+3854,#f2af68,orange,orange,Chai Spice,Autumn Gold Medium,5/7/2026
+3855,#fad396,orange,orange,Desert Winds,Autumn Gold Light,5/7/2026
+3856,#ffd3b5,orange,orange,Buff,Mahogany Ultra Very Light,5/7/2026
+402,#f7a777,orange,orange,Pottery,Mahogany Very Light,5/7/2026
+676,#e5ce97,orange,orange,Savannah,Old Gold Light,5/7/2026
+721,#f27842,orange,orange,Papaya,Orange Spice Medium,5/7/2026
+722,#f7976f,orange,orange,Shrimp,Orange Spice Light,5/7/2026
+725,#ffc840,orange,orange,Buttercup,Topaz Medium Light,5/7/2026
+740,#ff8b00,orange,orange,Orange Papaya,Tangerine,5/7/2026
+741,#ffa32b,orange,orange,Mandarin,Tangerine Medium,5/7/2026
+742,#ffbf57,orange,orange,Clementine,Tangerine Light,5/7/2026
+743,#fed376,orange,yellow,Banana,Yellow Medium,5/7/2026
+744,#ffe793,orange,yellow,Grapefruit,Yellow Pale,5/7/2026
+745,#ffe9ad,orange,yellow,Blonde,Yellow Pale Light,5/7/2026
+783,#ce9124,orange,orange,Old Gold,Topaz Medium,5/7/2026
+922,#e27323,orange,orange,Terracotta,Copper Light,5/7/2026
+972,#ffb515,orange,orange,Curry,Canary Deep,5/7/2026
+973,#ffe300,orange,yellow,Daffodil,Canary Bright,5/7/2026
+976,#c28142,orange,orange,Nutmeg,Golden Brown Medium,5/7/2026
+977,#dc9c56,orange,orange,Caramel,Golden Brown Light,5/7/2026
+781,#a26d20,orange,orange,781,Topaz Very Dark,5/7/2026
+971,#f67f00,orange,orange,971,Pumpkin,5/7/2026
+08,#6a5046,brown,brown,Racoon,Driftwood Dark,5/7/2026
+167,#a77c49,brown,brown,Praline,Yellow Beige Very Dark,5/7/2026
+300,#6f2f00,brown,brown,Mahogany,Mahogany Very Dark,5/7/2026
+301,#b35f2b,brown,brown,Metallic Squirrel,Mahogany Medium,5/7/2026
+3032,#b39f8b,brown,brown,Stone,Mocha Brown Medium,5/7/2026
+3033,#e3d8cc,brown,brown,Ashes,Mocha Brown Very Light,5/7/2026
+3045,#bc966a,brown,brown,Toffee,Yellow Beige Dark,5/7/2026
+3046,#d8bc9a,brown,brown,Biscuit,Yellow Beige Medium,5/7/2026
+3064,#c48e70,brown,brown,Fallow,Desert Sand,5/7/2026
+355,#984436,brown,brown,Red Brown,Terra Cotta Dark,5/7/2026
+356,#c56a5b,brown,pink,Pink Terracotta,Terra Cotta Medium,5/7/2026
+370,#b89d64,brown,brown,Herbes de Provence,Mustard Medium,5/7/2026
+371,#bfa671,brown,brown,Steppe,Mustard,5/7/2026
+372,#ccb784,brown,brown,Cardamom Green,Mustard Light,5/7/2026
+3771,#f4bba9,brown,pink,Pink Sand,Terra Cotta Ultra Very Light,5/7/2026
+3772,#a06c50,brown,brown,Glazed Chestnut,Desert Sand Very Dark,5/7/2026
+3777,#863022,brown,brown,Red Leather,Terra Cotta Very Dark,5/7/2026
+3790,#7f6a55,brown,brown,Tree Bark,Beige Gray Ultra Dark,5/7/2026
+3826,#ad7239,brown,brown,Fox,Golden Brown,5/7/2026
+3828,#b78b61,brown,brown,Oak,Hazelnut Brown,5/7/2026
+3829,#a98204,brown,brown,Ochre Earth,Old Gold Vy Dark,5/7/2026
+3857,#68251a,brown,brown,Oxblood,Rosewood Dark,5/7/2026
+3858,#964a3f,brown,brown,Rose Brown,Rosewood Medium,5/7/2026
+3859,#ba8b7c,brown,brown,Clay,Rosewood Light,5/7/2026
+3860,#7d5d57,brown,brown,Dark Taupe,Cocoa,5/7/2026
+3862,#8a6e4e,brown,brown,Lama,Mocha Beige Dark,5/7/2026
+3864,#cbb69c,brown,brown,Vicuna Wool,Mocha Beige Light,5/7/2026
+407,#bb8161,brown,brown,Fawn,Desert Sand Medium,5/7/2026
+420,#a07042,brown,brown,Hazelnut,Hazelnut Brown Dark,5/7/2026
+422,#c69f7b,brown,brown,Light Oak,Hazelnut Brown Light,5/7/2026
+433,#7a451f,brown,brown,Chocolate,Brown Medium,5/7/2026
+434,#985e33,brown,brown,Cigar Brown,Brown Light,5/7/2026
+435,#b87748,brown,brown,Tobacco,Brown Very Light,5/7/2026
+436,#cb9051,brown,brown,Metallic Teddy,Tan,5/7/2026
+437,#e4bb8e,brown,brown,Camel,Tan Light,5/7/2026
+543,#f2e3ce,brown,brown,Shell,Beige Brown Ultra Very Light,5/7/2026
+610,#796047,brown,brown,Beaver,Drab Brown Dark,5/7/2026
+611,#967656,brown,brown,Umber,Drab Brown,5/7/2026
+612,#bc9a78,brown,brown,Jute,Drab Brown Light,5/7/2026
+632,#875539,brown,brown,Cocoa,Desert Sand Ultra Very Dark,5/7/2026
+677,#f5eccb,brown,brown,Metallic Sand,Old Gold Very Light,5/7/2026
+680,#bc8d0e,brown,brown,Fennec,Old Gold Dark,5/7/2026
+729,#d0a53e,brown,brown,Honey,Old Gold Medium,5/7/2026
+738,#eccc9e,brown,brown,Sahara,Tan Very Light,5/7/2026
+739,#f8e4c8,brown,brown,Dune,Tan Ultra Very Light,5/7/2026
+754,#f7cbbf,brown,pink,Beige Rose,Peach Light,5/7/2026
+758,#eeaa9b,brown,pink,Pink Dawn,Terra Cotta Very Light,5/7/2026
+780,#94631a,brown,brown,Chestnut,Topaz Ultra Very Dark,5/7/2026
+782,#ae7720,brown,brown,Wicker,Topaz Dark,5/7/2026
+801,#653919,brown,brown,Mink,Coffee Brown Dark,5/7/2026
+829,#7e6b42,brown,brown,Star Anise,Golden Olive Very Dark,5/7/2026
+831,#aa8f56,brown,brown,Bronze,Golden Olive Medium,5/7/2026
+832,#bd9b51,brown,brown,Modoré,Golden Olive,5/7/2026
+833,#c8ab6c,brown,brown,Brass,Golden Olive Light,5/7/2026
+834,#dbbe7f,brown,brown,Dusty sunflower,Golden Olive Very Light,5/7/2026
+838,#594937,brown,brown,Dark Wood,Beige Brown Very Dark,5/7/2026
+839,#675541,brown,brown,Root Brown,Beige Brown Dark,5/7/2026
+840,#9a7c5c,brown,brown,Country Mouse,Beige Brown Medium,5/7/2026
+842,#d1baa1,brown,brown,Beige Rope,Beige Brown Very Light,5/7/2026
+869,#835e39,brown,brown,Coffee,Hazelnut Brown Very Dark,5/7/2026
+898,#492a13,brown,brown,Metallic Ferret,Coffee Brown Very Dark,5/7/2026
+938,#361f0e,brown,brown,Clove,Coffee Brown Ultra Dark,5/7/2026
+945,#fbd5bb,brown,brown,Champagne,Tawny,5/7/2026
+948,#fee7da,brown,brown,Himalayan Salt,Peach Very Light,5/7/2026
+950,#eed3c4,brown,brown,Beige,Desert Sand Light,5/7/2026
+951,#ffe2cf,brown,brown,Cashmere Beige,Tawny Light,5/7/2026
+975,#914f12,brown,brown,Weasel,Golden Brown Dark,5/7/2026
+3773,#b67552,brown,brown,3773,Desert Sand Dark,5/7/2026
+731,#938b37,brown,green,731,Olive Green Dark,5/7/2026
+05,#e3ccbe,beige,brown,Frosted Glass,Driftwood Light,5/7/2026
+06,#dcc6b8,beige,brown,Koala,Driftwood Medium Light,5/7/2026
+07,#dcc6b8,beige,brown,Rhino,Driftwood,5/7/2026
+01,#e3e3e6,grey,grey,Rain,White Tin,5/7/2026
+02,#d7d7d8,grey,grey,Mist,Tin,5/7/2026
+04,#aeaeb1,grey,grey,Shadow,Tin Dark,5/7/2026
+168,#d1d1d1,grey,grey,Metallic Town Mouse grey,Pewter Very Light,5/7/2026
+169,#848484,grey,grey,Tin,Pewter Light,5/7/2026
+27,#f0eef9,grey,purple,Ash White,White Violet,5/7/2026
+317,#6c6c6c,grey,grey,Metallic Steel,Pewter Gray,5/7/2026
+318,#ababab,grey,grey,Granite grey,Steel Gray Light,5/7/2026
+3747,#d3d7ed,grey,purple,Pearlescent Ice Blue,Blue Violet Very Light,5/7/2026
+3861,#a68881,grey,brown,Light Taupe,Cocoa Light,5/7/2026
+413,#565656,grey,grey,Iron,Pewter Gray Dark,5/7/2026
+414,#8c8c8c,grey,grey,Lead,Steel Gray Dark,5/7/2026
+415,#d3d3d6,grey,grey,Metallic Chrome,Pearl Gray,5/7/2026
+451,#917b73,grey,grey,Little Gray,Shell Gray Dark,5/7/2026
+452,#c0b3ae,grey,grey,Pigeon Gray,Shell Gray Medium,5/7/2026
+453,#d7cecb,grey,grey,Dove Gray,Shell Gray Light,5/7/2026
+535,#636458,grey,grey,Pebble,Ash Gray Very Light,5/7/2026
+644,#ddd8cb,grey,grey,Hemp,Beige Gray Medium,5/7/2026
+648,#bcb4ac,grey,grey,White Pepper,Beaver Gray Light,5/7/2026
+504,#c4decc,grey,green,504,Blue Green Very Light,5/7/2026
+3770,#ffeee3,white,white,Eggshell,Tawny Vy Light,5/7/2026
+3865,#f9f7f1,white,white,Edelweiss,Winter White,5/7/2026
+3866,#faf6f0,white,white,Garlic White,Mocha Brown Ultra Very Light,5/7/2026
+712,#fffbef,white,white,Cream,Cream,5/7/2026
+746,#fcfcee,white,white,Pearlescent Vanilla,Off White,5/7/2026
+762,#ececec,white,white,Pearl grey,Pearl Gray Very Light,5/7/2026
+819,#ffeeeb,white,pink,Layette,Baby Pink Light,5/7/2026
+B5200,#ffffff,white,white,Pearlescent White Light,Snow White,5/7/2026
+BLANC,#fcfbf8,white,white,Blanc,White,5/7/2026
+ECRU,#f0eada,white,white,Ecru,Ecru,5/7/2026
+3021,#4f4b41,black,black,Ink,Brown Gray Very Dark,5/7/2026
+3031,#4b3c2a,black,black,Brazil Nut,Mocha Brown Very Dark,5/7/2026
+310,#000000,black,black,Metallic Black,Black,5/7/2026
+3371,#1e1108,black,black,Peppercorn,Black Brown,5/7/2026
+823,#213063,black,blue,Blueberry,Navy Blue Dark,5/7/2026
+844,#484848,black,black,Black Pepper,Beaver Gray Ultra Dark,5/7/2026
+939,#1b2853,black,blue,Elderberry Blue,Navy Blue Very Dark,5/7/2026
+03,#b8b8bb,out of stock,grey,Dust,Tin Medium,5/7/2026
+09,#552014,out of stock,brown,Pine Marten,Cocoa Very Dark,5/7/2026
+12,#cdd99a,out of stock,green,Citrus Yellow,Tender Green,5/7/2026
+14,#d0fbb2,out of stock,green,Bok Choy,Apple Green Pale,5/7/2026
+151,#f0ced4,out of stock,pink,Marshmallow,Dusty Rose Very Light,5/7/2026
+152,#e2a099,out of stock,pink,Old Pink,Shell Pink Medium Light,5/7/2026
+164,#c8d8b8,out of stock,green,Pistachio,Forest Green Light,5/7/2026
+17,#e5e272,out of stock,yellow,Maize,Yellow Plum Light,5/7/2026
+18,#d9d56d,out of stock,yellow,Corn,Yellow Plum,5/7/2026
+29,#674076,out of stock,purple,Emperor Purple,Eggplant,5/7/2026
+3022,#8e9078,out of stock,grey,Rhino,Brown Gray Medium,5/7/2026
+3023,#b1aa97,out of stock,grey,Elephant,Brown Gray Light,5/7/2026
+3024,#ebeae7,out of stock,grey,Silver Linings,Brown Gray Very Light,5/7/2026
+3047,#e7d6c1,out of stock,brown,Sawdust,Yellow Beige Light,5/7/2026
+3052,#889268,out of stock,green,Silver Green,Green Gray Medium,5/7/2026
+3053,#9ca482,out of stock,green,Avocado,Green Gray,5/7/2026
+3072,#e6e8e8,out of stock,grey,Thunderous Skies,Beaver Gray Very Light,5/7/2026
+341,#b7bfdd,out of stock,purple,Hydrangea Blue,Blue Violet Light,5/7/2026
+3721,#a14b51,out of stock,pink,Pink Earth,Shell Pink Dark,5/7/2026
+3746,#776b98,out of stock,purple,Iris,Blue Violet Dark,5/7/2026
+3756,#eefcfc,out of stock,blue,Cloud Blue,Baby Blue Ultra Very Light,5/7/2026
+3774,#f3e1d7,out of stock,brown,Linen,Desert Sand Very Light,5/7/2026
+3778,#d98978,out of stock,pink,Rose Gold,Terra Cotta Light,5/7/2026
+3779,#f8cac8,out of stock,pink,Burnished Pink,Rosewood Ultra Very Light,5/7/2026
+3782,#d2bca6,out of stock,brown,Ginger,Mocha Brown Light,5/7/2026
+3816,#65a57d,out of stock,green,Serpent,Celadon Green,5/7/2026
+3830,#b95544,out of stock,red,Deep Blush,Terra Cotta,5/7/2026
+3840,#b0c0da,out of stock,blue,Linen Flower Blue,Lavender Blue Light,5/7/2026
+3842,#32667c,out of stock,blue,Prussian Blue,Wedgewood Very Dark,5/7/2026
+3850,#378477,out of stock,green,Emerald,Green Bright Dark,5/7/2026
+3863,#a4835c,out of stock,brown,Otter,Mocha Beige Medium,5/7/2026
+400,#8f430f,out of stock,brown,Conker,Mahogany Dark,5/7/2026
+445,#fffb8b,out of stock,yellow,Buttered Popcorn,Lemon Light,5/7/2026
+523,#abb197,out of stock,green,Green Ash,Fern Green Light,5/7/2026
+564,#a7cdaf,out of stock,green,Light Malachite,Jade Very Light,5/7/2026
+601,#d1286a,out of stock,pink,Impatiens,Cranberry Dark,5/7/2026
+605,#ffc0cd,out of stock,pink,Rosebud,Cranberry Very Light,5/7/2026
+613,#dcc4aa,out of stock,brown,Twine,Drab Brown Very Light,5/7/2026
+647,#b0a69c,out of stock,grey,Rock grey,Beaver Gray Medium,5/7/2026
+726,#fdd755,out of stock,yellow,Mimosa,Topaz Light,5/7/2026
+779,#624b45,out of stock,brown,Sepia,Cocoa Dark,5/7/2026
+803,#2c597c,out of stock,blue,Inky Blue,Baby Blue Ultra Very Dark,5/7/2026
+807,#64abba,out of stock,blue,Turquoise Tide,Peacock Blue,5/7/2026
+822,#e7e2d3,out of stock,brown,Cotton,Beige Gray Light,5/7/2026
+825,#4781a5,out of stock,blue,Metallic Gentian Blue,Blue Dark,5/7/2026
+828,#c5e8ed,out of stock,blue,Sea Air,Sky Blue Very Light,5/7/2026
+830,#8d784b,out of stock,brown,Cork Oak,Golden Olive Dark,5/7/2026
+841,#b69b7e,out of stock,brown,Suede,Beige Brown Light,5/7/2026
+892,#ff798c,out of stock,pink,Dahlia,Carnation Medium,5/7/2026
+931,#6a859e,out of stock,blue,Blue grey,Antique Blue Medium,5/7/2026
+943,#3d9384,out of stock,green,Acid Green,Green Bright Medium,5/7/2026
+964,#a9e2d8,out of stock,green,Sea Green,Sea Green Light,5/7/2026
+970,#f78b13,out of stock,orange,Neon Orange,Pumpkin Light,5/7/2026
+991,#477b6e,out of stock,green,Frog,Aquamarine Dark,5/7/2026

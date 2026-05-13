@@ -6,21 +6,25 @@ import { serializeEditorV2Document } from "@/lib/editor-v2/persistence/designs";
 const {
   getCurrentUserIdMock,
   findFirstMock,
+  findUniqueMock,
   updateMock,
   deleteMock,
   versionCreateMock,
   versionFindManyMock,
   versionDeleteManyMock,
+  guestTraceAssetUpdateManyMock,
   transactionMock,
   deleteBlobIfExistsMock,
 } = vi.hoisted(() => ({
   getCurrentUserIdMock: vi.fn(),
   findFirstMock: vi.fn(),
+  findUniqueMock: vi.fn(),
   updateMock: vi.fn(),
   deleteMock: vi.fn(),
   versionCreateMock: vi.fn(),
   versionFindManyMock: vi.fn(),
   versionDeleteManyMock: vi.fn(),
+  guestTraceAssetUpdateManyMock: vi.fn(),
   transactionMock: vi.fn(),
   deleteBlobIfExistsMock: vi.fn(),
 }));
@@ -34,6 +38,7 @@ vi.mock("@/lib/db", () => ({
     $transaction: transactionMock,
     editorDesign: {
       findFirst: findFirstMock,
+      findUnique: findUniqueMock,
       update: updateMock,
       delete: deleteMock,
     },
@@ -41,6 +46,9 @@ vi.mock("@/lib/db", () => ({
       create: versionCreateMock,
       findMany: versionFindManyMock,
       deleteMany: versionDeleteManyMock,
+    },
+    guestTraceAsset: {
+      updateMany: guestTraceAssetUpdateManyMock,
     },
   },
 }));
@@ -67,6 +75,7 @@ describe("editor-v2 individual design routes", () => {
     transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
       callback({
         editorDesign: {
+          findUnique: findUniqueMock,
           update: updateMock,
         },
         editorDesignVersion: {
@@ -74,9 +83,13 @@ describe("editor-v2 individual design routes", () => {
           findMany: versionFindManyMock,
           deleteMany: versionDeleteManyMock,
         },
+        guestTraceAsset: {
+          updateMany: guestTraceAssetUpdateManyMock,
+        },
       }),
     );
     versionFindManyMock.mockResolvedValue([]);
+    findUniqueMock.mockResolvedValue(null);
   });
 
   it("returns 404 for cross-user GET access", async () => {
@@ -113,10 +126,13 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: null,
       lastVersionHash: null,
+      deletedAt: null,
+      purgeAfterAt: null,
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -176,10 +192,13 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: new Date("2026-04-16T12:09:00.000Z"),
       lastVersionHash: "older_hash",
+      deletedAt: null,
+      purgeAfterAt: null,
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -232,10 +251,13 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: null,
       lastVersionHash: null,
+      deletedAt: null,
+      purgeAfterAt: null,
     });
 
     const response = await PUT(
@@ -259,17 +281,22 @@ describe("editor-v2 individual design routes", () => {
     });
   });
 
-  it("cleans up replaced trace blobs after saving", async () => {
+  it("does not eagerly delete replaced trace blobs after saving", async () => {
     const state = createNewDesignState(2, 2);
     state.document.trace = {
       previewUrl: "https://blob.example.com/new-preview.webp",
       thumbnailUrl: "https://blob.example.com/new-thumbnail.webp",
       originalUrl: "https://blob.example.com/new-original.png",
+      maskUrl: null,
       fileName: "trace.png",
       byteSize: 123,
       mimeType: "image/png",
       imageWidth: 200,
       imageHeight: 100,
+      cropX: 0,
+      cropY: 0,
+      cropWidth: 200,
+      cropHeight: 100,
       offsetX: 0,
       offsetY: 0,
       scale: 1,
@@ -284,6 +311,7 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: {
         trace: {
           previewUrl: "https://blob.example.com/old-preview.webp",
@@ -294,6 +322,8 @@ describe("editor-v2 individual design routes", () => {
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: null,
       lastVersionHash: null,
+      deletedAt: null,
+      purgeAfterAt: null,
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -324,10 +354,7 @@ describe("editor-v2 individual design routes", () => {
       updatedAt: "2026-04-16T12:10:00.000Z",
       versionToken: "2026-04-16T12:10:00.000Z",
     });
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledTimes(3);
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-preview.webp");
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-thumbnail.webp");
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith("https://blob.example.com/old-original.png");
+    expect(deleteBlobIfExistsMock).not.toHaveBeenCalled();
   });
 
   it("skips creating a duplicate version when autosave content is unchanged", async () => {
@@ -337,10 +364,13 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: new Date("2026-04-16T12:07:00.000Z"),
       lastVersionHash: "same_hash",
+      deletedAt: null,
+      purgeAfterAt: null,
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -355,10 +385,13 @@ describe("editor-v2 individual design routes", () => {
     const hash = (await import("@/lib/editor-v2/server/versioning")).hashPersistedEditorV2Design(data);
     findFirstMock.mockResolvedValueOnce({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: new Date("2026-04-16T12:07:00.000Z"),
       lastVersionHash: hash,
+      deletedAt: null,
+      purgeAfterAt: null,
     });
 
     const response = await routeModule.PUT(
@@ -390,10 +423,13 @@ describe("editor-v2 individual design routes", () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
+      title: "Untitled Design",
       data: { trace: null },
       updatedAt: new Date("2026-04-16T12:10:00.000Z"),
       lastVersionAt: null,
       lastVersionHash: null,
+      deletedAt: null,
+      purgeAfterAt: null,
     });
     updateMock.mockResolvedValue({
       id: "design_123",
@@ -432,40 +468,96 @@ describe("editor-v2 individual design routes", () => {
     });
   });
 
-  it("collects live and version blobs when deleting a design", async () => {
+  it("returns 410 for deleted designs on GET", async () => {
     getCurrentUserIdMock.mockResolvedValue("user_1");
     findFirstMock.mockResolvedValue({
       id: "design_123",
-      data: {
-        trace: {
-          previewUrl: "https://blob.example.com/live-preview.webp",
-          thumbnailUrl: "https://blob.example.com/live-thumbnail.webp",
-          originalUrl: "https://blob.example.com/live-original.png",
-        },
+      title: "Deleted Design",
+      data: { trace: null },
+      createdAt: new Date("2026-04-16T12:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T12:10:00.000Z"),
+      deletedAt: new Date("2026-05-01T12:00:00.000Z"),
+      purgeAfterAt: new Date("2026-05-31T12:00:00.000Z"),
+    });
+
+    const response = await GET(new Request("http://localhost"), {
+      params: { id: "design_123" },
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(410);
+    expect(body).toEqual({
+      error: "This design is in Recently Deleted.",
+      deletedDesign: {
+        id: "design_123",
+        title: "Deleted Design",
+        deletedAt: "2026-05-01T12:00:00.000Z",
+        purgeAfterAt: "2026-05-31T12:00:00.000Z",
       },
-      versions: [
-        {
-          data: {
-            trace: {
-              previewUrl: "https://blob.example.com/version-preview.webp",
-              thumbnailUrl: "https://blob.example.com/version-thumbnail.webp",
-              originalUrl: "https://blob.example.com/version-original.png",
-            },
-          },
-        },
-      ],
+    });
+  });
+
+  it("soft deletes a design by default", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user_1");
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      title: "Delete Me",
+      data: { trace: null },
+      deletedAt: null,
+      purgeAfterAt: null,
+      versions: [],
     });
 
     const response = await DELETE(new Request("http://localhost"), {
       params: { id: "design_123" },
     });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(updateMock).toHaveBeenCalledWith({
+      where: { id: "design_123" },
+      data: {
+        deletedAt: expect.any(Date),
+        purgeAfterAt: expect.any(Date),
+      },
+    });
+    expect(body).toEqual({
+      ok: true,
+      id: "design_123",
+      deletedAt: expect.any(String),
+      purgeAfterAt: expect.any(String),
+      deletedPermanently: false,
+    });
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it("permanently deletes a design already in Recently Deleted", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user_1");
+    findFirstMock.mockResolvedValue({
+      id: "design_123",
+      title: "Delete Me",
+      data: { trace: null },
+      deletedAt: new Date("2026-05-01T12:00:00.000Z"),
+      purgeAfterAt: new Date("2026-05-31T12:00:00.000Z"),
+      versions: [],
+    });
+    findUniqueMock.mockResolvedValue({
+      id: "design_123",
+      data: { trace: null },
+      versions: [],
+    });
+    deleteMock.mockResolvedValue({ id: "design_123" });
+
+    const response = await DELETE(
+      new Request("http://localhost/api/editor-v2/designs/design_123?mode=permanent"),
+      {
+        params: { id: "design_123" },
+      },
+    );
 
     expect(response.status).toBe(200);
     expect(deleteMock).toHaveBeenCalledWith({
       where: { id: "design_123" },
     });
-    expect(deleteBlobIfExistsMock).toHaveBeenCalledWith(
-      "https://blob.example.com/version-original.png",
-    );
   });
 });

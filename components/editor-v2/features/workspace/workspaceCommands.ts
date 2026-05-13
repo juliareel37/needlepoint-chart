@@ -164,6 +164,37 @@ export function createApplyTraceConversionCommand(payload: {
   );
 }
 
+export function createPreviewTraceConversionCommand(payload: {
+  replacements: Array<{ index: number; value: string | null }>;
+  extractedColorIds: string[];
+  activeColorId: string | null;
+}): EditorCommand {
+  return createCommand(
+    "grid.previewTraceConversion",
+    payload,
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitTraceConversionPreviewCommand(): EditorCommand {
+  return createCommand(
+    "grid.commitTraceConversionPreview",
+    {},
+    "toolbar",
+    { mode: "push", label: "Convert Image to Pattern" },
+  );
+}
+
+export function createCancelTraceConversionPreviewCommand(): EditorCommand {
+  return createCommand(
+    "grid.cancelTraceConversionPreview",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
 export function createSwapPaletteColorCommand(
   fromColorId: string,
   toColorId: string,
@@ -199,6 +230,66 @@ export function createMergeUsedColorsCommand(
   );
 }
 
+export function createCustomPaletteCommand(
+  paletteId: string,
+  name: string,
+  colorIds?: string[],
+): EditorCommand {
+  return createCommand(
+    "palette.createCustomPalette",
+    { paletteId, name, colorIds },
+    "toolbar",
+    { mode: "push", label: "Create Palette" },
+  );
+}
+
+export function createRenameCustomPaletteCommand(
+  paletteId: string,
+  name: string,
+): EditorCommand {
+  return createCommand(
+    "palette.renameCustomPalette",
+    { paletteId, name },
+    "toolbar",
+    { mode: "push", label: "Rename Palette" },
+  );
+}
+
+export function createDeleteCustomPaletteCommand(
+  paletteId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.deleteCustomPalette",
+    { paletteId },
+    "toolbar",
+    { mode: "push", label: "Delete Palette" },
+  );
+}
+
+export function createAddColorToCustomPaletteCommand(
+  paletteId: string,
+  colorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.addColorToCustomPalette",
+    { paletteId, colorId },
+    "toolbar",
+    { mode: "push", label: "Add Color to Palette" },
+  );
+}
+
+export function createRemoveColorFromCustomPaletteCommand(
+  paletteId: string,
+  colorId: string,
+): EditorCommand {
+  return createCommand(
+    "palette.removeColorFromCustomPalette",
+    { paletteId, colorId },
+    "toolbar",
+    { mode: "push", label: "Remove Color from Palette" },
+  );
+}
+
 export function createSelectionStartCommand(point: SelectionPoint): EditorCommand {
   return createCommand(
     "selection.start",
@@ -227,6 +318,69 @@ export function createSelectionCommitCommand(
     { point },
     "canvas",
     { mode: "skip" },
+  );
+}
+
+export function createMoveSelectionCommand(
+  deltaX: number,
+  deltaY: number,
+): EditorCommand {
+  return createCommand(
+    "selection.move",
+    { deltaX, deltaY },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createResizeSelectionCommand(
+  handle: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w",
+  current: GridPoint,
+): EditorCommand {
+  return createCommand(
+    "selection.resize",
+    { handle, current },
+    "canvas",
+    { mode: "skip" },
+  );
+}
+
+export function createBeginDuplicatePlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.beginDuplicatePlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createBeginCutPlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.beginCutPlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCancelDuplicatePlacementCommand(): EditorCommand {
+  return createCommand(
+    "selection.cancelDuplicatePlacement",
+    {},
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createCommitDuplicatePlacementCommand(
+  deltaX: number,
+  deltaY: number,
+): EditorCommand {
+  return createCommand(
+    "selection.commitDuplicatePlacement",
+    { deltaX, deltaY },
+    "toolbar",
+    { mode: "push", label: "Duplicate Selection" },
   );
 }
 
@@ -402,10 +556,12 @@ export function createBeginIconPlacementCommand(payload: {
   iconId: string;
   name: string;
   src: string;
+  mimeType: string | null;
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  isUserUploaded: boolean;
   lockAspectRatio: boolean;
   primitiveStrokeReferenceSize: number | null;
   supportsStrokeWidth: boolean;
@@ -448,10 +604,12 @@ export function createUpdateIconPlacementCommand(payload: {
   iconId?: string;
   name?: string;
   src?: string;
+  mimeType?: string | null;
   intrinsicWidth?: number;
   intrinsicHeight?: number;
   colorSlots?: import("@/lib/editor-v2/editor/icons/iconColorSlots").IconColorSlot[];
   primitiveKind?: import("@/lib/editor-v2/editor/icons/primitiveIcon").PrimitiveIconKind | null;
+  isUserUploaded?: boolean;
   lockAspectRatio?: boolean;
   primitiveStrokeReferenceSize?: number | null;
   supportsStrokeWidth?: boolean;
@@ -484,7 +642,7 @@ export function createCancelIconPlacementCommand(): EditorCommand {
 }
 
 export function createBeginTraceRepositionCommand(
-  origin: "panel" | "toolbar",
+  origin: "upload" | "replace" | "panel" | "toolbar",
 ): EditorCommand {
   return createCommand(
     "trace.beginReposition",
@@ -639,6 +797,15 @@ export function createSetSymbolsVisibleCommand(visible: boolean): EditorCommand 
   return createCommand(
     "ui.setSymbolsVisible",
     { visible },
+    "toolbar",
+    { mode: "skip" },
+  );
+}
+
+export function createSetTouchSnappingEnabledCommand(enabled: boolean): EditorCommand {
+  return createCommand(
+    "ui.setTouchSnappingEnabled",
+    { enabled },
     "toolbar",
     { mode: "skip" },
   );

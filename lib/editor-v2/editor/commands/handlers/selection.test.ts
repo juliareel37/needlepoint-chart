@@ -105,4 +105,482 @@ describe("selection command handlers", () => {
       preview: null,
     });
   });
+
+  it("moves a committed rectangular selection without changing canvas data", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+    initial.document.grid.width = 12;
+    initial.document.grid.height = 12;
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-4",
+      kind: "selection.move",
+      payload: { deltaX: 3, deltaY: -2 },
+      meta: { source: "canvas", timestamp: 4, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 5, y: 1, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 5, y: 1 },
+        { x: 8, y: 5 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("clamps selection movement to the canvas bounds", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 1, y: 1, width: 3, height: 3 },
+      lassoPoints: [
+        { x: 1.2, y: 1.4 },
+        { x: 3.8, y: 1.2 },
+        { x: 2.6, y: 3.7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-5",
+      kind: "selection.move",
+      payload: { deltaX: 4, deltaY: 4 },
+      meta: { source: "canvas", timestamp: 5, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 2, y: 2, width: 3, height: 3 },
+      lassoPoints: [
+        { x: 2.2, y: 2.4 },
+        { x: 4.8, y: 2.2 },
+        { x: 3.6, y: 4.7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("resizes a committed rectangular selection from its dragged corner", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-1",
+      kind: "selection.resize",
+      payload: {
+        handle: "nw",
+        current: { x: 1, y: 2 },
+      },
+      meta: { source: "canvas", timestamp: 6, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 2, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 2 },
+        { x: 5, y: 6 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("resizes a committed rectangular selection from a side handle without locking aspect ratio", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-2",
+      kind: "selection.resize",
+      payload: {
+        handle: "e",
+        current: { x: 8, y: 4 },
+      },
+      meta: { source: "canvas", timestamp: 7, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 2, y: 3, width: 7, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 8, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("resizes a committed elliptical selection from a side handle without locking aspect ratio", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.selection = {
+      mode: "circle",
+      shape: "circle",
+      rect: { x: 2, y: 3, width: 4, height: 5 },
+      lassoPoints: [
+        { x: 2, y: 3 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-resize-3",
+      kind: "selection.resize",
+      payload: {
+        handle: "n",
+        current: { x: 4, y: 1 },
+      },
+      meta: { source: "canvas", timestamp: 8, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.selection).toEqual({
+      mode: "circle",
+      shape: "circle",
+      rect: { x: 2, y: 1, width: 4, height: 7 },
+      lassoPoints: [
+        { x: 2, y: 1 },
+        { x: 5, y: 7 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    });
+  });
+
+  it("starts duplicate placement from the painted cells inside the selection", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+    initial.document.grid.cells = [
+      null, null, null, null, null,
+      null, "dmc:310", "dmc:321", null, null,
+      null, null, "dmc:666", null, null,
+      null, null, null, null, null,
+      null, null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "lasso",
+      shape: "freehand",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 3, y: 1 },
+        { x: 3, y: 3 },
+        { x: 1, y: 3 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-6",
+      kind: "selection.beginDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 6, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toEqual({
+      operation: "duplicate",
+      sourceRect: { x: 1, y: 1, width: 2, height: 2 },
+      selectionMode: "lasso",
+      outlinePoints: [
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 2, y: 2 },
+        { x: 0, y: 2 },
+      ],
+      cells: [
+        { x: 0, y: 0, colorId: "dmc:310" },
+        { x: 1, y: 0, colorId: "dmc:321" },
+        { x: 1, y: 1, colorId: "dmc:666" },
+      ],
+    });
+  });
+
+  it("commits duplicate placement as a single paint step and clears the session", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 6;
+    initial.document.grid.height = 6;
+    initial.document.grid.cells = new Array(36).fill(null);
+    initial.document.grid.cells[1 * 6 + 1] = "dmc:310";
+    initial.document.grid.cells[1 * 6 + 2] = "dmc:321";
+    initial.document.grid.cells[2 * 6 + 2] = "dmc:666";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-7",
+      kind: "selection.beginDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 7, history: { mode: "skip" } },
+    });
+
+    store.dispatch({
+      id: "cmd-8",
+      kind: "selection.commitDuplicatePlacement",
+      payload: { deltaX: 2, deltaY: 1 },
+      meta: { source: "toolbar", timestamp: 8, history: { mode: "push", label: "Duplicate Selection" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 6 + 3]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[2 * 6 + 4]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[3 * 6 + 4]).toBe("dmc:666");
+    expect(store.getState().document.grid.cells[1 * 6 + 1]).toBe("dmc:310");
+  });
+
+  it("begins cut placement by lifting painted cells from the source region", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 5;
+    initial.document.grid.height = 5;
+    initial.document.grid.cells = [
+      null, null, null, null, null,
+      null, "dmc:310", "dmc:321", null, null,
+      null, null, "dmc:666", null, null,
+      null, null, null, null, null,
+      null, null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+
+    store.dispatch({
+      id: "cmd-9",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 9, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toEqual({
+      operation: "cut",
+      sourceRect: { x: 1, y: 1, width: 2, height: 2 },
+      selectionMode: "rect",
+      outlinePoints: [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      cells: [
+        { x: 0, y: 0, colorId: "dmc:310" },
+        { x: 1, y: 0, colorId: "dmc:321" },
+        { x: 1, y: 1, colorId: "dmc:666" },
+      ],
+    });
+    expect(store.getState().document.grid.cells[1 * 5 + 1]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 5 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 5 + 2]).toBeNull();
+  });
+
+  it("cancels cut placement by restoring the lifted cells", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 4;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = [
+      null, null, null, null,
+      null, "dmc:310", "dmc:321", null,
+      null, null, "dmc:666", null,
+      null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-10",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 10, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-11",
+      kind: "selection.cancelDuplicatePlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 11, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 4 + 1]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 4 + 2]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 4 + 2]).toBe("dmc:666");
+  });
+
+  it("clearing selection during cut placement restores the lifted cells before exiting selection", () => {
+    const initial = createInitialEditorStoreState();
+    initial.session.activeTool.tool = "lasso";
+    initial.document.grid.width = 4;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = [
+      null, null, null, null,
+      null, "dmc:310", "dmc:321", null,
+      null, null, "dmc:666", null,
+      null, null, null, null,
+    ];
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-11a",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 11, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-11b",
+      kind: "selection.clear",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 12, history: { mode: "skip" } },
+    });
+
+    expect(store.getState().session.activeTool.tool).toBe("pan");
+    expect(store.getState().session.selection).toEqual({
+      mode: "none",
+      shape: "rect",
+      rect: null,
+      lassoPoints: [],
+      mirrorAxis: null,
+      preview: null,
+    });
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 4 + 1]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 4 + 2]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 4 + 2]).toBe("dmc:666");
+  });
+
+  it("commits cut placement by moving the lifted cells to the new location", () => {
+    const initial = createInitialEditorStoreState();
+    initial.document.grid.width = 6;
+    initial.document.grid.height = 4;
+    initial.document.grid.cells = new Array(24).fill(null);
+    initial.document.grid.cells[1 * 6 + 1] = "dmc:310";
+    initial.document.grid.cells[1 * 6 + 2] = "dmc:321";
+    initial.document.grid.cells[2 * 6 + 2] = "dmc:666";
+    initial.session.selection = {
+      mode: "rect",
+      shape: "rect",
+      rect: { x: 1, y: 1, width: 2, height: 2 },
+      lassoPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      mirrorAxis: null,
+      preview: null,
+    };
+
+    const store = createEditorStore({ initialState: initial });
+    store.dispatch({
+      id: "cmd-12",
+      kind: "selection.beginCutPlacement",
+      payload: {},
+      meta: { source: "toolbar", timestamp: 12, history: { mode: "skip" } },
+    });
+    store.dispatch({
+      id: "cmd-13",
+      kind: "selection.commitDuplicatePlacement",
+      payload: { deltaX: 2, deltaY: 0 },
+      meta: { source: "toolbar", timestamp: 13, history: { mode: "push", label: "Duplicate Selection" } },
+    });
+
+    expect(store.getState().session.duplicatePlacement).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 1]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[2 * 6 + 2]).toBeNull();
+    expect(store.getState().document.grid.cells[1 * 6 + 3]).toBe("dmc:310");
+    expect(store.getState().document.grid.cells[1 * 6 + 4]).toBe("dmc:321");
+    expect(store.getState().document.grid.cells[2 * 6 + 4]).toBe("dmc:666");
+  });
 });

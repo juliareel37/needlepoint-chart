@@ -4,6 +4,11 @@ import { getCurrentUserId } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import { deleteBlobIfExists, extractEditorV2TraceBlobUrls } from "@/lib/blob";
 import {
+  getDeletedEditorDesignMetadata,
+  getEditorDesignPurgeAfterAt,
+  permanentlyDeleteEditorDesign,
+} from "@/lib/editor-v2/server/designDeletion";
+import {
   normalizeProjectTitle,
   parsePersistedEditorV2Design,
 } from "@/lib/editor-v2/persistence/designs";
@@ -13,6 +18,7 @@ import {
   hashPersistedEditorV2Design,
   shouldCreateEditorDesignVersion,
 } from "@/lib/editor-v2/server/versioning";
+import { claimGuestTraceAssetsForDesign } from "@/lib/editor-v2/server/guestTraceAssets";
 
 export const runtime = "nodejs";
 
@@ -22,6 +28,21 @@ type SaveSourceInput = "manual" | "autosave";
 
 function toPrismaSaveSource(value: SaveSourceInput | undefined): SaveSource {
   return value === "autosave" ? SaveSource.AUTOSAVE : SaveSource.MANUAL;
+}
+
+function deletedDesignResponse(design: {
+  id: string;
+  title: string;
+  deletedAt: Date;
+  purgeAfterAt: Date | null;
+}) {
+  return NextResponse.json(
+    {
+      error: "This design is in Recently Deleted.",
+      deletedDesign: getDeletedEditorDesignMetadata(design),
+    },
+    { status: 410 },
+  );
 }
 
 export async function GET(_req: Request, context: RouteContext) {
@@ -40,14 +61,24 @@ export async function GET(_req: Request, context: RouteContext) {
     where: { id, appUserId },
     select: {
       id: true,
+      title: true,
       data: true,
       createdAt: true,
       updatedAt: true,
+      deletedAt: true,
+      purgeAfterAt: true,
     },
   });
 
   if (!design) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (design.deletedAt) {
+    return deletedDesignResponse({
+      ...design,
+      deletedAt: design.deletedAt,
+    });
   }
 
   const parsedData = parsePersistedEditorV2Design(design.data);
@@ -97,14 +128,24 @@ export async function PUT(req: Request, context: RouteContext) {
     where: { id, appUserId },
     select: {
       id: true,
+      title: true,
       data: true,
       updatedAt: true,
       lastVersionAt: true,
       lastVersionHash: true,
+      deletedAt: true,
+      purgeAfterAt: true,
     },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.deletedAt) {
+    return deletedDesignResponse({
+      ...existing,
+      deletedAt: existing.deletedAt,
+    });
   }
 
   const baseVersion =
@@ -148,6 +189,8 @@ export async function PUT(req: Request, context: RouteContext) {
       },
     });
 
+    await claimGuestTraceAssetsForDesign(tx, id, data);
+
     const prunedVersions = shouldVersion
       ? await createEditorDesignVersionSnapshot(tx, {
           designId: id,
@@ -182,12 +225,6 @@ export async function PUT(req: Request, context: RouteContext) {
     };
   });
 
-  const retainedBlobUrls = new Set(result.retainedBlobUrls);
-  for (const url of extractEditorV2TraceBlobUrls(existing.data)) {
-    if (!retainedBlobUrls.has(url)) {
-      void deleteBlobIfExists(url);
-    }
-  }
   for (const url of result.orphanedPrunedBlobUrls) {
     void deleteBlobIfExists(url);
   }
@@ -216,11 +253,17 @@ export async function DELETE(_req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
+  const requestUrl = new URL(_req.url);
+  const mode = requestUrl.searchParams.get("mode");
+
   const existing = await prisma.editorDesign.findFirst({
     where: { id, appUserId },
     select: {
       id: true,
+      title: true,
       data: true,
+      deletedAt: true,
+      purgeAfterAt: true,
       versions: {
         select: {
           data: true,
@@ -233,20 +276,47 @@ export async function DELETE(_req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.editorDesign.delete({
+  if (mode === "permanent") {
+    if (!existing.deletedAt) {
+      return NextResponse.json(
+        { error: "Design must be in Recently Deleted before permanent deletion." },
+        { status: 409 },
+      );
+    }
+
+    const blobUrls = await permanentlyDeleteEditorDesign(prisma, existing.id);
+    for (const url of blobUrls) {
+      void deleteBlobIfExists(url);
+    }
+
+    return NextResponse.json({ ok: true, id: existing.id, deletedPermanently: true });
+  }
+
+  if (existing.deletedAt) {
+    return deletedDesignResponse({
+      id: existing.id,
+      title: existing.title,
+      deletedAt: existing.deletedAt,
+      purgeAfterAt: existing.purgeAfterAt,
+    });
+  }
+
+  const deletedAt = new Date();
+  const purgedAfterAt = getEditorDesignPurgeAfterAt(deletedAt);
+
+  await prisma.editorDesign.update({
     where: { id: existing.id },
+    data: {
+      deletedAt,
+      purgeAfterAt: purgedAfterAt,
+    },
   });
 
-  const blobUrls = new Set<string>(extractEditorV2TraceBlobUrls(existing.data));
-  for (const version of existing.versions) {
-    for (const url of extractEditorV2TraceBlobUrls(version.data)) {
-      blobUrls.add(url);
-    }
-  }
-
-  for (const url of blobUrls) {
-    void deleteBlobIfExists(url);
-  }
-
-  return NextResponse.json({ ok: true, id: existing.id });
+  return NextResponse.json({
+    ok: true,
+    id: existing.id,
+    deletedAt: deletedAt.toISOString(),
+    purgeAfterAt: purgedAfterAt.toISOString(),
+    deletedPermanently: false,
+  });
 }

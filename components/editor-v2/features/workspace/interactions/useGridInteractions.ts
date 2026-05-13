@@ -28,6 +28,7 @@ interface UseGridInteractionsOptions {
   activeColorId: string | null;
   activeTool: ActiveTool;
   brushSize: number;
+  coarsePointer?: boolean;
   dispatch: EditorStore["dispatch"];
   getClampedSelectionPointFromClient: (
     clientX: number,
@@ -36,6 +37,7 @@ interface UseGridInteractionsOptions {
   getSelectionPointFromClient: (clientX: number, clientY: number) => SelectionPoint | null;
   metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
   paintDisabled?: boolean;
+  previewMode: boolean;
   state: EditorStoreState;
   trace: TraceDocument | null;
 }
@@ -44,11 +46,13 @@ export function useGridInteractions({
   activeColorId,
   activeTool,
   brushSize,
+  coarsePointer = false,
   dispatch,
   getClampedSelectionPointFromClient,
   getSelectionPointFromClient,
   metrics,
   paintDisabled = false,
+  previewMode,
   state,
   trace,
 }: UseGridInteractionsOptions) {
@@ -61,8 +65,10 @@ export function useGridInteractions({
   });
   const selectionDrag = useSelectionDrag({
     activeTool,
+    coarsePointer,
     dispatch,
     getClampedSelectionPointFromClient,
+    state,
     selectionShape: state.session.selection.shape,
   });
   const mirrorDrag = useMirrorDrag({
@@ -74,15 +80,25 @@ export function useGridInteractions({
 
   useClearSelectionOnEscape({
     clearLocalSelection: selectionDrag.clearDragSelection,
+    disabled:
+      previewMode ||
+      Boolean(state.session.traceInteraction.repositionSnapshot) ||
+      Boolean(state.session.traceInteraction.conversionPreview) ||
+      Boolean(state.session.textInteraction.placement) ||
+      Boolean(state.session.iconInteraction.placement),
     dispatch,
+    duplicatePlacementActive: Boolean(state.session.duplicatePlacement),
     hasSelection:
       activeTool === "lasso" ||
+      Boolean(state.session.duplicatePlacement) ||
       Boolean(state.session.selection.rect) ||
       Boolean(state.session.mirrorInteraction.session),
   });
 
   return {
     cancelPaintStroke: paintStroke.cancelStroke,
+    cursor: selectionDrag.cursor,
+    handleHover,
     handlePointerDown,
     handlePointerEnter,
   };
@@ -115,6 +131,10 @@ export function useGridInteractions({
     }
 
     paintStroke.handlePointerEnter(point);
+  }
+
+  function handleHover(selectionPoint: SelectionPoint | null): void {
+    selectionDrag.handlePointerHover(selectionPoint);
   }
 
   function handleEyedropperPointerDown(point: GridPoint): void {

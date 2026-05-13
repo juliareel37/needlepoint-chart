@@ -1,4 +1,5 @@
 export * from "./handlers/gridPaint";
+export * from "./handlers/customPalettes";
 export * from "./handlers/openPanel";
 export * from "./handlers/selection";
 export * from "./handlers/setActiveTool";

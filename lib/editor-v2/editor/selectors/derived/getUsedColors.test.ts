@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EditorStoreState } from "../../store/state";
+import { DEFAULT_CANVAS_PREFERENCES, type EditorStoreState } from "../../store/state";
 import { getUsedColors } from "./getUsedColors";
 
 describe("getUsedColors", () => {
@@ -60,6 +60,9 @@ function createSelectorTestState(): EditorStoreState {
         mode: "destructive-grid",
         entities: [],
       },
+      canvasPreferences: {
+        ...DEFAULT_CANVAS_PREFERENCES,
+      },
       metadata: {
         legacyDraftId: null,
         persistedVersionId: null,
@@ -88,6 +91,7 @@ function createSelectorTestState(): EditorStoreState {
         mirrorAxis: null,
         preview: null,
       },
+      duplicatePlacement: null,
       mirrorInteraction: {
         session: null,
       },
@@ -114,6 +118,7 @@ function createSelectorTestState(): EditorStoreState {
         replacedTrace: null,
         repositionSnapshot: null,
         runtimeImageRefId: null,
+        conversionPreview: null,
       },
       textInteraction: {
         draftText: "",
@@ -165,6 +170,7 @@ function createSelectorTestState(): EditorStoreState {
         showMajorGridlines: true,
         showRuler: true,
         showSymbols: false,
+        touchSnappingEnabled: true,
         previewMode: false,
         threadView: false,
         darkCanvas: false,

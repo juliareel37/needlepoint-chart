@@ -3,43 +3,47 @@ import type {
   EditorStoreState,
   TraceDocument,
 } from "@/lib/editor-v2/editor/store";
+import { applyDocumentPatches } from "@/lib/editor-v2/editor/store";
 
 export function getPersistableEditorDocument(
   state: EditorStoreState,
 ): EditorDocumentState {
   const { document, session } = state;
-  const { repositionOrigin, repositionSnapshot, replacedTrace } =
+  const { conversionPreview, repositionOrigin, repositionSnapshot, replacedTrace } =
     session.traceInteraction;
+  const baseDocument = conversionPreview
+    ? applyDocumentPatches(document, conversionPreview.inversePatches)
+    : document;
 
   if (!repositionOrigin) {
-    return document;
+    return baseDocument;
   }
 
   if (repositionOrigin === "upload") {
-    if (document.trace === null) {
-      return document;
+    if (baseDocument.trace === null) {
+      return baseDocument;
     }
 
     return {
-      ...document,
+      ...baseDocument,
       trace: null,
     };
   }
 
   if (repositionOrigin === "replace") {
     return {
-      ...document,
+      ...baseDocument,
       trace: replacedTrace,
     };
   }
 
-  if (!document.trace || !repositionSnapshot) {
-    return document;
+  if (!baseDocument.trace || !repositionSnapshot) {
+    return baseDocument;
   }
 
   return {
-    ...document,
-    trace: applyTraceSnapshot(document.trace, repositionSnapshot),
+    ...baseDocument,
+    trace: applyTraceSnapshot(baseDocument.trace, repositionSnapshot),
   };
 }
 

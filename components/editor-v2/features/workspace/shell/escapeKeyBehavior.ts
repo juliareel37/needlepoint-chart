@@ -1,0 +1,66 @@
+"use client";
+
+export interface WorkspaceEscapeState {
+  highlightedColorActive: boolean;
+  iconPlacementActive: boolean;
+  previewMode: boolean;
+  traceEditModeActive: boolean;
+  textPlacementActive: boolean;
+  traceConversionPreviewActive: boolean;
+  traceCropEditing: boolean;
+  traceEraserEditing?: boolean;
+  traceRepositionActive: boolean;
+}
+
+export type WorkspaceEscapeAction =
+  | "exit-trace-conversion-preview"
+  | "exit-trace-edit"
+  | "cancel-trace-crop"
+  | "cancel-trace-eraser"
+  | "cancel-trace-reposition"
+  | "cancel-text-placement"
+  | "cancel-icon-placement"
+  | "clear-highlight"
+  | "exit-preview";
+
+export function getWorkspaceEscapeAction(
+  state: WorkspaceEscapeState,
+): WorkspaceEscapeAction | null {
+  if (state.traceConversionPreviewActive) {
+    return "exit-trace-conversion-preview";
+  }
+
+  if (state.traceCropEditing) {
+    return "cancel-trace-crop";
+  }
+
+  if (state.traceEraserEditing) {
+    return "cancel-trace-eraser";
+  }
+
+  if (state.traceRepositionActive) {
+    return "cancel-trace-reposition";
+  }
+
+  if (state.traceEditModeActive) {
+    return "exit-trace-edit";
+  }
+
+  if (state.textPlacementActive) {
+    return "cancel-text-placement";
+  }
+
+  if (state.iconPlacementActive) {
+    return "cancel-icon-placement";
+  }
+
+  if (state.highlightedColorActive) {
+    return "clear-highlight";
+  }
+
+  if (state.previewMode) {
+    return "exit-preview";
+  }
+
+  return null;
+}

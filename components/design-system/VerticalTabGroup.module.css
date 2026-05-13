@@ -62,7 +62,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .item:hover {
+  .item:hover:not([data-active="true"]) {
     background: var(--sidebar-button-hover-bg);
     /* color: var(--toolbar-button-hover-text); */
     filter: none !important;

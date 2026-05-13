@@ -11,13 +11,19 @@ export function EditableDesignTitle({
   className,
   dispatch,
   documentTitle,
+  onCommitTitle,
   renameRequestToken,
+  renameAriaLabel = "Rename design",
+  inputAriaLabel = "Design name",
   variant = "panel",
 }: {
   className?: string;
-  dispatch: EditorStore["dispatch"];
+  dispatch?: EditorStore["dispatch"];
   documentTitle: string;
+  onCommitTitle?: (nextTitle: string) => void;
   renameRequestToken: number;
+  renameAriaLabel?: string;
+  inputAriaLabel?: string;
   variant?: "header" | "panel";
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
@@ -37,7 +43,11 @@ export function EditableDesignTitle({
       return;
     }
 
-    dispatch(createSetProjectTitleCommand(nextTitle));
+    if (onCommitTitle) {
+      onCommitTitle(nextTitle);
+    } else if (dispatch) {
+      dispatch(createSetProjectTitleCommand(nextTitle));
+    }
     setIsRenaming(false);
   }
 
@@ -97,14 +107,14 @@ export function EditableDesignTitle({
               cancelRename();
             }
           }}
-          aria-label="Design name"
+          aria-label={inputAriaLabel}
         />
       ) : (
         <button
           type="button"
           className={styles.editableTitleTrigger}
-          aria-label="Rename design"
-          title="Rename design"
+          aria-label={renameAriaLabel}
+          title={renameAriaLabel}
           onClick={startRename}
         >
           <span className={styles.editableTitleSurface}>

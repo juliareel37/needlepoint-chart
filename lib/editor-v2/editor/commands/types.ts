@@ -30,12 +30,26 @@ export type EditorCommandKind =
   | "grid.erase"
   | "grid.clear"
   | "grid.applyTraceConversion"
+  | "grid.previewTraceConversion"
+  | "grid.commitTraceConversionPreview"
+  | "grid.cancelTraceConversionPreview"
   | "palette.swapColor"
   | "palette.deleteUsedColors"
   | "palette.mergeUsedColors"
+  | "palette.createCustomPalette"
+  | "palette.renameCustomPalette"
+  | "palette.deleteCustomPalette"
+  | "palette.addColorToCustomPalette"
+  | "palette.removeColorFromCustomPalette"
   | "selection.start"
   | "selection.update"
   | "selection.commit"
+  | "selection.move"
+  | "selection.resize"
+  | "selection.beginDuplicatePlacement"
+  | "selection.beginCutPlacement"
+  | "selection.cancelDuplicatePlacement"
+  | "selection.commitDuplicatePlacement"
   | "selection.clear"
   | "selection.setShape"
   | "mirror.beginFromSelection"
@@ -69,6 +83,7 @@ export type EditorCommandKind =
   | "ui.setGridlinesVisible"
   | "ui.setRulerVisible"
   | "ui.setSymbolsVisible"
+  | "ui.setTouchSnappingEnabled"
   | "ui.setPreviewMode"
   | "ui.openPanel"
   | "history.undo"
@@ -124,6 +139,25 @@ export type ApplyTraceConversionCommand = BaseEditorCommand<
   }
 >;
 
+export type PreviewTraceConversionCommand = BaseEditorCommand<
+  "grid.previewTraceConversion",
+  {
+    replacements: Array<{ index: number; value: string | null }>;
+    extractedColorIds: string[];
+    activeColorId: string | null;
+  }
+>;
+
+export type CommitTraceConversionPreviewCommand = BaseEditorCommand<
+  "grid.commitTraceConversionPreview",
+  object
+>;
+
+export type CancelTraceConversionPreviewCommand = BaseEditorCommand<
+  "grid.cancelTraceConversionPreview",
+  object
+>;
+
 export type SwapPaletteColorCommand = BaseEditorCommand<
   "palette.swapColor",
   { fromColorId: string; toColorId: string }
@@ -139,6 +173,31 @@ export type MergeUsedColorsCommand = BaseEditorCommand<
   { fromColorIds: string[]; toColorId: string }
 >;
 
+export type CreateCustomPaletteCommand = BaseEditorCommand<
+  "palette.createCustomPalette",
+  { paletteId: string; name: string; colorIds?: string[] }
+>;
+
+export type RenameCustomPaletteCommand = BaseEditorCommand<
+  "palette.renameCustomPalette",
+  { paletteId: string; name: string }
+>;
+
+export type DeleteCustomPaletteCommand = BaseEditorCommand<
+  "palette.deleteCustomPalette",
+  { paletteId: string }
+>;
+
+export type AddColorToCustomPaletteCommand = BaseEditorCommand<
+  "palette.addColorToCustomPalette",
+  { paletteId: string; colorId: string }
+>;
+
+export type RemoveColorFromCustomPaletteCommand = BaseEditorCommand<
+  "palette.removeColorFromCustomPalette",
+  { paletteId: string; colorId: string }
+>;
+
 export type StartSelectionCommand = BaseEditorCommand<
   "selection.start",
   { point: SelectionPoint }
@@ -152,6 +211,39 @@ export type UpdateSelectionCommand = BaseEditorCommand<
 export type CommitSelectionCommand = BaseEditorCommand<
   "selection.commit",
   { point: SelectionPoint | null }
+>;
+
+export type MoveSelectionCommand = BaseEditorCommand<
+  "selection.move",
+  { deltaX: number; deltaY: number }
+>;
+
+export type ResizeSelectionCommand = BaseEditorCommand<
+  "selection.resize",
+  {
+    handle: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+    current: GridPoint;
+  }
+>;
+
+export type BeginDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.beginDuplicatePlacement",
+  object
+>;
+
+export type BeginCutPlacementCommand = BaseEditorCommand<
+  "selection.beginCutPlacement",
+  object
+>;
+
+export type CancelDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.cancelDuplicatePlacement",
+  object
+>;
+
+export type CommitDuplicatePlacementCommand = BaseEditorCommand<
+  "selection.commitDuplicatePlacement",
+  { deltaX: number; deltaY: number }
 >;
 
 export type ClearSelectionCommand = BaseEditorCommand<"selection.clear", object>;
@@ -253,10 +345,12 @@ export type BeginIconPlacementCommand = BaseEditorCommand<
     | "iconId"
     | "name"
     | "src"
+    | "mimeType"
     | "intrinsicWidth"
     | "intrinsicHeight"
     | "colorSlots"
     | "primitiveKind"
+    | "isUserUploaded"
     | "lockAspectRatio"
     | "primitiveStrokeReferenceSize"
     | "supportsStrokeWidth"
@@ -294,10 +388,12 @@ export type UpdateIconPlacementCommand = BaseEditorCommand<
       | "iconId"
       | "name"
       | "src"
+      | "mimeType"
       | "intrinsicWidth"
       | "intrinsicHeight"
       | "colorSlots"
       | "primitiveKind"
+      | "isUserUploaded"
       | "lockAspectRatio"
       | "primitiveStrokeReferenceSize"
       | "supportsStrokeWidth"
@@ -323,7 +419,7 @@ export type CancelIconPlacementCommand = BaseEditorCommand<
 
 export type BeginTraceRepositionCommand = BaseEditorCommand<
   "trace.beginReposition",
-  { origin: "panel" | "toolbar" }
+  { origin: "upload" | "replace" | "panel" | "toolbar" }
 >;
 
 export type PreviewTraceRepositionCommand = BaseEditorCommand<
@@ -410,6 +506,11 @@ export type SetSymbolsVisibleCommand = BaseEditorCommand<
   { visible: boolean }
 >;
 
+export type SetTouchSnappingEnabledCommand = BaseEditorCommand<
+  "ui.setTouchSnappingEnabled",
+  { enabled: boolean }
+>;
+
 export type SetPreviewModeCommand = BaseEditorCommand<
   "ui.setPreviewMode",
   { visible: boolean }
@@ -425,12 +526,26 @@ export type EditorCommand =
   | EraseCellsCommand
   | ClearCanvasCommand
   | ApplyTraceConversionCommand
+  | PreviewTraceConversionCommand
+  | CommitTraceConversionPreviewCommand
+  | CancelTraceConversionPreviewCommand
   | SwapPaletteColorCommand
   | DeleteUsedColorsCommand
   | MergeUsedColorsCommand
+  | CreateCustomPaletteCommand
+  | RenameCustomPaletteCommand
+  | DeleteCustomPaletteCommand
+  | AddColorToCustomPaletteCommand
+  | RemoveColorFromCustomPaletteCommand
   | StartSelectionCommand
   | UpdateSelectionCommand
   | CommitSelectionCommand
+  | MoveSelectionCommand
+  | ResizeSelectionCommand
+  | BeginDuplicatePlacementCommand
+  | BeginCutPlacementCommand
+  | CancelDuplicatePlacementCommand
+  | CommitDuplicatePlacementCommand
   | ClearSelectionCommand
   | SetSelectionShapeCommand
   | BeginMirrorFromSelectionCommand
@@ -464,6 +579,7 @@ export type EditorCommand =
   | SetGridlinesVisibleCommand
   | SetRulerVisibleCommand
   | SetSymbolsVisibleCommand
+  | SetTouchSnappingEnabledCommand
   | SetPreviewModeCommand
   | OpenPanelCommand
   | UndoCommand

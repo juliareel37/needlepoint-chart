@@ -1,4 +1,6 @@
 import type {
+  CanvasPreferencesDocument,
+  CustomPalette,
   GridCellValue,
   ProjectDocument,
   TextEntity,
@@ -11,10 +13,13 @@ export type DocumentPatch =
   | ReplaceColorPatch
   | SetExtractedPaletteIdsPatch
   | AssignPaletteSymbolsPatch
+  | UpsertCustomPalettePatch
+  | RemoveCustomPalettePatch
   | UpsertTracePatch
   | UpdateTracePatch
   | RemoveTracePatch
   | UpdateProjectMetadataPatch
+  | UpdateCanvasPreferencesPatch
   | UpsertTextEntityPatch
   | RemoveTextEntityPatch;
 
@@ -46,6 +51,16 @@ export interface AssignPaletteSymbolsPatch {
   assignments: Record<string, string>;
 }
 
+export interface UpsertCustomPalettePatch {
+  type: "palette.upsertCustomPalette";
+  palette: CustomPalette;
+}
+
+export interface RemoveCustomPalettePatch {
+  type: "palette.removeCustomPalette";
+  paletteId: string;
+}
+
 export interface UpsertTracePatch {
   type: "trace.upsert";
   trace: TraceDocument;
@@ -54,9 +69,14 @@ export interface UpsertTracePatch {
 export type TraceUpdateChanges = Partial<
   Pick<
     TraceDocument,
+    | "maskUrl"
     | "visible"
     | "blendMode"
     | "opacity"
+    | "cropX"
+    | "cropY"
+    | "cropWidth"
+    | "cropHeight"
     | "offsetX"
     | "offsetY"
     | "scale"
@@ -77,6 +97,13 @@ export interface RemoveTracePatch {
 export interface UpdateProjectMetadataPatch {
   type: "project.metadata.update";
   changes: Partial<ProjectDocument>;
+}
+
+export type CanvasPreferencesChanges = Partial<CanvasPreferencesDocument>;
+
+export interface UpdateCanvasPreferencesPatch {
+  type: "canvasPreferences.update";
+  changes: CanvasPreferencesChanges;
 }
 
 export interface UpsertTextEntityPatch {

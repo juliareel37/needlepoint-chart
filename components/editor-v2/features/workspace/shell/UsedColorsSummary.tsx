@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { PaletteColor } from "@/lib/editor-v2/editor/store";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
+import type { CustomPalette, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
@@ -41,6 +42,10 @@ function getSwatchIconColor(hex: string) {
   const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
 
   return luminance > 0.75 ? "#111111" : "#ffffff";
+}
+
+function formatColorCodeLabel(color: PaletteColor) {
+  return color.brand === "dmc" ? `DMC ${color.code}` : color.code;
 }
 
 type UsedColorsToolMode = "idle" | "select";
@@ -442,6 +447,7 @@ export function UsedColorsSummary({
   activeColorId,
   usedColors,
   colorsById,
+  customPalettesById,
   highlightedColorId,
   isBottomPanelCanvasFocusActive,
   isBottomPanelLayout,
@@ -463,6 +469,7 @@ export function UsedColorsSummary({
   activeColorId: string | null;
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
+  customPalettesById: Record<string, CustomPalette>;
   highlightedColorId: string | null;
   isBottomPanelCanvasFocusActive: boolean;
   isBottomPanelLayout: boolean;
@@ -498,6 +505,10 @@ export function UsedColorsSummary({
   const highlightColorChangeRef = useRef(onHighlightColorChange);
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
+  const paletteSections = useMemo(
+    () => getColorLibraryPaletteSections(palette, customPalettesById),
+    [customPalettesById, palette],
+  );
   const isSelecting = toolMode !== "idle";
   const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
   const scopeOptions = useMemo(
@@ -531,6 +542,33 @@ export function UsedColorsSummary({
     () => sortUsedColorsForDisplay(usedColors, colorsById, sortMode),
     [colorsById, sortMode, usedColors],
   );
+  const deactivateHighlight = useCallback((options?: { blurTrigger?: boolean }) => {
+    if (!highlightedColorId) {
+      return;
+    }
+
+    onHighlightColorChange(null);
+
+    if (isBottomPanelLayout && isBottomPanelCanvasFocusActive) {
+      onExitBottomPanelCanvasFocus();
+    }
+
+    if (options?.blurTrigger) {
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        activeElement.closest(`.${styles.usedColorsHighlightButton}`)
+      ) {
+        activeElement.blur();
+      }
+    }
+  }, [
+    highlightedColorId,
+    isBottomPanelCanvasFocusActive,
+    isBottomPanelLayout,
+    onExitBottomPanelCanvasFocus,
+    onHighlightColorChange,
+  ]);
 
   useEffect(() => {
     setSelectedColorIds((current) =>
@@ -543,6 +581,31 @@ export function UsedColorsSummary({
       onHighlightColorChange(null);
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
+
+  useEffect(() => {
+    if (!highlightedColorId) {
+      return;
+    }
+
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      const editableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (event.key !== "Escape" || editableTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      deactivateHighlight({ blurTrigger: true });
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleWindowKeyDown, { capture: true });
+  }, [deactivateHighlight, highlightedColorId]);
 
   useEffect(() => {
     highlightColorChangeRef.current = onHighlightColorChange;
@@ -819,7 +882,7 @@ export function UsedColorsSummary({
             <div className={styles.usedColorsActionRow}>
               <Button
                 type="button"
-                variant="secondary2"
+                variant="secondary"
                 size="sm"
                 active={actionMode === "merge"}
                 className={styles.usedColorsActionToggle}
@@ -832,7 +895,7 @@ export function UsedColorsSummary({
               </Button>
               <Button
                 type="button"
-                variant="secondary2"
+                variant="secondary"
                 size="sm"
                 active={actionMode === "delete"}
                 className={styles.usedColorsActionToggle}
@@ -848,7 +911,7 @@ export function UsedColorsSummary({
 
           {usedColors.length === 0 ? (
             <span className={styles.emptyMessage} style={typographyStyles.p2}>
-              None yet
+              No colors used yet.
             </span>
           ) : (
             <div className={styles.usedColorsListFrame}>
@@ -863,6 +926,9 @@ export function UsedColorsSummary({
             {displayedUsedColors.map((entry) => (
               (() => {
                 const isActiveColor = !isSelecting && activeColorId === entry.colorId;
+                const rowColor = colorsById[entry.colorId];
+                const rowColorName = rowColor?.name ?? entry.colorId;
+                const rowColorCode = rowColor ? formatColorCodeLabel(rowColor) : entry.colorId;
 
                 return (
               <li
@@ -922,8 +988,8 @@ export function UsedColorsSummary({
                       className={styles.usedColorSwatchButton}
                       aria-label={
                         isSelecting
-                          ? `${colorsById[entry.colorId]?.name ?? entry.colorId} color`
-                          : `Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`
+                          ? `${rowColorName} color`
+                          : `Replace ${rowColorName}`
                       }
                       aria-haspopup={isSelecting ? undefined : "dialog"}
                       aria-expanded={
@@ -956,14 +1022,6 @@ export function UsedColorsSummary({
                           backgroundColor: swatchColor,
                         }}
                       >
-                        <span
-                          className={[
-                            styles.sidebarColorPreviewCountBadge,
-                            styles.usedColorSwatchCountBadge,
-                          ].join(" ")}
-                        >
-                          {entry.count}
-                        </span>
                         {swatchSymbol ? (
                           <span
                             className={styles.usedColorSwatchSymbol}
@@ -990,7 +1048,7 @@ export function UsedColorsSummary({
                         anchorRef={swapSourceAnchorRef}
                         onRequestClose={() => setSwapSourceColorId(null)}
                         role="dialog"
-                        aria-label={`Replace ${colorsById[entry.colorId]?.name ?? entry.colorId}`}
+                        aria-label={`Replace ${rowColorName}`}
                         className={styles.usedColorsMergePopover}
                         style={{ whiteSpace: "normal" }}
                       >
@@ -999,6 +1057,7 @@ export function UsedColorsSummary({
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
                           featuredColorIds={featuredColorIds}
+                          paletteSections={paletteSections}
                           showFeaturedSymbols={showSymbols}
                           symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
@@ -1030,8 +1089,8 @@ export function UsedColorsSummary({
                     }}
                     aria-label={
                       isSelecting
-                        ? `Select ${colorsById[entry.colorId]?.name ?? entry.colorId}`
-                        : `Set ${colorsById[entry.colorId]?.name ?? entry.colorId} as active color`
+                        ? `Select ${rowColorName}`
+                        : `Set ${rowColorName} as active color`
                     }
                     aria-pressed={
                       isSelecting
@@ -1039,7 +1098,18 @@ export function UsedColorsSummary({
                         : isActiveColor
                     }
                   >
-                    <span>{colorsById[entry.colorId]?.name ?? entry.colorId}</span>
+                    <span className={styles.usedColorsItemText}>
+                      <span className={styles.usedColorsItemName}>{rowColorName}</span>
+                      <span className={styles.usedColorsItemCode}>{rowColorCode}</span>
+                    </span>
+                    <span
+                      className={[
+                        styles.sidebarColorPreviewCountBadge,
+                        styles.usedColorsItemCountBadge,
+                      ].join(" ")}
+                    >
+                      {entry.count}
+                    </span>
                   </button>
                 </div>
 
@@ -1062,20 +1132,18 @@ export function UsedColorsSummary({
                     const nextHighlightedColorId =
                       highlightedColorId === entry.colorId ? null : entry.colorId;
 
-                    onHighlightColorChange(nextHighlightedColorId);
-
-                    if (!isBottomPanelLayout) {
-                      return;
-                    }
-
                     if (nextHighlightedColorId) {
+                      onHighlightColorChange(nextHighlightedColorId);
+
+                      if (!isBottomPanelLayout) {
+                        return;
+                      }
+
                       onEnterBottomPanelCanvasFocus();
                       return;
                     }
 
-                    if (isBottomPanelCanvasFocusActive) {
-                      onExitBottomPanelCanvasFocus();
-                    }
+                    deactivateHighlight();
                   }}
                   onKeyDown={(event) => {
                     event.stopPropagation();
@@ -1180,6 +1248,7 @@ export function UsedColorsSummary({
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
                                 featuredColorIds={featuredColorIds}
+                                paletteSections={paletteSections}
                                 showFeaturedSymbols={showSymbols}
                                 symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {

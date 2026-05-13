@@ -1,32 +1,55 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { ButtonIcon } from "@/components/design-system";
+import { Button, ButtonIcon, Modal } from "@/components/design-system";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
-import type { EditorStore, PaletteColor } from "@/lib/editor-v2/editor/store";
+import type {
+  CustomPalette,
+  EditorStore,
+  PaletteColor,
+} from "@/lib/editor-v2/editor/store";
 import {
+  createAddColorToCustomPaletteCommand,
+  createCustomPaletteCommand,
+  createDeleteCustomPaletteCommand,
+  createRemoveColorFromCustomPaletteCommand,
+  createRenameCustomPaletteCommand,
   createSetActiveColorCommand,
   createDeleteUsedColorsCommand,
   createMergeUsedColorsCommand,
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
+import { EditableDesignTitle } from "../EditableDesignTitle";
 import { UsedColorsSummary } from "../UsedColorsSummary";
 import styles from "../EditorV2Shell.module.css";
 
-export type ColorPanelView = "overview" | "design-colors";
+export type ColorPanelView =
+  | "overview"
+  | "design-colors"
+  | "custom-palettes"
+  | "custom-palette-create";
 
 const SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES = 14;
 const BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES = 16;
-
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
   colorsById: Record<string, PaletteColor>;
+  customPalettesById: Record<string, CustomPalette>;
+  customPaletteDraftColorIds: string[];
+  customPaletteDraftId: string | null;
+  customPaletteDraftName: string;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
   isBottomPanelCanvasFocusActive: boolean;
   isBottomPanelLayout: boolean;
+  onCustomPaletteCreateOpen: () => void;
+  onCustomPaletteEditOpen: (paletteId: string) => void;
+  onCustomPaletteDraftNameChange: (nextName: string) => void;
+  onCustomPaletteDraftColorToggle: (colorId: string) => void;
+  onCustomPaletteDraftReset: () => void;
+  onCustomPaletteDraftSelectAll: (colorIds: string[]) => void;
   onExitBottomPanelCanvasFocus: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
@@ -46,10 +69,20 @@ export function ColorPanelPage({
   activeColor,
   activeColorId,
   colorsById,
+  customPalettesById,
+  customPaletteDraftColorIds,
+  customPaletteDraftId,
+  customPaletteDraftName,
   dispatch,
   highlightedColorId,
   isBottomPanelCanvasFocusActive,
   isBottomPanelLayout,
+  onCustomPaletteCreateOpen,
+  onCustomPaletteEditOpen,
+  onCustomPaletteDraftNameChange,
+  onCustomPaletteDraftColorToggle,
+  onCustomPaletteDraftReset,
+  onCustomPaletteDraftSelectAll,
   onExitBottomPanelCanvasFocus,
   onEnterBottomPanelCanvasFocus,
   onViewChange,
@@ -65,6 +98,7 @@ export function ColorPanelPage({
   view,
 }: ColorPanelPageProps) {
   const pageRef = useRef<HTMLElement | null>(null);
+  const [paletteDeleteTarget, setPaletteDeleteTarget] = useState<CustomPalette | null>(null);
   const colorPreviewMaxSwatches = isBottomPanelLayout
     ? BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES
     : SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES;
@@ -109,9 +143,73 @@ export function ColorPanelPage({
   const hiddenCount = Math.max(usedColors.length - visiblePreviewCount, 0);
   const showMoreButton = hiddenCount > 0;
   const openDesignColorsView = () => onViewChange("design-colors");
+  const openCustomPalettesView = () => onViewChange("custom-palettes");
+  const openCustomPaletteCreateView = () => onCustomPaletteCreateOpen();
+  const activeColorCodeLabel = activeColor
+    ? activeColor.brand === "dmc"
+      ? `DMC ${activeColor.code}`
+      : activeColor.code
+    : null;
+  const customPalettes = Object.values(customPalettesById);
+  const customPaletteDraftColors = customPaletteDraftColorIds
+    .map((colorId) => colorsById[colorId])
+    .filter((color): color is PaletteColor => Boolean(color));
+  const canSaveCustomPalette = customPaletteDraftColorIds.length > 0;
+  const saveCustomPalette = () => {
+    if (!canSaveCustomPalette) {
+      return;
+    }
+
+    if (customPaletteDraftId) {
+      const existingPalette = customPalettesById[customPaletteDraftId];
+
+      if (existingPalette) {
+        if (existingPalette.name !== customPaletteDraftName.trim()) {
+          dispatch(
+            createRenameCustomPaletteCommand(customPaletteDraftId, customPaletteDraftName),
+          );
+        }
+
+        const existingColorIdSet = new Set(existingPalette.colorIds);
+        const nextColorIdSet = new Set(customPaletteDraftColorIds);
+
+        for (const colorId of existingPalette.colorIds) {
+          if (!nextColorIdSet.has(colorId)) {
+            dispatch(createRemoveColorFromCustomPaletteCommand(customPaletteDraftId, colorId));
+          }
+        }
+
+        for (const colorId of customPaletteDraftColorIds) {
+          if (!existingColorIdSet.has(colorId)) {
+            dispatch(createAddColorToCustomPaletteCommand(customPaletteDraftId, colorId));
+          }
+        }
+      }
+    } else {
+      dispatch(
+        createCustomPaletteCommand(
+          createCustomPaletteId(),
+          customPaletteDraftName,
+          customPaletteDraftColorIds,
+        ),
+      );
+    }
+
+    onCustomPaletteDraftReset();
+    onViewChange("custom-palettes");
+  };
 
   return (
-    <section ref={pageRef} className={styles.sidebarSection}>
+    <section
+      ref={pageRef}
+      className={[
+        styles.sidebarSection,
+        styles.colorPanelPageSection,
+        view === "custom-palette-create" ? styles.customPaletteCreateSection : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
@@ -124,9 +222,18 @@ export function ColorPanelPage({
                   className={[styles.swatch, styles.activeColorSwatch].join(" ")}
                   style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
                 />
-                <strong className={styles.activeColorValue}>
-                  {activeColor ? `${activeColor.name} (${activeColor.code})` : "None selected"}
-                </strong>
+                {activeColor ? (
+                  <>
+                    <strong className={styles.activeColorName}>{activeColor.name}</strong>
+                    <span
+                      aria-hidden="true"
+                      className={styles.activeColorDivider}
+                    />
+                    <span className={styles.activeColorCode}>{activeColorCodeLabel}</span>
+                  </>
+                ) : (
+                  <strong className={styles.activeColorValue}>None selected</strong>
+                )}
               </div>
 
 
@@ -151,24 +258,18 @@ export function ColorPanelPage({
               <div className={styles.sidebarSubsectionHeaderRow}>
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
-                    <h3 style={typographyStyles.h5}>Design colors</h3>
-                  </div>
-                  <div className={styles.sidebarColorPreviewMetaRow}>
-                    <p className={styles.sidebarColorPreviewScopeLabel} style={typographyStyles.p2}>
-                      {selectionScopeActive ? "Selection" : "Full canvas"}
-                    </p>
-                    {usedColors.length > 0 ? (
-                      <span
+                    <h3 style={typographyStyles.h5}>
+                      {/* Design colors */}
+                      {selectionScopeActive ? "Selection colors" : "Design colors"}
+                      </h3>
+                       <span
                         className={styles.sidebarColorPreviewCountBadge}
                         style={typographyStyles.p2}
                       >
                         {usedColors.length}
                       </span>
-                    ) : null}
                   </div>
-                  {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                    Review, replace, merge, or delete the colors used in this design.
-                  </p> */}
+
                 </div>
                 <span className={styles.sidebarHeaderAction} aria-hidden="true">
                   <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
@@ -197,7 +298,7 @@ export function ColorPanelPage({
                       className={styles.sidebarColorPreviewMoreBadge}
                       style={{ gridColumn: `span ${hiddenBadgeSpan}` }}
                     >
-                      + {hiddenCount} more
+                      + {hiddenCount}
                     </span>
                   ) : null}
                   </span>
@@ -207,10 +308,77 @@ export function ColorPanelPage({
 
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
+            <div
+              className={[styles.sidebarSubsection, styles.sidebarColorPreviewSection].join(" ")}
+              role="button"
+              tabIndex={0}
+              aria-label="View custom palettes"
+              onClick={openCustomPalettesView}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                  return;
+                }
 
-            <div className={styles.sidebarSubsection}>
+                event.preventDefault();
+                openCustomPalettesView();
+              }}
+            >
+              <div className={styles.sidebarSubsectionHeaderRow}>
+                <div className={styles.sidebarSubsectionHeader}>
+                  <div className={styles.sidebarColorPreviewTitleRow}>
+                    <h3 style={typographyStyles.h5}>Custom palettes</h3>
+                  </div>
+                </div>
+                <span className={styles.sidebarHeaderAction} aria-hidden="true">
+                  <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                </span>
+              </div>
+
+              {customPalettes.length > 0 ? (
+                <div className={styles.customPaletteList}>
+                  {customPalettes.map((customPalette) => (
+                    <div key={customPalette.id} className={styles.customPaletteRow}>
+                      <div className={styles.customPaletteRowText}>
+                        <span className={styles.customPaletteRowName}>
+                          {customPalette.name}
+                        </span>
+                        <span className={styles.customPaletteRowCount}>
+                          ({customPalette.colorIds.length})
+                        </span>
+                      </div>
+                      <div className={styles.customPalettePreview}>
+                        {customPalette.colorIds.slice(0, 4).map((colorId) => {
+                          const color = colorsById[colorId];
+
+                          return (
+                            <span
+                              key={`${customPalette.id}-${colorId}`}
+                              className={styles.customPalettePreviewSwatch}
+                              aria-label={
+                                color ? `${color.name} (${color.code})` : "Palette color"
+                              }
+                              title={color ? `${color.name} (${color.code})` : "Palette color"}
+                              role="img"
+                              style={{ backgroundColor: color?.hex ?? "#ffffff" }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  No palettes in this design.
+                </p>
+              )}
+            </div>
+
+          <div className={styles.traceSectionDivider} aria-hidden="true" />
+
+            <div className={[styles.sidebarSubsection, styles.sidebarColorLibrarySection].join(" ")}>
               
-              <h3 style={typographyStyles.h5}>All colors</h3>
+              <h3 style={typographyStyles.h5}>Library</h3>
 
               <div className={styles.sidebarColorLibraryCard}>
                 <ColorLibrary
@@ -219,6 +387,8 @@ export function ColorPanelPage({
                   colors={palette}
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
+                  persistScrollPosition
+                  persistenceKey="sidebar-color-panel-library"
                   showAllSectionHeader={false}
                   showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
@@ -228,12 +398,13 @@ export function ColorPanelPage({
             </div>
 
           </>
-        ) : (
+        ) : view === "design-colors" ? (
           <div className={styles.sidebarSubsection}>
             <UsedColorsSummary
               activeColorId={activeColorId}
               usedColors={usedColors}
               colorsById={colorsById}
+              customPalettesById={customPalettesById}
               highlightedColorId={highlightedColorId}
               isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
@@ -259,8 +430,276 @@ export function ColorPanelPage({
               }
             />
           </div>
+        ) : view === "custom-palettes" ? (
+          <div className={styles.sidebarPageBody}>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className={styles.customPaletteCreateButton}
+              onClick={openCustomPaletteCreateView}
+            >
+              <ButtonIcon icon="/icons/lucide/plus.svg" />
+              <span>New Palette</span>
+            </Button>
+
+            {customPalettes.length === 0 ? (
+              <div className={styles.customPaletteEmptyState}>
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  No palettes created for this design yet.
+                </p>
+                {/* <button
+                  type="button"
+                  className={styles.customPaletteEmptyAction}
+                  onClick={openCustomPaletteCreateView}
+                >
+                  Create your first palette
+                </button> */}
+              </div>
+            ) : (
+                <div className={styles.customPaletteCardList}>
+                  {customPalettes.map((customPalette) => (
+                    <div
+                      key={customPalette.id}
+                      className={styles.customPaletteCard}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Edit ${customPalette.name}`}
+                      onClick={() => onCustomPaletteEditOpen(customPalette.id)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter" && event.key !== " ") {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        onCustomPaletteEditOpen(customPalette.id);
+                      }}
+                    >
+                      <h3 className={styles.customPaletteCardTitle} style={typographyStyles.h5}>
+                        <span>{customPalette.name}</span>
+                        <button
+                          type="button"
+                          className={styles.customPaletteCardDeleteButton}
+                          aria-label={`Delete ${customPalette.name}`}
+                          title={`Delete ${customPalette.name}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setPaletteDeleteTarget(customPalette);
+                          }}
+                        >
+                          <ButtonIcon
+                            icon="/icons/lucide/trash.svg"
+                            className={styles.customPaletteCardDeleteIcon}
+                          />
+                        </button>
+                      </h3>
+                      <div className={styles.customPaletteCardSwatches}>
+                        {customPalette.colorIds.map((colorId) => {
+                          const color = colorsById[colorId];
+
+                          return (
+                            <span
+                              key={`${customPalette.id}-${colorId}`}
+                              className={styles.customPaletteCardSwatch}
+                              aria-label={
+                                color ? `${color.name} (${color.code})` : "Palette color"
+                              }
+                              title={color ? `${color.name} (${color.code})` : "Palette color"}
+                              role="img"
+                              style={{ backgroundColor: color?.hex ?? "#ffffff" }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className={styles.customPaletteCardMeta}>
+                        {customPalette.colorIds.length}{" "}
+                        {customPalette.colorIds.length === 1 ? "color" : "colors"}
+                      </span>
+                    </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className={[styles.sidebarPageBody, styles.customPaletteCreatePage].join(" ")}>
+            {/* <div className={styles.customPaletteCreateHeaderRow}>
+              <button
+                type="button"
+                className={styles.customPaletteBackLink}
+                onClick={() => onViewChange("custom-palettes")}
+              >
+                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+                <span>Back to Palettes</span>
+              </button>
+            </div> */}
+
+            <div
+              className={[styles.sidebarSubsection, styles.sidebarColorLibrarySection].join(" ")}
+            >
+              <div className={styles.sidebarColorLibraryCard}>
+                <ColorLibrary
+                  activeColorId={null}
+                  className={[styles.sidebarColorLibrary, styles.customPaletteCreateLibrary].join(" ")}
+                  colors={palette}
+                  featuredSectionDisplay="stacked"
+                  featuredColorIds={usedColors.map((entry) => entry.colorId)}
+                  onColorSelect={onCustomPaletteDraftColorToggle}
+                  onFeaturedSectionAction={() =>
+                    onCustomPaletteDraftSelectAll(usedColors.map((entry) => entry.colorId))
+                  }
+                  featuredSectionActionLabel="Select all"
+                  persistScrollPosition
+                  persistenceKey="sidebar-color-panel-custom-palette-create-library"
+                  selectedColorIds={customPaletteDraftColorIds}
+                  selectionMode="multiple"
+                  showAllSectionHeader
+                  showFeaturedSection
+                  showFeaturedSymbols={showSymbols}
+                  symbolAssignments={symbolAssignments}
+                />
+              </div>
+            </div>
+
+            <div
+              className={[
+                styles.customPaletteCreateFooterBar,
+                customPaletteDraftColors.length === 0 ? styles.customPaletteCreateFooterBarEmpty : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <div
+                className={[
+                  styles.customPaletteSelectionSummary,
+                  customPaletteDraftColors.length === 0
+                    ? styles.customPaletteSelectionSummaryEmpty
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <div className={styles.customPaletteSelectionSummaryTop}>
+                  <div className={styles.customPaletteSelectionSummaryText}>
+                    <EditableDesignTitle
+                      className={styles.customPaletteSelectionSummaryTitle}
+                      documentTitle={customPaletteDraftName}
+                      inputAriaLabel="Palette name"
+                      onCommitTitle={onCustomPaletteDraftNameChange}
+                      renameAriaLabel="Rename palette"
+                      renameRequestToken={0}
+                    />
+                  </div>
+
+                  {customPaletteDraftColors.length > 0 ? (
+                    <button
+                      type="button"
+                      className={styles.customPaletteSelectionSummaryAction}
+                      onClick={onCustomPaletteDraftReset}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+
+                {customPaletteDraftColors.length > 0 ? (
+                  <div className={styles.customPaletteSelectionMetaRow}>
+                    <span
+                      className={styles.customPaletteSelectionCount}
+                      style={typographyStyles.p2}
+                    >
+                      {customPaletteDraftColors.length}{" "}
+                      {customPaletteDraftColors.length === 1
+                        ? "color selected"
+                        : "colors selected"}
+                    </span>
+                  </div>
+                ) : null}
+
+                {customPaletteDraftColors.length > 0 ? (
+                  <div className={styles.customPaletteSelectionSwatches}>
+                    {customPaletteDraftColors.map((color) => (
+                      <span
+                        key={color.id}
+                        className={styles.customPaletteSelectionSwatchItem}
+                        aria-label={`${color.name} (${color.code})`}
+                        title={`${color.name} (${color.code})`}
+                        role="img"
+                      >
+                        <span
+                          className={styles.customPaletteSelectionSwatch}
+                          aria-hidden="true"
+                          style={{ backgroundColor: color.hex }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.customPaletteSelectionRemoveButton}
+                          aria-label={`Remove ${color.name} (${color.code}) from palette`}
+                          title={`Remove ${color.name} (${color.code})`}
+                          onClick={() => onCustomPaletteDraftColorToggle(color.id)}
+                        >
+                          <span
+                            className={styles.customPaletteSelectionRemoveGlyph}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p
+                    className={styles.customPaletteSelectionSummaryCaption}
+                    style={typographyStyles.p2}
+                  >
+                  Select colors in the library to add them to your palette.
+                  </p>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className={styles.customPaletteCreateFooterButton}
+                disabled={!canSaveCustomPalette}
+                onClick={saveCustomPalette}
+              >
+                <span>Save palette</span>
+              </Button>
+            </div>
+          </div>
         )}
       </div>
+      <Modal
+        isOpen={paletteDeleteTarget !== null}
+        title="Delete this palette?"
+        description={
+          paletteDeleteTarget
+            ? `Delete "${paletteDeleteTarget.name}" from this design? This will not remove any colors from the design itself.`
+            : ""
+        }
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel="Delete palette"
+        confirmVariant="destructive"
+        onDismiss={() => setPaletteDeleteTarget(null)}
+        onConfirm={() => {
+          if (!paletteDeleteTarget) {
+            return;
+          }
+
+          dispatch(createDeleteCustomPaletteCommand(paletteDeleteTarget.id));
+          setPaletteDeleteTarget(null);
+        }}
+      />
     </section>
   );
+}
+
+function createCustomPaletteId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `custom-palette_${crypto.randomUUID()}`;
+  }
+
+  return `custom-palette_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }

@@ -8,9 +8,15 @@ import type {
 } from "@/lib/editor-v2/editor/store";
 import { getContainedRect, getPositionedBounds } from "@/lib/editor-v2/editor/positioning";
 import type { GridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
+import {
+  getTraceAssetCropRect,
+  getTraceDisplaySize,
+} from "@/lib/editor-v2/editor/trace/crop";
+import { drawMaskedTraceSourceToCanvas } from "@/lib/editor-v2/editor/trace/mask";
 import type {
   CanvasSizing,
   LoadedTraceAsset,
+  TraceDisplayOverride,
 } from "./GridCanvasStage.shared";
 import {
   drawGridOverlay,
@@ -59,6 +65,7 @@ export function renderDisplayCanvas(options: {
   deferPaintUntilTraceReady?: boolean;
   displayTrace?: TraceDocument | null;
   displayTraceAsset: LoadedTraceAsset | null;
+  displayTraceOverride?: TraceDisplayOverride;
   frameOrigin: { x: number; y: number };
   gridOverlayStep: number;
   gridWidth: number;
@@ -83,6 +90,7 @@ export function renderDisplayCanvas(options: {
     deferPaintUntilTraceReady = false,
     displayTrace = null,
     displayTraceAsset,
+    displayTraceOverride = null,
     frameOrigin,
     gridOverlayStep,
     gridWidth,
@@ -135,17 +143,28 @@ export function renderDisplayCanvas(options: {
     displayTraceAsset.width > 0 &&
     displayTraceAsset.height > 0
   ) {
-    const baseRect = getContainedRect(
+    const renderTrace = displayTraceOverride
+      ? {
+          ...displayTrace,
+          ...displayTraceOverride,
+        }
+      : displayTrace;
+    const displaySize = getTraceDisplaySize(
+      renderTrace,
       displayTraceAsset.width,
       displayTraceAsset.height,
+    );
+    const baseRect = getContainedRect(
+      displaySize.width,
+      displaySize.height,
       metrics.surfaceWidth,
       metrics.surfaceHeight,
     );
     const bounds = getPositionedBounds(baseRect, {
-      offsetX: displayTrace.offsetX,
-      offsetY: displayTrace.offsetY,
-      scale: displayTrace.scale,
-      rotation: displayTrace.rotation,
+      offsetX: renderTrace.offsetX,
+      offsetY: renderTrace.offsetY,
+      scale: renderTrace.scale,
+      rotation: renderTrace.rotation,
     });
     const traceRect = snapRectToDevicePixels(
       {
@@ -158,11 +177,22 @@ export function renderDisplayCanvas(options: {
     );
 
     context.save();
-    context.globalAlpha = Math.min(Math.max(displayTrace.opacity, 0), 1);
+    context.globalAlpha = Math.min(Math.max(renderTrace.opacity, 0), 1);
     context.translate(traceRect.x + traceRect.width / 2, traceRect.y + traceRect.height / 2);
-    context.rotate((displayTrace.rotation * Math.PI) / 180);
+    context.rotate((renderTrace.rotation * Math.PI) / 180);
+    const maskedTraceCanvas = document.createElement("canvas");
+    drawMaskedTraceSourceToCanvas(maskedTraceCanvas, displayTraceAsset.image, {
+      trace: renderTrace,
+      width: displayTraceAsset.width,
+      height: displayTraceAsset.height,
+      mask: displayTraceAsset.mask,
+    });
     context.drawImage(
-      displayTraceAsset.image,
+      maskedTraceCanvas,
+      0,
+      0,
+      maskedTraceCanvas.width,
+      maskedTraceCanvas.height,
       -traceRect.width / 2,
       -traceRect.height / 2,
       traceRect.width,

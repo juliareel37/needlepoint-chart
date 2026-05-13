@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dmc:generate": "node scripts/generate-dmc-colors.mjs",
+    "dev": "node scripts/dev-with-dmc-watch.mjs",
+    "next-dev-raw": "next dev",
     "build": "prisma generate && next build",
+    "prebuild": "npm run dmc:generate",
     "auth:audit-app-users": "node scripts/audit-app-user-migration.mjs",
     "auth:link-neon-rehearsal": "node scripts/link-neon-auth-rehearsal.mjs",
     "auth:migrate-clerk-users": "node scripts/migrate-clerk-users-to-neon.mjs",
@@ -13,7 +16,9 @@
     "db:migrate:status": "prisma migrate status",
     "postinstall": "prisma generate",
     "start": "next start",
+    "pretypecheck": "npm run dmc:generate",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run dmc:generate",
     "lint": "eslint",
     "test": "vitest run"
   },

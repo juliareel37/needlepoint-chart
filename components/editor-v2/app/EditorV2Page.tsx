@@ -4,11 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRouter } from "next/navigation";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { useAuthStatus } from "@/lib/auth/client";
+import { DEFAULT_DMC_COLOR_ID } from "@/lib/editor-v2/editor/color-library";
 import { createEditorStateFromDocument } from "@/lib/editor-v2/editor/store/createEditorStateFromDocument";
 import { createNewDesignState } from "@/lib/editor-v2/editor/store/createNewDesignState";
 import type { EditorDocumentState } from "@/lib/editor-v2/editor/store";
 import { EDITOR_V2_SAVE_MODE } from "@/lib/editor-v2/config";
+import { buildLibraryStitchSnapshot } from "@/lib/library/stitchSnapshot";
 import { EditorV2Providers } from "./EditorV2Providers";
+import { readStickyCanvasPreferences } from "./stickyCanvasPreferences";
 import {
   EditorV2SetupModal,
   type EditorV2DesignConfig,
@@ -20,6 +23,7 @@ import {
 } from "./EditorV2Workspace";
 import {
   deleteSavedEditorV2Document,
+  EditorV2PersistenceError,
   listEditorV2DesignVersions,
   listSavedEditorV2Documents,
   loadEditorV2DesignVersion,
@@ -32,10 +36,15 @@ import {
   type SavedEditorV2DocumentRecord,
 } from "./editorV2ServerPersistence";
 import {
+  createAutosaveSnapshotRecord,
+  deleteGuestLocalSnapshots,
   deleteLocalSnapshot,
+  readGuestLocalDraftIds,
+  readMostRecentGuestLocalSnapshot,
   readLocalSnapshot,
   shouldRecoverLocalSnapshot,
   type EditorV2LocalSnapshotRecord,
+  writeLocalSnapshot,
 } from "./editorV2AutosavePersistence";
 import {
   consumeEditorV2AuthHandoffFromUrl,
@@ -60,6 +69,46 @@ const SAVED_DOCUMENTS_PAGE_SIZE = 6;
 const AUTH_HANDOFF_LOCAL_RESTORE_DELAY_MS = 1500;
 const pendingSavedRouteHandoffCache = new Map<string, PendingSavedRouteHandoff>();
 
+function createSavedDocumentRecord(
+  document: EditorDocumentState,
+  savedRecord: Pick<
+    SaveEditorV2DocumentResult,
+    "storageId" | "title" | "gridWidth" | "gridHeight" | "updatedAt"
+  >,
+): SavedEditorV2DocumentRecord {
+  return {
+    storageId: savedRecord.storageId,
+    title: savedRecord.title,
+    folderId: null,
+    folderName: null,
+    gridWidth: savedRecord.gridWidth,
+    gridHeight: savedRecord.gridHeight,
+    updatedAt: savedRecord.updatedAt,
+    previewUrl: document.trace?.previewUrl ?? null,
+    thumbnailUrl: document.trace?.thumbnailUrl ?? null,
+    tracePlacement: document.trace
+      ? {
+          imageWidth: document.trace.imageWidth,
+          imageHeight: document.trace.imageHeight,
+          cropX: document.trace.cropX,
+          cropY: document.trace.cropY,
+          cropWidth: document.trace.cropWidth,
+          cropHeight: document.trace.cropHeight,
+          offsetX: document.trace.offsetX,
+          offsetY: document.trace.offsetY,
+          scale: document.trace.scale,
+          rotation: document.trace.rotation,
+        }
+      : null,
+    stitchSnapshot: buildLibraryStitchSnapshot({
+      gridWidth: document.grid.width,
+      gridHeight: document.grid.height,
+      cells: document.grid.cells,
+      colorsById: document.palette.colorsById,
+    }),
+  };
+}
+
 interface VersionPreviewSession {
   liveDocument: EditorDocumentState;
   liveStorageId: string;
@@ -80,13 +129,13 @@ export function EditorV2Page({
   const router = useRouter();
   const openSignIn = useOpenSignIn();
   const [mounted, setMounted] = useState(false);
-  const [draftWidth, setDraftWidth] = useState("120");
-  const [draftHeight, setDraftHeight] = useState("120");
+  const [draftWidth, setDraftWidth] = useState("");
+  const [draftHeight, setDraftHeight] = useState("");
   const [draftSizingMode, setDraftSizingMode] = useState<"stitches" | "inches">(
     "inches",
   );
-  const [draftWidthInches, setDraftWidthInches] = useState("8");
-  const [draftHeightInches, setDraftHeightInches] = useState("8");
+  const [draftWidthInches, setDraftWidthInches] = useState("");
+  const [draftHeightInches, setDraftHeightInches] = useState("");
   const [draftMeshCount, setDraftMeshCount] = useState("10");
   const [savedDocuments, setSavedDocuments] = useState<SavedEditorV2DocumentRecord[]>([]);
   const [savedDocumentsLoading, setSavedDocumentsLoading] = useState(false);
@@ -118,6 +167,7 @@ export function EditorV2Page({
     { mode: "entry" | "saved"; storageId: string | null } | undefined
   >(undefined);
   const pendingEntryRouteModeRef = useRef<"full" | "new-only" | null>(null);
+  const attemptedGuestDraftResumeRef = useRef(false);
   const hasLoadedSavedDocumentsRef = useRef(false);
   const nextSavedDocumentsOffsetRef = useRef(0);
   const pendingAuthHandoffDocumentRef = useRef<EditorDocumentState | null>(null);
@@ -131,7 +181,9 @@ export function EditorV2Page({
     designConfig.kind === "new"
       ? designConfig.draftId
       : designConfig.document.project.id;
-  const hasSavedDesignAccess = mounted && isLoaded && isSignedIn;
+  const authResolved = mounted && isLoaded;
+  const hasSavedDesignAccess = authResolved && isSignedIn;
+  const stickyCanvasPreferences = isSignedIn ? readStickyCanvasPreferences() : null;
 
   useEffect(() => {
     setMounted(true);
@@ -184,6 +236,7 @@ export function EditorV2Page({
       const result = await listSavedEditorV2Documents({
         limit: SAVED_DOCUMENTS_PAGE_SIZE,
         offset: 0,
+        view: "active",
       });
       hasLoadedSavedDocumentsRef.current = true;
       nextSavedDocumentsOffsetRef.current =
@@ -221,6 +274,7 @@ export function EditorV2Page({
       const result = await listSavedEditorV2Documents({
         limit: SAVED_DOCUMENTS_PAGE_SIZE,
         offset: nextSavedDocumentsOffsetRef.current,
+        view: "active",
       });
       nextSavedDocumentsOffsetRef.current =
         result.nextOffset ?? nextSavedDocumentsOffsetRef.current + result.documents.length;
@@ -264,6 +318,25 @@ export function EditorV2Page({
     [resetCurrentDesignState],
   );
 
+  const clearLocalBrowserData = useCallback(async () => {
+    const guestDraftIds = await readGuestLocalDraftIds();
+
+    await Promise.all(
+      guestDraftIds.map((draftId) => deleteGuestTraceAssetsForDraft(draftId)),
+    );
+    await deleteGuestLocalSnapshots();
+
+    if (typeof window !== "undefined") {
+      clearEditorV2BrowserStorage(window);
+    }
+
+    pendingAuthHandoffDocumentRef.current = null;
+    attemptedGuestDraftResumeRef.current = true;
+    resetCurrentDesignState();
+    openEntryRoute("full");
+    router.replace("/editor");
+  }, [openEntryRoute, resetCurrentDesignState, router]);
+
   const applySavedRouteState = useCallback(
     (
       document: EditorDocumentState,
@@ -279,13 +352,7 @@ export function EditorV2Page({
         document: loadedDocument,
       });
       setSavedDocuments((existing) => {
-        const nextRecord: SavedEditorV2DocumentRecord = {
-          storageId: savedRecord.storageId,
-          title: savedRecord.title,
-          gridWidth: savedRecord.gridWidth,
-          gridHeight: savedRecord.gridHeight,
-          updatedAt: savedRecord.updatedAt,
-        };
+        const nextRecord = createSavedDocumentRecord(loadedDocument, savedRecord);
 
         return [
           nextRecord,
@@ -317,6 +384,7 @@ export function EditorV2Page({
   const openLoadedDesignState = useCallback(
     ({
       document,
+      activeColorId = null,
       storageId,
       versionToken,
       instanceKey,
@@ -325,6 +393,7 @@ export function EditorV2Page({
       localSnapshot = null,
     }: {
       document: EditorDocumentState;
+      activeColorId?: string | null;
       storageId: string;
       versionToken: string | null;
       instanceKey: string;
@@ -342,6 +411,7 @@ export function EditorV2Page({
       setDesignConfig({
         kind: "loaded",
         document,
+        activeColorId,
         storageId,
         instanceKey,
       });
@@ -449,6 +519,12 @@ export function EditorV2Page({
     }
   }, [isLoaded, isSignedIn, resetCurrentDesignState]);
 
+  useEffect(() => {
+    if (isSignedIn || routeMode === "saved" || routeStorageId !== null) {
+      attemptedGuestDraftResumeRef.current = false;
+    }
+  }, [isSignedIn, routeMode, routeStorageId]);
+
   useLayoutEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -507,6 +583,33 @@ export function EditorV2Page({
     setCanvasLoadingKey("auth_handoff_restore");
     setSetupModalOpen(false);
   }, [resetCurrentDesignState]);
+
+  useEffect(() => {
+    if (
+      !mounted ||
+      !isLoaded ||
+      isSignedIn ||
+      routeMode !== "entry" ||
+      routeStorageId !== null ||
+      pendingAuthHandoffDocumentRef.current ||
+      attemptedGuestDraftResumeRef.current
+    ) {
+      return;
+    }
+
+    attemptedGuestDraftResumeRef.current = true;
+
+    void readMostRecentGuestLocalSnapshot()
+      .then((snapshot) => {
+        if (!snapshot) {
+          return;
+        }
+
+        setSetupModalOpen(false);
+        router.replace(`/editor/designs/${snapshot.key}`);
+      })
+      .catch(() => {});
+  }, [isLoaded, isSignedIn, mounted, routeMode, routeStorageId, router]);
 
   useEffect(() => {
     const handedOffDocument = pendingAuthHandoffDocumentRef.current;
@@ -583,17 +686,20 @@ export function EditorV2Page({
 
   const initialState = useMemo(() => {
     if (designConfig.kind === "loaded") {
-      return createEditorStateFromDocument(designConfig.document);
+      return createEditorStateFromDocument(designConfig.document, {
+        activeColorId: designConfig.activeColorId,
+      });
     }
 
     return createNewDesignState(designConfig.width, designConfig.height, {
+      canvasPreferences: stickyCanvasPreferences,
       projectId: designConfig.draftId,
       sizingMode: designConfig.sizingMode,
       meshCount: designConfig.meshCount,
       widthInches: designConfig.widthInches,
       heightInches: designConfig.heightInches,
     });
-  }, [designConfig]);
+  }, [designConfig, stickyCanvasPreferences]);
 
   const loadDesignIntoWorkspace = useCallback(async (storageId: string) => {
     const instanceKey = `loaded_${storageId}_${Date.now()}`;
@@ -612,6 +718,7 @@ export function EditorV2Page({
         : loaded.document;
       openLoadedDesignState({
         document,
+        activeColorId: shouldRecover ? (localSnapshot?.activeColorId ?? null) : null,
         storageId,
         versionToken: loaded.versionToken,
         instanceKey,
@@ -653,6 +760,7 @@ export function EditorV2Page({
             setDesignConfig({
               kind: "loaded",
               document: localSnapshot.document,
+              activeColorId: localSnapshot.activeColorId,
               storageId: "",
               instanceKey: `draft_${routeStorageId}_${Date.now()}`,
             });
@@ -679,6 +787,7 @@ export function EditorV2Page({
         setDesignConfig({
           kind: "loaded",
           document: pendingSavedRouteHandoff.document,
+          activeColorId: null,
           storageId: routeStorageId,
           instanceKey,
         });
@@ -699,6 +808,11 @@ export function EditorV2Page({
       }
 
       void loadDesignIntoWorkspace(routeStorageId).catch((error) => {
+        if (error instanceof EditorV2PersistenceError && error.status === 410) {
+          router.replace("/library?view=deleted&notice=deleted-design");
+          return;
+        }
+
         const message = getErrorMessage(error, "Try again in a moment.");
         navigateToEntryRoute("full");
         setSetupErrorMessage(message);
@@ -743,6 +857,7 @@ export function EditorV2Page({
     >
       <EditorV2Workspace
         canvasLoading={canvasLoadingKey !== null}
+        authResolved={authResolved}
         hasSavedDesignAccess={hasSavedDesignAccess}
         onCanvasReady={() => {
           setCanvasLoadingKey((currentKey) =>
@@ -766,6 +881,13 @@ export function EditorV2Page({
             : null
         }
         saveMode={EDITOR_V2_SAVE_MODE}
+        onLocalDraftPersisted={(draftId) => {
+          if (isSignedIn || routeStorageId === draftId) {
+            return;
+          }
+
+          router.replace(`/editor/designs/${draftId}`);
+        }}
         savedDocuments={savedDocuments}
         savedDocumentsLoading={savedDocumentsLoading}
         savedDocumentsHasMore={savedDocumentsHasMore}
@@ -808,13 +930,7 @@ export function EditorV2Page({
           setInitialLocalSnapshot(null);
           setSetupErrorMessage(null);
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: savedRecord.storageId,
-              title: savedRecord.title,
-              gridWidth: savedRecord.gridWidth,
-              gridHeight: savedRecord.gridHeight,
-              updatedAt: savedRecord.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(document, savedRecord);
 
             return [
               nextRecord,
@@ -851,13 +967,7 @@ export function EditorV2Page({
         onRestoreVersion={async (storageId, versionId) => {
           const restored = await restoreEditorV2DesignVersion(storageId, versionId);
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: restored.storageId,
-              title: restored.title,
-              gridWidth: restored.gridWidth,
-              gridHeight: restored.gridHeight,
-              updatedAt: restored.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(restored.document, restored);
 
             return [
               nextRecord,
@@ -888,13 +998,7 @@ export function EditorV2Page({
             mode: "copy",
           });
           setSavedDocuments((existing) => {
-            const nextRecord: SavedEditorV2DocumentRecord = {
-              storageId: restored.storageId,
-              title: restored.title,
-              gridWidth: restored.gridWidth,
-              gridHeight: restored.gridHeight,
-              updatedAt: restored.updatedAt,
-            };
+            const nextRecord = createSavedDocumentRecord(restored.document, restored);
 
             return [
               nextRecord,
@@ -922,14 +1026,21 @@ export function EditorV2Page({
             setSavedDocuments((existing) =>
               existing.filter((record) => record.storageId !== currentStorageId),
             );
+            setRestoreSuccessNotification({
+              title: "Moved to Trash",
+            });
           }
 
           if (localSnapshotKey) {
+            if (!currentStorageId && isLocalDesignId(localSnapshotKey)) {
+              await deleteGuestTraceAssetsForDraft(localSnapshotKey);
+            }
             await deleteLocalSnapshot(localSnapshotKey);
           }
 
           navigateToEntryRoute("full");
         }}
+        onClearLocalBrowserData={clearLocalBrowserData}
         onStartOver={() => {
           setSetupErrorMessage(null);
           setSetupModalMode("new-only");
@@ -977,6 +1088,7 @@ export function EditorV2Page({
                 ),
               });
             }}
+            onClearLocalBrowserData={clearLocalBrowserData}
             onClose={() => setSetupModalOpen(false)}
             onCreateDesign={async (config) => {
               if (isLoaded && isSignedIn) {
@@ -984,7 +1096,10 @@ export function EditorV2Page({
                 setSetupErrorMessage(null);
 
                 try {
-                  const persistedDraft = createPersistedDraftDocument(config);
+                  const persistedDraft = createPersistedDraftDocument(
+                    config,
+                    stickyCanvasPreferences,
+                  );
                   const savedRecord = await saveEditorV2Document(
                     persistedDraft,
                     undefined,
@@ -1002,10 +1117,36 @@ export function EditorV2Page({
                 return;
               }
 
+              const initialDraftState = createInitialDraftState(
+                config,
+                stickyCanvasPreferences,
+              );
+
+              await writeLocalSnapshot(
+                createAutosaveSnapshotRecord({
+                  key: config.draftId,
+                  storageId: null,
+                  persistenceScope: "guest-draft",
+                  document: initialDraftState.document,
+                  activeColorId:
+                    initialDraftState.session.activeTool.colorId ?? DEFAULT_DMC_COLOR_ID,
+                  serializedHash: null,
+                  latestLocalSequenceId: 0,
+                  latestSyncRequestedSequenceId: 0,
+                  latestSyncAppliedSequenceId: 0,
+                  baseServerVersion: null,
+                  lastKnownServerVersion: null,
+                  lastSuccessfulSyncAt: null,
+                  recoveredLocalChanges: false,
+                  degradedLocalRecovery: false,
+                }),
+              );
+
               resetCurrentDesignState();
               setSetupModalMode("full");
               setDesignConfig(config);
               setSetupModalOpen(false);
+              router.push(`/editor/designs/${config.draftId}`);
             }}
             onDraftHeightChange={setDraftHeight}
             onDraftHeightInchesChange={setDraftHeightInches}
@@ -1069,14 +1210,23 @@ function parseDuplicatedDocument(rawPayload: string): EditorDocumentState | null
 
 function createPersistedDraftDocument(
   config: EditorV2DesignConfigNew,
+  canvasPreferences: EditorDocumentState["canvasPreferences"] | null,
 ): EditorDocumentState {
+  return createInitialDraftState(config, canvasPreferences).document;
+}
+
+function createInitialDraftState(
+  config: EditorV2DesignConfigNew,
+  canvasPreferences: EditorDocumentState["canvasPreferences"] | null,
+) {
   return createNewDesignState(config.width, config.height, {
+    canvasPreferences,
     projectId: config.draftId,
     sizingMode: config.sizingMode,
     meshCount: config.meshCount,
     widthInches: config.widthInches,
     heightInches: config.heightInches,
-  }).document;
+  });
 }
 
 function applySavedRecordToDocument(
@@ -1097,6 +1247,38 @@ function applySavedRecordToDocument(
 
 function isLocalDesignId(designId: string): boolean {
   return designId.startsWith("local_");
+}
+
+async function deleteGuestTraceAssetsForDraft(draftId: string): Promise<void> {
+  if (!isLocalDesignId(draftId) || typeof window === "undefined") {
+    return;
+  }
+
+  await fetch(`/api/upload-trace/guest-drafts/${encodeURIComponent(draftId)}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  }).catch(() => {});
+}
+
+function clearEditorV2BrowserStorage(currentWindow: Window): void {
+  clearStorageEntries(currentWindow.localStorage);
+  clearStorageEntries(currentWindow.sessionStorage);
+}
+
+function clearStorageEntries(storage: Storage): void {
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+
+    if (key && key.startsWith("editor-v2-")) {
+      keysToRemove.push(key);
+    }
+  }
+
+  for (const key of keysToRemove) {
+    storage.removeItem(key);
+  }
 }
 
 interface PendingSavedRouteHandoff {

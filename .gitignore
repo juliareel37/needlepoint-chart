@@ -1,7 +1,11 @@
 node_modules/
 .next/
+.next-playwright-3101/
 .env.local
 .env
+test-results/
+playwright-report/
+blob-report/
 
 # clerk configuration (can include secrets)
 /.clerk/

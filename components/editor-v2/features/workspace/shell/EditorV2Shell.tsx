@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
@@ -19,14 +28,30 @@ import {
 import { createGridWorldMetrics } from "@/lib/editor-v2/editor/viewport";
 import {
   Button,
+  ButtonIcon,
+  MenuCaretIcon,
+  MenuDivider,
+  MenuItem,
+  MenuSurface,
+  MenuTrigger,
   SingleSelectDropdown,
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
 import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
 import type {
+  ActiveTool,
   EditorDocumentState,
 } from "@/lib/editor-v2/editor/store";
+import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
+import {
+  createFullTraceCrop,
+  getNormalizedTraceCrop,
+} from "@/lib/editor-v2/editor/trace/crop";
+import {
+  getContainedRect,
+  getPositionedBounds,
+} from "@/lib/editor-v2/editor/positioning";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
@@ -41,28 +66,49 @@ import type {
   SaveButtonState,
 } from "../../../app/EditorV2Workspace";
 import {
+  createCancelTraceConversionPreviewCommand,
+  createBeginTraceRepositionCommand,
+  createCancelTraceRepositionCommand,
+  createCommitTraceRepositionCommand,
   createCancelIconPlacementCommand,
+  createCancelTextPlacementCommand,
   createClearSelectionCommand,
   createRedoCommand,
   createSetActiveSidebarSectionCommand,
   createSetPreviewModeCommand,
+  createSetToolCommand,
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createUpdateIconPlacementCommand,
+  createUpdateTraceCommand,
   createUndoCommand,
 } from "../workspaceCommands";
 import { EditorRail } from "./EditorRail";
 import { EditorSidebar } from "./EditorSidebar";
-import { FloatingToolbar } from "./FloatingToolbar";
-import { ButtonIcon, Modal, Notification } from "@/components/design-system";
+import type { ColorPanelView } from "./panel-pages/ColorPanelPage";
+import {
+  FloatingToolbar,
+  type ColorLibraryDismissGesture,
+} from "./FloatingToolbar";
+import { Modal, Notification } from "@/components/design-system";
 import { TextPlacementToolbar } from "./TextPlacementToolbar";
 import { IconPlacementToolbar } from "./IconPlacementToolbar";
+import { TraceEraserToolbar } from "./TraceEraserToolbar";
 import { TraceRepositionToolbar } from "./TraceRepositionToolbar";
+import { ConversionPreviewToolbar } from "./ConversionPreviewToolbar";
+import {
+  type TraceCropAspectRatioId,
+} from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
+import { CanvasAidsFloatingToolbar } from "./CanvasAidsFloatingToolbar";
 import { ViewportToolbar } from "./ViewportToolbar";
 import { EditableDesignTitle } from "./EditableDesignTitle";
 import { createEditorV2AuthHandoffRedirectUrl } from "../../../app/editorV2AuthHandoff";
+import { getWorkspaceEscapeAction } from "./escapeKeyBehavior";
+import { composeMaskedImageDataUrl } from "@/lib/editor-v2/editor/imageMasking";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
 import styles from "./EditorV2Shell.module.css";
 
 const EXPANDED_SIDEBAR_WIDTH = 320;
@@ -76,7 +122,38 @@ const ERROR_NOTIFICATION_DURATION_MS = 8000;
 const ENABLE_MOBILE_SELECTION_DOCK = false;
 const DUPLICATE_QUERY_PARAM = "duplicate";
 const DUPLICATE_STORAGE_PREFIX = "editor-v2-duplicate:";
+const HEADER_FILE_RECENT_LIMIT = 5;
 const versionHistoryCache = new Map<string, EditorDesignVersionListItem[]>();
+
+interface TraceEraserHistoryEntry {
+  maskUrl: string | null;
+  isFullyVisible: boolean;
+}
+
+interface IconPlacementEraserInitialState extends TraceEraserHistoryEntry {
+  sourceSrc: string;
+}
+
+function traceEraserDebugEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const debugWindow = window as typeof window & { __TRACE_ERASER_DEBUG__?: boolean };
+  if (debugWindow.__TRACE_ERASER_DEBUG__) {
+    return true;
+  }
+
+  return new URLSearchParams(window.location.search).get("traceEraserDebug") === "1";
+}
+
+function traceEraserDebugLog(event: string, payload: Record<string, unknown>): void {
+  if (!traceEraserDebugEnabled()) {
+    return;
+  }
+
+  console.debug(`[trace-eraser:shell:${event}]`, payload);
+}
 const versionHistoryTimelineScrollCache = new Map<string, number>();
 type HeaderFileMenuItem = {
   id: string;
@@ -87,11 +164,11 @@ type HeaderFileMenuItem = {
 const HEADER_FILE_MENU_ITEMS = [
   { id: "new", label: "Create new", icon: "/icons/lucide/file-plus-corner.svg" },
   { id: "duplicate", label: "Duplicate", icon: "/icons/lucide/copy.svg" },
-  { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
+  // { id: "rename", label: "Rename", icon: "/icons/lucide/pencil.svg" },
   { id: "library", label: "My designs", icon: "/icons/lucide/list.svg" },
   { id: "divider-primary", label: "", kind: "divider" },
   { id: "version-history", label: "Version history", icon: "/icons/lucide/history.svg" },
-  { id: "save-version", label: "Save snapshot", icon: "/icons/lucide/save.svg" },
+  // { id: "save-version", label: "Take version snapshot", icon: "/icons/lucide/save.svg" },
   { id: "divider-secondary", label: "", kind: "divider" },
   { id: "download", label: "Download", icon: "/icons/lucide/download.svg" },
   { id: "delete", label: "Delete", icon: "/icons/lucide/trash.svg" },
@@ -102,6 +179,71 @@ const AUTH_REQUIRED_FILE_MENU_ACTION_IDS = new Set([
   "save-version",
   "delete",
 ]);
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function getAspectRatioValueFromId(
+  value: TraceCropAspectRatioId,
+  assetWidth: number,
+  assetHeight: number,
+): number | null {
+  if (value === "freehand") {
+    return null;
+  }
+
+  if (value === "original") {
+    return assetWidth > 0 && assetHeight > 0 ? assetWidth / assetHeight : null;
+  }
+
+  const [widthText, heightText] = value.split(":");
+  const width = Number(widthText);
+  const height = Number(heightText);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null;
+  }
+
+  return width / height;
+}
+
+function fitCropToAspectRatio(
+  crop: TraceCropRect,
+  aspectRatio: number | null,
+  assetWidth: number,
+  assetHeight: number,
+): TraceCropRect {
+  if (!aspectRatio || aspectRatio <= 0) {
+    return crop;
+  }
+
+  const centeredWidth = Math.min(crop.cropWidth, crop.cropHeight * aspectRatio);
+  const centeredHeight = centeredWidth / aspectRatio;
+  const fallbackHeight = Math.min(crop.cropHeight, crop.cropWidth / aspectRatio);
+  const nextWidth = centeredWidth > 0 ? centeredWidth : fallbackHeight * aspectRatio;
+  const nextHeight = centeredWidth > 0 ? centeredHeight : fallbackHeight;
+  const centerX = crop.cropX + crop.cropWidth / 2;
+  const centerY = crop.cropY + crop.cropHeight / 2;
+
+  return getNormalizedTraceCrop(
+    {
+      imageWidth: assetWidth,
+      imageHeight: assetHeight,
+      cropX: centerX - nextWidth / 2,
+      cropY: centerY - nextHeight / 2,
+      cropWidth: nextWidth,
+      cropHeight: nextHeight,
+    },
+    assetWidth,
+    assetHeight,
+  );
+}
 
 type EditorV2WindowWithDraftGetter = Window & {
   __editorV2GetCurrentDocument?: () => EditorDocumentState;
@@ -131,9 +273,11 @@ export function EditorV2Shell({
   deleteButtonState,
   errorNotification,
   exportButtonState,
+  authResolved,
   hasSavedDesignAccess,
   onCanvasReady,
   onDeleteCurrentDesign,
+  onClearLocalBrowserData,
   onDismissErrorNotification,
   onDismissSuccessNotification,
   onExportDocument,
@@ -151,6 +295,7 @@ export function EditorV2Shell({
   onStartOver,
   onCloseSetupModal,
   hasPersistableUnsavedChanges,
+  lastSaveConfirmedAt,
   recoveredLocalChanges,
   saveButtonState,
   saveMessage,
@@ -176,9 +321,11 @@ export function EditorV2Shell({
   deleteButtonState: DeleteButtonState;
   errorNotification: EditorV2ErrorNotification | null;
   exportButtonState: ExportButtonState;
+  authResolved: boolean;
   hasSavedDesignAccess: boolean;
   onCanvasReady: () => void;
   onDeleteCurrentDesign: (document: EditorDocumentState) => Promise<void> | void;
+  onClearLocalBrowserData: () => Promise<void> | void;
   onDismissErrorNotification: () => void;
   onDismissSuccessNotification: () => void;
   onExportDocument: (document: EditorDocumentState) => Promise<void> | void;
@@ -206,6 +353,7 @@ export function EditorV2Shell({
   onStartOver: () => void;
   onCloseSetupModal: () => void;
   hasPersistableUnsavedChanges: boolean;
+  lastSaveConfirmedAt: number | null;
   recoveredLocalChanges: boolean;
   saveButtonState: SaveButtonState;
   saveMessage: string;
@@ -258,6 +406,7 @@ export function EditorV2Shell({
   const showGridlines = state.ui.preferences.showGridlines;
   const showRuler = state.ui.preferences.showRuler;
   const showSymbols = state.ui.preferences.showSymbols;
+  const touchSnappingEnabled = state.ui.preferences.touchSnappingEnabled;
   const previewMode = state.ui.preferences.previewMode;
   const activeSidebarSection = state.ui.shell.activeSidebarSection;
   const sidebarCollapsed = state.ui.shell.sidebarCollapsed;
@@ -265,6 +414,7 @@ export function EditorV2Shell({
   const hasCompletedSave = state.session.persistence.lastSavedAt !== null;
   const traceRepositionActive = Boolean(state.session.traceInteraction.repositionSnapshot);
   const traceRepositionOrigin = state.session.traceInteraction.repositionOrigin;
+  const traceConversionPreview = state.session.traceInteraction.conversionPreview;
   const mirrorSession = state.session.mirrorInteraction.session;
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
@@ -272,9 +422,11 @@ export function EditorV2Shell({
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
+  const colorLibraryDismissGestureRef = useRef<ColorLibraryDismissGesture | null>(null);
   const hasAppliedInitialFitRef = useRef(false);
   const hasAppliedMobileLayoutRef = useRef(false);
   const mobileTraceRepositionWasActiveRef = useRef(false);
+  const mobileTraceConversionPreviewWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
   const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
   const bottomPanelCanvasFocusSnapshotRef =
@@ -284,10 +436,14 @@ export function EditorV2Shell({
   const bottomPanelCanvasFocusFitPendingRef = useRef(false);
   const reopenColorPanelAfterSelectionRef = useRef(false);
   const usedColorsSelectionPromptStartedRef = useRef(false);
+  const previousActiveSidebarSectionRef = useRef(activeSidebarSection);
+  const selectionScopeOwnerRef = useRef<"panel" | "toolbar" | null>(null);
+  const traceEditReturnToolRef = useRef<ActiveTool | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isBottomPanelLayout, setIsBottomPanelLayout] = useState(false);
   const visibleSidebarSection =
-    !isBottomPanelLayout && activeSidebarSection === "document"
+    !isBottomPanelLayout &&
+    activeSidebarSection === "settings"
       ? "color"
       : activeSidebarSection;
   const [isBottomPanelCanvasFocusActive, setIsBottomPanelCanvasFocusActive] =
@@ -299,7 +455,40 @@ export function EditorV2Shell({
   const [saveNotificationVisible, setSaveNotificationVisible] = useState(false);
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [exportAuthModalOpen, setExportAuthModalOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
+  const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
+  const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
+    useState<TraceCropAspectRatioId>("freehand");
+  const [traceEditModeActive, setTraceEditModeActive] = useState(false);
+  const [traceEraserActive, setTraceEraserActive] = useState(false);
+  const [traceEraserBrushSize, setTraceEraserBrushSize] = useState(1);
+  const [traceEraserEditMode, setTraceEraserEditMode] = useState<EraserEditMode>("brush");
+  const [traceEraserMode, setTraceEraserMode] = useState<EraserMode>("erase");
+  const [traceEraserDraftMaskUrl, setTraceEraserDraftMaskUrl] = useState<string | null>(null);
+  const [traceEraserDraftRevision, setTraceEraserDraftRevision] = useState(0);
+  const [traceEraserBrushPreviewVisible, setTraceEraserBrushPreviewVisible] = useState(false);
+  const [mainBrushPreviewVisible, setMainBrushPreviewVisible] = useState(false);
+  const [traceEraserMaskFullyVisible, setTraceEraserMaskFullyVisible] = useState(true);
+  const [traceEraserDirty, setTraceEraserDirty] = useState(false);
+  const [traceEraserInitialState, setTraceEraserInitialState] =
+    useState<TraceEraserHistoryEntry | null>(null);
+  const [traceEraserUndoStack, setTraceEraserUndoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [traceEraserRedoStack, setTraceEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [iconEraserActive, setIconEraserActive] = useState(false);
+  const [iconEraserBrushSize, setIconEraserBrushSize] = useState(1);
+  const [iconEraserEditMode, setIconEraserEditMode] = useState<EraserEditMode>("brush");
+  const [iconEraserMode, setIconEraserMode] = useState<EraserMode>("erase");
+  const [iconEraserDraftMaskUrl, setIconEraserDraftMaskUrl] = useState<string | null>(null);
+  const [iconEraserDraftRevision, setIconEraserDraftRevision] = useState(0);
+  const [iconEraserBrushPreviewVisible, setIconEraserBrushPreviewVisible] = useState(false);
+  const [iconEraserMaskFullyVisible, setIconEraserMaskFullyVisible] = useState(true);
+  const [iconEraserDirty, setIconEraserDirty] = useState(false);
+  const [iconEraserInitialState, setIconEraserInitialState] =
+    useState<IconPlacementEraserInitialState | null>(null);
+  const [iconEraserUndoStack, setIconEraserUndoStack] = useState<TraceEraserHistoryEntry[]>([]);
+  const [iconEraserRedoStack, setIconEraserRedoStack] = useState<TraceEraserHistoryEntry[]>([]);
   const [renameRequestToken, setRenameRequestToken] = useState(0);
   const [headerFileLeftTarget, setHeaderFileLeftTarget] = useState<HTMLElement | null>(null);
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
@@ -318,6 +507,785 @@ export function EditorV2Shell({
   const [selectedVersionHistoryId, setSelectedVersionHistoryId] = useState<"current" | string>(
     () => versionPreviewMeta?.versionId ?? "current",
   );
+
+  useEffect(() => {
+    setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
+    setTraceEditModeActive(false);
+    setTraceEraserActive(false);
+    setTraceEraserEditMode("brush");
+    setTraceEraserMode("erase");
+    setTraceEraserDraftMaskUrl(null);
+    setTraceEraserDraftRevision(0);
+    setTraceEraserBrushPreviewVisible(false);
+    setMainBrushPreviewVisible(false);
+    setTraceEraserMaskFullyVisible(!trace?.maskUrl);
+    setTraceEraserDirty(false);
+    setTraceEraserInitialState(null);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
+  }, [trace?.previewUrl]);
+
+  useEffect(() => {
+    setIconEraserActive(false);
+    setIconEraserEditMode("brush");
+    setIconEraserMode("erase");
+    setIconEraserDraftMaskUrl(null);
+    setIconEraserDraftRevision(0);
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserMaskFullyVisible(true);
+    setIconEraserDirty(false);
+    setIconEraserInitialState(null);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+  }, [iconPlacement?.iconId]);
+
+  useEffect(() => {
+    if (activeTool === "paint" || activeTool === "erase") {
+      return;
+    }
+
+    setMainBrushPreviewVisible(false);
+  }, [activeTool]);
+
+  const traceCropEditing = tracePreviewCrop !== null && traceCropSnapshot !== null;
+  const traceEraserEditing = traceEraserActive;
+  const iconEraserEditing = iconEraserActive;
+  const traceEraserCanUndo = traceEraserUndoStack.length > 0;
+  const traceEraserCanRedo = traceEraserRedoStack.length > 0;
+  const iconEraserCanUndo = iconEraserUndoStack.length > 0;
+  const iconEraserCanRedo = iconEraserRedoStack.length > 0;
+  const traceEditSubmode = traceCropEditing
+    ? "crop"
+    : traceEraserEditing
+      ? "erase"
+      : traceRepositionActive
+        ? "reposition"
+        : "none";
+  const traceImageEditingActive =
+    traceEditModeActive || traceEditSubmode !== "none";
+  const allowTraceModeSwitchesWhileRepositioning =
+    traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace";
+  const repositionModeActive =
+    traceImageEditingActive ||
+    traceRepositionActive ||
+    traceCropEditing ||
+    traceEraserEditing ||
+    iconEraserEditing ||
+    textPlacement !== null ||
+    iconPlacement !== null;
+  const canUndoFromToolbar = canUndo && !repositionModeActive;
+  const canRedoFromToolbar = canRedo && !repositionModeActive;
+  const handleBeginTraceCrop = useCallback(() => {
+    if (!trace) {
+      return;
+    }
+
+    const nextCrop = getNormalizedTraceCrop(trace);
+    setTraceCropSnapshot(nextCrop);
+    setTracePreviewCrop(nextCrop);
+    setTraceCropAspectRatioId("freehand");
+  }, [trace]);
+
+  const handlePreviewTraceCropChange = useCallback((crop: TraceCropRect | null) => {
+    setTracePreviewCrop(crop);
+  }, []);
+
+  const handleBeginTraceEraser = useCallback(() => {
+    if (!trace) {
+      return;
+    }
+
+    const nextInitialState = {
+      maskUrl: trace.maskUrl ?? null,
+      isFullyVisible: !trace.maskUrl,
+    };
+
+    traceEraserDebugLog("begin", {
+      previewUrl: trace.previewUrl,
+      maskUrl: trace.maskUrl,
+      imageWidth: trace.imageWidth,
+      imageHeight: trace.imageHeight,
+      cropX: trace.cropX,
+      cropY: trace.cropY,
+      cropWidth: trace.cropWidth,
+      cropHeight: trace.cropHeight,
+    });
+    setTraceEraserInitialState(nextInitialState);
+    setTraceEraserDraftMaskUrl(nextInitialState.maskUrl);
+    setTraceEraserDraftRevision((current) => current + 1);
+    setTraceEraserMaskFullyVisible(nextInitialState.isFullyVisible);
+    setTraceEraserEditMode("brush");
+    setTraceEraserMode("erase");
+    setTraceEraserBrushPreviewVisible(false);
+    setTraceEraserDirty(false);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
+    setTraceEraserActive(true);
+  }, [trace]);
+
+  const handleTraceEraserEditModeChange = useCallback((nextMode: EraserEditMode) => {
+    setTraceEraserEditMode(nextMode);
+    if (nextMode === "magic") {
+      setTraceEraserMode("erase");
+      setTraceEraserBrushPreviewVisible(false);
+    }
+  }, []);
+
+  const handleTraceEraserModeChange = useCallback(
+    (nextMode: EraserMode) => {
+      if (traceEraserEditMode === "magic" && nextMode === "restore") {
+        return;
+      }
+
+      setTraceEraserMode(nextMode);
+    },
+    [traceEraserEditMode],
+  );
+
+  const applyTraceEraserHistoryEntry = useCallback(
+    (entry: TraceEraserHistoryEntry) => {
+      setTraceEraserDraftMaskUrl(entry.maskUrl);
+      setTraceEraserDraftRevision((current) => current + 1);
+      setTraceEraserMaskFullyVisible(entry.isFullyVisible);
+      setTraceEraserDirty(
+        traceEraserInitialState === null
+          ? false
+          : entry.maskUrl !== traceEraserInitialState.maskUrl ||
+              entry.isFullyVisible !== traceEraserInitialState.isFullyVisible,
+      );
+    },
+    [traceEraserInitialState],
+  );
+
+  const handleTraceEraserDraftChange = useCallback(
+    (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      if (
+        nextMaskUrl === traceEraserDraftMaskUrl &&
+        isFullyVisible === traceEraserMaskFullyVisible
+      ) {
+        return;
+      }
+
+      traceEraserDebugLog("draft-change", {
+        nextMaskUrl,
+        isFullyVisible,
+      });
+      setTraceEraserUndoStack((current) => [
+        ...current,
+        {
+          maskUrl: traceEraserDraftMaskUrl,
+          isFullyVisible: traceEraserMaskFullyVisible,
+        },
+      ]);
+      setTraceEraserRedoStack([]);
+      setTraceEraserDraftMaskUrl(nextMaskUrl);
+      setTraceEraserMaskFullyVisible(isFullyVisible);
+      setTraceEraserDirty(
+        traceEraserInitialState === null
+          ? true
+          : nextMaskUrl !== traceEraserInitialState.maskUrl ||
+              isFullyVisible !== traceEraserInitialState.isFullyVisible,
+      );
+    },
+    [traceEraserDraftMaskUrl, traceEraserInitialState, traceEraserMaskFullyVisible],
+  );
+
+  const handleTraceEraserUndo = useCallback(() => {
+    if (traceEraserUndoStack.length === 0) {
+      return;
+    }
+
+    const previousEntry = traceEraserUndoStack[traceEraserUndoStack.length - 1];
+    setTraceEraserUndoStack((current) => current.slice(0, -1));
+    setTraceEraserRedoStack((current) => [
+      {
+        maskUrl: traceEraserDraftMaskUrl,
+        isFullyVisible: traceEraserMaskFullyVisible,
+      },
+      ...current,
+    ]);
+    applyTraceEraserHistoryEntry(previousEntry);
+  }, [
+    applyTraceEraserHistoryEntry,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+    traceEraserUndoStack,
+  ]);
+
+  const handleTraceEraserRedo = useCallback(() => {
+    if (traceEraserRedoStack.length === 0) {
+      return;
+    }
+
+    const [nextEntry, ...remainingEntries] = traceEraserRedoStack;
+    setTraceEraserRedoStack(remainingEntries);
+    setTraceEraserUndoStack((current) => [
+      ...current,
+      {
+        maskUrl: traceEraserDraftMaskUrl,
+        isFullyVisible: traceEraserMaskFullyVisible,
+      },
+    ]);
+    applyTraceEraserHistoryEntry(nextEntry);
+  }, [
+    applyTraceEraserHistoryEntry,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+    traceEraserRedoStack,
+  ]);
+
+  const handleCancelTraceEraser = useCallback(() => {
+    traceEraserDebugLog("cancel", {});
+    setTraceEraserActive(false);
+    setTraceEraserDraftMaskUrl(null);
+    setTraceEraserDraftRevision(0);
+    setTraceEraserBrushPreviewVisible(false);
+    setTraceEraserMaskFullyVisible(true);
+    setTraceEraserDirty(false);
+    setTraceEraserEditMode("brush");
+    setTraceEraserMode("erase");
+    setTraceEraserInitialState(null);
+    setTraceEraserUndoStack([]);
+    setTraceEraserRedoStack([]);
+  }, []);
+
+  const handleCommitTraceEraser = useCallback(async () => {
+    if (!trace) {
+      handleCancelTraceEraser();
+      return;
+    }
+
+    let nextMaskUrl = trace.maskUrl ?? null;
+
+    if (traceEraserDirty) {
+      if (traceEraserMaskFullyVisible || !traceEraserDraftMaskUrl) {
+        nextMaskUrl = null;
+      } else {
+        nextMaskUrl = await uploadTraceMask({
+          dataUrl: traceEraserDraftMaskUrl,
+          originalUrl: trace.originalUrl,
+        });
+      }
+
+      traceEraserDebugLog("commit", {
+        previousMaskUrl: trace.maskUrl,
+        draftMaskUrl: traceEraserDraftMaskUrl,
+        nextMaskUrl,
+        traceEraserMaskFullyVisible,
+      });
+
+      if (nextMaskUrl !== trace.maskUrl) {
+        dispatch(
+          createUpdateTraceCommand(
+            { maskUrl: nextMaskUrl },
+            { history: { mode: "push", label: "Erase Trace" }, source: "toolbar" },
+          ),
+        );
+      }
+    }
+
+    handleCancelTraceEraser();
+  }, [
+    dispatch,
+    handleCancelTraceEraser,
+    trace,
+    traceEraserDirty,
+    traceEraserDraftMaskUrl,
+    traceEraserMaskFullyVisible,
+  ]);
+
+  const handleBeginIconEraser = useCallback(() => {
+    if (!iconPlacement) {
+      return;
+    }
+
+    const nextInitialState = {
+      maskUrl: null,
+      isFullyVisible: true,
+      sourceSrc: iconPlacement.src,
+    };
+
+    setIconEraserInitialState(nextInitialState);
+    setIconEraserDraftMaskUrl(nextInitialState.maskUrl);
+    setIconEraserDraftRevision((current) => current + 1);
+    setIconEraserMaskFullyVisible(nextInitialState.isFullyVisible);
+    setIconEraserEditMode("brush");
+    setIconEraserMode("erase");
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserDirty(false);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+    setIconEraserActive(true);
+  }, [iconPlacement]);
+
+  const handleIconEraserEditModeChange = useCallback((nextMode: EraserEditMode) => {
+    setIconEraserEditMode(nextMode);
+    if (nextMode === "magic") {
+      setIconEraserMode("erase");
+      setIconEraserBrushPreviewVisible(false);
+    }
+  }, []);
+
+  const handleIconEraserModeChange = useCallback(
+    (nextMode: EraserMode) => {
+      if (iconEraserEditMode === "magic" && nextMode === "restore") {
+        return;
+      }
+
+      setIconEraserMode(nextMode);
+    },
+    [iconEraserEditMode],
+  );
+
+  const applyIconEraserHistoryEntry = useCallback(
+    (entry: TraceEraserHistoryEntry) => {
+      setIconEraserDraftMaskUrl(entry.maskUrl);
+      setIconEraserDraftRevision((current) => current + 1);
+      setIconEraserMaskFullyVisible(entry.isFullyVisible);
+      setIconEraserDirty(
+        iconEraserInitialState === null
+          ? false
+          : entry.maskUrl !== iconEraserInitialState.maskUrl ||
+              entry.isFullyVisible !== iconEraserInitialState.isFullyVisible,
+      );
+    },
+    [iconEraserInitialState],
+  );
+
+  const handleIconEraserDraftChange = useCallback(
+    (nextMaskUrl: string | null, isFullyVisible: boolean) => {
+      if (
+        nextMaskUrl === iconEraserDraftMaskUrl &&
+        isFullyVisible === iconEraserMaskFullyVisible
+      ) {
+        return;
+      }
+
+      setIconEraserUndoStack((current) => [
+        ...current,
+        {
+          maskUrl: iconEraserDraftMaskUrl,
+          isFullyVisible: iconEraserMaskFullyVisible,
+        },
+      ]);
+      setIconEraserRedoStack([]);
+      setIconEraserDraftMaskUrl(nextMaskUrl);
+      setIconEraserMaskFullyVisible(isFullyVisible);
+      setIconEraserDirty(
+        iconEraserInitialState === null
+          ? true
+          : nextMaskUrl !== iconEraserInitialState.maskUrl ||
+              isFullyVisible !== iconEraserInitialState.isFullyVisible,
+      );
+    },
+    [iconEraserDraftMaskUrl, iconEraserInitialState, iconEraserMaskFullyVisible],
+  );
+
+  const handleIconEraserUndo = useCallback(() => {
+    if (iconEraserUndoStack.length === 0) {
+      return;
+    }
+
+    const previousEntry = iconEraserUndoStack[iconEraserUndoStack.length - 1];
+    setIconEraserUndoStack((current) => current.slice(0, -1));
+    setIconEraserRedoStack((current) => [
+      {
+        maskUrl: iconEraserDraftMaskUrl,
+        isFullyVisible: iconEraserMaskFullyVisible,
+      },
+      ...current,
+    ]);
+    applyIconEraserHistoryEntry(previousEntry);
+  }, [
+    applyIconEraserHistoryEntry,
+    iconEraserDraftMaskUrl,
+    iconEraserMaskFullyVisible,
+    iconEraserUndoStack,
+  ]);
+
+  const handleIconEraserRedo = useCallback(() => {
+    if (iconEraserRedoStack.length === 0) {
+      return;
+    }
+
+    const [nextEntry, ...remainingEntries] = iconEraserRedoStack;
+    setIconEraserRedoStack(remainingEntries);
+    setIconEraserUndoStack((current) => [
+      ...current,
+      {
+        maskUrl: iconEraserDraftMaskUrl,
+        isFullyVisible: iconEraserMaskFullyVisible,
+      },
+    ]);
+    applyIconEraserHistoryEntry(nextEntry);
+  }, [
+    applyIconEraserHistoryEntry,
+    iconEraserDraftMaskUrl,
+    iconEraserMaskFullyVisible,
+    iconEraserRedoStack,
+  ]);
+
+  const handleCancelIconEraser = useCallback(() => {
+    setIconEraserActive(false);
+    setIconEraserDraftMaskUrl(null);
+    setIconEraserDraftRevision(0);
+    setIconEraserBrushPreviewVisible(false);
+    setIconEraserMaskFullyVisible(true);
+    setIconEraserDirty(false);
+    setIconEraserEditMode("brush");
+    setIconEraserMode("erase");
+    setIconEraserInitialState(null);
+    setIconEraserUndoStack([]);
+    setIconEraserRedoStack([]);
+  }, []);
+
+  const handleCommitIconEraser = useCallback(async () => {
+    if (!iconPlacement || !iconEraserInitialState) {
+      handleCancelIconEraser();
+      return;
+    }
+
+    if (iconEraserDirty) {
+      const nextSourceSrc =
+        iconEraserMaskFullyVisible || !iconEraserDraftMaskUrl
+          ? iconEraserInitialState.sourceSrc
+          : await composeMaskedImageDataUrl({
+              sourceSrc: iconEraserInitialState.sourceSrc,
+              maskSrc: iconEraserDraftMaskUrl,
+              width: iconPlacement.intrinsicWidth,
+              height: iconPlacement.intrinsicHeight,
+            });
+
+      dispatch(
+        createUpdateIconPlacementCommand({
+          src: nextSourceSrc,
+        }),
+      );
+    }
+
+    handleCancelIconEraser();
+  }, [
+    dispatch,
+    handleCancelIconEraser,
+    iconEraserDirty,
+    iconEraserDraftMaskUrl,
+    iconEraserInitialState,
+    iconEraserMaskFullyVisible,
+    iconPlacement,
+  ]);
+
+  const handleCancelTraceCrop = useCallback(() => {
+    setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
+  }, []);
+
+  const handleResetTraceCrop = useCallback(() => {
+    if (!trace || !tracePreviewCrop) {
+      return;
+    }
+
+    setTracePreviewCrop(
+      createFullTraceCrop(trace.imageWidth ?? tracePreviewCrop.cropWidth, trace.imageHeight ?? tracePreviewCrop.cropHeight),
+    );
+  }, [trace, tracePreviewCrop]);
+
+  const handleCommitTraceCrop = useCallback(() => {
+    if (!trace || !traceCropSnapshot || !tracePreviewCrop) {
+      setTracePreviewCrop(null);
+      setTraceCropSnapshot(null);
+      return;
+    }
+
+    if (
+      traceCropSnapshot.cropX === tracePreviewCrop.cropX &&
+      traceCropSnapshot.cropY === tracePreviewCrop.cropY &&
+      traceCropSnapshot.cropWidth === tracePreviewCrop.cropWidth &&
+      traceCropSnapshot.cropHeight === tracePreviewCrop.cropHeight
+    ) {
+      setTracePreviewCrop(null);
+      setTraceCropSnapshot(null);
+      return;
+    }
+
+    const cropMetrics = createGridWorldMetrics(
+      state.document.grid.width,
+      state.document.grid.height,
+      DEFAULT_CELL_SIZE,
+      0,
+    );
+    const baseRect = getContainedRect(
+      traceCropSnapshot.cropWidth,
+      traceCropSnapshot.cropHeight,
+      cropMetrics.surfaceWidth,
+      cropMetrics.surfaceHeight,
+    );
+    const baseFrameBounds = getPositionedBounds(baseRect, {
+      offsetX: trace.offsetX,
+      offsetY: trace.offsetY,
+      scale: trace.scale,
+      rotation: trace.rotation,
+    });
+    const imageScaleX = baseFrameBounds.width / Math.max(traceCropSnapshot.cropWidth, 1);
+    const imageScaleY = baseFrameBounds.height / Math.max(traceCropSnapshot.cropHeight, 1);
+    const imageBounds = {
+      left: baseFrameBounds.left - traceCropSnapshot.cropX * imageScaleX,
+      top: baseFrameBounds.top - traceCropSnapshot.cropY * imageScaleY,
+      width: (trace.imageWidth ?? tracePreviewCrop.cropWidth) * imageScaleX,
+      height: (trace.imageHeight ?? tracePreviewCrop.cropHeight) * imageScaleY,
+    };
+    const committedFrameBounds = {
+      left: imageBounds.left + tracePreviewCrop.cropX * imageScaleX,
+      top: imageBounds.top + tracePreviewCrop.cropY * imageScaleY,
+      width: tracePreviewCrop.cropWidth * imageScaleX,
+      height: tracePreviewCrop.cropHeight * imageScaleY,
+    };
+    const nextBaseRect = getContainedRect(
+      tracePreviewCrop.cropWidth,
+      tracePreviewCrop.cropHeight,
+      cropMetrics.surfaceWidth,
+      cropMetrics.surfaceHeight,
+    );
+    const nextScale = committedFrameBounds.width / Math.max(nextBaseRect.width, 1);
+
+    dispatch(
+      createUpdateTraceCommand(
+        {
+          ...tracePreviewCrop,
+          offsetX: committedFrameBounds.left - nextBaseRect.left,
+          offsetY: committedFrameBounds.top - nextBaseRect.top,
+          scale: nextScale,
+        },
+        {
+          history: traceRepositionActive
+            ? { mode: "skip" }
+            : { mode: "push", label: "Crop Trace" },
+          source: "toolbar",
+        },
+      ),
+    );
+    setTracePreviewCrop(null);
+    setTraceCropSnapshot(null);
+    setTraceCropAspectRatioId("freehand");
+  }, [
+    dispatch,
+    state.document.grid.height,
+    state.document.grid.width,
+    trace,
+    traceCropSnapshot,
+    tracePreviewCrop,
+    traceRepositionActive,
+  ]);
+  const handleCancelTraceReposition = useCallback(() => {
+    dispatch(createCancelTraceRepositionCommand());
+  }, [dispatch]);
+  const handleCommitTraceReposition = useCallback(() => {
+    dispatch(createCommitTraceRepositionCommand());
+  }, [dispatch]);
+  const handleBeginTraceReposition = useCallback(() => {
+    dispatch(createBeginTraceRepositionCommand("toolbar"));
+  }, [dispatch]);
+  const traceCropAspectRatio = useMemo(() => {
+    if (!trace) {
+      return null;
+    }
+
+    const assetWidth = trace.imageWidth ?? tracePreviewCrop?.cropWidth ?? traceCropSnapshot?.cropWidth ?? 0;
+    const assetHeight = trace.imageHeight ?? tracePreviewCrop?.cropHeight ?? traceCropSnapshot?.cropHeight ?? 0;
+
+    return getAspectRatioValueFromId(traceCropAspectRatioId, assetWidth, assetHeight);
+  }, [trace, traceCropAspectRatioId, traceCropSnapshot, tracePreviewCrop]);
+  const handleTraceCropAspectRatioChange = useCallback(
+    (value: TraceCropAspectRatioId) => {
+      setTraceCropAspectRatioId(value);
+
+      if (!trace || !tracePreviewCrop) {
+        return;
+      }
+
+      const assetWidth = trace.imageWidth ?? tracePreviewCrop.cropWidth;
+      const assetHeight = trace.imageHeight ?? tracePreviewCrop.cropHeight;
+      const nextAspectRatio = getAspectRatioValueFromId(value, assetWidth, assetHeight);
+
+      setTracePreviewCrop((currentCrop) => {
+        if (!currentCrop) {
+          return currentCrop;
+        }
+
+        return fitCropToAspectRatio(currentCrop, nextAspectRatio, assetWidth, assetHeight);
+      });
+    },
+    [trace, tracePreviewCrop],
+  );
+  const handleDoneTraceEditing = useCallback(() => {
+    setTraceEditModeActive(false);
+  }, []);
+  const handleToggleTraceEditMode = useCallback(() => {
+    if (!trace) {
+      return;
+    }
+
+    if (traceImageEditingActive) {
+      void handleDoneTraceEditing();
+      return;
+    }
+
+    setTraceEditModeActive(true);
+  }, [handleDoneTraceEditing, trace, traceImageEditingActive]);
+  const handleCancelActiveTraceEditMode = useCallback(() => {
+    if (traceCropEditing) {
+      handleCancelTraceCrop();
+      return;
+    }
+
+    if (traceEraserEditing) {
+      handleCancelTraceEraser();
+      return;
+    }
+
+    if (traceRepositionActive) {
+      if (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") {
+        setTraceEditModeActive(false);
+      }
+      handleCancelTraceReposition();
+    }
+  }, [
+    handleCancelTraceCrop,
+    handleCancelTraceEraser,
+    handleCancelTraceReposition,
+    traceCropEditing,
+    traceEraserEditing,
+    traceRepositionOrigin,
+    traceRepositionActive,
+  ]);
+  const handleActivateTraceEditSubmode = useCallback(
+    async (mode: "crop" | "erase" | "reposition") => {
+      if (!trace) {
+        return;
+      }
+
+      setTraceEditModeActive(true);
+
+      if (traceEditSubmode === mode) {
+        handleCancelActiveTraceEditMode();
+        return;
+      }
+
+      const preserveUploadRepositionSession =
+        traceRepositionActive &&
+        (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") &&
+        mode !== "reposition";
+
+      if (traceCropEditing) {
+        handleCommitTraceCrop();
+      } else if (traceEraserEditing) {
+        await handleCommitTraceEraser();
+      } else if (traceRepositionActive && !preserveUploadRepositionSession) {
+        handleCommitTraceReposition();
+      }
+
+      if (mode === "crop") {
+        handleBeginTraceCrop();
+        return;
+      }
+
+      if (mode === "erase") {
+        handleBeginTraceEraser();
+        return;
+      }
+
+      handleBeginTraceReposition();
+    },
+    [
+      handleBeginTraceCrop,
+      handleBeginTraceEraser,
+      handleBeginTraceReposition,
+      handleCancelActiveTraceEditMode,
+      handleCommitTraceCrop,
+      handleCommitTraceEraser,
+      handleCommitTraceReposition,
+      trace,
+      traceCropEditing,
+      traceEditSubmode,
+      traceEraserEditing,
+      traceRepositionOrigin,
+      traceRepositionActive,
+    ],
+  );
+  const handleFitTraceToSurface = useCallback(
+    (dimension: "width" | "height") => {
+      if (!trace) {
+        return;
+      }
+
+      const traceGridMetrics = createGridWorldMetrics(
+        state.document.grid.width,
+        state.document.grid.height,
+        DEFAULT_CELL_SIZE,
+        0,
+      );
+      const normalizedCrop = getNormalizedTraceCrop(trace);
+      const baseRect = getContainedRect(
+        normalizedCrop.cropWidth,
+        normalizedCrop.cropHeight,
+        traceGridMetrics.surfaceWidth,
+        traceGridMetrics.surfaceHeight,
+      );
+      const baseDimension =
+        dimension === "width" ? baseRect.width : baseRect.height;
+
+      if (baseDimension <= 0) {
+        return;
+      }
+
+      const nextScale =
+        (dimension === "width"
+          ? traceGridMetrics.surfaceWidth
+          : traceGridMetrics.surfaceHeight) / baseDimension;
+      const nextWidth = baseRect.width * nextScale;
+      const nextHeight = baseRect.height * nextScale;
+
+      dispatch(
+        createUpdateTraceCommand(
+          {
+            offsetX: (traceGridMetrics.surfaceWidth - nextWidth) / 2 - baseRect.left,
+            offsetY: (traceGridMetrics.surfaceHeight - nextHeight) / 2 - baseRect.top,
+            scale: nextScale,
+          },
+          { history: { mode: "skip" }, source: "toolbar" },
+        ),
+      );
+    },
+    [dispatch, state.document.grid.height, state.document.grid.width, trace],
+  );
+  const handleApplyActiveTraceEditMode = useCallback(async () => {
+    if (traceCropEditing) {
+      handleCommitTraceCrop();
+      return;
+    }
+
+    if (traceEraserEditing) {
+      await handleCommitTraceEraser();
+      return;
+    }
+
+    if (traceRepositionActive) {
+      if (traceRepositionOrigin === "upload" || traceRepositionOrigin === "replace") {
+        setTraceEditModeActive(false);
+      }
+      handleCommitTraceReposition();
+    }
+  }, [
+    handleCommitTraceCrop,
+    handleCommitTraceEraser,
+    handleCommitTraceReposition,
+    traceCropEditing,
+    traceEraserEditing,
+    traceRepositionOrigin,
+    traceRepositionActive,
+  ]);
   const [versionHistoryActionPendingId, setVersionHistoryActionPendingId] =
     useState<string | null>(null);
   const openSignInForCurrentDesign = useCallback(() => {
@@ -330,6 +1298,14 @@ export function EditorV2Shell({
       ),
     });
   }, [document, openSignIn]);
+  const handleExportRequest = useCallback(() => {
+    if (!hasSavedDesignAccess) {
+      setExportAuthModalOpen(true);
+      return;
+    }
+
+    void onExportDocument(document);
+  }, [document, hasSavedDesignAccess, onExportDocument]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -363,6 +1339,7 @@ export function EditorV2Shell({
   const previewModeDisabled =
     Boolean(textPlacement) ||
     Boolean(iconPlacement) ||
+    traceImageEditingActive ||
     traceRepositionActive ||
     selectionControlActive;
   const mobileVisibleTopInset =
@@ -696,6 +1673,14 @@ export function EditorV2Shell({
     isBottomPanelCanvasFocusActive,
   ]);
 
+  const clearHighlightedColor = useCallback(() => {
+    setHighlightedColorId(null);
+
+    if (isBottomPanelCanvasFocusActive) {
+      exitBottomPanelCanvasFocus();
+    }
+  }, [exitBottomPanelCanvasFocus, isBottomPanelCanvasFocusActive]);
+
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       setLayoutModeResolved(true);
@@ -1007,13 +1992,9 @@ export function EditorV2Shell({
   ]);
 
   useEffect(() => {
-    if (!traceRepositionActive) {
+    if (!traceImageEditingActive) {
       mobileTraceRepositionWasActiveRef.current = false;
       return;
-    }
-
-    if (!isBottomPanelLayout && activeSidebarSection !== "trace") {
-      dispatch(createSetActiveSidebarSectionCommand("trace"));
     }
 
     if (isBottomPanelLayout) {
@@ -1021,19 +2002,34 @@ export function EditorV2Shell({
         dispatch(createSetSidebarCollapsedCommand(true));
       }
       mobileTraceRepositionWasActiveRef.current = true;
-      return;
-    }
-
-    if (sidebarCollapsed) {
-      dispatch(createSetSidebarCollapsedCommand(false));
     }
   }, [
-    activeSidebarSection,
     dispatch,
     isBottomPanelLayout,
     sidebarCollapsed,
-    traceRepositionActive,
+    traceImageEditingActive,
   ]);
+
+  useEffect(() => {
+    if (traceImageEditingActive) {
+      if (traceEditReturnToolRef.current === null && activeTool !== "pan") {
+        traceEditReturnToolRef.current = activeTool;
+      }
+
+      if (activeTool !== "pan") {
+        dispatch(createSetToolCommand("pan"));
+      }
+
+      return;
+    }
+
+    const returnTool = traceEditReturnToolRef.current;
+    traceEditReturnToolRef.current = null;
+
+    if (returnTool && activeTool === "pan") {
+      dispatch(createSetToolCommand(returnTool));
+    }
+  }, [activeTool, dispatch, traceImageEditingActive]);
 
   useEffect(() => {
     if (!textPlacement) {
@@ -1053,22 +2049,192 @@ export function EditorV2Shell({
   }, [dispatch, isBottomPanelLayout, sidebarCollapsed, textPlacement]);
 
   useEffect(() => {
-    if (!previewMode) {
+    if (!traceConversionPreview) {
+      mobileTraceConversionPreviewWasActiveRef.current = false;
+      return;
+    }
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    if (!mobileTraceConversionPreviewWasActiveRef.current && !sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+
+    mobileTraceConversionPreviewWasActiveRef.current = true;
+  }, [dispatch, isBottomPanelLayout, sidebarCollapsed, traceConversionPreview]);
+
+  const handleExitTraceConversionPreviewFromToolbar = useCallback(() => {
+    dispatch(createCancelTraceConversionPreviewCommand());
+
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch, isBottomPanelLayout]);
+
+  useEffect(() => {
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && key === "z";
+      const isRedoShortcut =
+        ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "z") ||
+        (event.ctrlKey && !event.shiftKey && key === "y");
+
+      if (traceEraserEditing && isUndoShortcut && traceEraserCanUndo) {
+        event.preventDefault();
+        handleTraceEraserUndo();
+        return;
+      }
+
+      if (traceEraserEditing && isRedoShortcut && traceEraserCanRedo) {
+        event.preventDefault();
+        handleTraceEraserRedo();
+        return;
+      }
+
+      if (iconEraserEditing && isUndoShortcut && iconEraserCanUndo) {
+        event.preventDefault();
+        handleIconEraserUndo();
+        return;
+      }
+
+      if (iconEraserEditing && isRedoShortcut && iconEraserCanRedo) {
+        event.preventDefault();
+        handleIconEraserRedo();
+        return;
+      }
+
+      if (isUndoShortcut && canUndo) {
+        event.preventDefault();
+        dispatch(createUndoCommand());
+        return;
+      }
+
+      if (isRedoShortcut && canRedo) {
+        event.preventDefault();
+        dispatch(createRedoCommand());
+      }
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [
+    canRedo,
+    canUndo,
+    dispatch,
+    handleIconEraserRedo,
+    handleIconEraserUndo,
+    handleTraceEraserRedo,
+    handleTraceEraserUndo,
+    iconEraserCanRedo,
+    iconEraserCanUndo,
+    iconEraserEditing,
+    traceEraserCanRedo,
+    traceEraserCanUndo,
+    traceEraserEditing,
+  ]);
+
+  useEffect(() => {
+    const escapeAction = getWorkspaceEscapeAction({
+      highlightedColorActive: highlightedColorId !== null,
+      iconPlacementActive: Boolean(iconPlacement),
+      previewMode,
+      traceEditModeActive: traceImageEditingActive,
+      textPlacementActive: Boolean(textPlacement),
+      traceConversionPreviewActive: Boolean(traceConversionPreview),
+      traceCropEditing,
+      traceEraserEditing,
+      traceRepositionActive,
+    });
+
+    if (!escapeAction) {
       return;
     }
 
     function handleWindowKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || event.defaultPrevented || isEditableKeyboardTarget(event.target)) {
         return;
       }
 
       event.preventDefault();
+
+      if (iconEraserEditing) {
+        handleCancelIconEraser();
+        return;
+      }
+
+      if (escapeAction === "exit-trace-conversion-preview") {
+        handleExitTraceConversionPreviewFromToolbar();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-crop") {
+        handleCancelTraceCrop();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-eraser") {
+        handleCancelTraceEraser();
+        return;
+      }
+
+      if (escapeAction === "cancel-trace-reposition") {
+        handleCancelTraceReposition();
+        return;
+      }
+
+      if (escapeAction === "exit-trace-edit") {
+        setTraceEditModeActive(false);
+        return;
+      }
+
+      if (escapeAction === "cancel-text-placement") {
+        dispatch(createCancelTextPlacementCommand());
+        return;
+      }
+
+      if (escapeAction === "cancel-icon-placement") {
+        dispatch(createCancelIconPlacementCommand());
+        return;
+      }
+
+      if (escapeAction === "clear-highlight") {
+        clearHighlightedColor();
+        return;
+      }
+
       exitPreviewMode();
     }
 
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [exitPreviewMode, previewMode]);
+  }, [
+    clearHighlightedColor,
+    dispatch,
+    exitPreviewMode,
+    handleCancelIconEraser,
+    handleCancelTraceCrop,
+    handleCancelTraceEraser,
+    handleCancelTraceReposition,
+    handleExitTraceConversionPreviewFromToolbar,
+    highlightedColorId,
+    iconEraserEditing,
+    iconPlacement,
+    previewMode,
+    textPlacement,
+    traceImageEditingActive,
+    traceConversionPreview,
+    traceCropEditing,
+    traceEraserEditing,
+    traceRepositionActive,
+  ]);
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -1125,11 +2291,23 @@ export function EditorV2Shell({
     usedColorsSelectionPromptVisible,
   ]);
 
+  useEffect(() => {
+    if (selectionControlActive || usedColorsSelectionPromptVisible) {
+      return;
+    }
+
+    selectionScopeOwnerRef.current = null;
+  }, [selectionControlActive, usedColorsSelectionPromptVisible]);
+
   const [selectionRequestKey, setSelectionRequestKey] = useState(0);
+  const [requestedColorPanelView, setRequestedColorPanelView] =
+    useState<ColorPanelView | null>(null);
+  const [requestedColorPanelViewKey, setRequestedColorPanelViewKey] = useState(0);
 
   const handleUsedColorsScopeModeChange = useCallback(
     (mode: "full-canvas" | "selection") => {
       if (mode === "selection") {
+        selectionScopeOwnerRef.current = "panel";
         if (isBottomPanelLayout) {
           if (!sidebarCollapsed) {
             dispatch(createSetSidebarCollapsedCommand(true));
@@ -1144,12 +2322,50 @@ export function EditorV2Shell({
         return;
       }
 
+      selectionScopeOwnerRef.current = null;
       reopenColorPanelAfterSelectionRef.current = false;
       setUsedColorsSelectionPromptVisible(false);
       dispatch(createClearSelectionCommand());
     },
     [dispatch, isBottomPanelLayout, sidebarCollapsed],
   );
+
+  const handleOpenSelectionColorsPanel = useCallback(() => {
+    setRequestedColorPanelView("design-colors");
+    setRequestedColorPanelViewKey((current) => current + 1);
+    dispatch(createSetActiveSidebarSectionCommand("color"));
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch]);
+
+  const handleOpenCustomPalettesPanel = useCallback(() => {
+    setRequestedColorPanelView("custom-palettes");
+    setRequestedColorPanelViewKey((current) => current + 1);
+    dispatch(createSetActiveSidebarSectionCommand("color"));
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch]);
+
+  const handleToolbarSelectionIntent = useCallback(() => {
+    selectionScopeOwnerRef.current = "toolbar";
+    reopenColorPanelAfterSelectionRef.current = false;
+    setUsedColorsSelectionPromptVisible(false);
+  }, []);
+
+  useEffect(() => {
+    const previousActiveSidebarSection = previousActiveSidebarSectionRef.current;
+
+    if (
+      previousActiveSidebarSection === "color" &&
+      activeSidebarSection !== "color" &&
+      selectionScopeOwnerRef.current === "panel"
+    ) {
+      selectionScopeOwnerRef.current = null;
+      reopenColorPanelAfterSelectionRef.current = false;
+      setUsedColorsSelectionPromptVisible(false);
+      dispatch(createClearSelectionCommand());
+    }
+
+    previousActiveSidebarSectionRef.current = activeSidebarSection;
+  }, [activeSidebarSection, dispatch]);
 
   useEffect(() => {
     if (!iconPlacement) {
@@ -1162,12 +2378,7 @@ export function EditorV2Shell({
       }
 
       const target = event.target;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) {
+      if (isEditableKeyboardTarget(target)) {
         return;
       }
 
@@ -1222,10 +2433,10 @@ export function EditorV2Shell({
       ? true
       : Boolean(saveMessage || hasUnsavedChanges);
   const showDocumentPanelStatus =
-    isBottomPanelLayout &&
+    activeSidebarSection === "document" &&
+    hasSavedDesignAccess &&
     ((saveMode === "autosave" && showSaveStatus) ||
       (saveMode === "manual" && hasSavedDesignAccess && showSaveStatus));
-  const showHeaderSaveStatus = hasSavedDesignAccess || saveMode === "autosave";
   const versionHistoryDisplayState = useMemo(() => {
     if (!isVersionHistoryMode || !state.document.trace) {
       return state;
@@ -1252,15 +2463,25 @@ export function EditorV2Shell({
       ),
     [saveMode],
   );
-  const showLoggedOutTopBanner = !hasSavedDesignAccess && !saveBannerDismissed;
+  const recentSavedDocuments = useMemo(
+    () =>
+      savedDocuments
+        .filter((record) => record.storageId !== currentStorageId)
+        .slice(0, HEADER_FILE_RECENT_LIMIT),
+    [currentStorageId, savedDocuments],
+  );
+  const showLoggedOutTopBanner =
+    authResolved && !hasSavedDesignAccess && !saveBannerDismissed;
   const showTopSaveBanner = showLoggedOutTopBanner;
   const showSaveConfirmationOverlay =
     saveNotificationVisible &&
     (IS_DEV_APP_MODE || saveMode === "manual" || !hasSavedDesignAccess);
 
   useEffect(() => {
-    setSaveBannerDismissed(false);
-  }, [hasUnsavedChanges, saveMessage]);
+    if (!hasSavedDesignAccess) {
+      setSaveBannerDismissed(false);
+    }
+  }, [hasSavedDesignAccess]);
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
@@ -1583,7 +2804,7 @@ export function EditorV2Shell({
     }
 
     if (value === "save-version") {
-      if (!hasPersistableUnsavedChanges) {
+      if (saveButtonState === "saving") {
         return;
       }
       void onSaveVersionSnapshot();
@@ -1591,7 +2812,7 @@ export function EditorV2Shell({
     }
 
     if (value === "download") {
-      void onExportDocument(document);
+      handleExportRequest();
       return;
     }
 
@@ -1712,74 +2933,55 @@ export function EditorV2Shell({
             headerFileLeftTarget,
           )
         : null}
-      {!suppressHeaderForSetupModal && !isVersionHistoryMode && !showDocumentPanelStatus && headerAutosaveTarget
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerAutosaveTarget
         ? createPortal(
             isBottomPanelLayout ? (
-              showHeaderSaveStatus ? (
-                <SaveStatusCard
-                  autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                  hasSavedDesignAccess={hasSavedDesignAccess}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  layout="header"
-                  onDismiss={null}
-                  onSignIn={openSignInForCurrentDesign}
-                  recoveredLocalChanges={recoveredLocalChanges}
-                  saveMode={saveMode}
-                  saveMessage={saveMessage}
-                />
-              ) : null
+              hasSavedDesignAccess ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className={styles.headerSaveButton}
+                  onClick={() => {
+                    void onClearLocalBrowserData();
+                  }}
+                >
+                  Clear browser drafts
+                </Button>
+              )
             ) : (
               <div className={styles.headerFileMenuGroup}>
-                <SingleSelectDropdown
-                  ariaLabel="File actions"
-                  items={headerFileMenuItems}
-                  value=""
-                  placeholder="File"
-                  triggerLabel={<span className={styles.headerFileMenuTriggerLabel}>File</span>}
-                  triggerVariant="ghost"
-                  showChevron={false}
-                  menuPortalToViewport
-                  menuPlacement="bottom-start"
-                  menuShowTrailingCheck={false}
-                  minWidth="auto"
-                  menuWidth={180}
-                  getItemIsDivider={(item) => item.kind === "divider"}
-                  getItemValue={(item) => item.id}
+                <HeaderFileMenu
+                  currentStorageId={currentStorageId}
+                  deleteButtonState={deleteButtonState}
+                  exportButtonState={exportButtonState}
                   getItemLabel={renderHeaderMenuItemLabel}
-                  getItemDisabled={(item) =>
-                    item.kind === "divider" ||
-                    (item.id === "save-version" &&
-                      (saveButtonState === "saving" ||
-                        !hasPersistableUnsavedChanges)) ||
-                    (item.id === "version-history" &&
-                      hasSavedDesignAccess &&
-                      !currentStorageId) ||
-                    (item.id === "download" && exportButtonState === "exporting") ||
-                    (item.id === "delete" && deleteButtonState === "deleting")
-                  }
-                  onValueChange={handleHeaderMenuAction}
-                  wrapperClassName={styles.headerFileMenu}
-                  triggerClassName={styles.headerFileMenuTrigger}
-                  menuClassName={styles.headerFileMenuSurface}
-                  triggerStyle={{ minWidth: "auto", padding: "6px 8px" }}
+                  hasPersistableUnsavedChanges={hasPersistableUnsavedChanges}
+                  hasSavedDesignAccess={hasSavedDesignAccess}
+                  items={headerFileMenuItems}
+                  onAction={handleHeaderMenuAction}
+                  onOpenSavedDocuments={onOpenSavedDocuments}
+                  recentSavedDocuments={recentSavedDocuments}
+                  saveButtonState={saveButtonState}
+                  savedDocumentsLoading={savedDocumentsLoading}
                 />
-                {showHeaderSaveStatus ? (
-                  <SaveStatusCard
-                    autoSaveEnabled={saveMode === "autosave" && !hasCompletedSave && !saveMessage}
-                    hasSavedDesignAccess={hasSavedDesignAccess}
-                    hasUnsavedChanges={hasUnsavedChanges}
-                    layout="header"
-                    onDismiss={null}
-                    onSignIn={openSignInForCurrentDesign}
-                    recoveredLocalChanges={recoveredLocalChanges}
-                    saveMode={saveMode}
-                    saveMessage={saveMessage}
-                  />
+                {!hasSavedDesignAccess ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className={styles.headerSaveButton}
+                    onClick={() => {
+                      void onClearLocalBrowserData();
+                    }}
+                  >
+                    Clear browser drafts
+                  </Button>
                 ) : null}
               </div>
             ),
             headerAutosaveTarget,
-          )
+         )
         : null}
       {!isVersionHistoryMode && showTopSaveBanner && topBannerTarget
         ? createPortal(
@@ -1803,7 +3005,7 @@ export function EditorV2Shell({
               {previewMode ? (
                 <Button
                   type="button"
-                  variant="secondary2"
+                  variant="outlined"
                   size="sm"
                   className={styles.headerMobilePreviewButton}
                   onClick={exitPreviewMode}
@@ -1818,7 +3020,7 @@ export function EditorV2Shell({
                 <>
                   <ToolbarButton
                     type="button"
-                    disabled={!canUndo}
+                    disabled={!canUndoFromToolbar}
                     aria-label="Undo"
                     title="Undo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1828,7 +3030,7 @@ export function EditorV2Shell({
                   </ToolbarButton>
                   <ToolbarButton
                     type="button"
-                    disabled={!canRedo}
+                    disabled={!canRedoFromToolbar}
                     aria-label="Redo"
                     title="Redo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1881,7 +3083,7 @@ export function EditorV2Shell({
                 <div className={styles.headerHistoryControls}>
                   <ToolbarButton
                     type="button"
-                    disabled={!canUndo}
+                    disabled={!canUndoFromToolbar}
                     aria-label="Undo"
                     title="Undo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1891,7 +3093,7 @@ export function EditorV2Shell({
                   </ToolbarButton>
                   <ToolbarButton
                     type="button"
-                    disabled={!canRedo}
+                    disabled={!canRedoFromToolbar}
                     aria-label="Redo"
                     title="Redo"
                     className={[styles.historyButton, styles.headerHistoryButton].join(" ")}
@@ -1903,7 +3105,7 @@ export function EditorV2Shell({
               ) : null}
               <Button
                 type="button"
-                variant={previewMode ? "secondary" : "secondary2"}
+                variant="secondary"
                 size="md"
                 className={styles.headerPreviewButton}
                 disabled={!previewMode && previewModeDisabled}
@@ -1921,7 +3123,7 @@ export function EditorV2Shell({
                 size="md"
                 className={styles.headerExportButton}
                 disabled={exportButtonState === "exporting"}
-                onClick={() => onExportDocument(document)}
+                onClick={handleExportRequest}
               >
                 {exportButtonState === "exporting" ? (
                   <>
@@ -2065,11 +3267,24 @@ export function EditorV2Shell({
           )
         : null}
       <Modal
+        isOpen={exportAuthModalOpen}
+        title="Export your pattern as a PDF"
+        description="Create a free account to download PDFs, save designs, and continue editing later."
+        tone="none"
+        dismissLabel="Not now"
+        confirmLabel="Create free account"
+        onDismiss={() => setExportAuthModalOpen(false)}
+        onConfirm={() => {
+          setExportAuthModalOpen(false);
+          openSignInForCurrentDesign();
+        }}
+      />
+      <Modal
         isOpen={deleteConfirmationOpen}
-        title={currentStorageId ? "Delete this design?" : "Discard this design?"}
+        title={currentStorageId ? "Move this design to Trash?" : "Discard this design?"}
         description={
           currentStorageId
-            ? "This will permanently delete the current design from your saved designs."
+            ? "This design can be restored for 30 days from My Designs."
             : "This will discard the current design."
         }
         tone="fail"
@@ -2077,10 +3292,10 @@ export function EditorV2Shell({
         confirmLabel={
           deleteButtonState === "deleting"
             ? currentStorageId
-              ? "Deleting..."
+              ? "Moving..."
               : "Discarding..."
             : currentStorageId
-              ? "Delete design"
+              ? "Move to Trash"
               : "Discard design"
         }
         confirmVariant="destructive"
@@ -2129,6 +3344,7 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
+                    colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
@@ -2138,6 +3354,7 @@ export function EditorV2Shell({
                     showGridlines={false}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     state={versionHistoryDisplayState}
                     zoomAnchor={zoomAnchor}
                   />
@@ -2238,7 +3455,8 @@ export function EditorV2Shell({
           <>
             <EditorRail
               activeSection={visibleSidebarSection}
-              hideDocumentItem={!isBottomPanelLayout}
+              hideDocumentItem={false}
+              hideSettingsItem={!isBottomPanelLayout}
               panelCollapsed={sidebarCollapsed}
               onSelectSection={(section) => {
                 if (!sidebarCollapsed && activeSidebarSection === section) {
@@ -2306,11 +3524,58 @@ export function EditorV2Shell({
                     onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
+                    onDuplicateDocument={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      duplicateDesignToNewTab(document);
+                    }}
+                    onDownloadDocument={handleExportRequest}
+                    onSaveVersionSnapshot={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      if (saveButtonState === "saving") {
+                        return;
+                      }
+
+                      void onSaveVersionSnapshot();
+                    }}
+                    onOpenVersionHistory={() => {
+                      if (!hasSavedDesignAccess) {
+                        openSignInForCurrentDesign();
+                        return;
+                      }
+
+                      if (!currentStorageId) {
+                        return;
+                      }
+
+                      onEnterVersionHistoryMode();
+                    }}
                     onSignIn={openSignInForCurrentDesign}
                     onStartOver={onStartOver}
+                    onClearLocalBrowserData={onClearLocalBrowserData}
                     previewMode={previewMode}
+                    snapshotSaving={saveButtonState === "saving"}
+                    exportInProgress={exportButtonState === "exporting"}
                     previewModeDisabled={previewModeDisabled}
+                    traceCropDraft={tracePreviewCrop}
+                    traceCropEditing={traceCropEditing}
+                    traceEditModeActive={traceImageEditingActive}
+                    traceEraserEditing={traceEraserEditing}
+                    onBeginTraceCrop={handleBeginTraceCrop}
+                    onBeginTraceEraser={handleBeginTraceEraser}
+                    onCancelTraceCrop={handleCancelTraceCrop}
+                    onCommitTraceCrop={handleCommitTraceCrop}
+                    onResetTraceCrop={handleResetTraceCrop}
+                    onToggleTraceEditMode={handleToggleTraceEditMode}
                     trace={trace}
+                    traceConversionPreview={traceConversionPreview}
                     traceRepositionActive={traceRepositionActive}
                     traceRepositionOrigin={traceRepositionOrigin}
                     textPlacement={textPlacement}
@@ -2320,12 +3585,16 @@ export function EditorV2Shell({
                     document={document}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
+                    lastSaveConfirmedAt={lastSaveConfirmedAt}
                     recoveredLocalChanges={recoveredLocalChanges}
+                    requestedColorPanelView={requestedColorPanelView}
+                    requestedColorPanelViewKey={requestedColorPanelViewKey}
                     saveMessage={saveMessage}
                     saveMode={saveMode}
                     onHighlightColorChange={setHighlightedColorId}
                     showGridlines={showGridlines}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     textViewportCenter={textViewportCenter}
                     textViewportWidth={textViewportWidth}
                     textViewportHeight={textViewportHeight}
@@ -2343,32 +3612,99 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {traceRepositionActive && trace ? (
-                      <TraceRepositionToolbar
+                    {traceConversionPreview ? (
+                      <ConversionPreviewToolbar
                         dispatch={dispatch}
+                        onExitPreview={handleExitTraceConversionPreviewFromToolbar}
+                      />
+                    ) : traceImageEditingActive && trace ? (
+                      <TraceRepositionToolbar
+                        activeMode={traceEditSubmode}
+                        allowModeSwitchesWhileRepositioning={
+                          traceEditSubmode === "reposition" &&
+                          allowTraceModeSwitchesWhileRepositioning
+                        }
+                        cropEditing={traceCropEditing}
+                        cropAspectRatioId={traceCropEditing ? traceCropAspectRatioId : undefined}
+                        brushSize={traceEraserBrushSize}
+                        canRedo={traceEraserCanRedo}
+                        canUndo={traceEraserCanUndo}
+                        eraserEditMode={traceEraserEditMode}
+                        eraserMode={traceEraserMode}
+                        onFitHeight={() => handleFitTraceToSurface("height")}
+                        onFitWidth={() => handleFitTraceToSurface("width")}
+                        onBeginCrop={() => {
+                          void handleActivateTraceEditSubmode("crop");
+                        }}
+                        onBeginEraser={() => {
+                          void handleActivateTraceEditSubmode("erase");
+                        }}
+                        onBeginReposition={() => {
+                          void handleActivateTraceEditSubmode("reposition");
+                        }}
+                        onBrushSizeChange={setTraceEraserBrushSize}
+                        onApplyCrop={handleCommitTraceCrop}
+                        onApplyMode={() => {
+                          void handleApplyActiveTraceEditMode();
+                        }}
+                        onCancelCrop={handleCancelTraceCrop}
+                        onCancelMode={handleCancelActiveTraceEditMode}
+                        onDone={handleDoneTraceEditing}
+                        onCropAspectRatioChange={
+                          traceCropEditing ? handleTraceCropAspectRatioChange : undefined
+                        }
+                        onEditModeChange={handleTraceEraserEditModeChange}
+                        onModeChange={handleTraceEraserModeChange}
+                        onPreviewVisibilityChange={setTraceEraserBrushPreviewVisible}
+                        onRedo={handleTraceEraserRedo}
+                        onResetCrop={handleResetTraceCrop}
+                        onUndo={handleTraceEraserUndo}
                         trace={trace}
                       />
                     ) : textPlacement ? (
                       <TextPlacementToolbar
                         activeColorHex={activeColor?.hex ?? null}
                         activeColorId={activeColorId}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         featuredColorIds={featuredColorIds}
                         grid={document.grid}
                         gridMetrics={gridMetrics}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
                         palette={palette}
                         placement={textPlacement}
                         showSymbols={showSymbols}
                         symbolAssignments={document.palette.symbolAssignments}
                       />
+                    ) : iconEraserEditing && iconPlacement ? (
+                      <TraceEraserToolbar
+                        brushSize={iconEraserBrushSize}
+                        canRedo={iconEraserCanRedo}
+                        canUndo={iconEraserCanUndo}
+                        editMode={iconEraserEditMode}
+                        mode={iconEraserMode}
+                        onBrushSizeChange={setIconEraserBrushSize}
+                        onCancel={handleCancelIconEraser}
+                        onCommit={() => {
+                          void handleCommitIconEraser();
+                        }}
+                        onEditModeChange={handleIconEraserEditModeChange}
+                        onModeChange={handleIconEraserModeChange}
+                        onPreviewVisibilityChange={setIconEraserBrushPreviewVisible}
+                        onRedo={handleIconEraserRedo}
+                        onUndo={handleIconEraserUndo}
+                      />
                     ) : iconPlacement ? (
                       <IconPlacementToolbar
                         activeColorHex={activeColor?.hex ?? null}
                         activeColorId={activeColorId}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         featuredColorIds={featuredColorIds}
                         grid={document.grid}
                         gridMetrics={gridMetrics}
+                        onBeginEraser={handleBeginIconEraser}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
                         palette={palette}
                         placement={iconPlacement}
                         showSymbols={showSymbols}
@@ -2379,9 +3715,11 @@ export function EditorV2Shell({
                         activeColor={activeColor}
                         activeColorId={activeColorId}
                         activeTool={activeTool}
+                        activeSidebarSection={activeSidebarSection}
                         brushSize={brushSize}
-                        canRedo={canRedo}
-                        canUndo={canUndo}
+                        canRedo={canRedoFromToolbar}
+                        canUndo={canUndoFromToolbar}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         eyedropperReturnTool={state.session.eyedropperReturnTool}
                         hasPaintedCells={hasPaintedCells}
@@ -2391,9 +3729,22 @@ export function EditorV2Shell({
                         selectionCommitted={selectionCommitted}
                         selectionMode={state.session.selection.mode}
                         selectionShape={state.session.selection.shape}
+                        sidebarCollapsed={sidebarCollapsed}
                         trace={trace}
+                        duplicatePlacementActive={Boolean(state.session.duplicatePlacement)}
+                        duplicatePlacementOperation={
+                          state.session.duplicatePlacement?.operation ?? null
+                        }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
+                        onToolbarSelectionIntent={handleToolbarSelectionIntent}
+                        onToggleTraceEditMode={handleToggleTraceEditMode}
+                        onColorLibraryDismissPointerDown={(gesture) => {
+                          colorLibraryDismissGestureRef.current = gesture;
+                        }}
+                        onOpenSelectionColorsPanel={handleOpenSelectionColorsPanel}
+                        onBrushPreviewVisibilityChange={setMainBrushPreviewVisible}
                         selectionRequestKey={selectionRequestKey}
                         showSymbols={showSymbols}
                         symbolAssignments={document.palette.symbolAssignments}
@@ -2404,13 +3755,24 @@ export function EditorV2Shell({
 
                 {previewMode ? null : (
                   <div className={styles.stageToolbarBottomRight}>
-                    <ViewportToolbar
-                      dispatch={dispatch}
-                      fitZoom={fitZoom}
-                      onFitToGrid={fitToGrid}
-                      zoomAnchor={zoomAnchor}
-                      viewport={viewport}
-                    />
+                    <div className={styles.stageToolbarBottomRightCluster}>
+                      <ViewportToolbar
+                        dispatch={dispatch}
+                        fitZoom={fitZoom}
+                        onFitToGrid={fitToGrid}
+                        zoomAnchor={zoomAnchor}
+                        viewport={viewport}
+                      />
+                      {!isBottomPanelLayout ? (
+                        <CanvasAidsFloatingToolbar
+                          dispatch={dispatch}
+                          showGridlines={showGridlines}
+                          showRuler={showRuler}
+                          showSymbols={showSymbols}
+                          touchSnappingEnabled={touchSnappingEnabled}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 )}
 
@@ -2423,6 +3785,8 @@ export function EditorV2Shell({
                     activeColorId={activeColorId}
                     activeTool={activeTool}
                     brushSize={brushSize}
+                    brushPreviewVisible={mainBrushPreviewVisible}
+                    colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
@@ -2431,7 +3795,29 @@ export function EditorV2Shell({
                     showGridlines={showGridlines}
                     showRuler={showRuler}
                     showSymbols={showSymbols}
+                    touchSnappingEnabled={touchSnappingEnabled}
                     state={state}
+                    iconEraserBrushSize={iconEraserBrushSize}
+                    iconEraserBrushPreviewVisible={iconEraserBrushPreviewVisible}
+                    iconEraserEditing={iconEraserEditing}
+                    iconEraserMaskUrl={iconEraserDraftMaskUrl}
+                    iconEraserDraftRevision={iconEraserDraftRevision}
+                    iconEraserMode={iconEraserMode}
+                    iconEraserEditMode={iconEraserEditMode}
+                    traceCropBase={traceCropSnapshot}
+                    traceCropAspectRatio={traceCropAspectRatio}
+                    traceCropEditing={traceCropEditing}
+                    traceEraserBrushSize={traceEraserBrushSize}
+                    traceEraserBrushPreviewVisible={traceEraserBrushPreviewVisible}
+                    traceEraserEditing={traceEraserEditing}
+                    traceEraserMaskUrl={traceEraserDraftMaskUrl}
+                    traceEraserDraftRevision={traceEraserDraftRevision}
+                    traceEraserMode={traceEraserMode}
+                    traceEraserEditMode={traceEraserEditMode}
+                    traceDisplayOverride={tracePreviewCrop}
+                    onIconEraserDraftChange={handleIconEraserDraftChange}
+                    onTraceCropPreviewChange={handlePreviewTraceCropChange}
+                    onTraceEraserDraftChange={handleTraceEraserDraftChange}
                     zoomAnchor={zoomAnchor}
                   />
                 </div>
@@ -2458,6 +3844,338 @@ export function EditorV2Shell({
           )
         : null}
     </main>
+  );
+}
+
+function HeaderFileMenu({
+  currentStorageId,
+  deleteButtonState,
+  exportButtonState,
+  getItemLabel,
+  hasPersistableUnsavedChanges,
+  hasSavedDesignAccess,
+  items,
+  onAction,
+  onOpenSavedDocuments,
+  recentSavedDocuments,
+  saveButtonState,
+  savedDocumentsLoading,
+}: {
+  currentStorageId: string;
+  deleteButtonState: DeleteButtonState;
+  exportButtonState: ExportButtonState;
+  getItemLabel: (item: HeaderFileMenuItem) => ReactNode;
+  hasPersistableUnsavedChanges: boolean;
+  hasSavedDesignAccess: boolean;
+  items: HeaderFileMenuItem[];
+  onAction: (value: string) => void;
+  onOpenSavedDocuments: () => Promise<void> | void;
+  recentSavedDocuments: SavedEditorV2DocumentRecord[];
+  saveButtonState: SaveButtonState;
+  savedDocumentsLoading: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const recentCloseTimeoutRef = useRef<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (recentCloseTimeoutRef.current !== null) {
+        window.clearTimeout(recentCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      const clickedTrigger = Boolean(target && rootRef.current?.contains(target));
+      const clickedMenu = Boolean(target && menuRef.current?.contains(target));
+
+      if (!target || clickedTrigger || clickedMenu) {
+        return;
+      }
+
+      setOpen(false);
+      setRecentOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
+        setOpen(false);
+        setRecentOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setRecentOpen(false);
+      return;
+    }
+
+    if (
+      hasSavedDesignAccess &&
+      !savedDocumentsLoading &&
+      recentSavedDocuments.length === 0
+    ) {
+      void onOpenSavedDocuments();
+    }
+  }, [
+    hasSavedDesignAccess,
+    onOpenSavedDocuments,
+    open,
+    recentSavedDocuments.length,
+    savedDocumentsLoading,
+  ]);
+
+  const updatePortalStyle = useCallback(() => {
+    if (!rootRef.current || !menuRef.current) {
+      return;
+    }
+
+    const viewportPadding = 8;
+    const triggerRect = rootRef.current.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const measuredMenuWidth = menuRect.width || 220;
+    const measuredMenuHeight = menuRect.height || 0;
+    const left = Math.min(
+      Math.max(triggerRect.left, viewportPadding),
+      window.innerWidth - measuredMenuWidth - viewportPadding,
+    );
+    const top = Math.min(
+      triggerRect.bottom + 4,
+      window.innerHeight - measuredMenuHeight - viewportPadding,
+    );
+    const maxHeight = Math.max(window.innerHeight - triggerRect.bottom - 12, 160);
+
+    setPortalStyle({
+      position: "fixed",
+      top,
+      left,
+      zIndex: "var(--z-editor-popover)",
+      width: 220,
+      maxHeight: Math.min(400, maxHeight),
+      overflowY: "auto",
+      visibility: "visible",
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open || !mounted) {
+      return;
+    }
+
+    updatePortalStyle();
+
+    const rafId = window.requestAnimationFrame(updatePortalStyle);
+    window.addEventListener("resize", updatePortalStyle);
+    window.addEventListener("scroll", updatePortalStyle, true);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updatePortalStyle);
+      window.removeEventListener("scroll", updatePortalStyle, true);
+    };
+  }, [mounted, open, updatePortalStyle]);
+
+  function getItemDisabled(item: HeaderFileMenuItem) {
+    return (
+      item.kind === "divider" ||
+      (item.id === "save-version" && saveButtonState === "saving") ||
+      (item.id === "version-history" &&
+        hasSavedDesignAccess &&
+        !currentStorageId) ||
+      (item.id === "download" && exportButtonState === "exporting") ||
+      (item.id === "delete" && deleteButtonState === "deleting")
+    );
+  }
+
+  function closeMenus() {
+    if (recentCloseTimeoutRef.current !== null) {
+      window.clearTimeout(recentCloseTimeoutRef.current);
+      recentCloseTimeoutRef.current = null;
+    }
+    setOpen(false);
+    setRecentOpen(false);
+  }
+
+  function clearRecentCloseTimeout() {
+    if (recentCloseTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(recentCloseTimeoutRef.current);
+    recentCloseTimeoutRef.current = null;
+  }
+
+  function scheduleRecentClose() {
+    clearRecentCloseTimeout();
+    recentCloseTimeoutRef.current = window.setTimeout(() => {
+      setRecentOpen(false);
+      recentCloseTimeoutRef.current = null;
+    }, 180);
+  }
+
+  function handleAction(value: string) {
+    closeMenus();
+    onAction(value);
+  }
+
+  function handleOpenRecentDesign(storageId: string) {
+    closeMenus();
+    window.location.assign(`/editor/designs/${storageId}`);
+  }
+
+  function handleViewAll() {
+    closeMenus();
+    window.location.assign("/library");
+  }
+
+  const recentSubmenuLabel = !hasSavedDesignAccess
+    ? "Sign in to view recent designs"
+    : savedDocumentsLoading && recentSavedDocuments.length === 0
+      ? "Loading recent designs..."
+      : recentSavedDocuments.length === 0
+        ? "No recent designs yet"
+        : null;
+
+  return (
+    <div ref={rootRef} className={styles.headerFileMenu}>
+      <MenuTrigger
+        type="button"
+        variant="ghost"
+        open={open}
+        onClick={() => setOpen((currentValue) => !currentValue)}
+        className={styles.headerFileMenuTrigger}
+        style={{ minWidth: "auto", padding: "6px 8px" }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <span className={styles.headerFileMenuTriggerLabel}>File</span>
+      </MenuTrigger>
+      {open && mounted
+        ? createPortal(
+            <MenuSurface
+              ref={menuRef}
+              className={[
+                styles.headerFileMenuSurface,
+                recentOpen ? styles.headerFileMenuSurfaceSubmenuOpen : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              role="menu"
+              aria-label="File actions"
+              style={portalStyle ?? { visibility: "hidden" }}
+            >
+              {items.map((item) =>
+                item.kind === "divider" ? (
+                  <MenuDivider key={item.id} />
+                ) : item.id === "library" ? (
+                  <div key={item.id} className={styles.headerFileMenuSubmenuGroup}>
+                    <MenuItem
+                      type="button"
+                      disabled={getItemDisabled(item)}
+                      onClick={() => handleAction(item.id)}
+                    >
+                      {getItemLabel(item)}
+                    </MenuItem>
+                    <div
+                      className={styles.headerFileMenuSubmenuItem}
+                      onMouseEnter={() => {
+                        clearRecentCloseTimeout();
+                        setRecentOpen(true);
+                      }}
+                      onMouseLeave={scheduleRecentClose}
+                    >
+                      <MenuItem
+                        type="button"
+                        trailing={<MenuCaretIcon />}
+                        onClick={() => {
+                          clearRecentCloseTimeout();
+                          setRecentOpen((currentValue) => !currentValue);
+                        }}
+                        onFocus={() => {
+                          clearRecentCloseTimeout();
+                          setRecentOpen(true);
+                        }}
+                        onBlur={scheduleRecentClose}
+                        className={styles.headerFileMenuSubmenuTrigger}
+                      >
+                        <span className={styles.headerOverflowItemLabel}>
+                          <ButtonIcon
+                            icon="/icons/lucide/history.svg"
+                            className={styles.saveButtonIcon}
+                          />
+                          <span>Open recent</span>
+                        </span>
+                      </MenuItem>
+                      {recentOpen ? (
+                        <MenuSurface
+                          className={styles.headerFileRecentMenuSurface}
+                          role="menu"
+                          aria-label="Recent designs"
+                          onMouseEnter={clearRecentCloseTimeout}
+                          onMouseLeave={scheduleRecentClose}
+                        >
+                          {recentSubmenuLabel ? (
+                            <MenuItem type="button" disabled>
+                              {recentSubmenuLabel}
+                            </MenuItem>
+                          ) : (
+                            recentSavedDocuments.map((record) => (
+                              <MenuItem
+                                key={record.storageId}
+                                type="button"
+                                onClick={() => handleOpenRecentDesign(record.storageId)}
+                                className={styles.headerFileRecentMenuItem}
+                                title={record.title}
+                              >
+                                {record.title}
+                              </MenuItem>
+                            ))
+                          )}
+                          <MenuDivider />
+                          <MenuItem type="button" onClick={handleViewAll}>
+                            View all
+                          </MenuItem>
+                        </MenuSurface>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <MenuItem
+                    key={item.id}
+                    type="button"
+                    disabled={getItemDisabled(item)}
+                    onClick={() => handleAction(item.id)}
+                  >
+                    {getItemLabel(item)}
+                  </MenuItem>
+                ),
+              )}
+            </MenuSurface>,
+            document.body,
+          )
+        : null}
+    </div>
   );
 }
 
@@ -2545,7 +4263,8 @@ function getSaveStatusState(
 
   if (
     saveMessage.startsWith(SAVE_SUCCESS_PREFIX) ||
-    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX)
+    saveMessage.startsWith(AUTOSAVE_SUCCESS_PREFIX) ||
+    saveMessage.startsWith(VERSION_SAVE_SUCCESS_PREFIX)
   ) {
     return "saved";
   }
@@ -2621,4 +4340,36 @@ function duplicateDesignToNewTab(document: EditorDocumentState): void {
   );
   duplicateUrl.searchParams.set(DUPLICATE_QUERY_PARAM, duplicateToken);
   window.open(duplicateUrl.toString(), "_blank", "noopener,noreferrer");
+}
+
+async function uploadTraceMask(input: {
+  dataUrl: string;
+  originalUrl: string;
+}): Promise<string> {
+  const blob = await dataUrlToBlob(input.dataUrl);
+  const formData = new FormData();
+  formData.set("file", new File([blob], "trace-mask.png", { type: "image/png" }));
+  formData.set("originalUrl", input.originalUrl);
+
+  const response = await fetch("/api/upload-trace-mask", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error || "Couldn't upload trace mask.");
+  }
+
+  const payload = (await response.json()) as { url?: string };
+  if (!payload.url) {
+    throw new Error("Trace mask upload did not return a URL.");
+  }
+
+  return payload.url;
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  return response.blob();
 }

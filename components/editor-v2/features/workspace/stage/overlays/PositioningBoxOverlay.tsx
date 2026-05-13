@@ -10,9 +10,11 @@ import type { WorldPoint } from "@/lib/editor-v2/editor/viewport";
 import {
   getHandleLeft,
   getHandleTop,
+  getPinchSnappedBounds,
   getPositionedBounds,
   getResizeSnappedBounds,
   getRotationCss,
+  getSnappedRotationDegrees,
   getTransformFromDrag,
   getTransformFromPinch,
   getCenterSnappedPosition,
@@ -55,6 +57,7 @@ interface PositioningBoxOverlayProps {
   usePointerCapture?: boolean;
   showHandles?: boolean;
   showOutline?: boolean;
+  touchSnappingEnabled?: boolean;
   transform: PositioningTransform;
   transactionKeyPrefix: string;
   zoom: number;
@@ -74,6 +77,9 @@ interface DragSession {
   rafId: number | null;
   lastPreviewAt: number;
   moveSnap: PositioningMoveSnapState;
+  isTouchInteraction: boolean;
+  rotationSnap: number | null;
+  snappingModifierPressed: boolean;
 }
 
 interface HandleElements {
@@ -84,6 +90,8 @@ interface HandleElements {
 interface PinchSession {
   pinch: PositioningPinchState;
   pointerIds: [number, number];
+  snappingEnabled: boolean;
+  moveSnap: PositioningMoveSnapState;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -114,6 +122,7 @@ export function PositioningBoxOverlay({
   usePointerCapture = true,
   showHandles = true,
   showOutline = true,
+  touchSnappingEnabled = true,
   transform,
   transactionKeyPrefix,
   zoom,
@@ -138,6 +147,7 @@ export function PositioningBoxOverlay({
   const latestOnTransformCommitRef = useRef(onTransformCommit);
   const latestProjectBoundsForPreviewRef = useRef(projectBoundsForPreview);
   const latestSnapContainerBoundsRef = useRef(snapContainerBounds);
+  const latestTouchSnappingEnabledRef = useRef(touchSnappingEnabled);
   const resolvedSnapZoom = snapZoom ?? zoom;
   const latestSnapZoomRef = useRef(resolvedSnapZoom);
   const [activeMoveSnap, setActiveMoveSnap] = useState<PositioningMoveSnapState>({
@@ -234,6 +244,10 @@ export function PositioningBoxOverlay({
   }, [snapContainerBounds]);
 
   useEffect(() => {
+    latestTouchSnappingEnabledRef.current = touchSnappingEnabled;
+  }, [touchSnappingEnabled]);
+
+  useEffect(() => {
     latestSnapZoomRef.current = resolvedSnapZoom;
   }, [resolvedSnapZoom]);
 
@@ -267,6 +281,7 @@ export function PositioningBoxOverlay({
 
       session.pendingClientX = event.clientX;
       session.pendingClientY = event.clientY;
+      session.snappingModifierPressed = isSnappingModifierPressed(event);
 
       const hasLivePreview =
         previewBoundsStrategy === "live" || Boolean(latestOnTransformPreviewRef.current);
@@ -358,7 +373,35 @@ export function PositioningBoxOverlay({
       latestBaseRectRef.current,
     );
 
-    if (session.mode === "move" && latestSnapContainerBoundsRef.current) {
+    const snappingEnabled = isDragSnappingEnabled(
+      session,
+      session.mode,
+      latestTouchSnappingEnabledRef.current,
+    );
+
+    if (session.mode === "rotate") {
+      if (!snappingEnabled) {
+        session.rotationSnap = null;
+      } else {
+        session.rotationSnap = getRotationSnapTarget(
+          nextTransform.rotation,
+          session.rotationSnap,
+        );
+        nextTransform = {
+          ...nextTransform,
+          rotation: getSnappedRotationDegrees(
+            nextTransform.rotation,
+            session.rotationSnap,
+          ),
+        };
+      }
+    }
+
+    if (
+      session.mode === "move" &&
+      latestSnapContainerBoundsRef.current &&
+      snappingEnabled
+    ) {
       const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
       const snappedPosition = getCenterSnappedPosition(
         rawBounds,
@@ -378,7 +421,8 @@ export function PositioningBoxOverlay({
       session.dragged &&
       session.mode !== "move" &&
       session.mode !== "rotate" &&
-      latestSnapContainerBoundsRef.current
+      latestSnapContainerBoundsRef.current &&
+      snappingEnabled
     ) {
       const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
       const snappedBounds = getResizeSnappedBounds(
@@ -398,7 +442,7 @@ export function PositioningBoxOverlay({
       };
       session.moveSnap = snappedBounds.snap;
       setActiveMoveSnap(snappedBounds.snap);
-    } else if (session.mode !== "move") {
+    } else {
       session.moveSnap = emptyMoveSnap();
       setActiveMoveSnap(emptyMoveSnap());
     }
@@ -461,17 +505,37 @@ export function PositioningBoxOverlay({
     const rawRotation =
       pinchSession.pinch.startTransform.rotation +
       ((nextAngle - pinchSession.pinch.startAngle) * 180) / Math.PI;
-    pinchSession.pinch.snapRotation = getRotationSnapTarget(
-      rawRotation,
-      pinchSession.pinch.snapRotation,
-    );
-    const nextTransform = getTransformFromPinch(
+    pinchSession.pinch.snapRotation = pinchSession.snappingEnabled
+      ? getRotationSnapTarget(rawRotation, pinchSession.pinch.snapRotation)
+      : null;
+    let nextTransform = getTransformFromPinch(
       pinchSession.pinch,
       worldCenter,
       nextDistance,
       nextAngle,
       latestBaseRectRef.current,
     );
+
+    if (pinchSession.snappingEnabled && latestSnapContainerBoundsRef.current) {
+      const rawBounds = getPositionedBounds(latestBaseRectRef.current, nextTransform);
+      const snappedBounds = getPinchSnappedBounds(
+        rawBounds,
+        latestSnapContainerBoundsRef.current,
+        pinchSession.moveSnap,
+        latestSnapZoomRef.current,
+      );
+
+      nextTransform = {
+        ...nextTransform,
+        offsetX: snappedBounds.bounds.left - latestBaseRectRef.current.left,
+        offsetY: snappedBounds.bounds.top - latestBaseRectRef.current.top,
+      };
+      pinchSession.moveSnap = snappedBounds.snap;
+      setActiveMoveSnap(snappedBounds.snap);
+    } else {
+      pinchSession.moveSnap = emptyMoveSnap();
+      setActiveMoveSnap(emptyMoveSnap());
+    }
 
     latestTransformRef.current = nextTransform;
     const nextInteractionBounds = getPositionedBounds(
@@ -531,13 +595,14 @@ export function PositioningBoxOverlay({
           secondTouch.clientY - firstTouch.clientY,
           secondTouch.clientX - firstTouch.clientX,
         ),
-        snapRotation: getRotationSnapTarget(
-          latestTransformRef.current.rotation,
-          null,
-        ),
+        snapRotation: latestTouchSnappingEnabledRef.current
+          ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
+          : null,
         startTransform: latestTransformRef.current,
       },
       pointerIds: [firstPointerId, secondPointerId],
+      snappingEnabled: latestTouchSnappingEnabledRef.current,
+      moveSnap: emptyMoveSnap(),
     };
 
     const activeDragSession = dragSessionRef.current;
@@ -611,6 +676,12 @@ export function PositioningBoxOverlay({
       rafId: null,
       lastPreviewAt: 0,
       moveSnap: emptyMoveSnap(),
+      isTouchInteraction: event.pointerType === "touch",
+      rotationSnap:
+        mode === "rotate" && event.pointerType !== "touch"
+          ? getRotationSnapTarget(latestTransformRef.current.rotation, null)
+          : null,
+      snappingModifierPressed: isSnappingModifierPressed(event.nativeEvent),
     };
 
     if (usePointerCapture) {
@@ -887,6 +958,24 @@ function emptyMoveSnap(): PositioningMoveSnapState {
     centerX: null,
     centerY: null,
   };
+}
+
+function isSnappingModifierPressed(
+  event: Pick<PointerEvent, "metaKey" | "ctrlKey">,
+): boolean {
+  return event.metaKey || event.ctrlKey;
+}
+
+function isDragSnappingEnabled(
+  session: DragSession,
+  mode: PositioningDragMode,
+  touchSnappingEnabled: boolean,
+): boolean {
+  if (session.isTouchInteraction) {
+    return mode === "rotate" ? false : touchSnappingEnabled;
+  }
+
+  return !session.snappingModifierPressed;
 }
 
 function getHorizontalGuideTop(

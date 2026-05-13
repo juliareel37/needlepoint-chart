@@ -6,11 +6,22 @@ export interface ShapeIconLibraryItem {
   name: string;
   category: string;
   src: string;
+  mimeType: string | null;
   intrinsicWidth: number;
   intrinsicHeight: number;
   colorSlots: IconColorSlot[];
   primitiveKind: PrimitiveIconKind | null;
+  isUserUploaded: boolean;
   lockAspectRatio: boolean;
   supportsStrokeWidth: boolean;
   searchKeywords: string[];
 }
+
+export interface ShapeIconLibraryOverviewGroup {
+  category: string;
+  count: number;
+  previewItems: ShapeIconLibraryItem[];
+}
+
+export interface UploadedShapeIconLibraryItem
+  extends Omit<ShapeIconLibraryItem, "category" | "searchKeywords"> {}

@@ -1,92 +1,569 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { TraceDocument } from "@/lib/editor-v2/editor/store";
-import { Toolbar, ToolbarButton, ToolbarDivider, ToolbarGroup, ToolbarIcon, ToolbarLabel } from "@/components/design-system";
-import type { EditorStore } from "@/lib/editor-v2/editor/store";
 import {
-  createCancelTraceRepositionCommand,
-  createCommitTraceRepositionCommand,
-  createSetActiveSidebarSectionCommand,
-  createSetSidebarCollapsedCommand,
-} from "../workspaceCommands";
+  MenuChevronIcon,
+  SegmentedControl,
+  Slider,
+  Toolbar,
+  ToolbarAnchor,
+  ToolbarButton,
+  ToolbarDivider,
+  ToolbarGroup,
+  ToolbarIcon,
+  ToolbarLabel,
+  ToolbarPopover,
+} from "@/components/design-system";
+import type { EraserEditMode, EraserMode } from "@/lib/editor-v2/editor/magicWand";
+import {
+  getToolbarPopoverHorizontalPosition,
+  TOOLBAR_POPOVER_VIEWPORT_PADDING,
+} from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
 
+export type TraceCropAspectRatioId =
+  | "freehand"
+  | "original"
+  | "1:1"
+  | "2:3"
+  | "3:2"
+  | "3:4"
+  | "4:3"
+  | "4:5"
+  | "5:4"
+  | "9:16"
+  | "16:9";
+
+export const TRACE_CROP_ASPECT_RATIO_OPTIONS: Array<{
+  id: TraceCropAspectRatioId;
+  label: string;
+}> = [
+  { id: "freehand", label: "Free-form" },
+  { id: "original", label: "Original" },
+  { id: "1:1", label: "1:1" },
+  { id: "2:3", label: "2:3" },
+  { id: "3:2", label: "3:2" },
+  { id: "3:4", label: "3:4" },
+  { id: "4:3", label: "4:3" },
+  { id: "4:5", label: "4:5" },
+  { id: "5:4", label: "5:4" },
+  { id: "9:16", label: "9:16" },
+  { id: "16:9", label: "16:9" },
+];
+
+function getAspectRatioValue(
+  optionId: TraceCropAspectRatioId,
+  trace: TraceDocument,
+): number | null {
+  if (optionId === "freehand") {
+    return null;
+  }
+
+  if (optionId === "original") {
+    const width = trace.imageWidth ?? 0;
+    const height = trace.imageHeight ?? 0;
+    return width > 0 && height > 0 ? width / height : 1;
+  }
+
+  const [widthText, heightText] = optionId.split(":");
+  const width = Number(widthText);
+  const height = Number(heightText);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return 1;
+  }
+
+  return width / height;
+}
+
+function getAspectRatioGlyphDimensions(aspectRatio: number | null): { width: number; height: number } {
+  const maxSize = 14;
+  const minSize = 6;
+
+  if (!aspectRatio || !(aspectRatio > 0)) {
+    return { width: 11, height: 11 };
+  }
+
+  if (aspectRatio >= 1) {
+    return {
+      width: maxSize,
+      height: Math.max(minSize, Math.round(maxSize / aspectRatio)),
+    };
+  }
+
+  return {
+    width: Math.max(minSize, Math.round(maxSize * aspectRatio)),
+    height: maxSize,
+  };
+}
+
+function AspectRatioGlyph({
+  optionId,
+  trace,
+}: {
+  optionId: TraceCropAspectRatioId;
+  trace: TraceDocument;
+}) {
+  if (optionId === "freehand") {
+    return <ToolbarIcon icon="/icons/lucide/free.svg" />;
+  }
+
+  if (optionId === "original") {
+    return <ToolbarIcon icon="/icons/lucide/image.svg" />;
+  }
+
+  const aspectRatio = getAspectRatioValue(optionId, trace);
+  const dimensions = getAspectRatioGlyphDimensions(aspectRatio);
+
+  return (
+    <span aria-hidden="true" className={styles.aspectRatioGlyph}>
+      <span
+        className={styles.aspectRatioGlyphFrame}
+        style={{
+          width: `${dimensions.width}px`,
+          height: `${dimensions.height}px`,
+        }}
+      />
+    </span>
+  );
+}
+
 interface TraceRepositionToolbarProps {
-  dispatch: EditorStore["dispatch"];
+  activeMode: "none" | "crop" | "erase" | "reposition";
+  cropEditing?: boolean;
+  cropAspectRatioId?: TraceCropAspectRatioId;
+  canRedo?: boolean;
+  canUndo?: boolean;
+  brushSize?: number;
+  eraserEditMode?: EraserEditMode;
+  eraserMode?: EraserMode;
+  allowModeSwitchesWhileRepositioning?: boolean;
+  onFitHeight?: () => void;
+  onFitWidth?: () => void;
+  onBeginCrop?: () => void;
+  onBeginEraser?: () => void;
+  onBeginReposition?: () => void;
+  onApplyCrop?: () => void;
+  onApplyMode?: () => void;
+  onCancelCrop?: () => void;
+  onCropAspectRatioChange?: (value: TraceCropAspectRatioId) => void;
+  onBrushSizeChange?: (brushSize: number) => void;
+  onCancelMode?: () => void;
+  onDone: () => void;
+  onEditModeChange?: (mode: EraserEditMode) => void;
+  onModeChange?: (mode: EraserMode) => void;
+  onPreviewVisibilityChange?: (visible: boolean) => void;
+  onRedo?: () => void;
+  onResetCrop?: () => void;
+  onUndo?: () => void;
   trace: TraceDocument;
 }
 
+function TraceToolbarPortalPopover({
+  align = "start",
+  anchorRef,
+  children,
+  onRequestClose,
+  ...props
+}: React.ComponentProps<typeof ToolbarPopover> & {
+  align?: "start" | "center";
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  onRequestClose?: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number | "auto";
+    right: number | "auto";
+    transform: string;
+  } | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    function updatePosition() {
+      const anchor = anchorRef.current;
+
+      if (!anchor) {
+        setPosition(null);
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      const popoverWidth = popoverRef.current?.offsetWidth ?? 0;
+      const horizontalPosition = getToolbarPopoverHorizontalPosition({
+        align,
+        anchorRect: rect,
+        popoverWidth,
+      });
+
+      setPosition({
+        top: rect.bottom + 8,
+        left: horizontalPosition.left,
+        right: horizontalPosition.right,
+        transform: horizontalPosition.transform,
+      });
+    }
+
+    updatePosition();
+
+    const frame = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [align, anchorRef, mounted]);
+
+  useEffect(() => {
+    if (!mounted || !onRequestClose) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (popoverRef.current?.contains(target) || anchorRef.current?.contains(target)) {
+        return;
+      }
+
+      onRequestClose?.();
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [anchorRef, mounted, onRequestClose]);
+
+  if (!mounted || !position) {
+    return null;
+  }
+
+  return createPortal(
+    <ToolbarPopover
+      {...props}
+      ref={popoverRef}
+      style={{
+        ...props.style,
+        position: "fixed",
+        top: position.top,
+        left: position.left,
+        right: position.right,
+        zIndex: "var(--z-editor-popover)",
+        transform: position.transform,
+        maxWidth: `calc(100vw - ${TOOLBAR_POPOVER_VIEWPORT_PADDING * 2}px)`,
+        minWidth: "168px",
+        maxHeight: "240px",
+        overflowY: "auto",
+      }}
+    >
+      {children}
+    </ToolbarPopover>,
+    document.body,
+  );
+}
+
 export function TraceRepositionToolbar({
-  dispatch,
-  trace: _trace,
+  activeMode,
+  cropEditing = false,
+  cropAspectRatioId,
+  canRedo = false,
+  canUndo = false,
+  brushSize = 1,
+  eraserEditMode = "brush",
+  eraserMode = "erase",
+  allowModeSwitchesWhileRepositioning = false,
+  onFitHeight,
+  onFitWidth,
+  onBeginCrop,
+  onBeginEraser,
+  onBeginReposition,
+  onApplyCrop,
+  onApplyMode,
+  onCancelCrop,
+  onCropAspectRatioChange,
+  onBrushSizeChange,
+  onCancelMode,
+  onDone,
+  onEditModeChange,
+  onModeChange,
+  onPreviewVisibilityChange,
+  onRedo,
+  onResetCrop,
+  onUndo,
+  trace,
 }: TraceRepositionToolbarProps) {
+  const [cropAspectRatioMenuOpen, setCropAspectRatioMenuOpen] = useState(false);
+  const cropAspectRatioAnchorRef = useRef<HTMLDivElement | null>(null);
+  const brushSizeSliderValue = Number.isFinite(brushSize)
+    ? Math.min(Math.max(brushSize, 1), 10)
+    : 1;
+  const brushSizePercent = Math.round(1 + ((brushSizeSliderValue - 1) / 9) * 99);
+  const activeCropAspectRatio =
+    TRACE_CROP_ASPECT_RATIO_OPTIONS.find((option) => option.id === cropAspectRatioId) ??
+    TRACE_CROP_ASPECT_RATIO_OPTIONS[0];
+
+  useEffect(() => {
+    if (!cropEditing) {
+      setCropAspectRatioMenuOpen(false);
+    }
+  }, [cropEditing]);
+
   return (
     <div className={styles.selectionToolbarCluster}>
-      <div className={styles.selectionToolbarCloseViewport}>
-        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
-          <ToolbarButton
-            type="button"
-            variant="ghost"
-            iconOnly
-            className={styles.selectionToolbarCloseButton}
-            onClick={() => dispatch(createCancelTraceRepositionCommand())}
-          >
-            <ToolbarIcon icon="/icons/lucide/x.svg" />
-          </ToolbarButton>
-        </Toolbar>
-      </div>
-
       <div className={styles.selectionToolbarMainViewport}>
         <Toolbar className={styles.floatingToolbar}>
           <ToolbarGroup>
-            <ToolbarButton
-              type="button"
-              labelled
-              onClick={() => {
-                dispatch(createSetActiveSidebarSectionCommand("trace"));
-                dispatch(createSetSidebarCollapsedCommand(false));
-              }}
-            >
-              <ToolbarIcon icon="/icons/lucide/sliders-horizontal.svg" />
-              <ToolbarLabel>Display settings</ToolbarLabel>
-            </ToolbarButton>
-{/* 
-            <ToolbarDivider />
-            <ToolbarGroup style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 10 }}>
-              <ToolbarButton
-                type="button"
-                variant="secondary"
-                labelled
-                onClick={() => dispatch(createCancelTraceRepositionCommand())}
-              >
-                Cancel
-              </ToolbarButton>
-              <ToolbarButton
-                type="button"
-                variant="primary"
-                labelled
-                onClick={() => dispatch(createCommitTraceRepositionCommand())}
-              >
-                Done
-              </ToolbarButton>
-            </ToolbarGroup> */}
+            {activeMode === "none" ? (
+              <>
+                <ToolbarButton type="button" labelled onClick={onBeginReposition}>
+                  <ToolbarIcon icon="/icons/lucide/vector_square.svg" />
+                  Reposition
+                </ToolbarButton>
+                <ToolbarButton type="button" labelled onClick={onBeginEraser}>
+                  <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                  Erase
+                </ToolbarButton>
+                <ToolbarButton type="button" labelled onClick={onBeginCrop}>
+                  <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                  Crop
+                </ToolbarButton>
+              </>
+            ) : null}
+
+            {activeMode === "reposition" && onFitHeight && onFitWidth ? (
+              <>
+                <ToolbarButton type="button" labelled onClick={onFitHeight}>
+                  <ToolbarIcon icon="/icons/lucide/fold-vertical.svg" />
+                  Fit height
+                </ToolbarButton>
+
+                <ToolbarButton type="button" labelled onClick={onFitWidth}>
+                  <ToolbarIcon icon="/icons/lucide/fold-horizontal.svg" />
+                  Fit width
+                </ToolbarButton>
+
+                {allowModeSwitchesWhileRepositioning ? (
+                  <>
+                    <ToolbarButton type="button" labelled onClick={onBeginEraser}>
+                      <ToolbarIcon icon="/icons/lucide/eraser.svg" />
+                      Erase
+                    </ToolbarButton>
+                    <ToolbarButton type="button" labelled onClick={onBeginCrop}>
+                      <ToolbarIcon icon="/icons/lucide/crop.svg" />
+                      Crop
+                    </ToolbarButton>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+
+            {activeMode === "erase" ? (
+              <>
+                <SegmentedControl
+                  ariaLabel="Trace eraser edit mode"
+                  value={eraserEditMode}
+                  onChange={(value) => onEditModeChange?.(value as EraserEditMode)}
+                  options={[
+                    { label: "Brush", value: "brush" },
+                    { label: "Magic", value: "magic" },
+                  ]}
+                />
+                <SegmentedControl
+                  ariaLabel="Trace eraser mode"
+                  value={eraserMode}
+                  onChange={(value) => onModeChange?.(value as EraserMode)}
+                  options={[
+                    { label: "Erase", value: "erase" },
+                    { label: "Restore", value: "restore", disabled: eraserEditMode === "magic" },
+                  ]}
+                />
+                {eraserEditMode === "brush" ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 15,
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      padding: "6px 8px",
+                    }}
+                  >
+                    <ToolbarIcon icon="/icons/other/stroke-width.svg" />
+                    <div className={styles.traceSliderTooltipWrap} style={{ width: 80, flexShrink: 0 }}>
+                      <Slider
+                        min={1}
+                        max={10}
+                        step={0.05}
+                        value={brushSizeSliderValue}
+                        aria-label="Eraser brush size"
+                        aria-valuetext={`${brushSizePercent}% image-size erase area`}
+                        onPointerDown={() => onPreviewVisibilityChange?.(true)}
+                        onPointerUp={() => onPreviewVisibilityChange?.(false)}
+                        onPointerCancel={() => onPreviewVisibilityChange?.(false)}
+                        onBlur={() => onPreviewVisibilityChange?.(false)}
+                        onChange={(event) => {
+                          const nextSliderValue = Number(event.currentTarget.value);
+                          const nextBrushSize = Math.min(Math.max(nextSliderValue, 1), 10);
+
+                          if (Math.abs(nextBrushSize - brushSizeSliderValue) < 0.001) {
+                            return;
+                          }
+
+                          onBrushSizeChange?.(nextBrushSize);
+                        }}
+                        style={{ width: "100%", maxWidth: "none" }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <ToolbarButton
+                  type="button"
+                  variant="secondary"
+                  disabled={!canUndo}
+                  onClick={onUndo}
+                  aria-label="Undo eraser change"
+                >
+                  <ToolbarIcon icon="/icons/lucide/undo.svg" />
+                </ToolbarButton>
+                <ToolbarButton
+                  type="button"
+                  variant="secondary"
+                  disabled={!canRedo}
+                  onClick={onRedo}
+                  aria-label="Redo eraser change"
+                >
+                  <ToolbarIcon icon="/icons/lucide/redo.svg" />
+                </ToolbarButton>
+              </>
+            ) : null}
+
+            {activeMode === "crop" && cropEditing ? (
+              <>
+                {cropAspectRatioId && onCropAspectRatioChange ? (
+                  <ToolbarAnchor ref={cropAspectRatioAnchorRef}>
+                    <ToolbarButton
+                      type="button"
+                      labelled
+                      active={cropAspectRatioMenuOpen}
+                      aria-expanded={cropAspectRatioMenuOpen}
+                      aria-haspopup="menu"
+                      onClick={() => setCropAspectRatioMenuOpen((open) => !open)}
+                      className={styles.selectionShapeTrigger}
+                    >
+                      <AspectRatioGlyph optionId={activeCropAspectRatio.id} trace={trace} />
+                      <ToolbarLabel>{activeCropAspectRatio.label}</ToolbarLabel>
+                      <MenuChevronIcon open={cropAspectRatioMenuOpen} />
+                    </ToolbarButton>
+
+                    {cropAspectRatioMenuOpen ? (
+                      <TraceToolbarPortalPopover
+                        anchorRef={cropAspectRatioAnchorRef}
+                        onRequestClose={() => setCropAspectRatioMenuOpen(false)}
+                        role="menu"
+                        aria-label="Crop aspect ratio"
+                        className={styles.selectionShapeMenu}
+                      >
+                        {TRACE_CROP_ASPECT_RATIO_OPTIONS.map((option) => (
+                          <ToolbarButton
+                            key={option.id}
+                            type="button"
+                            labelled
+                            role="menuitemradio"
+                            active={cropAspectRatioId === option.id}
+                            aria-checked={cropAspectRatioId === option.id}
+                            onClick={() => {
+                              onCropAspectRatioChange(option.id);
+                              setCropAspectRatioMenuOpen(false);
+                            }}
+                            className={styles.selectionShapeMenuItem}
+                          >
+                            <AspectRatioGlyph optionId={option.id} trace={trace} />
+                            <ToolbarLabel>{option.label}</ToolbarLabel>
+                          </ToolbarButton>
+                        ))}
+                      </TraceToolbarPortalPopover>
+                    ) : null}
+                  </ToolbarAnchor>
+                ) : null}
+                <ToolbarButton type="button" variant="secondary" textOnly onClick={onResetCrop}>
+                  Reset
+                </ToolbarButton>
+              </>
+            ) : null}
+
+            {activeMode !== "none" ? (
+              <>
+                <ToolbarDivider />
+                <ToolbarButton
+                  type="button"
+                  variant="secondary"
+                  textOnly
+                  onClick={() => {
+                    setCropAspectRatioMenuOpen(false);
+                    if (activeMode === "crop") {
+                      onCancelCrop?.();
+                      return;
+                    }
+
+                    onCancelMode?.();
+                  }}
+                >
+                  Cancel
+                </ToolbarButton>
+                <ToolbarButton
+                  type="button"
+                  variant="primary"
+                  textOnly
+                  onClick={() => {
+                    setCropAspectRatioMenuOpen(false);
+                    if (activeMode === "crop") {
+                      onApplyCrop?.();
+                      return;
+                    }
+
+                    onApplyMode?.();
+                  }}
+                >
+                  Apply
+                </ToolbarButton>
+              </>
+            ) : null}
           </ToolbarGroup>
         </Toolbar>
       </div>
 
-      <div className={styles.selectionToolbarCloseViewport}>
-        <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
-          <ToolbarButton
-            type="button"
-            variant="ghost"
-            iconOnly
-            className={styles.selectionToolbarCloseButton}
-            onClick={() => dispatch(createCommitTraceRepositionCommand())}
-          >
-            <ToolbarIcon icon="/icons/lucide/check.svg" />
-          </ToolbarButton>
-        </Toolbar>
-      </div>
+      {activeMode === "none" ? (
+        <div className={styles.selectionToolbarCloseViewport}>
+          <Toolbar className={[styles.floatingToolbar, styles.selectionToolbarCloseBar].join(" ")}>
+            <ToolbarButton
+              type="button"
+              variant="ghost"
+              iconOnly
+              className={styles.selectionToolbarCloseButton}
+              aria-label="Done editing image"
+              title="Done"
+              onClick={onDone}
+            >
+              <ToolbarIcon icon="/icons/lucide/x.svg" />
+            </ToolbarButton>
+          </Toolbar>
+        </div>
+      ) : null}
     </div>
   );
 }

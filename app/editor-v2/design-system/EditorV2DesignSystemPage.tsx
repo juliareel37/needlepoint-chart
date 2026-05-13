@@ -39,9 +39,9 @@ import { useThemeMode } from "@/components/editor-v2/app/useThemeMode";
 import styles from "./editor-v2-design-system.module.css";
 
 const railItems = [
-  { id: "document", label: "Document", icon: "/icons/file.svg" },
-  { id: "color", label: "Color", icon: "/icons/grid_view.svg" },
-  { id: "trace", label: "Trace", icon: "/icons/photo.svg" },
+  { id: "document", label: "Document", icon: "/icons/legacy/file.svg" },
+  { id: "color", label: "Color", icon: "/icons/legacy/grid_view.svg" },
+  { id: "trace", label: "Trace", icon: "/icons/legacy/photo.svg" },
 ];
 
 const savedDesigns = [
@@ -69,13 +69,24 @@ const paletteGroups = [
   {
     title: "Brand",
     tokens: [
-      { name: "brand-fill-50", cssVar: "--brand-lightest", sourceType: "literal" },
-      { name: "brand-fill-100", cssVar: "--brand-100", sourceType: "literal" },
-      { name: "brand-fill-300", cssVar: "--brand-200", sourceType: "literal" },
-      { name: "brand-500", cssVar: "--brand-primary", sourceType: "literal" },
-      { name: "brand-600", cssVar: "--brand-400", sourceType: "literal" },
-      { name: "brand-700", cssVar: "--brand-500", sourceType: "literal" },
-      { name: "brand-900", cssVar: "--brand-600", sourceType: "literal" },
+      { name: "brand-50", cssVar: "--brand-50", sourceType: "literal" },
+      { name: "brand-100", cssVar: "--brand-100", sourceType: "literal" },
+      { name: "brand-200", cssVar: "--brand-200", sourceType: "literal" },
+      { name: "brand-300", cssVar: "--brand-300", sourceType: "literal" },
+      { name: "brand-400", cssVar: "--brand-400", sourceType: "literal" },
+      { name: "brand-500", cssVar: "--brand-500", sourceType: "literal" },
+      { name: "brand-600", cssVar: "--brand-600", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--brand-700", sourceType: "literal" },
+    ],
+  },
+  {
+    title: "Secondary",
+    tokens: [
+      { name: "brand-50", cssVar: "--secondary-50", sourceType: "literal" },
+      { name: "brand-100", cssVar: "--secondary-100", sourceType: "literal" },
+      { name: "brand-300", cssVar: "--secondary-300", sourceType: "literal" },
+      { name: "brand-400", cssVar: "--secondary-400", sourceType: "literal" },
+      { name: "brand-700", cssVar: "--secondary-700", sourceType: "literal" },
     ],
   },
   {
@@ -92,19 +103,19 @@ const paletteGroups = [
 ];
 
 const buttonVariants: Array<{
-  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2";
   label: string;
 }> = [
   { variant: "primary", label: "Primary" },
   { variant: "secondary", label: "Secondary" },
-  { variant: "secondary2", label: "Secondary2" },
+  { variant: "outlined", label: "outlined" },
   // { variant: "destructive", label: "Destructive" },
   // { variant: "ghost", label: "Ghost" },
   { variant: "ghostV2", label: "Ghost v2" },
 ];
 
 const buttonHoverStyles: Record<
-  "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2",
+  "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2",
   CSSProperties
 > = {
   primary: {
@@ -113,8 +124,8 @@ const buttonHoverStyles: Record<
   secondary: {
     background: "var(--button-secondary-hover)",
   },
-  secondary2: {
-    background: "var(--button-secondary2-hover)",
+  outlined: {
+    background: "var(--button-outlined-hover)",
   },
   destructive: {
     background: "var(--status-destructive-strong)",
@@ -616,7 +627,7 @@ function ButtonStateRow({
   active: boolean;
   label: string;
   onToggle: () => void;
-  variant: "primary" | "secondary" | "secondary2" | "destructive" | "ghost" | "ghostV2";
+  variant: "primary" | "secondary" | "outlined" | "destructive" | "ghost" | "ghostV2";
 }) {
   return (
     <>

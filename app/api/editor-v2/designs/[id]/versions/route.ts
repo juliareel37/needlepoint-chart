@@ -4,6 +4,9 @@ import { getCurrentUserId } from "@/lib/auth/server";
 import { deleteBlobIfExists, extractEditorV2TraceBlobUrls } from "@/lib/blob";
 import { prisma } from "@/lib/db";
 import {
+  getDeletedEditorDesignMetadata,
+} from "@/lib/editor-v2/server/designDeletion";
+import {
   normalizeProjectTitle,
   parsePersistedEditorV2Design,
 } from "@/lib/editor-v2/persistence/designs";
@@ -18,6 +21,21 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: { id: string } } | { params: Promise<{ id: string }> };
 type RestoreBody = { versionId?: string; mode?: "replace" | "copy" };
+
+function deletedDesignResponse(design: {
+  id: string;
+  title: string;
+  deletedAt: Date;
+  purgeAfterAt: Date | null;
+}) {
+  return NextResponse.json(
+    {
+      error: "This design is in Recently Deleted.",
+      deletedDesign: getDeletedEditorDesignMetadata(design),
+    },
+    { status: 410 },
+  );
+}
 
 function formatRestoredCopyTitle(title: string, timestamp: Date): string {
   const baseTitle = normalizeProjectTitle(title);
@@ -45,10 +63,21 @@ export async function GET(_req: Request, context: RouteContext) {
 
   const design = await prisma.editorDesign.findFirst({
     where: { id, appUserId },
-    select: { id: true },
+    select: {
+      id: true,
+      title: true,
+      deletedAt: true,
+      purgeAfterAt: true,
+    },
   });
   if (!design) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (design.deletedAt) {
+    return deletedDesignResponse({
+      ...design,
+      deletedAt: design.deletedAt,
+    });
   }
 
   const versions = await prisma.editorDesignVersion.findMany({
@@ -91,10 +120,18 @@ export async function POST(req: Request, context: RouteContext) {
       updatedAt: true,
       lastVersionAt: true,
       lastVersionHash: true,
+      deletedAt: true,
+      purgeAfterAt: true,
     },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (existing.deletedAt) {
+    return deletedDesignResponse({
+      ...existing,
+      deletedAt: existing.deletedAt,
+    });
   }
 
   const version = await prisma.editorDesignVersion.findFirst({
