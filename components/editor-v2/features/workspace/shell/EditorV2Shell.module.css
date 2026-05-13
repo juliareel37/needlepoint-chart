@@ -1335,8 +1335,23 @@
 }
 
 .customPaletteCreatePage {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.customPaletteCreatePage .sidebarColorLibrarySection {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.customPaletteCreatePage .sidebarColorLibraryCard {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .customPaletteCreateHeaderRow {
@@ -1349,16 +1364,21 @@
 .customPaletteSelectionSummary {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 0 0 16px;
-  border-bottom: 1px solid var(--ui-border-reg);
+  gap: 8px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, transparent);
+}
+
+.customPaletteSelectionSummaryEmpty {
+  gap: 6px;
+  padding-bottom: 8px;
 }
 
 .customPaletteSelectionSummaryTop {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .customPaletteSelectionSummaryText {
@@ -1366,10 +1386,13 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .customPaletteSelectionSummaryTitle {
   margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
 }
 
 .customPaletteSelectionSummaryTitle .editableTitleSurface {
@@ -1379,6 +1402,29 @@
 .customPaletteSelectionSummaryCaption {
   margin: 0;
   color: var(--text-secondary);
+  max-width: 32ch;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.customPaletteSelectionSummaryEmpty .customPaletteSelectionSummaryCaption {
+  max-width: 34ch;
+  color: color-mix(in srgb, var(--text-secondary) 92%, white);
+}
+
+.customPaletteSelectionMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 16px;
+}
+
+.customPaletteSelectionCount {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .customPaletteSelectionSummaryAction {
@@ -1386,15 +1432,17 @@
   align-items: center;
   justify-content: center;
   margin: 0;
+  margin-left: 4px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
+  color: color-mix(in srgb, var(--text-secondary) 88%, white);
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   transition: color 140ms ease;
+  letter-spacing: 0.01em;
 }
 
 .customPaletteSelectionSummaryAction:hover {
@@ -1407,10 +1455,54 @@
   border-radius: 6px;
 }
 
+.customPaletteCreateFooterBar {
+  position: sticky;
+  bottom: -24px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  flex: 0 0 auto;
+  margin-top: 0;
+  margin-bottom: -24px;
+  padding: 10px 0 24px;
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--ui-border-reg) 82%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-primary) 0%, transparent),
+      color-mix(in srgb, var(--surface-primary) 82%, var(--surface-primary)) 18%,
+      var(--surface-primary) 100%
+    );
+  backdrop-filter: blur(8px);
+}
+
+.customPaletteCreateFooterBarEmpty {
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.customPaletteCreateFooterButton {
+  width: 100%;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
 .customPaletteSelectionSwatches {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-secondary) 62%, var(--surface-primary));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .customPaletteSelectionSwatchItem {
@@ -1418,15 +1510,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
 }
 
 .customPaletteSelectionSwatch {
   display: inline-flex;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 25%;
   border: 1px solid var(--swatch-border);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 .customPaletteSelectionRemoveButton {
@@ -2249,6 +2342,7 @@
 }
 
 .toolbarColorLibrary.toolbarColorLibrary {
+  --color-library-header-padding-top: 14px;
   width: min(260px, calc(100vw - 40px));
   height: min(340px, calc(100vh - 160px));
   overscroll-behavior-y: none;
@@ -2266,6 +2360,10 @@
   border-radius: 0;
   /* height: 370px; */
   overscroll-behavior: none;
+}
+
+.customPaletteCreateLibrary.customPaletteCreateLibrary {
+  --color-library-header-padding-top: 4px;
 }
 
 .libraryPopoverSwatchTrigger {

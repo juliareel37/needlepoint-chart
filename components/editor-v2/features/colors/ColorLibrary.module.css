@@ -8,11 +8,11 @@
 .library {
   --color-library-track-size: 33px;
   --color-library-grid-gap: 6px;
-  --color-library-header-padding-top: 10px;
+  --color-library-header-padding-top: 8px;
   --color-library-header-padding-right: 16px;
-  --color-library-header-padding-bottom: 14px;
+  --color-library-header-padding-bottom: 10px;
   --color-library-header-padding-left: 16px;
-  --color-library-body-padding-top: 14px;
+  --color-library-body-padding-top: 10px;
   --color-library-body-padding-right: 16px;
   --color-library-body-padding-bottom: 16px;
   --color-library-body-padding-left: 16px;
@@ -32,7 +32,7 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   padding:
     var(--color-library-header-padding-top)
     var(--color-library-header-padding-right)
@@ -48,7 +48,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-height: 0;
   overflow: auto;
   padding:
@@ -129,6 +129,7 @@
   padding-bottom: 6px !important;
   padding-left: 32px !important;
   padding-right: 12px !important;
+  box-shadow: none;
 }
 
 .searchControls {
@@ -168,6 +169,7 @@
 .viewControlItem {
   min-width: 0;
 }
+
 
 .searchControlButton:focus-visible {
   outline: 2px solid var(--brand-500);
@@ -218,7 +220,7 @@
 .sectionContent {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -276,7 +278,7 @@
 .familySections {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .familySection {
@@ -441,11 +443,11 @@
 }
 
 .colorButton[data-active="true"] .swatch {
-  transform: scale(1.14);
+  transform: scale(1.08);
   border-color: var(--swatch-border-strong);
   box-shadow:
     0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 3px var(--swatch-ring-outer);
+    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
 }
 
 .swatch {
@@ -465,11 +467,11 @@
 }
 
 .colorButton:focus-visible .swatch {
-  transform: scale(1.14);
+  transform: scale(1.08);
   border-color: var(--swatch-border-strong);
   box-shadow:
     0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 3px var(--swatch-ring-outer);
+    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
 }
 
 .swatchCheck {
