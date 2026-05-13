@@ -1193,6 +1193,35 @@
   justify-content: center;
 }
 
+.customPaletteEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.customPaletteEmptyAction {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.customPaletteEmptyAction:hover {
+  color: color-mix(in srgb, var(--text-primary) 82%, white);
+}
+
+.customPaletteEmptyAction:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
 .customPaletteCardList {
   display: flex;
   flex-direction: column;

@@ -369,7 +369,7 @@ export function ColorPanelPage({
                 </div>
               ) : (
                 <p className={styles.emptyMessage} style={typographyStyles.p2}>
-                  No custom palettes yet. Create palettes to keep favorite color groups handy.
+                  No palettes in this design.
                 </p>
               )}
             </div>
@@ -439,14 +439,22 @@ export function ColorPanelPage({
               onClick={openCustomPaletteCreateView}
             >
               <ButtonIcon icon="/icons/lucide/plus.svg" />
-              <span>Create new palette</span>
+              <span>New Palette</span>
             </Button>
 
             {customPalettes.length === 0 ? (
-              <p className={styles.emptyMessage} style={typographyStyles.p2}>
-                You don&apos;t have any custom palettes yet. Create one to collect color groups
-                you want to reuse in this design.
-              </p>
+              <div className={styles.customPaletteEmptyState}>
+                <p className={styles.emptyMessage} style={typographyStyles.p2}>
+                  No palettes created for this design yet.
+                </p>
+                {/* <button
+                  type="button"
+                  className={styles.customPaletteEmptyAction}
+                  onClick={openCustomPaletteCreateView}
+                >
+                  Create your first palette
+                </button> */}
+              </div>
             ) : (
                 <div className={styles.customPaletteCardList}>
                   {customPalettes.map((customPalette) => (
@@ -642,7 +650,7 @@ export function ColorPanelPage({
                     className={styles.customPaletteSelectionSummaryCaption}
                     style={typographyStyles.p2}
                   >
-                    Select colors from Design colors or the Library to start building this palette.
+                  Select colors in the library to add them to your palette.
                   </p>
                 )}
               </div>

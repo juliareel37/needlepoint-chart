@@ -530,7 +530,7 @@ function buildNextCustomPaletteDefaultName(
   const existingNames = new Set(
     Object.values(customPalettesById).map((palette) => palette.name.trim().toLowerCase()),
   );
-  const baseName = "My Custom Palette";
+  const baseName = "My Palette";
 
   if (!existingNames.has(baseName.toLowerCase())) {
     return baseName;

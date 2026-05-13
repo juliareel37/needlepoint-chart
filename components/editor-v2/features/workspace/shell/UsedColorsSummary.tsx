@@ -904,7 +904,7 @@ export function UsedColorsSummary({
 
           {usedColors.length === 0 ? (
             <span className={styles.emptyMessage} style={typographyStyles.p2}>
-              None yet
+              No colors used yet.
             </span>
           ) : (
             <div className={styles.usedColorsListFrame}>
