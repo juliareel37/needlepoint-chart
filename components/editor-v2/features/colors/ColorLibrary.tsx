@@ -69,11 +69,15 @@ interface ColorLibraryProps {
   className?: string;
   colors: PaletteColor[];
   featuredColorIds?: string[];
+  featuredSectionActionLabel?: string;
   includeTransparentSwatch?: boolean;
   onColorSelect: (colorId: string) => void;
+  onFeaturedSectionAction?: (() => void) | undefined;
   onTransparentSelect?: () => void;
   persistScrollPosition?: boolean;
   persistenceKey?: string;
+  selectedColorIds?: string[];
+  selectionMode?: "single" | "multiple";
   scrollActiveColorIntoView?: boolean;
   showAllSectionHeader?: boolean;
   showAllSymbols?: boolean;
@@ -88,11 +92,15 @@ export function ColorLibrary({
   className,
   colors,
   featuredColorIds = [],
+  featuredSectionActionLabel,
   includeTransparentSwatch = false,
   onColorSelect,
+  onFeaturedSectionAction,
   onTransparentSelect,
   persistScrollPosition = false,
   persistenceKey,
+  selectedColorIds = [],
+  selectionMode = "single",
   scrollActiveColorIntoView = false,
   showAllSectionHeader = true,
   showAllSymbols = false,
@@ -135,6 +143,7 @@ export function ColorLibrary({
   const viewRef = useRef<ColorLibraryView>(view);
   const restoreFrameRef = useRef<number | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
+  const selectedColorIdSet = new Set(selectedColorIds);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const matchesSearch = (color: PaletteColor) =>
     normalizedSearchQuery.length === 0
@@ -491,6 +500,7 @@ export function ColorLibrary({
   }
 
   function renderTransparentButton() {
+    const selected = selectionMode === "multiple" ? transparentSelected : transparentSelected;
     return (
       <Button
         key="transparent-swatch"
@@ -498,22 +508,25 @@ export function ColorLibrary({
         onClick={() => onTransparentSelect?.()}
         variant="ghostV2"
         size="sm"
-        active={transparentSelected}
-        inertWhenActive
+        active={selected}
+        inertWhenActive={selectionMode === "single"}
         className={styles.colorButton}
         data-color-library-id="transparent-swatch"
         data-tooltip="Transparent"
         data-tooltip-key="transparent-swatch"
         aria-label="Transparent"
-        aria-pressed={transparentSelected}
+        aria-pressed={selected}
       >
-        {renderSwatch(null, { selected: transparentSelected, transparent: true })}
+        {renderSwatch(null, { selected, transparent: true })}
       </Button>
     );
   }
 
   function renderColorButton(color: PaletteColor, options?: { showSymbol?: boolean }) {
-    const selected = color.id === activeColorId;
+    const selected =
+      selectionMode === "multiple"
+        ? selectedColorIdSet.has(color.id)
+        : color.id === activeColorId;
     const showSymbol = options?.showSymbol ?? false;
     const symbol = showSymbol ? symbolAssignments[color.id] : null;
     const colorCodeLabel = formatColorCodeLabel(color);
@@ -527,7 +540,7 @@ export function ColorLibrary({
         variant="ghostV2"
         size="sm"
         active={selected}
-        inertWhenActive
+        inertWhenActive={selectionMode === "single"}
         className={styles.colorButton}
         data-color-library-id={color.id}
         data-tooltip={color.name}
@@ -542,7 +555,10 @@ export function ColorLibrary({
   }
 
   function renderColorListRow(color: PaletteColor, options?: { showSymbol?: boolean }) {
-    const selected = color.id === activeColorId;
+    const selected =
+      selectionMode === "multiple"
+        ? selectedColorIdSet.has(color.id)
+        : color.id === activeColorId;
 
     return (
       <button
@@ -777,6 +793,18 @@ export function ColorLibrary({
           {activeView === "featured" ? (
             <section className={styles.section} aria-label="Design colors">
               <div className={styles.sectionContent}>
+                {onFeaturedSectionAction && featuredColors.length > 0 ? (
+                  <div className={styles.sectionHeaderRow}>
+                    <h3 className={styles.sectionHeader}>Design colors</h3>
+                    <button
+                      type="button"
+                      className={styles.sectionHeaderAction}
+                      onClick={onFeaturedSectionAction}
+                    >
+                      {featuredSectionActionLabel ?? "Action"}
+                    </button>
+                  </div>
+                ) : null}
                 {featuredColors.length > 0 ? (
                   layoutMode === "list" ? (
                     <div className={styles.colorList}>

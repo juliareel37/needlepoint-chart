@@ -187,6 +187,7 @@ export function EditorSidebar({
   onToggleTraceEditMode,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
+  const [customPaletteDraftColorIds, setCustomPaletteDraftColorIds] = useState<string[]>([]);
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
   const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
   const iconsOverviewScrollTopRef = useRef(0);
@@ -230,26 +231,69 @@ export function EditorSidebar({
     shouldRestoreIconsSubpageScrollRef.current = false;
     setIconsPanelView(nextView);
   };
+  const isColorSubpage = colorPanelView !== "overview";
+  const colorPanelBackTitle =
+    colorPanelView === "design-colors"
+      ? "Design colors"
+      : colorPanelView === "custom-palettes"
+        ? "Custom palettes"
+        : "Create palette";
+  const handleColorPanelBack = () => {
+    if (colorPanelView === "custom-palette-create") {
+      setColorPanelView("custom-palettes");
+      return;
+    }
+
+    setColorPanelView("overview");
+  };
+  const colorPanelBackLabel =
+    colorPanelView === "custom-palette-create"
+      ? "Back to custom palettes"
+      : "Back to color overview";
+  const handleCustomPaletteCreateOpen = () => {
+    setCustomPaletteDraftColorIds([]);
+    setColorPanelView("custom-palette-create");
+  };
+  const handleCustomPaletteDraftColorToggle = (colorId: string) => {
+    setCustomPaletteDraftColorIds((current) =>
+      current.includes(colorId)
+        ? current.filter((entry) => entry !== colorId)
+        : [...current, colorId],
+    );
+  };
+  const handleCustomPaletteDraftReset = () => {
+    setCustomPaletteDraftColorIds([]);
+  };
+  const handleCustomPaletteDraftSelectAll = (colorIds: string[]) => {
+    setCustomPaletteDraftColorIds((current) => {
+      const next = new Set(current);
+      for (const colorId of colorIds) {
+        next.add(colorId);
+      }
+
+      return [...next];
+    });
+  };
 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarSurface}>
         <div className={styles.sidebarPanelHeader}>
-          {activeSection === "color" && colorPanelView === "design-colors" ? (
+          {activeSection === "color" && isColorSubpage ? (
             <div className={styles.sidebarPanelBackRow}>
               <Button
                 type="button"
                 variant="ghostV2"
                 size="sm"
                 className={styles.sidebarPanelBackButton}
-                aria-label="Back to color overview"
-                title="Back to color overview"
-                onClick={() => setColorPanelView("overview")}
+                aria-label={colorPanelBackLabel}
+                title={colorPanelBackLabel}
+                onClick={handleColorPanelBack}
               >
                 <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
               </Button>
               <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
-                Design colors
+                {colorPanelBackTitle}
               </span>
             </div>
           ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
@@ -344,11 +388,17 @@ export function EditorSidebar({
               activeColor={activeColor}
               activeColorId={activeColorId}
               colorsById={colorsById}
+              customPalettesById={document.palette.customPalettesById}
               dispatch={dispatch}
               highlightedColorId={highlightedColorId}
               isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
+              customPaletteDraftColorIds={customPaletteDraftColorIds}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
+              onCustomPaletteCreateOpen={handleCustomPaletteCreateOpen}
+              onCustomPaletteDraftColorToggle={handleCustomPaletteDraftColorToggle}
+              onCustomPaletteDraftReset={handleCustomPaletteDraftReset}
+              onCustomPaletteDraftSelectAll={handleCustomPaletteDraftSelectAll}
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
