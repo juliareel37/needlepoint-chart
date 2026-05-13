@@ -442,11 +442,21 @@ export function ColorPanelPage({
             ) : (
                 <div className={styles.customPaletteCardList}>
                   {customPalettes.map((customPalette) => (
-                    <button
+                    <div
                       key={customPalette.id}
-                      type="button"
                       className={styles.customPaletteCard}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Edit ${customPalette.name}`}
                       onClick={() => onCustomPaletteEditOpen(customPalette.id)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter" && event.key !== " ") {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        onCustomPaletteEditOpen(customPalette.id);
+                      }}
                     >
                       <h3 className={styles.customPaletteCardTitle} style={typographyStyles.h5}>
                         <span>{customPalette.name}</span>
@@ -489,7 +499,7 @@ export function ColorPanelPage({
                         {customPalette.colorIds.length}{" "}
                         {customPalette.colorIds.length === 1 ? "color" : "colors"}
                       </span>
-                    </button>
+                    </div>
                 ))}
               </div>
             )}
