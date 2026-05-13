@@ -68,6 +68,7 @@ interface ColorLibraryProps {
   activeColorId: string | null;
   className?: string;
   colors: PaletteColor[];
+  featuredSectionDisplay?: "stacked" | "tabbed";
   featuredColorIds?: string[];
   featuredSectionActionLabel?: string;
   includeTransparentSwatch?: boolean;
@@ -91,6 +92,7 @@ export function ColorLibrary({
   activeColorId,
   className,
   colors,
+  featuredSectionDisplay = "tabbed",
   featuredColorIds = [],
   featuredSectionActionLabel,
   includeTransparentSwatch = false,
@@ -102,7 +104,7 @@ export function ColorLibrary({
   selectedColorIds = [],
   selectionMode = "single",
   scrollActiveColorIntoView = false,
-  showAllSectionHeader = true,
+  showAllSectionHeader = false,
   showAllSymbols = false,
   showFeaturedSection = true,
   showFeaturedSymbols = false,
@@ -162,7 +164,9 @@ export function ColorLibrary({
   const hasSearchQuery = normalizedSearchQuery.length > 0;
   const hasActiveFamilyFilter = familyFilter !== "all";
   const canShowFeaturedView = showFeaturedSection;
-  const activeView = canShowFeaturedView ? view : "all";
+  const useTabbedFeaturedView = canShowFeaturedView && featuredSectionDisplay === "tabbed";
+  const showStackedFeaturedSection = canShowFeaturedView && featuredSectionDisplay === "stacked";
+  const activeView = useTabbedFeaturedView ? view : "all";
   const segmentedOptions = [
     { label: "Design colors", value: "featured" },
     { label: "Library", value: "all" },
@@ -648,9 +652,12 @@ export function ColorLibrary({
         setActiveTooltip(null);
       }}
     >
-      <div className={[styles.library, className].filter(Boolean).join(" ")}>
+      <div
+        className={[styles.library, className].filter(Boolean).join(" ")}
+        data-featured-display={featuredSectionDisplay}
+      >
         <div ref={stickyHeaderRef} className={styles.stickyHeader}>
-          {canShowFeaturedView ? (
+          {useTabbedFeaturedView ? (
             <SegmentedControl<ColorLibraryView>
               ariaLabel="Color library view"
               className={styles.viewControl}
@@ -790,8 +797,16 @@ export function ColorLibrary({
             </section>
           ) : null}
 
-          {activeView === "featured" ? (
-            <section className={styles.section} aria-label="Design colors">
+          {showStackedFeaturedSection || activeView === "featured" ? (
+            <section
+              className={[
+                styles.section,
+                showStackedFeaturedSection ? styles.stackedFeaturedSection : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-label="Design colors"
+            >
               <div className={styles.sectionContent}>
                 {onFeaturedSectionAction && featuredColors.length > 0 ? (
                   <div className={styles.sectionHeaderRow}>
@@ -833,8 +848,19 @@ export function ColorLibrary({
           ) : null}
 
           {activeView === "all" ? (
-            <section className={styles.section} aria-label="All colors">
+            <section
+              className={[
+                styles.section,
+                showStackedFeaturedSection ? styles.stackedLibrarySection : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-label="All colors"
+            >
               <div className={styles.sectionContent}>
+                {/* {showAllSectionHeader ? (
+                  <h3 className={styles.sectionHeader}>Library</h3>
+                ) : null} */}
                 {familySections.length > 0 ? (
                   <div className={styles.familySections}>
                     {familySections.map((section) => (

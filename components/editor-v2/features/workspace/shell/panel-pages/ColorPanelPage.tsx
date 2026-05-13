@@ -515,6 +515,7 @@ export function ColorPanelPage({
                   activeColorId={null}
                   className={[styles.sidebarColorLibrary, styles.customPaletteCreateLibrary].join(" ")}
                   colors={palette}
+                  featuredSectionDisplay="stacked"
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={onCustomPaletteDraftColorToggle}
                   onFeaturedSectionAction={() =>
@@ -525,6 +526,7 @@ export function ColorPanelPage({
                   persistenceKey="sidebar-color-panel-custom-palette-create-library"
                   selectedColorIds={customPaletteDraftColorIds}
                   selectionMode="multiple"
+                  showAllSectionHeader
                   showFeaturedSection
                   showFeaturedSymbols={showSymbols}
                   symbolAssignments={symbolAssignments}

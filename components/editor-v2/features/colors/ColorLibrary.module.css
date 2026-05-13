@@ -217,6 +217,23 @@
   flex-direction: column;
 }
 
+.library[data-featured-display="stacked"] .stickyHeader {
+  gap: 0;
+  padding-bottom: 12px;
+}
+
+.library[data-featured-display="stacked"] .searchRow {
+  padding-bottom: 4px;
+}
+
+.stackedFeaturedSection {
+  padding-top: 4px;
+}
+
+.stackedFeaturedSection .sectionContent {
+  gap: 8px;
+}
+
 .sectionContent {
   display: flex;
   flex-direction: column;
@@ -242,6 +259,10 @@
   gap: 12px;
 }
 
+.stackedFeaturedSection .sectionHeaderRow {
+  margin-bottom: 2px;
+}
+
 .sectionHeaderAction {
   display: inline-flex;
   align-items: center;
@@ -256,6 +277,13 @@
   line-height: 1.2;
   cursor: pointer;
   transition: color 140ms ease;
+}
+
+.stackedFeaturedSection .sectionHeaderAction {
+  color: color-mix(in srgb, var(--text-secondary) 90%, white);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .sectionHeaderAction:hover {
@@ -278,6 +306,15 @@
 .familySections {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.stackedLibrarySection {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, transparent);
+}
+
+.stackedLibrarySection .sectionContent {
   gap: 12px;
 }
 
