@@ -438,7 +438,7 @@
 .tooltipLayer {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--z-editor-popover-high) - 1);
+  z-index: var(--z-editor-tooltip);
   pointer-events: none;
 }
 
