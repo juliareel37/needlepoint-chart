@@ -3429,8 +3429,8 @@
 }
 
 .usedColorsMergeLibraryGrid {
-  width: min(260px, calc(100vw - 120px));
-  height: min(220px, var(--used-colors-popover-max-height, calc(100vh - 240px)));
+  width: min(320px, calc(100vw - 40px));
+  height: min(420px, var(--used-colors-popover-max-height, calc(100vh - 240px)));
   max-height: var(--used-colors-popover-max-height, calc(100vh - 240px));
   overscroll-behavior-y: none;
 }

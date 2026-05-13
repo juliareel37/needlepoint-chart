@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { PaletteColor } from "@/lib/editor-v2/editor/store";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
+import type { CustomPalette, PaletteColor } from "@/lib/editor-v2/editor/store";
 import type { UsedColorSummary } from "@/lib/editor-v2/editor/selectors";
 import { typographyStyles } from "@/app/design-system/typography";
 import {
@@ -446,6 +447,7 @@ export function UsedColorsSummary({
   activeColorId,
   usedColors,
   colorsById,
+  customPalettesById,
   highlightedColorId,
   isBottomPanelCanvasFocusActive,
   isBottomPanelLayout,
@@ -467,6 +469,7 @@ export function UsedColorsSummary({
   activeColorId: string | null;
   usedColors: UsedColorSummary[];
   colorsById: Record<string, PaletteColor>;
+  customPalettesById: Record<string, CustomPalette>;
   highlightedColorId: string | null;
   isBottomPanelCanvasFocusActive: boolean;
   isBottomPanelLayout: boolean;
@@ -502,6 +505,10 @@ export function UsedColorsSummary({
   const highlightColorChangeRef = useRef(onHighlightColorChange);
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
+  const paletteSections = useMemo(
+    () => getColorLibraryPaletteSections(palette, customPalettesById),
+    [customPalettesById, palette],
+  );
   const isSelecting = toolMode !== "idle";
   const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
   const scopeOptions = useMemo(
@@ -1050,6 +1057,7 @@ export function UsedColorsSummary({
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
                           featuredColorIds={featuredColorIds}
+                          paletteSections={paletteSections}
                           showFeaturedSymbols={showSymbols}
                           symbolAssignments={symbolAssignments}
                           onColorSelect={(colorId) => {
@@ -1240,6 +1248,7 @@ export function UsedColorsSummary({
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
                                 featuredColorIds={featuredColorIds}
+                                paletteSections={paletteSections}
                                 showFeaturedSymbols={showSymbols}
                                 symbolAssignments={symbolAssignments}
                                 onColorSelect={(colorId) => {

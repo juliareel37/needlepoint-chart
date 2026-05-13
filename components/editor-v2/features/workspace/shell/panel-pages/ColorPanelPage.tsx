@@ -404,6 +404,7 @@ export function ColorPanelPage({
               activeColorId={activeColorId}
               usedColors={usedColors}
               colorsById={colorsById}
+              customPalettesById={customPalettesById}
               highlightedColorId={highlightedColorId}
               isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
