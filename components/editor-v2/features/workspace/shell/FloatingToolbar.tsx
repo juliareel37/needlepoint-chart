@@ -18,8 +18,10 @@ import {
   ToolbarSubtoolGroup,
   ToolbarSwatch,
 } from "@/components/design-system";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import type {
   ActiveTool,
+  CustomPalette,
   EditorSidebarSection,
   EditorStore,
   GridPoint,
@@ -300,6 +302,7 @@ interface FloatingToolbarProps {
   brushSize: number;
   canRedo: boolean;
   canUndo: boolean;
+  customPalettesById: Record<string, CustomPalette>;
   dispatch: EditorStore["dispatch"];
   eyedropperReturnTool: ActiveTool | null;
   hasPaintedCells: boolean;
@@ -316,6 +319,7 @@ interface FloatingToolbarProps {
   duplicatePlacementOperation: "duplicate" | "cut" | null;
   mirrorSessionActive: boolean;
   isBottomPanelLayout: boolean;
+  onOpenCustomPalettesPanel: () => void;
   onOpenSelectionColorsPanel: () => void;
   onToggleTraceEditMode: () => void;
   onToolbarSelectionIntent: () => void;
@@ -333,6 +337,7 @@ export function FloatingToolbar({
   brushSize,
   canRedo,
   canUndo,
+  customPalettesById,
   dispatch,
   eyedropperReturnTool,
   hasPaintedCells,
@@ -349,6 +354,7 @@ export function FloatingToolbar({
   duplicatePlacementOperation,
   mirrorSessionActive,
   isBottomPanelLayout,
+  onOpenCustomPalettesPanel,
   onOpenSelectionColorsPanel,
   onToggleTraceEditMode,
   onToolbarSelectionIntent,
@@ -396,6 +402,7 @@ export function FloatingToolbar({
   const brushSizeTooltipPercent =
     ((brushSizeSliderValue - 1) / 9) * 100;
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
+  const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
   const duplicatePlacementSelected = duplicatePlacementOperation === "duplicate";
@@ -1136,6 +1143,11 @@ export function FloatingToolbar({
                 className={styles.toolbarColorLibrary}
                 colors={palette}
                 featuredColorIds={featuredColorIds}
+                onManagePalettes={() => {
+                  closeColorLibrary();
+                  onOpenCustomPalettesPanel();
+                }}
+                paletteSections={paletteSections}
                 persistenceKey="floating-toolbar-color-library"
                 scrollActiveColorIntoView
                 showFeaturedSymbols={showSymbols}

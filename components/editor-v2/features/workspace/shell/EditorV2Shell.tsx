@@ -2337,6 +2337,13 @@ export function EditorV2Shell({
     dispatch(createSetSidebarCollapsedCommand(false));
   }, [dispatch]);
 
+  const handleOpenCustomPalettesPanel = useCallback(() => {
+    setRequestedColorPanelView("custom-palettes");
+    setRequestedColorPanelViewKey((current) => current + 1);
+    dispatch(createSetActiveSidebarSectionCommand("color"));
+    dispatch(createSetSidebarCollapsedCommand(false));
+  }, [dispatch]);
+
   const handleToolbarSelectionIntent = useCallback(() => {
     selectionScopeOwnerRef.current = "toolbar";
     reopenColorPanelAfterSelectionRef.current = false;
@@ -3658,10 +3665,12 @@ export function EditorV2Shell({
                       <TextPlacementToolbar
                         activeColorHex={activeColor?.hex ?? null}
                         activeColorId={activeColorId}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         featuredColorIds={featuredColorIds}
                         grid={document.grid}
                         gridMetrics={gridMetrics}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
                         palette={palette}
                         placement={textPlacement}
                         showSymbols={showSymbols}
@@ -3689,11 +3698,13 @@ export function EditorV2Shell({
                       <IconPlacementToolbar
                         activeColorHex={activeColor?.hex ?? null}
                         activeColorId={activeColorId}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         featuredColorIds={featuredColorIds}
                         grid={document.grid}
                         gridMetrics={gridMetrics}
                         onBeginEraser={handleBeginIconEraser}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
                         palette={palette}
                         placement={iconPlacement}
                         showSymbols={showSymbols}
@@ -3708,6 +3719,7 @@ export function EditorV2Shell({
                         brushSize={brushSize}
                         canRedo={canRedoFromToolbar}
                         canUndo={canUndoFromToolbar}
+                        customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         eyedropperReturnTool={state.session.eyedropperReturnTool}
                         hasPaintedCells={hasPaintedCells}
@@ -3725,6 +3737,7 @@ export function EditorV2Shell({
                         }
                         mirrorSessionActive={Boolean(mirrorSession)}
                         isBottomPanelLayout={isBottomPanelLayout}
+                        onOpenCustomPalettesPanel={handleOpenCustomPalettesPanel}
                         onToolbarSelectionIntent={handleToolbarSelectionIntent}
                         onToggleTraceEditMode={handleToggleTraceEditMode}
                         onColorLibraryDismissPointerDown={(gesture) => {

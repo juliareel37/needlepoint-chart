@@ -18,10 +18,12 @@ import {
   ToolbarPopover,
   ToolbarSwatch,
 } from "@/components/design-system";
+import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import { TEXT_FONT_OPTIONS } from "@/lib/editor-v2/editor/text/textFontOptions";
 import { measureIntrinsicText } from "@/lib/editor-v2/editor/text/measureIntrinsicText";
 import { convertTextPlacementToPaintGroups } from "@/lib/editor-v2/editor/text/convertTextPlacementToCells";
 import type {
+  CustomPalette,
   EditorStore,
   GridDocument,
   PaletteColor,
@@ -163,10 +165,12 @@ function TextToolbarPortalPopover({
 interface TextPlacementToolbarProps {
   activeColorHex: string | null;
   activeColorId: string | null;
+  customPalettesById: Record<string, CustomPalette>;
   dispatch: EditorStore["dispatch"];
   featuredColorIds: string[];
   grid: GridDocument;
   gridMetrics: GridWorldMetrics;
+  onOpenCustomPalettesPanel: () => void;
   palette: PaletteColor[];
   placement: TextPlacementSession;
   showSymbols: boolean;
@@ -176,10 +180,12 @@ interface TextPlacementToolbarProps {
 export function TextPlacementToolbar({
   activeColorHex,
   activeColorId,
+  customPalettesById,
   dispatch,
   featuredColorIds,
   grid,
   gridMetrics,
+  onOpenCustomPalettesPanel,
   palette,
   placement,
   showSymbols,
@@ -196,6 +202,7 @@ export function TextPlacementToolbar({
   const bold = placement.fontWeight >= 700;
   const italic = placement.fontStyle === "italic";
   const underline = placement.underline;
+  const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
   const canConvert = !isConverting && palette.length > 0;
   const conversionSubject = getConversionSubjectLabel("text");
   const paletteById = palette.reduce<Record<string, PaletteColor>>((accumulator, color) => {
@@ -335,6 +342,11 @@ export function TextPlacementToolbar({
                     className={styles.toolbarColorLibrary}
                     colors={palette}
                     featuredColorIds={featuredColorIds}
+                    onManagePalettes={() => {
+                      setColorLibraryOpen(false);
+                      onOpenCustomPalettesPanel();
+                    }}
+                    paletteSections={paletteSections}
                     showFeaturedSymbols={showSymbols}
                     symbolAssignments={symbolAssignments}
                     onColorSelect={(colorId) => {

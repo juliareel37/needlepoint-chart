@@ -10,13 +10,14 @@ import {
   getDmcColorFamily,
   getDmcColorFamilyFilterOptions,
   getDmcColorFamilySections,
+  type ColorLibraryPaletteSection,
   type DmcColorFamilyFilter,
 } from "@/lib/editor-v2/editor/color-library";
 import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import type { PaletteColor } from "@/lib/editor-v2/editor/store";
 import styles from "./ColorLibrary.module.css";
 
-type ColorLibraryView = "featured" | "all";
+type ColorLibraryView = "featured" | "all" | "palettes";
 type ColorLibraryLayoutMode = "list" | "grid";
 
 type ColorLibraryPersistenceState = {
@@ -74,6 +75,8 @@ interface ColorLibraryProps {
   includeTransparentSwatch?: boolean;
   onColorSelect: (colorId: string) => void;
   onFeaturedSectionAction?: (() => void) | undefined;
+  onManagePalettes?: (() => void) | undefined;
+  paletteSections?: ColorLibraryPaletteSection[];
   onTransparentSelect?: () => void;
   persistScrollPosition?: boolean;
   persistenceKey?: string;
@@ -98,6 +101,8 @@ export function ColorLibrary({
   includeTransparentSwatch = false,
   onColorSelect,
   onFeaturedSectionAction,
+  onManagePalettes,
+  paletteSections,
   onTransparentSelect,
   persistScrollPosition = false,
   persistenceKey,
@@ -112,9 +117,12 @@ export function ColorLibrary({
   transparentSelected = false,
 }: ColorLibraryProps) {
   const initialPersistenceState = getPersistenceState(persistenceKey);
+  const showPalettesView = Array.isArray(paletteSections);
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setViewState] = useState<ColorLibraryView>(() =>
-    initialPersistenceState?.view ?? "featured",
+    initialPersistenceState?.view === "palettes" && !showPalettesView
+      ? "featured"
+      : (initialPersistenceState?.view ?? "featured"),
   );
   const [familyFilter, setFamilyFilterState] = useState<DmcColorFamilyFilter | "all">(
     () => initialPersistenceState?.familyFilter ?? "all",
@@ -158,18 +166,30 @@ export function ColorLibrary({
   const familyFilteredColors = filteredColors.filter(
     (color) => familyFilter === "all" || getDmcColorFamily(color) === familyFilter,
   );
+  const familyFilteredColorIdSet = new Set(familyFilteredColors.map((color) => color.id));
   const featuredColors = familyFilteredColors.filter((color) => featuredColorIdSet.has(color.id));
   const familySections = getDmcColorFamilySections(familyFilteredColors);
+  const filteredPaletteSections =
+    paletteSections?.map((section) => ({
+      ...section,
+      colors: section.colors.filter((color) => familyFilteredColorIdSet.has(color.id)),
+    })) ?? [];
   const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
   const hasSearchQuery = normalizedSearchQuery.length > 0;
   const hasActiveFamilyFilter = familyFilter !== "all";
   const canShowFeaturedView = showFeaturedSection;
   const useTabbedFeaturedView = canShowFeaturedView && featuredSectionDisplay === "tabbed";
   const showStackedFeaturedSection = canShowFeaturedView && featuredSectionDisplay === "stacked";
-  const activeView = useTabbedFeaturedView ? view : "all";
+  const activeView =
+    useTabbedFeaturedView
+      ? view === "palettes" && !showPalettesView
+        ? "all"
+        : view
+      : "all";
   const segmentedOptions = [
-    { label: "Design colors", value: "featured" },
     { label: "Library", value: "all" },
+    { label: "Design", value: "featured" },
+    ...(showPalettesView ? ([{ label: "Palettes", value: "palettes" }] as const) : []),
   ] as const;
 
   function writePersistence(
@@ -526,7 +546,10 @@ export function ColorLibrary({
     );
   }
 
-  function renderColorButton(color: PaletteColor, options?: { showSymbol?: boolean }) {
+  function renderColorButton(
+    color: PaletteColor,
+    options?: { key?: string; showSymbol?: boolean },
+  ) {
     const selected =
       selectionMode === "multiple"
         ? selectedColorIdSet.has(color.id)
@@ -538,7 +561,7 @@ export function ColorLibrary({
 
     return (
       <Button
-        key={color.id}
+        key={options?.key ?? color.id}
         type="button"
         onClick={() => onColorSelect(color.id)}
         variant="ghostV2"
@@ -558,7 +581,10 @@ export function ColorLibrary({
     );
   }
 
-  function renderColorListRow(color: PaletteColor, options?: { showSymbol?: boolean }) {
+  function renderColorListRow(
+    color: PaletteColor,
+    options?: { key?: string; showSymbol?: boolean },
+  ) {
     const selected =
       selectionMode === "multiple"
         ? selectedColorIdSet.has(color.id)
@@ -566,7 +592,7 @@ export function ColorLibrary({
 
     return (
       <button
-        key={color.id}
+        key={options?.key ?? color.id}
         type="button"
         onClick={() => onColorSelect(color.id)}
         className={styles.colorListRow}
@@ -724,7 +750,7 @@ export function ColorLibrary({
                 />
               </button>
 
-                            <button
+              <button
                 type="button"
                 className={styles.searchControlButton}
                 aria-label={
@@ -743,7 +769,6 @@ export function ColorLibrary({
                   className={styles.searchControlIcon}
                 />
               </button>
-
             </div>
           </div>
 
@@ -865,7 +890,7 @@ export function ColorLibrary({
                   <div className={styles.familySections}>
                     {familySections.map((section) => (
                       <div key={section.family} className={styles.familySection}>
-                        <h4 className={styles.familySectionHeader}>{section.label}</h4>
+                        <h4 className={styles.libraryFamilySectionHeader}>{section.label}</h4>
                         {layoutMode === "list" ? (
                           <div className={styles.colorList}>
                             {section.colors.map((color) =>
@@ -891,6 +916,67 @@ export function ColorLibrary({
                         : "No colors found in this family."}
                   </p>
                 )}
+              </div>
+            </section>
+          ) : null}
+
+          {activeView === "palettes" ? (
+            <section className={styles.section} aria-label="Palettes">
+              <div className={styles.sectionContent}>
+                {filteredPaletteSections.length > 0 ? (
+                  <div className={styles.familySections}>
+                    {filteredPaletteSections.map((section) => (
+                      <div key={section.id} className={styles.familySection}>
+                        <h4 className={styles.paletteSectionHeader}>{section.label}</h4>
+                        {section.colors.length > 0 ? (
+                          layoutMode === "list" ? (
+                            <div className={styles.colorList}>
+                              {section.colors.map((color, index) =>
+                                renderColorListRow(color, {
+                                  key: `${section.id}-${color.id}-${index}`,
+                                  showSymbol: showAllSymbols,
+                                }),
+                              )}
+                            </div>
+                          ) : (
+                            <div className={styles.sectionGrid}>
+                              {section.colors.map((color, index) =>
+                                renderColorButton(color, {
+                                  key: `${section.id}-${color.id}-${index}`,
+                                  showSymbol: showAllSymbols,
+                                }),
+                              )}
+                            </div>
+                          )
+                        ) : (
+                          <p className={styles.emptyState}>No colors in this palette.</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.emptyState}>
+                    {!paletteSections || paletteSections.length === 0
+                      ? "No palettes created yet."
+                      : hasSearchQuery
+                      ? `No palette colors found for "${searchQuery.trim()}".`
+                      : familyFilter === "all"
+                        ? "No palette colors found."
+                        : "No palette colors found in this family."}
+                  </p>
+                )}
+                {onManagePalettes ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    className={styles.palettesManageButton}
+                    onClick={onManagePalettes}
+                  >
+                    <ButtonIcon icon="/icons/lucide/sliders-horizontal.svg" />
+                    <span>Manage Palettes</span>
+                  </Button>
+                ) : null}
               </div>
             </section>
           ) : null}
