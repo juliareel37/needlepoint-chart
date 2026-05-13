@@ -10,7 +10,7 @@
   --color-library-grid-gap: 6px;
   --color-library-header-padding-top: 8px;
   --color-library-header-padding-right: 16px;
-  --color-library-header-padding-bottom: 10px;
+  --color-library-header-padding-bottom: 6px;
   --color-library-header-padding-left: 16px;
   --color-library-body-padding-top: 10px;
   --color-library-body-padding-right: 16px;
@@ -32,7 +32,7 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding:
     var(--color-library-header-padding-top)
     var(--color-library-header-padding-right)
@@ -127,7 +127,7 @@
 .searchInput {
   padding-top: 6px !important;
   padding-bottom: 6px !important;
-  padding-left: 32px !important;
+  padding-left: 34px !important;
   padding-right: 12px !important;
   box-shadow: none;
 }
@@ -143,8 +143,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -177,14 +177,14 @@
 }
 
 .searchControlIcon {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
 }
 
 .searchControlIcon > span {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .settingsPanel {
@@ -219,15 +219,15 @@
 
 .library[data-featured-display="stacked"] .stickyHeader {
   gap: 0;
-  padding-bottom: 12px;
+  padding-bottom: 8px;
 }
 
 .library[data-featured-display="stacked"] .searchRow {
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .stackedFeaturedSection {
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .stackedFeaturedSection .sectionContent {

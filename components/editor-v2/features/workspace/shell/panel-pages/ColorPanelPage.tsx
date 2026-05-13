@@ -32,7 +32,6 @@ export type ColorPanelView =
 
 const SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES = 14;
 const BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES = 16;
-
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
@@ -201,7 +200,16 @@ export function ColorPanelPage({
   };
 
   return (
-    <section ref={pageRef} className={[styles.sidebarSection, styles.colorPanelPageSection].join(" ")}>
+    <section
+      ref={pageRef}
+      className={[
+        styles.sidebarSection,
+        styles.colorPanelPageSection,
+        view === "custom-palette-create" ? styles.customPaletteCreateSection : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
@@ -573,6 +581,16 @@ export function ColorPanelPage({
                       renameRequestToken={0}
                     />
                   </div>
+
+                  {customPaletteDraftColors.length > 0 ? (
+                    <button
+                      type="button"
+                      className={styles.customPaletteSelectionSummaryAction}
+                      onClick={onCustomPaletteDraftReset}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
                 </div>
 
                 {customPaletteDraftColors.length > 0 ? (
@@ -586,13 +604,6 @@ export function ColorPanelPage({
                         ? "color selected"
                         : "colors selected"}
                     </span>
-                    <button
-                      type="button"
-                      className={styles.customPaletteSelectionSummaryAction}
-                      onClick={onCustomPaletteDraftReset}
-                    >
-                      Clear
-                    </button>
                   </div>
                 ) : null}
 
