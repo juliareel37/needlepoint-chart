@@ -187,7 +187,9 @@ export function EditorSidebar({
   onToggleTraceEditMode,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
+  const [customPaletteDraftId, setCustomPaletteDraftId] = useState<string | null>(null);
   const [customPaletteDraftColorIds, setCustomPaletteDraftColorIds] = useState<string[]>([]);
+  const [customPaletteDraftName, setCustomPaletteDraftName] = useState("");
   const [iconsPanelView, setIconsPanelView] = useState<IconsPanelView>({ type: "overview" });
   const [iconsPanelBackRequestKey, setIconsPanelBackRequestKey] = useState(0);
   const iconsOverviewScrollTopRef = useRef(0);
@@ -251,7 +253,20 @@ export function EditorSidebar({
       ? "Back to custom palettes"
       : "Back to color overview";
   const handleCustomPaletteCreateOpen = () => {
+    setCustomPaletteDraftId(null);
     setCustomPaletteDraftColorIds([]);
+    setCustomPaletteDraftName(buildNextCustomPaletteDefaultName(document.palette.customPalettesById));
+    setColorPanelView("custom-palette-create");
+  };
+  const handleCustomPaletteEditOpen = (paletteId: string) => {
+    const palette = document.palette.customPalettesById[paletteId];
+    if (!palette) {
+      return;
+    }
+
+    setCustomPaletteDraftId(palette.id);
+    setCustomPaletteDraftColorIds([...palette.colorIds]);
+    setCustomPaletteDraftName(palette.name);
     setColorPanelView("custom-palette-create");
   };
   const handleCustomPaletteDraftColorToggle = (colorId: string) => {
@@ -263,6 +278,9 @@ export function EditorSidebar({
   };
   const handleCustomPaletteDraftReset = () => {
     setCustomPaletteDraftColorIds([]);
+  };
+  const handleCustomPaletteDraftNameChange = (nextName: string) => {
+    setCustomPaletteDraftName(nextName);
   };
   const handleCustomPaletteDraftSelectAll = (colorIds: string[]) => {
     setCustomPaletteDraftColorIds((current) => {
@@ -394,9 +412,13 @@ export function EditorSidebar({
               isBottomPanelCanvasFocusActive={isBottomPanelCanvasFocusActive}
               isBottomPanelLayout={isBottomPanelLayout}
               customPaletteDraftColorIds={customPaletteDraftColorIds}
+              customPaletteDraftId={customPaletteDraftId}
+              customPaletteDraftName={customPaletteDraftName}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onCustomPaletteCreateOpen={handleCustomPaletteCreateOpen}
+              onCustomPaletteEditOpen={handleCustomPaletteEditOpen}
               onCustomPaletteDraftColorToggle={handleCustomPaletteDraftColorToggle}
+              onCustomPaletteDraftNameChange={handleCustomPaletteDraftNameChange}
               onCustomPaletteDraftReset={handleCustomPaletteDraftReset}
               onCustomPaletteDraftSelectAll={handleCustomPaletteDraftSelectAll}
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
@@ -500,4 +522,24 @@ export function EditorSidebar({
       </div>
     </aside>
   );
+}
+
+function buildNextCustomPaletteDefaultName(
+  customPalettesById: EditorDocumentState["palette"]["customPalettesById"],
+): string {
+  const existingNames = new Set(
+    Object.values(customPalettesById).map((palette) => palette.name.trim().toLowerCase()),
+  );
+  const baseName = "My custom palette";
+
+  if (!existingNames.has(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  let index = 1;
+  while (existingNames.has(`${baseName} ${index}`.toLowerCase())) {
+    index += 1;
+  }
+
+  return `${baseName} ${index}`;
 }

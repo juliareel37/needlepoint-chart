@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon } from "@/components/design-system";
+import { Button, ButtonIcon, Modal } from "@/components/design-system";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import type {
   CustomPalette,
@@ -10,12 +10,17 @@ import type {
   PaletteColor,
 } from "@/lib/editor-v2/editor/store";
 import {
+  createAddColorToCustomPaletteCommand,
   createCustomPaletteCommand,
+  createDeleteCustomPaletteCommand,
+  createRemoveColorFromCustomPaletteCommand,
+  createRenameCustomPaletteCommand,
   createSetActiveColorCommand,
   createDeleteUsedColorsCommand,
   createMergeUsedColorsCommand,
   createSwapPaletteColorCommand,
 } from "../../workspaceCommands";
+import { EditableDesignTitle } from "../EditableDesignTitle";
 import { UsedColorsSummary } from "../UsedColorsSummary";
 import styles from "../EditorV2Shell.module.css";
 
@@ -34,11 +39,15 @@ interface ColorPanelPageProps {
   colorsById: Record<string, PaletteColor>;
   customPalettesById: Record<string, CustomPalette>;
   customPaletteDraftColorIds: string[];
+  customPaletteDraftId: string | null;
+  customPaletteDraftName: string;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
   isBottomPanelCanvasFocusActive: boolean;
   isBottomPanelLayout: boolean;
   onCustomPaletteCreateOpen: () => void;
+  onCustomPaletteEditOpen: (paletteId: string) => void;
+  onCustomPaletteDraftNameChange: (nextName: string) => void;
   onCustomPaletteDraftColorToggle: (colorId: string) => void;
   onCustomPaletteDraftReset: () => void;
   onCustomPaletteDraftSelectAll: (colorIds: string[]) => void;
@@ -63,11 +72,15 @@ export function ColorPanelPage({
   colorsById,
   customPalettesById,
   customPaletteDraftColorIds,
+  customPaletteDraftId,
+  customPaletteDraftName,
   dispatch,
   highlightedColorId,
   isBottomPanelCanvasFocusActive,
   isBottomPanelLayout,
   onCustomPaletteCreateOpen,
+  onCustomPaletteEditOpen,
+  onCustomPaletteDraftNameChange,
   onCustomPaletteDraftColorToggle,
   onCustomPaletteDraftReset,
   onCustomPaletteDraftSelectAll,
@@ -86,6 +99,7 @@ export function ColorPanelPage({
   view,
 }: ColorPanelPageProps) {
   const pageRef = useRef<HTMLElement | null>(null);
+  const [paletteDeleteTarget, setPaletteDeleteTarget] = useState<CustomPalette | null>(null);
   const colorPreviewMaxSwatches = isBottomPanelLayout
     ? BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES
     : SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES;
@@ -147,13 +161,41 @@ export function ColorPanelPage({
       return;
     }
 
-    dispatch(
-      createCustomPaletteCommand(
-        createCustomPaletteId(),
-        buildNextCustomPaletteName(customPalettes),
-        customPaletteDraftColorIds,
-      ),
-    );
+    if (customPaletteDraftId) {
+      const existingPalette = customPalettesById[customPaletteDraftId];
+
+      if (existingPalette) {
+        if (existingPalette.name !== customPaletteDraftName.trim()) {
+          dispatch(
+            createRenameCustomPaletteCommand(customPaletteDraftId, customPaletteDraftName),
+          );
+        }
+
+        const existingColorIdSet = new Set(existingPalette.colorIds);
+        const nextColorIdSet = new Set(customPaletteDraftColorIds);
+
+        for (const colorId of existingPalette.colorIds) {
+          if (!nextColorIdSet.has(colorId)) {
+            dispatch(createRemoveColorFromCustomPaletteCommand(customPaletteDraftId, colorId));
+          }
+        }
+
+        for (const colorId of customPaletteDraftColorIds) {
+          if (!existingColorIdSet.has(colorId)) {
+            dispatch(createAddColorToCustomPaletteCommand(customPaletteDraftId, colorId));
+          }
+        }
+      }
+    } else {
+      dispatch(
+        createCustomPaletteCommand(
+          createCustomPaletteId(),
+          customPaletteDraftName,
+          customPaletteDraftColorIds,
+        ),
+      );
+    }
+
     onCustomPaletteDraftReset();
     onViewChange("custom-palettes");
   };
@@ -398,35 +440,56 @@ export function ColorPanelPage({
                 you want to reuse in this design.
               </p>
             ) : (
-              <div className={styles.customPaletteCardList}>
-                {customPalettes.map((customPalette) => (
-                  <div key={customPalette.id} className={styles.customPaletteCard}>
-                    <h3 className={styles.customPaletteCardTitle} style={typographyStyles.h5}>
-                      {customPalette.name}
-                    </h3>
-                    <div className={styles.customPaletteCardSwatches}>
-                      {customPalette.colorIds.map((colorId) => {
-                        const color = colorsById[colorId];
-
-                        return (
-                          <span
-                            key={`${customPalette.id}-${colorId}`}
-                            className={styles.customPaletteCardSwatch}
-                            aria-label={
-                              color ? `${color.name} (${color.code})` : "Palette color"
-                            }
-                            title={color ? `${color.name} (${color.code})` : "Palette color"}
-                            role="img"
-                            style={{ backgroundColor: color?.hex ?? "#ffffff" }}
+                <div className={styles.customPaletteCardList}>
+                  {customPalettes.map((customPalette) => (
+                    <button
+                      key={customPalette.id}
+                      type="button"
+                      className={styles.customPaletteCard}
+                      onClick={() => onCustomPaletteEditOpen(customPalette.id)}
+                    >
+                      <h3 className={styles.customPaletteCardTitle} style={typographyStyles.h5}>
+                        <span>{customPalette.name}</span>
+                        <button
+                          type="button"
+                          className={styles.customPaletteCardDeleteButton}
+                          aria-label={`Delete ${customPalette.name}`}
+                          title={`Delete ${customPalette.name}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setPaletteDeleteTarget(customPalette);
+                          }}
+                        >
+                          <ButtonIcon
+                            icon="/icons/lucide/trash.svg"
+                            className={styles.customPaletteCardDeleteIcon}
                           />
-                        );
-                      })}
-                    </div>
-                    <span className={styles.customPaletteCardMeta}>
-                      {customPalette.colorIds.length}{" "}
-                      {customPalette.colorIds.length === 1 ? "color" : "colors"}
-                    </span>
-                  </div>
+                        </button>
+                      </h3>
+                      <div className={styles.customPaletteCardSwatches}>
+                        {customPalette.colorIds.map((colorId) => {
+                          const color = colorsById[colorId];
+
+                          return (
+                            <span
+                              key={`${customPalette.id}-${colorId}`}
+                              className={styles.customPaletteCardSwatch}
+                              aria-label={
+                                color ? `${color.name} (${color.code})` : "Palette color"
+                              }
+                              title={color ? `${color.name} (${color.code})` : "Palette color"}
+                              role="img"
+                              style={{ backgroundColor: color?.hex ?? "#ffffff" }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className={styles.customPaletteCardMeta}>
+                        {customPalette.colorIds.length}{" "}
+                        {customPalette.colorIds.length === 1 ? "color" : "colors"}
+                      </span>
+                    </button>
                 ))}
               </div>
             )}
@@ -457,12 +520,14 @@ export function ColorPanelPage({
             <div className={styles.customPaletteSelectionSummary}>
               <div className={styles.customPaletteSelectionSummaryTop}>
                 <div className={styles.customPaletteSelectionSummaryText}>
-                  <h3
+                  <EditableDesignTitle
                     className={styles.customPaletteSelectionSummaryTitle}
-                    style={typographyStyles.h5}
-                  >
-                    New palette
-                  </h3>
+                    documentTitle={customPaletteDraftName}
+                    inputAriaLabel="Palette name"
+                    onCommitTitle={onCustomPaletteDraftNameChange}
+                    renameAriaLabel="Rename palette"
+                    renameRequestToken={0}
+                  />
                   {customPaletteDraftColors.length === 0 ? (
                     <p
                       className={styles.customPaletteSelectionSummaryCaption}
@@ -540,6 +605,28 @@ export function ColorPanelPage({
           </div>
         )}
       </div>
+      <Modal
+        isOpen={paletteDeleteTarget !== null}
+        title="Delete this palette?"
+        description={
+          paletteDeleteTarget
+            ? `Delete "${paletteDeleteTarget.name}" from this design? This will not remove any colors from the design itself.`
+            : ""
+        }
+        tone="fail"
+        dismissLabel="Cancel"
+        confirmLabel="Delete palette"
+        confirmVariant="destructive"
+        onDismiss={() => setPaletteDeleteTarget(null)}
+        onConfirm={() => {
+          if (!paletteDeleteTarget) {
+            return;
+          }
+
+          dispatch(createDeleteCustomPaletteCommand(paletteDeleteTarget.id));
+          setPaletteDeleteTarget(null);
+        }}
+      />
     </section>
   );
 }
@@ -550,18 +637,4 @@ function createCustomPaletteId(): string {
   }
 
   return `custom-palette_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function buildNextCustomPaletteName(customPalettes: CustomPalette[]): string {
-  const existingNames = new Set(customPalettes.map((palette) => palette.name.trim().toLowerCase()));
-  let index = customPalettes.length + 1;
-
-  while (true) {
-    const candidate = `Custom Palette ${index}`;
-    if (!existingNames.has(candidate.toLowerCase())) {
-      return candidate;
-    }
-
-    index += 1;
-  }
 }
