@@ -1,0 +1,126 @@
+.page {
+  min-height: calc(100dvh - var(--app-top-offset, 52px));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-100) 52%, transparent) 0%, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-card) 84%, transparent) 0%, var(--surface-app) 100%);
+  padding: 32px 20px 48px;
+}
+
+.shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metaCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-card) 92%, var(--surface-app));
+}
+
+.metaLabel,
+.answerLabel,
+.applicationMeta,
+.sectionMeta {
+  color: var(--text-secondary);
+}
+
+.metaValue,
+.answerValue {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.answerValueBreak {
+  color: var(--text-primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+.section {
+  display: grid;
+  gap: 14px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.applicationCard,
+.emptyCard {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: 20px;
+  background: var(--surface-card);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.applicationHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.applicationTitle {
+  margin: 0;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.answerBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-success-base) 18%, var(--surface-card));
+  color: var(--status-success-strong);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 20px 14px 36px;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+}

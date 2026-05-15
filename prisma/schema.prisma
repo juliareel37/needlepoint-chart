@@ -20,6 +20,12 @@ enum AppThemePreference {
   DARK
 }
 
+enum WaitlistApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model AppUser {
   id              String              @id @default(cuid())
   createdAt       DateTime            @default(now())
@@ -45,6 +51,26 @@ model AuthIdentity {
   @@unique([provider, providerUserId])
   @@index([appUserId])
   @@index([email])
+}
+
+model WaitlistApplication {
+  id                 String                    @id @default(cuid())
+  email              String
+  status             WaitlistApplicationStatus @default(PENDING)
+  experienceLevel    String?
+  currentTools       String?
+  freeformResponse   String?
+  approvedAt         DateTime?
+  approvedBy         String?
+  inviteToken        String?                   @unique
+  inviteTokenExpiresAt DateTime?
+  accountCreatedAt   DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@unique([email])
+  @@index([status, createdAt])
+  @@index([inviteTokenExpiresAt])
 }
 
 model PatternDraft {

@@ -13,7 +13,7 @@ import {
   Panel,
   panelMutedTextStyle,
 } from "@/components/design-system";
-import { useAuthActions, useAuthSession } from "@/lib/auth/client";
+import { useAuthAccessState, useAuthActions, useAuthSession } from "@/lib/auth/client";
 import styles from "./AuthPage.module.css";
 
 type ViewName =
@@ -74,6 +74,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function normalizeEmail(email: string | null | undefined) {
+  return typeof email === "string" && email.trim() ? email.trim().toLowerCase() : null;
+}
+
 function getTitles(pathname: string) {
   switch (pathname as ViewName) {
     case "sign-up":
@@ -112,13 +116,23 @@ function getTitles(pathname: string) {
 export function AuthSignInPageContent({
   pathname,
   redirectUrl,
+  signUpInvite,
 }: {
   pathname: string;
   redirectUrl: string;
+  signUpInvite:
+    | {
+        isValid: boolean;
+        email: string | null;
+        error: string | null;
+        token: string | null;
+      }
+    | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoaded, isSignedIn } = useAuthSession();
+  const { accessState, isLoaded: isAccessLoaded, resolvedEmail } = useAuthAccessState();
   const {
     requestPasswordReset,
     resetPassword,
@@ -134,6 +148,14 @@ export function AuthSignInPageContent({
   const [name, setName] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [isCompletingInvite, setIsCompletingInvite] = useState(false);
+  const [hasCompletedInviteActivation, setHasCompletedInviteActivation] = useState(false);
+  const isSignUpPath = pathname === "sign-up";
+  const signUpInviteEmail = signUpInvite?.email ?? "";
+  const hasValidSignUpInvite = isSignUpPath && signUpInvite?.isValid === true;
+  const signUpBlockedMessage = isSignUpPath
+    ? signUpInvite?.error ?? "Account creation is invite-only during the beta."
+    : null;
 
   const token = searchParams.get("token") ?? undefined;
   const resetMode = searchParams.get("mode");
@@ -155,8 +177,28 @@ export function AuthSignInPageContent({
       };
     }
 
+    if (isSignUpPath) {
+      if (hasValidSignUpInvite) {
+        return {
+          title: "Create your account",
+          description: `You're approved for beta access. Finish setting up the account for ${signUpInviteEmail}.`,
+        };
+      }
+
+      return {
+        title: "Invite required",
+        description: "Account creation is currently limited to approved beta invites.",
+      };
+    }
+
     return getTitles(pathname);
-  }, [isSetPasswordFlow, pathname]);
+  }, [hasValidSignUpInvite, isSetPasswordFlow, isSignUpPath, pathname, signUpInviteEmail]);
+
+  useEffect(() => {
+    if (hasValidSignUpInvite && signUpInviteEmail) {
+      setEmail(signUpInviteEmail);
+    }
+  }, [hasValidSignUpInvite, signUpInviteEmail]);
 
   useEffect(() => {
     if (oauthError) {
@@ -172,7 +214,11 @@ export function AuthSignInPageContent({
   }, [oauthError]);
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || !isAccessLoaded) {
+      return;
+    }
+
+    if (hasCompletedInviteActivation) {
       return;
     }
 
@@ -195,11 +241,215 @@ export function AuthSignInPageContent({
       return;
     }
 
-    if (isSignedIn && pathname !== "forgot-password" && pathname !== "reset-password") {
+    if (
+      isSignedIn &&
+      accessState === "pending_approval" &&
+      isSignUpPath &&
+      hasValidSignUpInvite
+    ) {
+      const signedInEmail = normalizeEmail(user?.email) ?? normalizeEmail(resolvedEmail);
+      const invitedEmail = normalizeEmail(signUpInviteEmail);
+
+      void (async () => {
+        if (!invitedEmail) {
+          setStatus({
+            tone: "error",
+            message: "This invite link is missing an approved email.",
+          });
+          return;
+        }
+
+        if (!signedInEmail) {
+          return;
+        }
+
+        if (signedInEmail !== invitedEmail) {
+          setIsSubmitting(true);
+          const result = await signOut();
+          setIsSubmitting(false);
+
+          if (result.error) {
+            setStatus({
+              tone: "error",
+              message:
+                result.error.message ??
+                "We couldn't finish sign-in because this Google account doesn't match the approved invite.",
+            });
+            return;
+          }
+
+          router.replace("/?notice=approval-required");
+          router.refresh();
+          return;
+        }
+
+        if (isCompletingInvite) {
+          return;
+        }
+
+        setIsCompletingInvite(true);
+        setIsSubmitting(true);
+        setStatus({
+          tone: "success",
+          message: "Finishing your approved Google sign-in...",
+        });
+
+        try {
+          const response = await fetch("/api/waitlist/invite", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              token,
+              email: invitedEmail,
+            }),
+          });
+          const body = (await response.json().catch(() => null)) as { error?: string } | null;
+
+          if (!response.ok) {
+            throw new Error(
+              body?.error ?? "We couldn't finish activating your approved invite.",
+            );
+          }
+
+          setHasCompletedInviteActivation(true);
+          router.replace(redirectUrl);
+          router.refresh();
+        } catch (error) {
+          const result = await signOut();
+          if (result.error) {
+            setStatus({
+              tone: "error",
+              message: getErrorMessage(
+                error,
+                "We couldn't finish activating your approved invite.",
+              ),
+            });
+          } else {
+            setStatus({
+              tone: "error",
+              message: getErrorMessage(
+                error,
+                "We couldn't finish activating your approved invite.",
+              ),
+            });
+            router.replace("/?notice=approval-required");
+            router.refresh();
+          }
+        } finally {
+          setIsSubmitting(false);
+          setIsCompletingInvite(false);
+        }
+      })();
+      return;
+    }
+
+    if (
+      isSignedIn &&
+      accessState === "pending_approval" &&
+      pathname !== "forgot-password" &&
+      pathname !== "reset-password"
+    ) {
+      void (async () => {
+        setIsSubmitting(true);
+        const result = await signOut();
+        setIsSubmitting(false);
+
+        if (result.error) {
+          setStatus({
+            tone: "error",
+            message:
+              result.error.message ??
+              "We couldn't finish sign-in because this account isn't approved yet.",
+          });
+          return;
+        }
+
+        router.replace("/?notice=approval-required");
+        router.refresh();
+      })();
+      return;
+    }
+
+    if (
+      isSignedIn &&
+      accessState === "approved" &&
+      pathname !== "forgot-password" &&
+      pathname !== "reset-password"
+    ) {
       router.replace(redirectUrl);
       router.refresh();
     }
-  }, [isLoaded, isSignedIn, pathname, redirectUrl, router, signOut]);
+  }, [
+    accessState,
+    hasValidSignUpInvite,
+    hasCompletedInviteActivation,
+    isAccessLoaded,
+    isCompletingInvite,
+    isLoaded,
+    isSignUpPath,
+    isSignedIn,
+    pathname,
+    redirectUrl,
+    router,
+    signOut,
+    signUpInviteEmail,
+    token,
+    resolvedEmail,
+    user?.email,
+  ]);
+
+  async function handleGoogleSignIn() {
+    setIsSubmitting(true);
+    setStatus(null);
+
+    const signUpCallbackPath =
+      isSignUpPath && token
+        ? `/sign-in/sign-up?token=${encodeURIComponent(token)}&redirect_url=${encodeURIComponent(redirectUrl)}`
+        : null;
+    const callbackURL =
+      typeof window !== "undefined"
+        ? `${window.location.origin}${signUpCallbackPath ?? redirectUrl}`
+        : signUpCallbackPath ?? redirectUrl;
+    const errorCallbackURL =
+      typeof window !== "undefined"
+        ? `${window.location.origin}${signUpCallbackPath ?? `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`}`
+        : signUpCallbackPath ?? `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
+
+    try {
+      const result = await signInWithGoogle({
+        provider: "google",
+        callbackURL,
+        newUserCallbackURL: callbackURL,
+        errorCallbackURL,
+      });
+
+      if (result.error) {
+        setStatus({
+          tone: "error",
+          message: result.error.message ?? "Google sign-in could not start. Please try again.",
+        });
+        return;
+      }
+
+      if (result.data.url) {
+        window.location.assign(result.data.url);
+        return;
+      }
+
+      router.replace(redirectUrl);
+      router.refresh();
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: getErrorMessage(error, "Google sign-in could not start. Please try again."),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   async function handleEmailSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -236,6 +486,14 @@ export function AuthSignInPageContent({
 
   async function handleEmailSignUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!hasValidSignUpInvite || !token || !signUpInviteEmail) {
+      setStatus({
+        tone: "error",
+        message: signUpBlockedMessage ?? "This invite link is invalid.",
+      });
+      return;
+    }
+
     if (signUpPasswordError) {
       setStatus({
         tone: "error",
@@ -263,62 +521,42 @@ export function AuthSignInPageContent({
         return;
       }
 
+      const consumeResponse = await fetch("/api/waitlist/invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          token,
+          email: signUpInviteEmail,
+        }),
+      });
+      const consumeBody = (await consumeResponse.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!consumeResponse.ok) {
+        setStatus({
+          tone: "error",
+          message:
+            consumeBody?.error ??
+            "Your account was created, but we couldn't finish activating your invite yet.",
+        });
+        return;
+      }
+
       setStatus({
         tone: "success",
         message: "Your account is ready. Redirecting you into Wippa now.",
       });
+      setHasCompletedInviteActivation(true);
       router.replace(redirectUrl);
       router.refresh();
     } catch (error) {
       setStatus({
         tone: "error",
         message: getErrorMessage(error, "We couldn't create your account just yet."),
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    setIsSubmitting(true);
-    setStatus(null);
-
-    const callbackURL =
-      typeof window !== "undefined"
-        ? `${window.location.origin}${redirectUrl}`
-        : redirectUrl;
-    const errorCallbackURL =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`
-        : `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
-
-    try {
-      const result = await signInWithGoogle({
-        provider: "google",
-        callbackURL,
-        newUserCallbackURL: callbackURL,
-        errorCallbackURL,
-      });
-
-      if (result.error) {
-        setStatus({
-          tone: "error",
-          message: result.error.message ?? "Google sign-in could not start. Please try again.",
-        });
-        return;
-      }
-
-      if (result.data.url) {
-        window.location.assign(result.data.url);
-        return;
-      }
-
-      router.replace(redirectUrl);
-      router.refresh();
-    } catch (error) {
-      setStatus({
-        tone: "error",
-        message: getErrorMessage(error, "Google sign-in could not start. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -449,8 +687,8 @@ export function AuthSignInPageContent({
             <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
               Back to sign in
             </Link>
-            <Link href={`/sign-in/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-              Create account instead
+            <Link href="/" className={styles.link} style={typographyStyles.p2}>
+              Join the waitlist
             </Link>
           </div>
         </form>
@@ -532,10 +770,36 @@ export function AuthSignInPageContent({
 
     const isSignUp = pathname === "sign-up";
 
+    if (isSignUp && !hasValidSignUpInvite) {
+      return (
+        <div className={styles.form}>
+          <div
+            className={[styles.status, styles.statusError].join(" ")}
+            style={typographyStyles.p2}
+          >
+            {signUpBlockedMessage}
+          </div>
+          <p style={panelMutedTextStyle}>
+            Join the waitlist from the landing page, and once you're approved we'll send you a private account-creation link.
+          </p>
+          <div className={styles.linkRow}>
+            <Link href="/" className={styles.link} style={typographyStyles.p2}>
+              Join the waitlist
+            </Link>
+            <Link
+              href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`}
+              className={styles.link}
+              style={typographyStyles.p2}
+            >
+              Already have an account? Sign in
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <form className={styles.form} onSubmit={isSignUp ? handleEmailSignUp : handleEmailSignIn}>
-
-
         <Button
           type="button"
           variant="secondary"
@@ -544,13 +808,20 @@ export function AuthSignInPageContent({
           disabled={isSubmitting}
         >
           <img src="/google_logo.png" alt="Google" className={styles.googleIcon} />
-          Continue with Google
+          {isSignUp ? "Continue with Google" : "Continue with Google"}
         </Button>
 
-        
-        <div className={styles.divider} style={typographyStyles.s}>
-          <span>or</span>
-        </div>
+        {!isSignUp ? (
+          <>
+            <div className={[styles.status, styles.statusMuted].join(" ")} style={typographyStyles.p2}>
+              Google sign-in works for returning approved accounts. New beta access still requires waitlist approval first.
+            </div>
+          </>
+        ) : (
+          <div className={[styles.status, styles.statusMuted].join(" ")} style={typographyStyles.p2}>
+            Approved invite links can use either Google or email/password, but the Google account email must match the invited address.
+          </div>
+        )}
 
         {isSignUp ? (
           <Field label="Name">
@@ -571,6 +842,7 @@ export function AuthSignInPageContent({
             value={email}
             onChange={(event) => setEmail(event.currentTarget.value)}
             placeholder="you@example.com"
+            disabled={isSignUp}
             required
           />
         </Field>
@@ -631,8 +903,8 @@ export function AuthSignInPageContent({
               Already have an account? Sign in
             </Link>
           ) : (
-            <Link href={`/sign-in/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-              Need an account? Create one
+            <Link href="/" className={styles.link} style={typographyStyles.p2}>
+              Need access? Join the waitlist
             </Link>
           )}
         </div>
@@ -668,24 +940,24 @@ export function AuthSignInPageContent({
                 </li>
                 <li className={styles.featureItem} style={typographyStyles.p2}>
                   <span className={styles.featureDot} aria-hidden="true" />
-                  Google OAuth and email/password are both powered by Neon, just without the global Neon theme layer.
+                  Invite-based account setup now runs through the same in-app auth screens as the rest of the product.
                 </li>
               </ul>
             </Panel>
             <Panel
               className={styles.supportPanel}
               title="Need a specific route?"
-              description="You can still move directly between sign in, sign up, and password recovery without leaving this flow."
+              description="You can still move directly between sign in and password recovery without leaving this flow."
             >
               <div className={styles.linkRow}>
                 <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
                   Sign in
                 </Link>
-                <Link href={`/sign-in/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
-                  Sign up
-                </Link>
                 <Link href={`/sign-in/forgot-password?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
                   Forgot password
+                </Link>
+                <Link href="/" className={styles.link} style={typographyStyles.p2}>
+                  Join waitlist
                 </Link>
               </div>
             </Panel>

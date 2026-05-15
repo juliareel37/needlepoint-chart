@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthAccountPageContent } from "@/components/auth/AuthAccountPageContent";
+import { getAuthSession } from "@/lib/auth/server";
 
 const DEFAULT_ACCOUNT_PATHNAME = "settings";
 const VALID_ACCOUNT_PATHNAMES = new Set([
@@ -21,8 +22,17 @@ export default async function AccountPage({
     account?: string[];
   }>;
 }) {
+  const session = await getAuthSession();
   const routeParams = await params;
   const requestedPathname = routeParams.account?.[0];
+
+  if (!session.userId) {
+    redirect(
+      session.accessState === "pending_approval"
+        ? "/?notice=pending-approval"
+        : "/sign-in",
+    );
+  }
 
   if (requestedPathname === "security") {
     redirect("/account/settings");

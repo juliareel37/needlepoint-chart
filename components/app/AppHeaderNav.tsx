@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
 import { Button } from "@/components/design-system";
+import { useAuthAccessState } from "@/lib/auth/client";
 
 const landingHeaderWrapStyle = {
   display: "flex",
@@ -78,9 +79,11 @@ const utilityLinkStyle = {
 
 export default function AppHeaderNav() {
   const pathname = usePathname();
+  const { isLoaded, hasAppAccess } = useAuthAccessState();
   const showLandingHeader = pathname === "/" || pathname === "/library";
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
+  const showResumeCta = isLoaded && hasAppAccess;
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
@@ -131,9 +134,9 @@ export default function AppHeaderNav() {
         {/* <Link href="/library" style={utilityLinkStyle}>
           My Library
         </Link> */}
-        <Link href="/editor" style={{ textDecoration: "none" }}>
+        <Link href={showResumeCta ? "/library" : "/#waitlist"} style={{ textDecoration: "none" }}>
           <Button type="button" variant="secondary" size="md">
-            Launch Editor
+            {showResumeCta ? "Open Library" : "Join Waitlist"}
           </Button>
         </Link>
       </div>

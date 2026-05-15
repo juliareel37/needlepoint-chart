@@ -30,6 +30,7 @@ export interface AuthSession {
   email: string | null;
   name: string | null;
   themePreference: ThemeMode | null;
+  accessState: "signed_out" | "approved" | "pending_approval";
 }
 
 interface AuthUserProfile {
@@ -84,7 +85,57 @@ async function getCurrentAuthUser(): Promise<AuthUserProfile | null> {
   };
 }
 
-async function createOrLinkAppUserForAuthUser(authUser: AuthUserProfile): Promise<string> {
+async function findExistingAppUserIdForAuthUser(
+  authUser: AuthUserProfile,
+): Promise<string | null> {
+  const existingIdentity = await prisma.authIdentity.findUnique({
+    where: {
+      provider_providerUserId: {
+        provider: NEON_AUTH_PROVIDER,
+        providerUserId: authUser.id,
+      },
+    },
+    select: { appUserId: true },
+  });
+
+  return existingIdentity?.appUserId ?? null;
+}
+
+async function canProvisionAppUserForAuthUser(
+  authUser: AuthUserProfile,
+): Promise<boolean> {
+  const normalizedEmail = normalizeEmail(authUser.email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  const waitlistApplication = await prisma.waitlistApplication.findUnique({
+    where: { email: normalizedEmail },
+    select: {
+      status: true,
+      accountCreatedAt: true,
+    },
+  });
+
+  return (
+    waitlistApplication?.status === "APPROVED" &&
+    waitlistApplication.accountCreatedAt !== null
+  );
+}
+
+async function createOrLinkAppUserForApprovedAuthUser(
+  authUser: AuthUserProfile,
+): Promise<string | null> {
+  const existingAppUserId = await findExistingAppUserIdForAuthUser(authUser);
+  if (existingAppUserId) {
+    return existingAppUserId;
+  }
+
+  const canProvision = await canProvisionAppUserForAuthUser(authUser);
+  if (!canProvision) {
+    return null;
+  }
+
   const normalizedEmail = normalizeEmail(authUser.email);
   const emailMatches = normalizedEmail
     ? await prisma.authIdentity.findMany({
@@ -132,18 +183,10 @@ async function createOrLinkAppUserForAuthUser(authUser: AuthUserProfile): Promis
       return appUserId;
     });
   } catch (error) {
-    const existingIdentity = await prisma.authIdentity.findUnique({
-      where: {
-        provider_providerUserId: {
-          provider: NEON_AUTH_PROVIDER,
-          providerUserId: authUser.id,
-        },
-      },
-      select: { appUserId: true },
-    });
+    const existingIdentity = await findExistingAppUserIdForAuthUser(authUser);
 
     if (existingIdentity) {
-      return existingIdentity.appUserId;
+      return existingIdentity;
     }
 
     throw error;
@@ -159,10 +202,22 @@ export async function getAuthSession(): Promise<AuthSession> {
       email: null,
       name: null,
       themePreference: null,
+      accessState: "signed_out",
     };
   }
 
-  const userId = await createOrLinkAppUserForAuthUser(authUser);
+  const userId = await createOrLinkAppUserForApprovedAuthUser(authUser);
+  if (!userId) {
+    return {
+      userId: null,
+      authUserId: authUser.id,
+      email: authUser.email,
+      name: authUser.name,
+      themePreference: null,
+      accessState: "pending_approval",
+    };
+  }
+
   const appUser = await prisma.appUser.findUnique({
     where: { id: userId },
     select: { themePreference: true },
@@ -174,6 +229,7 @@ export async function getAuthSession(): Promise<AuthSession> {
     email: authUser.email,
     name: authUser.name,
     themePreference: fromPrismaThemePreference(appUser?.themePreference ?? null),
+    accessState: "approved",
   };
 }
 
@@ -205,7 +261,11 @@ export async function updateCurrentUserThemePreference(
     return null;
   }
 
-  const appUserId = await createOrLinkAppUserForAuthUser(authUser);
+  const appUserId = await createOrLinkAppUserForApprovedAuthUser(authUser);
+  if (!appUserId) {
+    return null;
+  }
+
   const updated = await prisma.appUser.update({
     where: { id: appUserId },
     data: {

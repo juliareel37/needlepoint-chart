@@ -1,10 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState, type FormEvent } from "react";
 import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
-import { Button, ButtonIcon } from "@/components/design-system";
-import { useAuthSession } from "@/lib/auth/client";
+import {
+  Button,
+  ButtonIcon,
+  Field,
+  FieldInput,
+  FieldSelect,
+  Modal,
+  Notification,
+} from "@/components/design-system";
+import { useAuthAccessState, useAuthSession } from "@/lib/auth/client";
 import styles from "./page.module.css";
 
 const heroHighlights = [
@@ -46,11 +55,116 @@ const featureCards = [
   },
 ] as const;
 
+type WaitlistStatus =
+  | { tone: "success"; title: string; description: string }
+  | { tone: "destructive"; title: string; description: string }
+  | null;
+
+const experienceLevelOptions = [
+  "Yes, regularly",
+  "Sometimes",
+  "Not yet, but I want to start",
+] as const;
+
 export default function Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoaded, isSignedIn } = useAuthSession();
-  const showResumeCta = isLoaded && isSignedIn;
-  const secondaryCtaLabel = showResumeCta ? "View my designs" : "Sign up for free";
+  const { accessState, hasAppAccess, isLoaded: isAccessStateLoaded } = useAuthAccessState();
+  const showResumeCta = isLoaded && isAccessStateLoaded && hasAppAccess;
+  const showPendingApprovalNotice = searchParams.get("notice") === "pending-approval";
+  const showApprovalRequiredNotice = searchParams.get("notice") === "approval-required";
+  const [waitlistModalOpen, setWaitlistModalOpen] = useState(false);
+  const [isSubmittingWaitlist, setIsSubmittingWaitlist] = useState(false);
+  const [waitlistStatus, setWaitlistStatus] = useState<WaitlistStatus>(null);
+  const [email, setEmail] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState<(typeof experienceLevelOptions)[number]>(
+    experienceLevelOptions[0],
+  );
+  const [currentTools, setCurrentTools] = useState("");
+  const [freeformResponse, setFreeformResponse] = useState("");
+  const waitlistIntroCopy = showResumeCta
+    ? "Your account is active. Head back into your library to keep designing."
+    : accessState === "pending_approval"
+      ? "Your beta application has been received. We’ll email you as soon as your access is approved."
+    : "Beta access is rolling out gradually. Join the waitlist and tell us a little about how you design today.";
+  const waitlistActionLabel = showResumeCta ? "View my designs" : "Join the waitlist";
+  const modalDescription = useMemo(
+    () =>
+      showResumeCta
+        ? "You already have access to Wippa. Open your library to keep working."
+        : "Share a few details and we’ll reach out once your beta access is approved.",
+    [showResumeCta],
+  );
+
+  function resetWaitlistForm() {
+    setExperienceLevel(experienceLevelOptions[0]);
+    setCurrentTools("");
+    setFreeformResponse("");
+  }
+
+  function openWaitlistModal(prefilledEmail?: string) {
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+    }
+
+    setWaitlistModalOpen(true);
+  }
+
+  async function handleWaitlistSubmit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    if (showResumeCta) {
+      router.push("/library");
+      return;
+    }
+
+    setIsSubmittingWaitlist(true);
+    setWaitlistStatus(null);
+
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email,
+          experienceLevel,
+          currentTools,
+          freeformResponse,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        setWaitlistStatus({
+          tone: "destructive",
+          title: "Couldn’t join the waitlist",
+          description: body?.error ?? "Please check your answers and try again.",
+        });
+        return;
+      }
+
+      setWaitlistStatus({
+        tone: "success",
+        title: "You’re on the list",
+        description:
+          "Thanks for sharing more about your workflow. We’ll reach out when your beta access is ready.",
+      });
+      setWaitlistModalOpen(false);
+      resetWaitlistForm();
+    } catch {
+      setWaitlistStatus({
+        tone: "destructive",
+        title: "Couldn’t join the waitlist",
+        description: "Something went wrong on our side. Please try again in a moment.",
+      });
+    } finally {
+      setIsSubmittingWaitlist(false);
+    }
+  }
 
   return (
     <main className={styles.page}>
@@ -71,31 +185,97 @@ export default function Page() {
             A better way to create, refine, and finish your designs,
             so every pattern starts as a work in progress and ends exactly how you want it.
             </p>
+            <div className={styles.waitlistCallout}>
+              <p className={styles.waitlistEyebrow} style={marketingTypographyStyles.eyebrow}>
+                Private beta access
+              </p>
+              <p className={styles.waitlistIntro} style={marketingTypographyStyles.body}>
+                {waitlistIntroCopy}
+              </p>
+              {!showResumeCta ? (
+                <form
+                  className={styles.waitlistQuickForm}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    openWaitlistModal(email);
+                  }}
+                >
+                  <label className={styles.waitlistQuickField}>
+                    <span className={styles.visuallyHidden}>Email</span>
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.currentTarget.value)}
+                      placeholder="you@example.com"
+                      className={styles.waitlistQuickInput}
+                      required
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    className={styles.waitlistQuickButton}
+                    onClick={() => openWaitlistModal(email)}
+                  >
+                    Continue application
+                    <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                  </Button>
+                </form>
+              ) : null}
+            </div>
+            {waitlistStatus ? (
+              <Notification
+                tone={waitlistStatus.tone}
+                title={waitlistStatus.title}
+                description={waitlistStatus.description}
+                onDismiss={() => setWaitlistStatus(null)}
+                neutralSurface
+              />
+            ) : null}
+            {!waitlistStatus && (showPendingApprovalNotice || showApprovalRequiredNotice) ? (
+              <Notification
+                tone="info"
+                title={
+                  showApprovalRequiredNotice
+                    ? "This account isn’t approved for beta access yet"
+                    : "Your beta access is still pending"
+                }
+                description={
+                  showApprovalRequiredNotice
+                    ? "Google sign-in is back for returning approved users, but new access still starts with the waitlist. Join the beta queue below and we’ll email you when you’re approved."
+                    : "Thanks for signing in. We’ve got your application and will email you once your account is approved."
+                }
+                neutralSurface
+              />
+            ) : null}
             <div className={styles.heroActions}>
               <Button
                 type="button"
                 variant="primary"
                 size="lg"
                 className={styles.primaryCta}
-                onClick={() => router.push("/editor")}
+                onClick={() => {
+                  if (showResumeCta) {
+                    router.push("/library");
+                    return;
+                  }
+
+                  openWaitlistModal(email);
+                }}
               >
-                <span className={styles.ctaLabel}>Start designing</span>
-                <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                <span className={styles.ctaLabel}>{waitlistActionLabel}</span>
+                {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
               </Button>
               <Button
                 type="button"
                 variant="outlined"
                 size="lg"
                 className={styles.secondaryCta}
-                onClick={() =>
-                  router.push(
-                    showResumeCta
-                      ? "/library"
-                      : `/sign-in/sign-up?redirect_url=${encodeURIComponent("/")}`,
-                  )
-                }
+                onClick={() => router.push(showResumeCta ? "/sign-in" : "/#waitlist")}
               >
-                {secondaryCtaLabel}
+                {showResumeCta ? "Sign in with another account" : accessState === "pending_approval" ? "Check beta details" : "Learn about the beta"}
               </Button>
             </div>
             <div className={styles.heroPreviewWrap}>
@@ -178,15 +358,16 @@ export default function Page() {
           <div className={styles.footerInner}>
             <div className={styles.footerContent}>
               <div className={styles.footerCopy}>
-                <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Begin</p>
+                <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Waitlist</p>
                 <h2 className={styles.footerTitle}  style={marketingTypographyStyles.footerTitle} >
-                  Your next pattern is one <span className={styles.footerTitleEmphasis}>grid square</span> away.
+                  Help shape the <span className={styles.footerTitleEmphasis}>next draft</span> of Wippa.
                 </h2>
               </div>
-              <div className={styles.footerCopy}>
+              <div className={styles.footerCopy} id="waitlist">
                 <p className={styles.footerBody} style={marketingTypographyStyles.body}>
-                  Open the editor, choose a fabric count, and start placing stitches.
-                  no account required to draft your first pattern.
+                  {showResumeCta
+                    ? "Your beta access is already active. Jump back into your library whenever you’re ready."
+                    : "Share how you currently design needlepoint patterns and what you’re hoping to make with Wippa. We’re inviting people in gradually during beta."}
                 </p>
                 <div className={styles.footerActions}>
                   <Button
@@ -194,19 +375,26 @@ export default function Page() {
                     variant="primary"
                     size="lg"
                     className={styles.footerPrimary}
-                    onClick={() => router.push("/editor")}
+                    onClick={() => {
+                      if (showResumeCta) {
+                        router.push("/library");
+                        return;
+                      }
+
+                      openWaitlistModal(email);
+                    }}
                   >
-                    Launch Editor
-                    <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                    {showResumeCta ? "Open My Library" : "Join the Waitlist"}
+                    {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
                   </Button>
                   <Button
                     type="button"
                     variant="secondary"
                     size="lg"
                     className={styles.footerSecondary}
-                    onClick={() => router.push("/library")}
+                    onClick={() => router.push(showResumeCta ? "/sign-in" : "/sign-in")}
                   >
-                    Open My Library
+                    {showResumeCta ? "Sign in" : "Already approved? Sign in"}
                   </Button>
                 </div>
               </div>
@@ -218,6 +406,82 @@ export default function Page() {
           </div>
         </section>
       </div>
+      <Modal
+        isOpen={waitlistModalOpen}
+        title="Apply for beta access"
+        description={
+          <div className={styles.waitlistModalCopy}>
+            <p>{modalDescription}</p>
+            {!showResumeCta ? (
+              <form
+                id="waitlist-application-form"
+                className={styles.waitlistModalForm}
+                onSubmit={handleWaitlistSubmit}
+              >
+                <Field label="Email">
+                  <FieldInput
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.currentTarget.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </Field>
+                <Field label="Do you currently create your own needlepoint patterns?">
+                  <FieldSelect
+                    value={experienceLevel}
+                    onChange={(event) =>
+                      setExperienceLevel(
+                        event.currentTarget.value as (typeof experienceLevelOptions)[number],
+                      )
+                    }
+                  >
+                    {experienceLevelOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </FieldSelect>
+                </Field>
+                <Field label="What tools do you currently use?">
+                  <FieldInput
+                    type="text"
+                    value={currentTools}
+                    onChange={(event) => setCurrentTools(event.currentTarget.value)}
+                    placeholder="Photoshop, Procreate, graph paper, stitch charts..."
+                    required
+                  />
+                </Field>
+                <Field label="What are you hoping to use WIP for?">
+                  <textarea
+                    value={freeformResponse}
+                    onChange={(event) => setFreeformResponse(event.currentTarget.value)}
+                    placeholder="Tell us what you want to design, refine, or speed up."
+                    className={styles.waitlistTextarea}
+                    rows={5}
+                    required
+                  />
+                </Field>
+              </form>
+            ) : null}
+          </div>
+        }
+        dismissLabel={showResumeCta ? "Close" : "Not now"}
+        confirmLabel={showResumeCta ? "Open library" : isSubmittingWaitlist ? "Submitting..." : "Join waitlist"}
+        onDismiss={() => setWaitlistModalOpen(false)}
+        onConfirm={() => {
+          if (showResumeCta) {
+            router.push("/library");
+            return;
+          }
+
+          void handleWaitlistSubmit();
+        }}
+        onClose={() => setWaitlistModalOpen(false)}
+        confirmDisabled={isSubmittingWaitlist}
+        showCloseButton
+      />
     </main>
   );
 }
