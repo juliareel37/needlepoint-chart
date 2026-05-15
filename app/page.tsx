@@ -96,6 +96,7 @@ export default function Page() {
         : "Share a few details and we’ll reach out once your beta access is approved.",
     [showResumeCta],
   );
+  const editorRoute = "/editor";
 
   function resetWaitlistForm() {
     setExperienceLevel(experienceLevelOptions[0]);
@@ -185,7 +186,7 @@ export default function Page() {
             A better way to create, refine, and finish your designs,
             so every pattern starts as a work in progress and ends exactly how you want it.
             </p>
-            <div className={styles.waitlistCallout}>
+            {/* <div className={styles.waitlistCallout}>
               <p className={styles.waitlistEyebrow} style={marketingTypographyStyles.eyebrow}>
                 Private beta access
               </p>
@@ -224,7 +225,7 @@ export default function Page() {
                   </Button>
                 </form>
               ) : null}
-            </div>
+            </div> */}
             {waitlistStatus ? (
               <Notification
                 tone={waitlistStatus.tone}
@@ -268,24 +269,26 @@ export default function Page() {
                 <span className={styles.ctaLabel}>{waitlistActionLabel}</span>
                 {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
               </Button>
-              <Button
-                type="button"
-                variant="outlined"
-                size="lg"
-                className={styles.secondaryCta}
-                onClick={() => router.push(showResumeCta ? "/sign-in" : "/#waitlist")}
-              >
-                {showResumeCta ? "Sign in with another account" : accessState === "pending_approval" ? "Check beta details" : "Learn about the beta"}
-              </Button>
+              {showResumeCta ? (
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="lg"
+                  className={styles.secondaryCta}
+                  onClick={() => router.push(editorRoute)}
+                >
+                  Launch Editor
+                </Button>
+              ) : null}
             </div>
             <div className={styles.heroPreviewWrap}>
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/editor-warp.png"
-                    alt="Wippa editor interface showing a needlepoint design workspace"
-                    width={2840}
-                    height={1657}
+                    src="/editor-collapsed.png"
+                    alt="Wippa editor interface with the workspace controls collapsed"
+                    width={2940}
+                    height={1472}
                     priority
                     sizes="100vw"
                     className={styles.heroPreviewImage}
@@ -324,7 +327,7 @@ export default function Page() {
         <div className={styles.sectionDivider} aria-hidden="true" />
 
         <section className={styles.features} id="features">
-            <div className={styles.featuresIntro}>
+          <div className={styles.featuresIntro}>
             <div>
               <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>The Canvas</p>
               <h2 className={styles.sectionTitle} style={marketingTypographyStyles.sectionTitle}>
@@ -387,15 +390,17 @@ export default function Page() {
                     {showResumeCta ? "Open My Library" : "Join the Waitlist"}
                     {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="lg"
-                    className={styles.footerSecondary}
-                    onClick={() => router.push(showResumeCta ? "/sign-in" : "/sign-in")}
-                  >
-                    {showResumeCta ? "Sign in" : "Already approved? Sign in"}
-                  </Button>
+                  {showResumeCta ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="lg"
+                      className={styles.footerSecondary}
+                      onClick={() => router.push(editorRoute)}
+                    >
+                      Launch Editor
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>

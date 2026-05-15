@@ -198,11 +198,9 @@
 
 .heroPreviewWrap {
   position: relative;
-  justify-self: stretch;
-  left: 50%;
-  width: 100dvw;
-  max-width: 100dvw;
-  margin-left: -50dvw;
+  justify-self: center;
+  width: min(75vw, 1280px);
+  max-width: 100%;
   margin-top: -24px;
   display: grid;
   justify-items: center;
@@ -215,16 +213,18 @@
 
 .heroPreviewCard {
   width: 100%;
-  max-height: clamp(300px, 52vw, 640px);
+  max-height: clamp(240px, 27vw, 420px);
   overflow: hidden;
 }
 
 .heroPreviewImage {
   display: block;
-  width: 112%;
+  position: relative;
+  left: 50%;
+  width: 116%;
   max-width: none;
   height: auto;
-  margin-left: -2%;
+  transform: translateX(-50%);
 }
 
 .heroFeatureGrid {
@@ -481,6 +481,10 @@
     width: 100%;
   }
 
+  .heroPreviewWrap {
+    width: min(84vw, 1100px);
+  }
+
   .featureCard {
     padding: 24px 24px 28px;
   }
@@ -502,6 +506,10 @@
 
   .heroCopy {
     padding: 56px 24px 0;
+  }
+
+  .heroPreviewWrap {
+    width: min(92vw, 760px);
   }
 
   .featuresGrid {
@@ -574,12 +582,11 @@
   }
 
   .heroPreviewImage {
-    width: 122%;
-    margin-left: -6%;
+    width: 128%;
   }
 
   .heroPreviewCard {
-    max-height: clamp(220px, 44vw, 360px);
+    max-height: clamp(200px, 36vw, 300px);
   }
 
 }
