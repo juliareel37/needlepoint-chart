@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { Manrope, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
@@ -19,6 +20,16 @@ const uiSans = Manrope({
 const geistMono = Geist_Mono({
   variable: "--font-code",
   subsets: ["latin"],
+});
+
+const marketingHeadingFont = localFont({
+  // src: "../public/fonts/beautique_display/Beautique Display/BeautiqueDisplay-Regular.otf",
+  // src: "../public/fonts/RL Madena/RL-Madena.otf",
+  // src: "../public/fonts/LT_museum/LTMuseum-Medium.ttf",
+  src: "../public/fonts/Larken-Regular/Web Fonts/61637e80c3e88812def846832594f24d.ttf",
+  weight: "400",
+  variable: "--font-marketing-heading",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -91,7 +102,9 @@ export default async function RootLayout({
   if (!neonAuthBaseUrl || !neonAuthCookieSecret) {
     return (
       <html lang="en">
-        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+        <body
+          className={`${uiSans.variable} ${geistMono.variable} ${marketingHeadingFont.variable} antialiased`}
+        >
           <div
             style={{
               minHeight: "100vh",
@@ -141,7 +154,9 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
-      <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${uiSans.variable} ${geistMono.variable} ${marketingHeadingFont.variable} antialiased`}
+      >
         <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>
             <div id="app-top-banner" className="app-top-banner-slot" />

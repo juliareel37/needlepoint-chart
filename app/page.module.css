@@ -34,7 +34,7 @@
 .shell {
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 48px 120px 32px;
+  /* padding: 48px 120px 32px; */
   display: grid;
   gap: 72px;
 }
@@ -222,9 +222,10 @@
   position: relative;
   left: 50%;
   width: 116%;
-  max-width: none;
+  /* max-width: none; */
   height: auto;
   transform: translateX(-50%);
+  border-radius: 20px;
 }
 
 .heroFeatureGrid {
@@ -306,6 +307,7 @@
 .features {
   display: grid;
   gap: 96px;
+  padding: 0 140px;
 }
 
 .featuresIntro {
@@ -350,7 +352,7 @@
 .featureTitle {
   max-width: 15ch;
   color: var(--text-primary);
-  font-family: 'Playfair Display';
+  font-family: var(--font-marketing-heading), serif;
 }
 
 .waitlistModalCopy {
@@ -383,15 +385,15 @@
 }
 
 .footerSection {
-  position: relative;
-  left: 50%;
+  /* position: relative;
+  left: 50%; */
   width: 100dvw;
   background:
     radial-gradient(circle at 18% 18%, color-mix(in oklch, transparent 58%, var(--secondary-400)) 0%, transparent 34%),
     radial-gradient(circle at 82% 0%, color-mix(in oklch, transparent 82%, var(--brand-300)) 0%, transparent 26%),
     var(--landing-dark-surface);
   color: var(--neutral-0);
-  margin-left: -50dvw;
+  /* margin-left: -50dvw; */
   margin-bottom: -32px;
 }
 
