@@ -179,8 +179,10 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              Needlepoint pattern design<span> </span>
-              <span className={styles.accentWord}>made simple</span>
+              Designing your own 
+              <span className={styles.accentWord}>  needlepoint patterns </span>
+              just got easier
+              <span> </span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
             A better way to create, refine, and finish your designs,
