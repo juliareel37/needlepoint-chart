@@ -47,7 +47,7 @@
   height: 1px;
   background: var(--ui-border-reg);
   margin-left: -50dvw;
-  margin-top: -72px;
+  margin-top: -32px;
   margin-bottom: -72px;
 }
 
@@ -330,7 +330,7 @@
 }
 
 .sectionTitle {
-  max-width: 14ch;
+  max-width: 26ch;
 }
 
 .sectionTitleEmphasis {
@@ -379,7 +379,7 @@
 
 .bentoIntro {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: clamp(28px, 4vw, 56px);
   align-items: end;
 }

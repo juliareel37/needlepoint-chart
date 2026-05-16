@@ -269,7 +269,7 @@ export default function Page() {
                 }}
               >
                 <span className={styles.ctaLabel}>{waitlistActionLabel}</span>
-                {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
+                {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
               </Button>
               {showResumeCta ? (
                 <Button
@@ -287,7 +287,7 @@ export default function Page() {
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/ui/full-editor-dachsund.png"
+                    src="/ui/dachsund-editor-new.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2940}
                     height={1472}
@@ -368,13 +368,15 @@ export default function Page() {
                 className={styles.sectionTitle}
                 style={marketingTypographyStyles.sectionTitle}
               >
-                The features that make the <span className={styles.sectionTitleEmphasis}>workflow</span> feel premium.
+                Creative tools built 
+                <span className={styles.sectionTitleEmphasis}> specifically </span>
+                for stitched canvases
               </h2>
             </div>
-            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+            {/* <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
               A more detailed look at the product experience: expressive tools, clearer previews,
               and export moments that feel as finished as the design itself.
-            </p>
+            </p> */}
           </div>
 
           <div className={styles.bentoRows}>
@@ -382,11 +384,10 @@ export default function Page() {
               <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Comprehensive, easy-to-use tools
+                    Flexible editing tools
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    A full toolbar and selection menu — built for fast, precise pattern work.
-                  </p>
+                Select, move, duplicate, erase, and refine designs with tools built for fast, intuitive editing.                      </p>
                 </div>
                 <div className={styles.bentoVisualFrame} aria-hidden="true">
                   <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
@@ -452,7 +453,7 @@ export default function Page() {
                 <div className={styles.bentoSplitLayout}>
                   <div className={[styles.bentoCopy, styles.bentoSplitCopy].join(" ")}>
                     <h3 className={styles.bentoTitleStacked} style={marketingTypographyStyles.featureTitle}>
-                      Add in pre-made graphics
+                      Built-in graphics library
                     </h3>
                     <p className={styles.bentoBodyStacked} style={marketingTypographyStyles.bodySm}>
                       Drop in icons or frames or upload your own elements to add to your pattern without breaking your flow.
@@ -620,7 +621,7 @@ export default function Page() {
                     }}
                   >
                     {showResumeCta ? "Open My Library" : "Join the Waitlist"}
-                    {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null}
+                    {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
                   </Button>
                   {showResumeCta ? (
                     <Button
@@ -690,7 +691,7 @@ export default function Page() {
                     required
                   />
                 </Field>
-                <Field label="What are you hoping to use WIP for?">
+                <Field label="What are you hoping to use Wippa for?">
                   <textarea
                     value={freeformResponse}
                     onChange={(event) => setFreeformResponse(event.currentTarget.value)}

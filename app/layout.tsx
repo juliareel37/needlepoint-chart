@@ -24,9 +24,9 @@ const geistMono = Geist_Mono({
 
 const marketingHeadingFont = localFont({
   // src: "../public/fonts/beautique_display/Beautique Display/BeautiqueDisplay-Regular.otf",
-  // src: "../public/fonts/RL Madena/RL-Madena.otf",
+  src: "../public/fonts/RL Madena/RL-Madena.otf",
   // src: "../public/fonts/LT_museum/LTMuseum-Medium.ttf",
-  src: "../public/fonts/Larken-Regular/Web Fonts/61637e80c3e88812def846832594f24d.ttf",
+  // src: "../public/fonts/Larken-Regular/Web Fonts/61637e80c3e88812def846832594f24d.ttf",
   weight: "400",
   variable: "--font-marketing-heading",
   display: "swap",
