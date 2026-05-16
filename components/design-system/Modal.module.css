@@ -16,7 +16,7 @@
   box-sizing: border-box;
   display: grid;
   gap: 20px;
-  /* width: min(100%, 360px); */
+  width: min(100%, 540px);
   padding: 28px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;

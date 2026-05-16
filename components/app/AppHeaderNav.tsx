@@ -134,9 +134,9 @@ export default function AppHeaderNav() {
         {/* <Link href="/library" style={utilityLinkStyle}>
           My Library
         </Link> */}
-        <Link href={showResumeCta ? "/library" : "/#waitlist"} style={{ textDecoration: "none" }}>
+        <Link href={showResumeCta ? "/editor" : "/?waitlist=1"} style={{ textDecoration: "none" }}>
           <Button type="button" variant="secondary" size="md">
-            {showResumeCta ? "Open Library" : "Join Waitlist"}
+            {showResumeCta ? "Launch Editor" : "Join Waitlist"}
           </Button>
         </Link>
       </div>

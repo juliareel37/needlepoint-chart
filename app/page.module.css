@@ -744,6 +744,25 @@
   font: inherit;
 }
 
+.errorText,
+.fieldError {
+  color: var(--status-destructive-strong);
+}
+
+.fieldError {
+  display: block;
+}
+
+.invalidInput {
+  border-color: var(--status-destructive-base);
+  color: var(--status-destructive-strong);
+}
+
+.invalidInput:focus-visible,
+.invalidInput:focus-within {
+  border-color: var(--status-destructive-strong);
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;

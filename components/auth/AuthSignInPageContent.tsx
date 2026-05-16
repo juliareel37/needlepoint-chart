@@ -181,7 +181,7 @@ export function AuthSignInPageContent({
       if (hasValidSignUpInvite) {
         return {
           title: "Create your account",
-          description: `You're approved for beta access. Finish setting up the account for ${signUpInviteEmail}.`,
+          description: `Welcome to the Wippa beta! Finish setting up the account for ${signUpInviteEmail}.`,
         };
       }
 
@@ -811,7 +811,7 @@ export function AuthSignInPageContent({
           {isSignUp ? "Continue with Google" : "Continue with Google"}
         </Button>
 
-        {!isSignUp ? (
+        {/* {!isSignUp ? (
           <>
             <div className={[styles.status, styles.statusMuted].join(" ")} style={typographyStyles.p2}>
               Google sign-in works for returning approved accounts. New beta access still requires waitlist approval first.
@@ -821,7 +821,7 @@ export function AuthSignInPageContent({
           <div className={[styles.status, styles.statusMuted].join(" ")} style={typographyStyles.p2}>
             Approved invite links can use either Google or email/password, but the Google account email must match the invited address.
           </div>
-        )}
+        )} */}
 
         {isSignUp ? (
           <Field label="Name">
