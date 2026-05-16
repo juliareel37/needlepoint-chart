@@ -502,7 +502,7 @@
 }
 
 .bentoTitleStacked {
-  max-width: 14ch;
+  max-width: 16ch;
 }
 
 .bentoBody, .bentoBodyStacked {
@@ -516,7 +516,7 @@
 }
 
 .bentoBodyStacked {
-  max-width: 20ch;
+  max-width: 28ch;
 }
 
 .bentoSplitLayout > * {
@@ -564,8 +564,8 @@
 
 .bentoOverlayVisual {
   position: relative;
-  width: min(100%, clamp(18rem, 30vw, 29rem));
-  aspect-ratio: 11 / 8;
+  width: min(100%, clamp(20rem, 34vw, 33rem));
+  aspect-ratio: 12 / 8.5;
   min-height: 0;
   align-self: end;
   justify-self: end;
@@ -574,17 +574,17 @@
 
 .bentoVisualQuaternaryBack {
   position: absolute;
-  top: 3%;
+  top: 0;
   right: 0;
-  width: 72%;
+  width: 78%;
   z-index: 1;
 }
 
 .bentoVisualQuaternaryFront {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 44%;
+  left: -20%;
+  bottom: 6%;
+  width: 56%;
   z-index: 2;
 }
 
@@ -743,12 +743,22 @@
 }
 
 @media (max-width: 1100px) {
-  .bentoGridBottom {
-    align-items: start;
-  }
-
   .bentoGridBottom .bentoCard {
     min-height: auto;
+  }
+
+  .bentoCardTertiary.bentoCardImageFirst {
+    align-content: stretch;
+    grid-template-rows: 1fr auto;
+  }
+
+  .bentoCardTertiary .bentoVisualFrame {
+    min-height: 0;
+    align-items: center;
+  }
+
+  .bentoCardTertiary .bentoVisualAsset {
+    justify-self: center;
   }
 
   .bentoSplitLayout {
@@ -758,8 +768,9 @@
   }
 
   .bentoOverlayVisual {
-    width: min(100%, clamp(14rem, 34vw, 20rem));
+    width: min(100%, clamp(16rem, 38vw, 24rem));
     justify-self: center;
+    transform: translateX(6%);
   }
 }
 
@@ -841,8 +852,9 @@
   }
 
   .bentoOverlayVisual {
-    width: min(100%, 100%);
+    width: min(100%, clamp(18rem, 82vw, 28rem));
     justify-self: center;
+    transform: translateX(6%);
   }
 
   .bentoCardTertiary .bentoVisualAsset,
