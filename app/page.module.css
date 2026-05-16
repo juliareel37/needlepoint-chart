@@ -395,6 +395,30 @@
   grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
 }
 
+.bentoGridTopCompact {
+  align-items: stretch;
+}
+
+.bentoGridTopCompact .bentoCard {
+  min-height: auto;
+  align-content: start;
+}
+
+.bentoGridTopCompact .bentoVisualFrame {
+  min-height: 0;
+  align-self: start;
+}
+
+.bentoGridTopCompact .bentoStackedVisualFrame {
+  min-height: 0;
+  align-self: start;
+}
+
+.bentoGridTopCompact .bentoVisualSecondary {
+  width: min(100%, 250px);
+  justify-self: center;
+}
+
 .bentoGridBottom {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.1fr);
 }
@@ -466,6 +490,11 @@
 
 .bentoCardImageFirst {
   align-content: start;
+}
+
+.bentoCardWrappedStack {
+  align-content: start;
+  grid-auto-rows: min-content;
 }
 
 .bentoSplitLayout {
@@ -572,6 +601,28 @@
   overflow: visible;
 }
 
+.bentoStackedVisualFrame {
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  align-self: stretch;
+  min-height: clamp(168px, 16vw, 230px);
+}
+
+.bentoCardWrappedStack .bentoStackedVisualFrame {
+  align-items: start;
+  align-self: start;
+  min-height: auto;
+}
+
+.bentoOverlayVisualCompact {
+  width: min(100%, clamp(22rem, 36vw, 32rem));
+  aspect-ratio: 2.05 / 1;
+  justify-self: center;
+  align-self: start;
+  transform: none;
+}
+
 .bentoVisualQuaternaryBack {
   position: absolute;
   top: 0;
@@ -588,14 +639,29 @@
   z-index: 2;
 }
 
+.bentoVisualCompactBack {
+  top: 14%;
+  right: 0;
+  width: 72%;
+}
+
+.bentoVisualCompactFront {
+  left: -5%;
+  bottom: auto;
+  width: 82%;
+  z-index: 3;
+}
+
 .bentoPlaceholderBack {
-  aspect-ratio: 1.5 / 1;
+  display: block;
   width: 100%;
+  height: auto;
 }
 
 .bentoPlaceholderFront {
-  aspect-ratio: 1 / 1;
+  display: block;
   width: 100%;
+  height: auto;
 }
 
 .bentoVisualImage {
@@ -767,10 +833,24 @@
     min-height: auto;
   }
 
+  .bentoTitleStacked {
+    max-width: 20ch;
+  }
+
+  .bentoBodyStacked {
+    max-width: 42ch;
+  }
+
   .bentoOverlayVisual {
     width: min(100%, clamp(16rem, 38vw, 24rem));
     justify-self: center;
     transform: translateX(6%);
+  }
+
+  .bentoOverlayVisualCompact {
+    width: min(100%, clamp(19rem, 42vw, 26rem));
+    justify-self: center;
+    transform: none;
   }
 }
 
@@ -855,6 +935,16 @@
     width: min(100%, clamp(18rem, 82vw, 28rem));
     justify-self: center;
     transform: translateX(6%);
+  }
+
+  .bentoStackedVisualFrame {
+    min-height: clamp(156px, 44vw, 220px);
+  }
+
+  .bentoOverlayVisualCompact {
+    width: min(100%, clamp(17rem, 80vw, 24rem));
+    justify-self: center;
+    transform: none;
   }
 
   .bentoCardTertiary .bentoVisualAsset,

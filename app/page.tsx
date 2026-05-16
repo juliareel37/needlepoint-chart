@@ -379,7 +379,7 @@ export default function Page() {
 
           <div className={styles.bentoRows}>
             <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
-              <article className={[styles.bentoCard, styles.bentoCardPrimary].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
                     Comprehensive, easy-to-use tools
@@ -482,18 +482,50 @@ export default function Page() {
               </article>
             </div>
 
-                        <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
-              <article className={[styles.bentoCard, styles.bentoCardPrimary].join(" ")}>
+               <div className={[styles.bentoGrid, styles.bentoGridTop, styles.bentoGridTopCompact].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Comprehensive, easy-to-use tools
+                    Convert text to stitches
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    A full toolbar and selection menu — built for fast, precise pattern work.
+                    Insert text and choose from dozens of fonts to instantly convert to pattern stitches.
                   </p>
                 </div>
-                <div className={styles.bentoVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
+                <div className={styles.bentoStackedVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualCompact].join(" ")}>
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryBack,
+                        styles.bentoVisualCompactBack,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/canvas-text-pink.png"
+                        alt=""
+                        width={1200}
+                        height={1400}
+                        className={styles.bentoPlaceholderBack}
+                      />
+                    </div>
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryFront,
+                        styles.bentoVisualCompactFront,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/text-settings-pink.png"
+                        alt=""
+                        width={1200}
+                        height={1400}
+                        className={styles.bentoPlaceholderFront}
+                      />
+                    </div>
+                  </div>
+                  {/* <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
                     <Image
                       src="/ui/copy-tool-new.png"
                       alt=""
@@ -501,23 +533,25 @@ export default function Page() {
                       height={1000}
                       className={styles.bentoVisualImage}
                     />
-                  </div>
+                  </div> */}
+
+                  
                 </div>
               </article>
 
               <article className={[styles.bentoCard, styles.bentoCardSecondary].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Turn any image into a pattern
+                    Edit design colors with ease
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    Upload a photo, choose your color count and smoothing — get a stitch-ready pattern in seconds.
+                    See every color in your design with stitch counts, and merge similar shades or bulk delete shades with low usage.
                   </p>
                 </div>
                 <div className={styles.bentoVisualFrame} aria-hidden="true">
                   <div className={[styles.bentoVisualAsset, styles.bentoVisualSecondary].join(" ")}>
                     <Image
-                      src="/ui/convert-pattern-line.png"
+                      src="/ui/design-colors-list.png"
                       alt=""
                       width={1600}
                       height={1000}
