@@ -287,7 +287,7 @@ export default function Page() {
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/editor-collapsed.png"
+                    src="/ui/full-editor-dachsund.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2940}
                     height={1472}
@@ -328,7 +328,7 @@ export default function Page() {
 
         <div className={styles.sectionDivider} aria-hidden="true" />
 
-        <section className={styles.features} id="features">
+        {/* <section className={styles.features} id="features">
           <div className={styles.featuresIntro}>
             <div>
               <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>The Canvas</p>
@@ -356,6 +356,179 @@ export default function Page() {
                 <p className={styles.featureBody} style={marketingTypographyStyles.body}>{item.body}</p>
               </article>
             ))}
+          </div>
+        </section> */}
+
+        <section className={styles.bentoSection} aria-labelledby="feature-detail-heading">
+          <div className={styles.bentoIntro}>
+            <div>
+              {/* <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>In The Details</p> */}
+              <h2
+                id="feature-detail-heading"
+                className={styles.sectionTitle}
+                style={marketingTypographyStyles.sectionTitle}
+              >
+                The features that make the <span className={styles.sectionTitleEmphasis}>workflow</span> feel premium.
+              </h2>
+            </div>
+            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+              A more detailed look at the product experience: expressive tools, clearer previews,
+              and export moments that feel as finished as the design itself.
+            </p>
+          </div>
+
+          <div className={styles.bentoRows}>
+            <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardPrimary].join(" ")}>
+                <div className={styles.bentoCopy}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
+                    Comprehensive, easy-to-use tools
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
+                    A full toolbar and selection menu — built for fast, precise pattern work.
+                  </p>
+                </div>
+                <div className={styles.bentoVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
+                    <Image
+                      src="/ui/copy-tool-new.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                      className={styles.bentoVisualImage}
+                    />
+                  </div>
+                </div>
+              </article>
+
+              <article className={[styles.bentoCard, styles.bentoCardSecondary].join(" ")}>
+                <div className={styles.bentoCopy}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
+                    Turn any image into a pattern
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
+                    Upload a photo, choose your color count and smoothing — get a stitch-ready pattern in seconds.
+                  </p>
+                </div>
+                <div className={styles.bentoVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoVisualAsset, styles.bentoVisualSecondary].join(" ")}>
+                    <Image
+                      src="/ui/convert-pattern-line.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                      className={styles.bentoVisualImage}
+                    />
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div className={[styles.bentoGrid, styles.bentoGridBottom].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardTertiary, styles.bentoCardImageFirst].join(" ")}>
+                <div className={styles.bentoVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoVisualAsset, styles.bentoVisualTertiary].join(" ")}>
+                    <Image
+                      src="/ui/custom-palettes-simple.png"
+                      alt=""
+                      width={1200}
+                      height={1400}
+                      // className={styles.bentoVisualImage}
+                    />
+                  </div>
+                </div>
+                <div className={styles.bentoCopy}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
+                  Custom palettes
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
+                    Build palettes from your own thread inventory or favorite shades 
+                    and reuse them across projects.
+                  </p>
+                </div>
+              </article>
+
+              <article className={[styles.bentoCard, styles.bentoCardQuaternary].join(" ")}>
+                <div className={styles.bentoSplitLayout}>
+                  <div className={[styles.bentoCopy, styles.bentoSplitCopy].join(" ")}>
+                    <h3 className={styles.bentoTitleStacked} style={marketingTypographyStyles.featureTitle}>
+                      Add in pre-made graphics
+                    </h3>
+                    <p className={styles.bentoBodyStacked} style={marketingTypographyStyles.bodySm}>
+                      Drop in icons or frames or upload your own elements to add to your pattern without breaking your flow.
+                    </p>
+                  </div>
+                  <div className={styles.bentoOverlayVisual} aria-hidden="true">
+                    <div className={[styles.bentoVisualAsset, styles.bentoVisualQuaternaryBack].join(" ")}>
+                      <Image 
+                      src="/ui/canvas-wide.png"
+                      alt=""
+                      width={1200}
+                      height={1400}
+                      className={styles.bentoPlaceholderBack} 
+                    />
+                    </div>
+                    <div className={[styles.bentoVisualAsset, styles.bentoVisualQuaternaryFront].join(" ")}>
+                      <Image 
+                      src="/ui/canvas-lemon.png"
+                      alt=""
+                      width={1200}
+                      height={1400}
+                      className={styles.bentoPlaceholderFront} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+                        <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardPrimary].join(" ")}>
+                <div className={styles.bentoCopy}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
+                    Comprehensive, easy-to-use tools
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
+                    A full toolbar and selection menu — built for fast, precise pattern work.
+                  </p>
+                </div>
+                <div className={styles.bentoVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
+                    <Image
+                      src="/ui/copy-tool-new.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                      className={styles.bentoVisualImage}
+                    />
+                  </div>
+                </div>
+              </article>
+
+              <article className={[styles.bentoCard, styles.bentoCardSecondary].join(" ")}>
+                <div className={styles.bentoCopy}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
+                    Turn any image into a pattern
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
+                    Upload a photo, choose your color count and smoothing — get a stitch-ready pattern in seconds.
+                  </p>
+                </div>
+                <div className={styles.bentoVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoVisualAsset, styles.bentoVisualSecondary].join(" ")}>
+                    <Image
+                      src="/ui/convert-pattern-line.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                      className={styles.bentoVisualImage}
+                    />
+                  </div>
+                </div>
+              </article>
+            </div>
+
+
           </div>
         </section>
 
