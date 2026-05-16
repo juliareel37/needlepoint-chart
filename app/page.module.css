@@ -368,6 +368,10 @@
 }
 
 .bentoSection {
+  --bento-image-shadow:
+    drop-shadow(0 0 1px rgba(24, 20, 34, 0.16))
+    drop-shadow(0 1px 2px rgba(24, 20, 34, 0.10))
+    drop-shadow(0 2px 3px rgba(24, 20, 34, 0.06));
   display: grid;
   gap: clamp(32px, 4vw, 48px);
   padding: 0 10%;
@@ -497,6 +501,10 @@
   grid-auto-rows: min-content;
 }
 
+.bentoCardRightStack {
+  align-content: start;
+}
+
 .bentoSplitLayout {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
@@ -563,6 +571,10 @@
   overflow: visible;
 }
 
+.bentoVisualAsset :global(img) {
+  filter: var(--bento-image-shadow);
+}
+
 .bentoVisualPrimary {
   width: min(100%, 700px);
 }
@@ -623,6 +635,14 @@
   transform: none;
 }
 
+.bentoOverlayVisualRightStack {
+  width: min(100%, clamp(15rem, 24vw, 20rem));
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+  align-self: start;
+  transform: none;
+}
+
 .bentoVisualQuaternaryBack {
   position: absolute;
   top: 0;
@@ -652,16 +672,53 @@
   z-index: 3;
 }
 
+.bentoVisualRightStackBack {
+  top: 10%;
+  left: -8%;
+  right: auto;
+  width: 84%;
+}
+
+.bentoVisualRightStackFront {
+  top: 50%;
+  left: auto;
+  right: -10%;
+  bottom: auto;
+  width: 86%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
 .bentoPlaceholderBack {
   display: block;
   width: 100%;
   height: auto;
 }
 
+.bentoVisualRightStackBack :global(img) {
+  opacity: 0.5;
+  border-radius: 28px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
 .bentoPlaceholderFront {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.bentoPlaceholderWideFront {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 1;
+  object-fit: cover;
+  object-position: center;
 }
 
 .bentoVisualImage {
@@ -852,6 +909,10 @@
     justify-self: center;
     transform: none;
   }
+
+  .bentoOverlayVisualRightStack {
+    width: min(100%, clamp(14rem, 28vw, 18rem));
+  }
 }
 
 @media (max-width: 680px) {
@@ -945,6 +1006,10 @@
     width: min(100%, clamp(17rem, 80vw, 24rem));
     justify-self: center;
     transform: none;
+  }
+
+  .bentoOverlayVisualRightStack {
+    width: min(100%, clamp(14rem, 72vw, 19rem));
   }
 
   .bentoCardTertiary .bentoVisualAsset,

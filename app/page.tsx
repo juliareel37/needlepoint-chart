@@ -539,7 +539,7 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={[styles.bentoCard, styles.bentoCardSecondary].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardSecondary, styles.bentoCardRightStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
                     Edit design colors with ease
@@ -548,15 +548,38 @@ export default function Page() {
                     See every color in your design with stitch counts, and merge similar shades or bulk delete shades with low usage.
                   </p>
                 </div>
-                <div className={styles.bentoVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoVisualAsset, styles.bentoVisualSecondary].join(" ")}>
-                    <Image
-                      src="/ui/design-colors-list.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                      className={styles.bentoVisualImage}
-                    />
+                <div className={styles.bentoStackedVisualFrame} aria-hidden="true">
+                  <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")}>
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryBack,
+                        styles.bentoVisualRightStackBack,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/design-colors-list.png"
+                        alt=""
+                        width={1600}
+                        height={1000}
+                        className={styles.bentoPlaceholderBack}
+                      />
+                    </div>
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryFront,
+                        styles.bentoVisualRightStackFront,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/merge-selection-bar.png"
+                        alt=""
+                        width={1600}
+                        height={1000}
+                        // className={styles.bentoPlaceholderWideFront}
+                      />
+                    </div>
                   </div>
                 </div>
               </article>
