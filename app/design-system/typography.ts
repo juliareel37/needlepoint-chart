@@ -73,6 +73,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     weight: fontWeights.bold,
     usage: "hero titles, page titles",
     sample: "Header One",
+    fontFamily: "var(--font-marketing-heading), serif",
   },
   h2: {
     label: "h2",
@@ -81,6 +82,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     weight: fontWeights.bold,
     usage: "section titles, major dialogs",
     sample: "Header Two",
+    fontFamily: "var(--font-marketing-heading), serif",
   },
   h3: {
     label: "h3",
@@ -89,6 +91,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     weight: fontWeights.bold,
     usage: "subsection titles",
     sample: "Header Three",
+    fontFamily: "var(--font-marketing-heading), serif",
   },
   h4: {
     label: "h4",
@@ -97,6 +100,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     weight: fontWeights.bold,
     usage: "minor headings, card titles",
     sample: "Header Four",
+    fontFamily: "var(--font-marketing-heading), serif",
   },
   h5: {
     label: "h5",
@@ -105,6 +109,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     weight: fontWeights.bold,
     usage: "compact emphasis headings, alert titles",
     sample: "Header Five",
+    fontFamily: "var(--font-marketing-heading), serif",
   },
   p1: {
     label: "p1",

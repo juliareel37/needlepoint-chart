@@ -1,34 +1,43 @@
 .page {
-  --landing-accent-soft: color-mix(in srgb, white 72%, var(--brand-100));
+  --landing-accent-soft: color-mix(in srgb, white 90%, var(--light-blue));
   --landing-accent-strong: var(--brand-400);
-  --landing-secondary-soft: color-mix(in srgb, white 76%, var(--secondary-base));
+  --landing-secondary-soft: color-mix(in srgb, white 28%, var(--light-pink));
   --landing-secondary-surface: color-mix(in oklch, var(--surface-primary) 80%, var(--secondary-50));
   --landing-secondary-border: color-mix(in oklch, var(--ui-border-reg) 60%, var(--secondary-100));
   --landing-surface-elevated: var(--surface-card);
   --landing-dark-surface: var(--neutral-900);
   --landing-hero-left-glow: var(--landing-accent-soft);
   --landing-hero-right-glow: var(--landing-secondary-soft);
-  --landing-hero-center-glow: transparent;
-  --landing-hero-base: linear-gradient(180deg, var(--surface-primary) 0%, var(--surface-app) 100%);
+  --landing-hero-center-glow: color-mix(in srgb, white 58%, var(--butter-yellow));
+  --landing-hero-bottom-glow: color-mix(in srgb, white 54%, var(--light-pink));
+  --landing-hero-base:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, white 82%, var(--butter-yellow)) 0%,
+      color-mix(in srgb, white 64%, var(--light-pink)) 42%,
+      color-mix(in srgb, white 72%, var(--light-pink)) 100%
+    );
   min-height: calc(100dvh - var(--app-top-offset, 52px));
   overflow-x: clip;
-  background:
-    radial-gradient(circle at 84% 10%, var(--landing-hero-right-glow) 0%, transparent 36%),
-    radial-gradient(circle at 14% 12%, var(--landing-hero-left-glow) 0%, transparent 32%),
-    radial-gradient(circle at 50% 38%, var(--landing-hero-center-glow) 0%, transparent 42%),
-    var(--landing-hero-base);
   color: var(--text-primary);
 }
 
 :global(:root[data-theme="dark"]) .page {
-  --landing-accent-soft: color-mix(in srgb, var(--brand-400) 22%, transparent);
-  --landing-secondary-soft: color-mix(in srgb, var(--secondary-400) 24%, transparent);
+  --landing-accent-soft: color-mix(in srgb, var(--light-blue) 12%, transparent);
+  --landing-secondary-soft: color-mix(in srgb, var(--light-pink) 42%, transparent);
   --landing-secondary-surface: color-mix(in srgb, var(--surface-card) 92%, var(--secondary-400));
   --landing-secondary-border: color-mix(in srgb, var(--ui-border-reg) 76%, var(--secondary-300));
-  --landing-hero-left-glow: rgba(87, 183, 224, 0.24);
-  --landing-hero-right-glow: rgba(230, 173, 214, 0.26);
-  --landing-hero-center-glow: rgba(142, 110, 154, 0.14);
-  --landing-hero-base: linear-gradient(180deg, #26252a 0%, #17171b 100%);
+  --landing-hero-left-glow: color-mix(in srgb, var(--light-blue) 14%, transparent);
+  --landing-hero-right-glow: color-mix(in srgb, var(--light-pink) 46%, transparent);
+  --landing-hero-center-glow: color-mix(in srgb, var(--butter-yellow) 22%, transparent);
+  --landing-hero-bottom-glow: color-mix(in srgb, var(--light-pink) 28%, transparent);
+  --landing-hero-base:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #17171b 80%, var(--butter-yellow)) 0%,
+      color-mix(in srgb, #17171b 68%, var(--light-pink)) 44%,
+      color-mix(in srgb, #17171b 66%, var(--light-pink)) 100%
+    );
 }
 
 .shell {
@@ -51,12 +60,18 @@
   margin-bottom: -72px;
 }
 
-/* .hero {
+.hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
-  gap: 56px;
-  align-items: center;
-} */
+  grid-template-columns: 1fr;
+  align-items: start;
+  padding-bottom: 28px;
+  background:
+    radial-gradient(circle at 84% 10%, var(--landing-hero-right-glow) 0%, transparent 36%),
+    radial-gradient(circle at 14% 12%, var(--landing-hero-left-glow) 0%, transparent 34%),
+    radial-gradient(circle at 52% 28%, var(--landing-hero-center-glow) 0%, transparent 40%),
+    radial-gradient(circle at 48% 100%, var(--landing-hero-bottom-glow) 0%, transparent 46%),
+    var(--landing-hero-base);
+}
 
 .heroCopy {
   display: grid;
@@ -202,10 +217,11 @@
 }
 
 .heroPreviewWrap {
+  box-sizing: border-box;
   position: relative;
   justify-self: center;
-  width: min(75vw, 1280px);
-  max-width: 100%;
+  width: min(100%, 1280px);
+  padding-inline: 24px;
   margin-top: 16px;
   display: grid;
   justify-items: center;
@@ -230,12 +246,9 @@
 
 .heroPreviewImage {
   display: block;
-  position: relative;
-  left: 50%;
-  width: 116%;
-  /* max-width: none; */
+  width: 100%;
+  max-width: 100%;
   height: auto;
-  transform: translateX(-50%);
   border-radius: 20px;
   border: 8px solid rgb(237 237 237 / 50%);
 }
@@ -776,15 +789,12 @@
 }
 
 .footerSection {
-  /* position: relative;
-  left: 50%; */
-  width: 100dvw;
+  width: 100%;
   background:
     radial-gradient(circle at 18% 18%, color-mix(in oklch, transparent 58%, var(--secondary-400)) 0%, transparent 34%),
     radial-gradient(circle at 82% 0%, color-mix(in oklch, transparent 82%, var(--brand-300)) 0%, transparent 26%),
     var(--landing-dark-surface);
   color: var(--neutral-0);
-  /* margin-left: -50dvw; */
   margin-bottom: -32px;
 }
 

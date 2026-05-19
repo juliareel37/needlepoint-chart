@@ -254,7 +254,9 @@
   --brand-600: color-mix(in oklch, black 44%, var(--brand-base));
   --brand-700: color-mix(in oklch, black 60%, var(--brand-base)); */
 
-  --brand-50: #eefaff;
+
+  /* BLUE PALETTE */ 
+  /* --brand-50: #eefaff;
   --brand-100: #DBF1FB;
   --brand-200: #c8e8f6;
   --brand-300: #97D4ed;
@@ -262,7 +264,39 @@
   --brand-500: #3aa4ca;
   --brand-600: #01678c;
   --brand-700: #104356;
-  --brand-800: #062936;
+  --brand-800: #062936; */
+
+
+  --mint-cream: #f0fff9ff;
+  --honeydew: #daf4e6ff;
+  --celadon: #b5e8cbff;
+
+  --emerald: #79d09cff;
+
+  --mint-leaf: #4cb287ff;
+
+  --sea-green: #1e9371ff;
+
+  --dark-emerald: #186a4fff;
+  --emerald-depths: #15563eff;
+  --deep-forest: #11412dff;
+
+  /* GREEN PALETTE */ 
+
+  --brand-50: #f0fff9ff;
+  --brand-100: #daf4e6ff;
+  --brand-200: #b5e8cbff;
+  --brand-300: #79d09cff;
+  --brand-400: #4cb287ff;
+  --brand-500: #1e9371ff;
+  --brand-600: #186a4fff;
+  --brand-700: #15563eff;
+  --brand-800: #11412dff;
+
+  /* BRAND PALETTE TOKENS */
+  --light-pink: #ffdcf5;
+  --butter-yellow: #fff6a1;
+  --light-blue: #bee3fc;
 
   --secondary-base: rgb(236, 119, 189);
 
@@ -283,6 +317,7 @@
   --brand-500: #ae60c3;
   --brand-600: #850d9d;
   --brand-700: #471d56; */
+
 
   /* --brand-50: #fcf7ff;
   --brand-100: #d3f0fa;
@@ -920,6 +955,73 @@ button:disabled {
 #app-header-overflow-right:empty,
 #app-top-banner:empty {
   display: none;
+}
+
+.app-shell-header {
+  background: color-mix(in srgb, var(--surface-primary) 92%, transparent);
+  border-bottom: 1px solid var(--ui-border-reg);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    backdrop-filter 220ms ease,
+    -webkit-backdrop-filter 220ms ease;
+}
+
+#app-shell-root[data-header-nav-mode="landing"] .app-shell-header {
+  margin-bottom: calc(-1 * var(--app-header-height, 64px));
+}
+
+#app-shell-root[data-header-nav-mode="landing"] .landing-header-cta {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    backdrop-filter 220ms ease,
+    -webkit-backdrop-filter 220ms ease;
+}
+
+#app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="transparent"] .app-shell-header {
+  background: transparent;
+  border-bottom-color: transparent;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  box-shadow: none;
+}
+
+#app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="transparent"] .landing-header-cta {
+  background: color-mix(in srgb, white 12%, transparent);
+  border-color: color-mix(in srgb, var(--ui-border-reg) 28%, transparent);
+  color: var(--text-primary);
+  box-shadow: none;
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+}
+
+#app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="solid"] .app-shell-header {
+  background: color-mix(in srgb, var(--surface-primary) 90%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--ui-border-reg) 92%, transparent);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+#app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="solid"] .landing-header-cta {
+  background: var(--button-secondary-default);
+  border-color: var(--button-secondary-border);
+  color: var(--text-primary);
+  box-shadow: none;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .app-top-banner-slot {

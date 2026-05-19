@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -39,19 +40,25 @@ const landingHeaderRightStyle = {
 } as const;
 
 const brandStyle = {
-  color: "var(--brand-400)",
   textDecoration: "none",
-  fontSize: 30,
-  lineHeight: 1,
-  fontWeight: 700,
-  letterSpacing: "-0.04em",
   flex: "0 0 auto",
-  fontFamily: "Playfair Display",
+  display: "inline-flex",
+  alignItems: "center",
 } as const;
 
 const editorBrandStyle = {
   ...brandStyle,
-  fontSize: 24,
+} as const;
+
+const brandLogoStyle = {
+  display: "block",
+  width: "auto",
+  height: 28,
+} as const;
+
+const editorBrandLogoStyle = {
+  ...brandLogoStyle,
+  height: 24,
 } as const;
 
 const navLinkStyle = {
@@ -81,6 +88,7 @@ export default function AppHeaderNav() {
   const pathname = usePathname();
   const { isLoaded, hasAppAccess } = useAuthAccessState();
   const showLandingHeader = pathname === "/" || pathname === "/library";
+  const showHeroResponsiveHeader = pathname === "/";
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
   const showResumeCta = isLoaded && hasAppAccess;
@@ -104,8 +112,52 @@ export default function AppHeaderNav() {
     };
   }, [showEditorBrandOnly, showLandingHeader]);
 
+  useEffect(() => {
+    const appShellRoot = window.document.getElementById("app-shell-root");
+    const scrollRegion = window.document.getElementById("app-shell-scroll-region");
+    const heroSection = window.document.getElementById("canvas");
+
+    if (!appShellRoot) {
+      return;
+    }
+
+    if (!showHeroResponsiveHeader || !scrollRegion || !heroSection) {
+      appShellRoot.setAttribute("data-landing-header-visual", "solid");
+      return () => {
+        appShellRoot.removeAttribute("data-landing-header-visual");
+      };
+    }
+
+    const updateHeaderVisual = () => {
+      const solidThreshold = Math.max(heroSection.offsetTop + heroSection.offsetHeight - 96, 0);
+      const visualMode = scrollRegion.scrollTop < solidThreshold ? "transparent" : "solid";
+      appShellRoot.setAttribute("data-landing-header-visual", visualMode);
+    };
+
+    updateHeaderVisual();
+    scrollRegion.addEventListener("scroll", updateHeaderVisual, { passive: true });
+    window.addEventListener("resize", updateHeaderVisual);
+
+    return () => {
+      scrollRegion.removeEventListener("scroll", updateHeaderVisual);
+      window.removeEventListener("resize", updateHeaderVisual);
+      appShellRoot.removeAttribute("data-landing-header-visual");
+    };
+  }, [showHeroResponsiveHeader]);
+
   if (showEditorBrandOnly) {
-    return <Link href="/" style={editorBrandStyle}>wippa.</Link>;
+    return (
+      <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
+        <Image
+          src="/logos/bw_full_thread.png"
+          alt="Wippa"
+          width={344}
+          height={72}
+          style={editorBrandLogoStyle}
+          priority
+        />
+      </Link>
+    );
   }
 
   if (!showLandingHeader) {
@@ -115,8 +167,15 @@ export default function AppHeaderNav() {
   return (
     <div style={landingHeaderWrapStyle}>
       <div style={landingHeaderLeftStyle}>
-        <Link href="/" style={brandStyle}>
-          wippa.
+        <Link href="/" style={brandStyle} aria-label="Wippa home">
+          <Image
+            src="/logos/full-bw.png"
+            alt="Wippa"
+            width={344}
+            height={72}
+            style={brandLogoStyle}
+            priority
+          />
         </Link>
         {/* <nav aria-label="Primary" style={landingHeaderLinksStyle}>
           <Link href="/#canvas" style={navLinkStyle}>
@@ -135,7 +194,7 @@ export default function AppHeaderNav() {
           My Library
         </Link> */}
         <Link href={showResumeCta ? "/editor" : "/?waitlist=1"} style={{ textDecoration: "none" }}>
-          <Button type="button" variant="secondary" size="md">
+          <Button type="button" variant="secondary" size="md" className="landing-header-cta">
             {showResumeCta ? "Launch Editor" : "Join Waitlist"}
           </Button>
         </Link>

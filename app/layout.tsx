@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
-import { Manrope, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist_Mono, Manrope } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
@@ -22,13 +21,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const marketingHeadingFont = localFont({
-  // src: "../public/fonts/beautique_display/Beautique Display/BeautiqueDisplay-Regular.otf",
-  src: "../public/fonts/RL Madena/RL-Madena.otf",
-  // src: "../public/fonts/LT_museum/LTMuseum-Medium.ttf",
-  // src: "../public/fonts/Larken-Regular/Web Fonts/61637e80c3e88812def846832594f24d.ttf",
-  weight: "400",
+const marketingHeadingFont = Fraunces({
   variable: "--font-marketing-heading",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -62,7 +58,7 @@ const appShellStyle: CSSProperties &
   padding: 0,
   display: "flex",
   flexDirection: "column",
-  "--app-header-height": "52px",
+  "--app-header-height": "64px",
   "--app-top-banner-height": "0px",
   "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
 };
@@ -170,8 +166,6 @@ export default async function RootLayout({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "0 14px 0 14px",
-                background: "var(--surface-primary)",
-                borderBottom: "1px solid var(--ui-border-reg)",
                 position: "relative",
                 zIndex: "var(--z-app-header)",
               }}
@@ -202,7 +196,10 @@ export default async function RootLayout({
                 <div id="app-header-overflow-right" />
               </div>
             </div>
-            <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+            <div
+              id="app-shell-scroll-region"
+              style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}
+            >
               {children}
             </div>
           </div>
