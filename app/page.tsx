@@ -365,7 +365,7 @@ export default function Page() {
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/ui/dachsund-editor-new.png"
+                    src="/ui/editor-dachsund-color-tab.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2940}
                     height={1472}
@@ -404,7 +404,7 @@ export default function Page() {
           </div> */}
         </section>
 
-        <div className={styles.sectionDivider} aria-hidden="true" />
+        {/* <div className={styles.sectionDivider} aria-hidden="true" /> */}
 
         {/* <section className={styles.features} id="features">
           <div className={styles.featuresIntro}>

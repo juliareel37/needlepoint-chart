@@ -24,6 +24,7 @@ const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
   Circle: 1,
   Triangle: 2,
 };
+const OVERVIEW_PREVIEW_POSITION_ORDER = [0.08, 0.52, 0.24, 0.76, 0.4, 0.92];
 
 type ShapeIconLibraryDescriptor = {
   absolutePath: string;
@@ -50,9 +51,9 @@ export async function getShapeIconLibraryOverview(
       category,
       count: categoryDescriptors.length,
       previewItems: await Promise.all(
-        categoryDescriptors
-          .slice(0, Math.max(previewLimit, 0))
-          .map((descriptor) => buildShapeIconLibraryItem(descriptor)),
+        selectOverviewPreviewDescriptors(categoryDescriptors, previewLimit).map((descriptor) =>
+          buildShapeIconLibraryItem(descriptor),
+        ),
       ),
     })),
   );
@@ -168,6 +169,57 @@ function groupDescriptorsByCategory(
   }
 
   return descriptorsByCategory;
+}
+
+function selectOverviewPreviewDescriptors(
+  descriptors: ShapeIconLibraryDescriptor[],
+  previewLimit: number,
+): ShapeIconLibraryDescriptor[] {
+  const normalizedLimit = Math.max(Math.floor(previewLimit), 0);
+
+  if (normalizedLimit === 0) {
+    return [];
+  }
+
+  if (descriptors.length <= normalizedLimit) {
+    return descriptors.slice(0, normalizedLimit);
+  }
+
+  const selectedIndices = new Set<number>();
+  const selectedDescriptors: ShapeIconLibraryDescriptor[] = [];
+
+  for (const position of OVERVIEW_PREVIEW_POSITION_ORDER) {
+    if (selectedDescriptors.length >= normalizedLimit) {
+      break;
+    }
+
+    const index = Math.min(
+      descriptors.length - 1,
+      Math.max(0, Math.floor(position * descriptors.length)),
+    );
+
+    if (selectedIndices.has(index)) {
+      continue;
+    }
+
+    selectedIndices.add(index);
+    selectedDescriptors.push(descriptors[index]);
+  }
+
+  for (let index = 0; index < descriptors.length; index += 1) {
+    if (selectedDescriptors.length >= normalizedLimit) {
+      break;
+    }
+
+    if (selectedIndices.has(index)) {
+      continue;
+    }
+
+    selectedIndices.add(index);
+    selectedDescriptors.push(descriptors[index]);
+  }
+
+  return selectedDescriptors;
 }
 
 async function buildShapeIconLibraryItem(

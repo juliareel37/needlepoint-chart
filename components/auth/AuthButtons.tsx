@@ -34,7 +34,7 @@ export default function AuthButtons() {
         <Button
           type="button"
           variant="ghostV2"
-          size="md"
+          size="lg"
           className="app-header-sign-in-button"
           onClick={() => {
             if (typeof window === "undefined") {
@@ -70,8 +70,8 @@ export default function AuthButtons() {
             openSignIn({ redirectUrl: currentUrl });
           }}
         >
-          <ButtonIcon icon="/icons/lucide/user.svg" />
-          Sign in
+          {/* <ButtonIcon icon="/icons/lucide/user.svg" /> */}
+          Log in
         </Button>
       </AuthSignedOut>
     </>

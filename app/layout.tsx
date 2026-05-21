@@ -165,7 +165,7 @@ export default async function RootLayout({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "0 14px 0 14px",
+                padding: "0 var(--app-shell-inline-padding, 14px)",
                 position: "relative",
                 zIndex: "var(--z-app-header)",
               }}

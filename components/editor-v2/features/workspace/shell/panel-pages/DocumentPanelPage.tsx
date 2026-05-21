@@ -361,8 +361,8 @@ export function DocumentPanelPage({
               className={styles.documentSecondaryButton}
               onClick={onSignIn}
             >
-              <ButtonIcon icon="/icons/lucide/user.svg" />
-              Sign in
+              {/* <ButtonIcon icon="/icons/lucide/user.svg" /> */}
+              Log in
             </Button>
           ) : null}
           {!hasSavedDesignAccess ? (

@@ -149,7 +149,7 @@ export default function AppHeaderNav() {
     return (
       <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
         <Image
-          src="/logos/bw_full_thread.png"
+          src="/logos/curly/full-bw.png"
           alt="Wippa"
           width={344}
           height={72}
@@ -169,7 +169,7 @@ export default function AppHeaderNav() {
       <div style={landingHeaderLeftStyle}>
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/full-bw.png"
+            src="/logos/curly/full-bw copy 2.png"
             alt="Wippa"
             width={344}
             height={72}

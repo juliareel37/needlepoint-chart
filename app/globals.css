@@ -217,6 +217,7 @@
 :root {
   --theme-transition-duration: 220ms;
   --theme-transition-timing: cubic-bezier(0.22, 1, 0.36, 1);
+  --landing-page-gutter: clamp(20px, 4vw, 48px);
   /* Layer Tokens */
   --z-app-header: 200;
   --z-app-top-banner: 210;
@@ -974,6 +975,10 @@ button:disabled {
   margin-bottom: calc(-1 * var(--app-header-height, 64px));
 }
 
+#app-shell-root[data-header-nav-mode="landing"] {
+  --app-shell-inline-padding: var(--landing-page-gutter);
+}
+
 #app-shell-root[data-header-nav-mode="landing"] .landing-header-cta {
   transition:
     opacity 220ms ease,
@@ -1283,7 +1288,7 @@ input[type="number"] {
     grid-template-columns: auto 1fr auto;
     align-items: center;
     column-gap: 8px;
-    padding: 0 10px !important;
+    padding: 0 var(--app-shell-inline-padding, 10px) !important;
   }
   .app-shell-header-left {
     gap: 8px !important;
