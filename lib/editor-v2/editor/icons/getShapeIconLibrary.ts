@@ -36,37 +36,54 @@ type ShapeIconLibraryDescriptor = {
   searchKeywords: string[];
 };
 
-export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
+type ShapeIconLibraryOptions = {
+  featuredIconIds?: ReadonlySet<string>;
+};
+
+export async function getShapeIconLibrary(
+  options: ShapeIconLibraryOptions = {},
+): Promise<ShapeIconLibraryItem[]> {
   const descriptors = await getSortedShapeIconDescriptors();
-  return Promise.all(descriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+  return Promise.all(
+    descriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor, options)),
+  );
 }
 
 export async function getShapeIconLibraryOverview(
   previewLimit: number,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryOverviewGroup[]> {
   const descriptors = await getSortedShapeIconDescriptors();
   const descriptorsByCategory = groupDescriptorsByCategory(descriptors);
-  const groups = await Promise.all(
+  const categoryGroups = await Promise.all(
     Array.from(descriptorsByCategory.entries()).map(async ([category, categoryDescriptors]) => ({
       category,
       count: categoryDescriptors.length,
       previewItems: await Promise.all(
         selectOverviewPreviewDescriptors(categoryDescriptors, previewLimit).map((descriptor) =>
-          buildShapeIconLibraryItem(descriptor),
+          buildShapeIconLibraryItem(descriptor, options),
         ),
       ),
     })),
   );
+  const groups = categoryGroups.sort((left, right) => compareCategories(left.category, right.category));
+  const featuredGroup = await buildFeaturedOverviewGroup(descriptors, previewLimit, options);
 
-  return groups.sort((left, right) => compareCategories(left.category, right.category));
+  return featuredGroup ? [featuredGroup, ...groups] : groups;
 }
 
 export async function getShapeIconLibraryByCategory(
   category: string,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryItem[]> {
   const descriptors = await getSortedShapeIconDescriptors();
-  const matchingDescriptors = descriptors.filter((descriptor) => descriptor.category === category);
-  return Promise.all(matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+  const matchingDescriptors =
+    category === "Featured"
+      ? descriptors.filter((descriptor) => options.featuredIconIds?.has(descriptor.id) ?? false)
+      : descriptors.filter((descriptor) => descriptor.category === category);
+  return Promise.all(
+    matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor, options)),
+  );
 }
 
 export async function buildUploadedShapeIconLibraryItem(options: {
@@ -94,6 +111,7 @@ export async function buildUploadedShapeIconLibraryItem(options: {
     id: `upload-${crypto.randomUUID()}`,
     name: humanizeIconName(baseName),
     category: "Uploads",
+    isFeatured: false,
     src,
     mimeType: extension === ".svg" ? "image/svg+xml" : getRasterMimeType(extension),
     intrinsicWidth: width,
@@ -224,6 +242,7 @@ function selectOverviewPreviewDescriptors(
 
 async function buildShapeIconLibraryItem(
   descriptor: ShapeIconLibraryDescriptor,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryItem> {
   const fileContents = await fs.readFile(descriptor.absolutePath);
   const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } =
@@ -238,6 +257,7 @@ async function buildShapeIconLibraryItem(
     id: descriptor.id,
     name: descriptor.name,
     category: descriptor.category,
+    isFeatured: options.featuredIconIds?.has(descriptor.id) ?? false,
     src,
     mimeType: descriptor.extension === ".svg" ? "image/svg+xml" : getRasterMimeType(descriptor.extension),
     intrinsicWidth: width,
@@ -248,6 +268,33 @@ async function buildShapeIconLibraryItem(
     lockAspectRatio,
     supportsStrokeWidth,
     searchKeywords: descriptor.searchKeywords,
+  };
+}
+
+async function buildFeaturedOverviewGroup(
+  descriptors: ShapeIconLibraryDescriptor[],
+  previewLimit: number,
+  options: ShapeIconLibraryOptions,
+): Promise<ShapeIconLibraryOverviewGroup | null> {
+  const featuredIconIds = options.featuredIconIds;
+
+  if (!featuredIconIds || featuredIconIds.size === 0) {
+    return null;
+  }
+
+  const featuredDescriptors = descriptors.filter((descriptor) => featuredIconIds.has(descriptor.id));
+  if (featuredDescriptors.length === 0) {
+    return null;
+  }
+
+  return {
+    category: "Featured",
+    count: featuredDescriptors.length,
+    previewItems: await Promise.all(
+      selectOverviewPreviewDescriptors(featuredDescriptors, previewLimit).map((descriptor) =>
+        buildShapeIconLibraryItem(descriptor, options),
+      ),
+    ),
   };
 }
 

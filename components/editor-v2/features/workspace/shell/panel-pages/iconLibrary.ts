@@ -5,6 +5,7 @@ export interface ShapeIconLibraryItem {
   id: string;
   name: string;
   category: string;
+  isFeatured: boolean;
   src: string;
   mimeType: string | null;
   intrinsicWidth: number;

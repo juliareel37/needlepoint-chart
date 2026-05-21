@@ -51,3 +51,41 @@ export async function listWaitlistApplicationsForAdmin() {
     },
   });
 }
+
+export async function listFeaturedGraphicIds() {
+  const records = await prisma.featuredGraphic.findMany({
+    select: {
+      iconId: true,
+    },
+  });
+
+  return records.map((record) => record.iconId);
+}
+
+export async function setGraphicFeatured(options: {
+  iconId: string;
+  featured: boolean;
+  updatedByEmail: string | null;
+}) {
+  if (options.featured) {
+    await prisma.featuredGraphic.upsert({
+      where: {
+        iconId: options.iconId,
+      },
+      update: {
+        updatedByEmail: options.updatedByEmail,
+      },
+      create: {
+        iconId: options.iconId,
+        updatedByEmail: options.updatedByEmail,
+      },
+    });
+    return;
+  }
+
+  await prisma.featuredGraphic.deleteMany({
+    where: {
+      iconId: options.iconId,
+    },
+  });
+}

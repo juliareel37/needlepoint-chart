@@ -73,6 +73,14 @@ model WaitlistApplication {
   @@index([inviteTokenExpiresAt])
 }
 
+model FeaturedGraphic {
+  id             String   @id @default(cuid())
+  iconId         String   @unique
+  updatedByEmail String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model PatternDraft {
   id              String           @id @default(cuid())
   userId          String

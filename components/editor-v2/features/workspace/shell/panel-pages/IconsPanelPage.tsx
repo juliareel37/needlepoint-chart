@@ -753,7 +753,10 @@ async function loadIconCategory(category: string): Promise<ShapeIconLibraryItem[
   }
 
   if (iconFullLibraryCache) {
-    const icons = iconFullLibraryCache.filter((icon) => icon.category === category);
+    const icons =
+      category === "Featured"
+        ? iconFullLibraryCache.filter((icon) => icon.isFeatured)
+        : iconFullLibraryCache.filter((icon) => icon.category === category);
     iconCategoryCache.set(category, icons);
     return icons;
   }
