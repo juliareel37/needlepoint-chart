@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/w.png"), type: "image/png" },
+      { url: assetPath("/favicon-green-on-green.png"), type: "image/png" },
       // { url: assetPath("/favicon.png"), type: "image/png" },
     ],
     shortcut: assetPath("/w.png"),

@@ -55,6 +55,33 @@ const featureCards = [
   },
 ] as const;
 
+const buildingBlockCategoryIcons = [
+  {
+    label: "cocktails",
+    src: "/icons/shapes/food%20%26%20drink/cocktail-3.svg",
+  },
+  {
+    label: "pets",
+    src: "/icons/shapes/animals/dog-face-puppy.svg",
+  },
+  {
+    label: "travel",
+    src: "/icons/shapes/metropolitan/plane.svg",
+  },
+  {
+    label: "holidays",
+    src: "/icons/shapes/seasonal/gift.svg",
+  },
+  {
+    label: "food",
+    src: "/icons/shapes/food%20%26%20drink/cherries.svg",
+  },
+  {
+    label: "sports",
+    src: "/icons/shapes/games%20%26%20activities/football.svg",
+  },
+] as const;
+
 type WaitlistStatus =
   | { tone: "success"; title: string; description: string }
   | { tone: "destructive"; title: string; description: string }
@@ -404,7 +431,107 @@ export default function Page() {
           </div> */}
         </section>
 
-        {/* <div className={styles.sectionDivider} aria-hidden="true" /> */}
+        <section className={styles.buildingBlocksSection} aria-labelledby="building-blocks-heading">
+          <div className={styles.buildingBlocksIntro}>
+            <div>
+              <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>
+                Design building blocks
+              </p>
+              <h2
+                id="building-blocks-heading"
+                className={styles.sectionTitle}
+                style={marketingTypographyStyles.sectionTitle}
+              >
+                Build with text, icons, graphics, and frames that convert cleanly to stitches.
+              </h2>
+            </div>
+            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+              The editor comes stocked with ready-to-use ingredients, so you can compose,
+              customize, and finish a pattern without bouncing between tools.
+            </p>
+          </div>
+
+          <div className={styles.buildingBlocksLayout}>
+            <article className={styles.buildingBlocksPreviewCard}>
+              <div className={styles.buildingBlocksPreviewFrame}>
+                <Image
+                  src="/ui/editor-dachsund-color-tab.png"
+                  alt="Editor preview showing the design workspace and sidebar tools"
+                  width={2940}
+                  height={1472}
+                  sizes="(max-width: 1100px) 100vw, 68vw"
+                  className={styles.buildingBlocksPreviewImage}
+                />
+              </div>
+            </article>
+
+            <div className={styles.buildingBlocksPanelGrid}>
+              <article
+                className={[
+                  styles.buildingBlocksPanel,
+                  styles.buildingBlocksPanelFonts,
+                ].join(" ")}
+              >
+                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
+                  Panel 1
+                </p>
+                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
+                  Fonts
+                </h3>
+                <div className={styles.fontSamples} aria-label="Font style examples">
+                  <span className={styles.fontSampleSerif}>Monogram Magic</span>
+                  <span className={styles.fontSampleScript}>stitch club</span>
+                  <span className={styles.fontSampleCaps}>WIPPA LABEL SET</span>
+                </div>
+              </article>
+
+              <article className={[styles.buildingBlocksPanel, styles.buildingBlocksPanelIcons].join(" ")}>
+                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
+                  Panel 2
+                </p>
+                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
+                  Icon Library
+                </h3>
+                <div className={styles.iconCategoryGrid}>
+                  {buildingBlockCategoryIcons.map((item) => (
+                    <div key={item.label} className={styles.iconCategoryChip}>
+                      <Image src={item.src} alt="" width={20} height={20} className={styles.iconCategoryGlyph} />
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article
+                className={[
+                  styles.buildingBlocksPanel,
+                  styles.buildingBlocksPanelShapes,
+                ].join(" ")}
+              >
+                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
+                  Panel 3
+                </p>
+                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
+                  Shapes + Frames
+                </h3>
+                <div className={styles.shapesFramePreview} aria-hidden="true">
+                  <div className={styles.framePreviewOuter}>
+                    <div className={styles.framePreviewInner}>
+                      <span className={styles.framePreviewRibbon}>label</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.shapesTagList}>
+                  {["borders", "ribbons", "labels", "geometric shapes"].map((item) => (
+                    <span key={item} className={styles.shapeTag}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
 
         {/* <section className={styles.features} id="features">
           <div className={styles.featuresIntro}>
