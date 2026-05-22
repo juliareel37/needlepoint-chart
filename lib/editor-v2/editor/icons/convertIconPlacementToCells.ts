@@ -118,8 +118,18 @@ export function sampleCellSampledPlacementPreview(options: {
         continue;
       }
 
-      const sampleX = Math.floor(centerWorldX - options.bounds.left);
-      const sampleY = Math.floor(centerWorldY - options.bounds.top);
+      const normalizedX =
+        (centerWorldX - options.bounds.left) / Math.max(options.bounds.width, 0.0001);
+      const normalizedY =
+        (centerWorldY - options.bounds.top) / Math.max(options.bounds.height, 0.0001);
+      const sampleX = Math.min(
+        canvasWidth - 1,
+        Math.max(0, Math.floor(normalizedX * canvasWidth)),
+      );
+      const sampleY = Math.min(
+        canvasHeight - 1,
+        Math.max(0, Math.floor(normalizedY * canvasHeight)),
+      );
       if (sampleX < 0 || sampleY < 0 || sampleX >= canvasWidth || sampleY >= canvasHeight) {
         continue;
       }

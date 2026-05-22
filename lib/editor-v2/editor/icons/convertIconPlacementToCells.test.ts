@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveRasterPlacementColorId } from "./convertIconPlacementToCells";
+import {
+  resolveRasterPlacementColorId,
+  sampleCellSampledPlacementPreview,
+} from "./convertIconPlacementToCells";
 import type { PaletteColor } from "../store/state";
 
 function makePaletteColor(id: string, hex: string): PaletteColor {
@@ -11,6 +14,66 @@ function makePaletteColor(id: string, hex: string): PaletteColor {
     hex,
   };
 }
+
+describe("sampleCellSampledPlacementPreview", () => {
+  it("samples cell centers correctly from scaled preview rasters", () => {
+    const hits: string[] = [];
+    const sourceContext = {
+      canvas: { width: 2, height: 2 },
+      getImageData(x: number, y: number) {
+        hits.push(`${x},${y}`);
+        const isBottomRight = x === 1 && y === 1;
+
+        return {
+          data: new Uint8ClampedArray(
+            isBottomRight ? [12, 34, 56, 255] : [0, 0, 0, 0],
+          ),
+        };
+      },
+    } as unknown as CanvasRenderingContext2D;
+
+    const cells = sampleCellSampledPlacementPreview({
+      bounds: { left: 0, top: 0, width: 40, height: 40 },
+      metrics: {
+        cellSize: 10,
+        cellGap: 0,
+        width: 4,
+        height: 4,
+        surfaceWidth: 40,
+        surfaceHeight: 40,
+      },
+      sourceContext,
+    });
+
+    expect(hits).toContain("1,1");
+    expect(cells).toEqual([
+      {
+        alpha: 1,
+        color: { r: 12, g: 34, b: 56 },
+        x: 2,
+        y: 2,
+      },
+      {
+        alpha: 1,
+        color: { r: 12, g: 34, b: 56 },
+        x: 3,
+        y: 2,
+      },
+      {
+        alpha: 1,
+        color: { r: 12, g: 34, b: 56 },
+        x: 2,
+        y: 3,
+      },
+      {
+        alpha: 1,
+        color: { r: 12, g: 34, b: 56 },
+        x: 3,
+        y: 3,
+      },
+    ]);
+  });
+});
 
 describe("resolveRasterPlacementColorId", () => {
   it("maps sampled raster pixels to the nearest palette color", () => {
