@@ -165,6 +165,7 @@
   "greek-key-frame-shadow.svg": ["frame", "border", "greek key", "meander", "shadow frame", "ornamental frame"],
   "double-rectangle-frame.svg": ["frame", "border", "double line", "double rectangle", "nested rectangles", "simple frame"],
   "scalloped-frame.svg": ["frame", "border", "scalloped", "wavy frame", "rick rack", "decorative frame"],
+  "double-scalloped-frame.svg": ["frame", "border", "double scalloped", "double wavy frame", "rick rack", "decorative frame"],
   "gift.svg": ["gift", "present"],
   "jack-o-lantern-pumpkin.svg": ["pumpkin", "halloween"],
   "menorah.svg": ["menorah", "hanukkah"],

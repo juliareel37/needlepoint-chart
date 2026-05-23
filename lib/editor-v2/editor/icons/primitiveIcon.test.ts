@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildPrimitiveIconDataUrl } from "./primitiveIcon";
+import {
+  buildPrimitiveIconDataUrl,
+  getPrimitiveDefaultSpacingScale,
+  getPrimitiveIconKind,
+  getPrimitiveSpacingScaleRange,
+} from "./primitiveIcon";
 
 function decodeDataUrlSvg(dataUrl: string): string {
   const [, base64 = ""] = dataUrl.split(",", 2);
   return Buffer.from(base64, "base64").toString("utf8");
+}
+
+function extractPathCommands(svg: string): string[] {
+  return Array.from(svg.matchAll(/<path d="([^"]+)"/g), (match) => match[1] ?? "");
 }
 
 describe("buildPrimitiveIconDataUrl", () => {
@@ -34,5 +43,66 @@ describe("buildPrimitiveIconDataUrl", () => {
 
     expect(svg).toContain('rx="36.667"');
     expect(svg).toContain('ry="36.667"');
+  });
+
+  it("renders the vintage label frame as a responsive single-stroke path", () => {
+    const svg = decodeDataUrlSvg(
+      buildPrimitiveIconDataUrl({
+        kind: "vintage-label-frame",
+        width: 180,
+        height: 120,
+        strokeColor: "#121923",
+      }),
+    );
+
+    expect(svg.match(/<path /g)?.length).toBe(1);
+    expect(svg).toContain('stroke-linejoin="round"');
+    expect(svg).toContain('viewBox="0 0 180.000 120.000"');
+    expect(svg).toMatch(/L [\d.]+ [\d.]+ C [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ L [\d.]+ [\d.]+ C /);
+    expect(svg).toMatch(/C [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ L [\d.]+ [\d.]+ C [\d.]+ [\d.]+/);
+  });
+
+  it("renders the double scalloped frame as two scalloped paths", () => {
+    const svg = decodeDataUrlSvg(
+      buildPrimitiveIconDataUrl({
+        kind: "double-scalloped-frame",
+        width: 180,
+        height: 120,
+        strokeColor: "#121923",
+        spacingScale: getPrimitiveDefaultSpacingScale("double-scalloped-frame"),
+      }),
+    );
+
+    const [outerPath = "", innerPath = ""] = extractPathCommands(svg);
+
+    expect(svg.match(/<path /g)?.length).toBe(2);
+    expect(svg).toContain('stroke-linejoin="round"');
+    expect(svg).toContain('shape-rendering="crispEdges"');
+    expect((outerPath.match(/L/g) ?? []).length).toBe((innerPath.match(/L/g) ?? []).length);
+  });
+});
+
+describe("getPrimitiveIconKind", () => {
+  it("maps the vintage label frame asset to its primitive kind", () => {
+    expect(getPrimitiveIconKind("frames/vintage-label-frame.svg")).toBe("vintage-label-frame");
+  });
+
+  it("maps the double scalloped frame asset to its primitive kind", () => {
+    expect(getPrimitiveIconKind("frames/double-scalloped-frame.svg")).toBe(
+      "double-scalloped-frame",
+    );
+  });
+});
+
+describe("double scalloped spacing defaults", () => {
+  it("starts with a wider default gap", () => {
+    expect(getPrimitiveDefaultSpacingScale("double-scalloped-frame")).toBe(1.15);
+  });
+
+  it("allows a wider spacing range", () => {
+    expect(getPrimitiveSpacingScaleRange("double-scalloped-frame")).toEqual({
+      min: 0.8,
+      max: 3,
+    });
   });
 });

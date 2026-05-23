@@ -11,8 +11,10 @@ export type PrimitiveIconKind =
   | "star"
   | "double-rectangle-frame"
   | "scalloped-frame"
+  | "double-scalloped-frame"
   | "greek-key-frame"
-  | "greek-key-frame-shadow";
+  | "greek-key-frame-shadow"
+  | "vintage-label-frame";
 
 interface PrimitiveIconSvgOptions {
   kind: PrimitiveIconKind;
@@ -36,6 +38,12 @@ const FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH = 0.3;
 const DEFAULT_SHAPE_STROKE_WIDTH_SCALE = 0.45;
 const DEFAULT_FRAME_STROKE_WIDTH_SCALE = 0.7;
 const DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
+const DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE = 1.15;
+const DOUBLE_SCALLOPED_INNER_CORNER_CRAMP = 0.18;
+const DOUBLE_SCALLOPED_INNER_EDGE_WAVE_ELONGATION = 0.05;
+const SCALLOP_JOIN_INSET_RATIO = 0.32;
+const SCALLOP_CORNER_WIDENING_STRENGTH = 0.2;
+const SCALLOP_CORNER_MIN_RADIUS_RATIO = 0.58;
 const RESPONSIVE_STROKE_REFERENCE_MIN = 96;
 const RESPONSIVE_STROKE_REFERENCE_MAX = 180;
 const RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN = 0.7;
@@ -44,8 +52,10 @@ export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined)
   return (
     kind === "double-rectangle-frame" ||
     kind === "scalloped-frame" ||
+    kind === "double-scalloped-frame" ||
     kind === "greek-key-frame" ||
-    kind === "greek-key-frame-shadow"
+    kind === "greek-key-frame-shadow" ||
+    kind === "vintage-label-frame"
   );
 }
 
@@ -87,7 +97,25 @@ export function getPrimitiveStrokeWidthScaleRange(
 export function getPrimitiveDefaultSpacingScale(
   kind: PrimitiveIconKind | null | undefined,
 ): number {
-  return kind === "double-rectangle-frame" ? DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE : 1;
+  if (kind === "double-rectangle-frame") {
+    return DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE;
+  }
+
+  if (kind === "double-scalloped-frame") {
+    return DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE;
+  }
+
+  return 1;
+}
+
+export function getPrimitiveSpacingScaleRange(
+  kind: PrimitiveIconKind | null | undefined,
+): { min: number; max: number } {
+  if (kind === "double-scalloped-frame") {
+    return { min: 0.8, max: 3 };
+  }
+
+  return { min: 0.5, max: 2 };
 }
 
 export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | null {
@@ -100,10 +128,14 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "double-rectangle-frame";
     case "frames/scalloped-frame.svg":
       return "scalloped-frame";
+    case "frames/double-scalloped-frame.svg":
+      return "double-scalloped-frame";
     case "frames/greek-key-frame.svg":
       return "greek-key-frame";
     case "frames/greek-key-frame-shadow.svg":
       return "greek-key-frame-shadow";
+    case "frames/vintage-label-frame.svg":
+      return "vintage-label-frame";
     case "shapes/star.svg":
       return "star";
     case "shapes/square.svg":
@@ -248,6 +280,51 @@ export function buildPrimitiveIconDataUrl({
       )}" stroke-linecap="round" stroke-linejoin="round"/>`;
       break;
     }
+    case "double-scalloped-frame": {
+      const referenceSize =
+        typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
+          ? Math.max(strokeReferenceSize, 1)
+          : Math.min(normalizedWidth, normalizedHeight);
+      const normalizedSpacingScale =
+        Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
+      const innerStrokeWidth = Math.max(
+        FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH,
+        strokeWidth * 0.58,
+      );
+      const innerGap = Math.max(referenceSize * 0.055 * normalizedSpacingScale, 3);
+      const innerInset = strokeWidth + innerGap + innerStrokeWidth / 2;
+      const outerScallopMetrics = getScallopedFrameMetrics(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+        patternScale,
+      );
+      const outerPoints = buildScallopedFramePoints(outerScallopMetrics);
+      const centerlineInsetDelta = Math.max(0.1, innerInset - halfStroke);
+      const innerPoints = crampClosedPathCorners(
+        elongateClosedPathEdgeWaves(
+          scaleClosedPathPointsInward(
+            outerPoints,
+            centerlineInsetDelta,
+            centerlineInsetDelta,
+          ),
+          DOUBLE_SCALLOPED_INNER_EDGE_WAVE_ELONGATION,
+        ),
+        DOUBLE_SCALLOPED_INNER_CORNER_CRAMP,
+      );
+      const outerPathData = buildClosedPointPathData(outerPoints);
+      const innerPathData = buildClosedPointPathData(innerPoints);
+
+      shapeMarkup = [
+        `<path d="${outerPathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+          3,
+        )}" stroke-linecap="round" stroke-linejoin="round"/>`,
+        `<path d="${innerPathData}" fill="none" stroke="${escapedStroke}" stroke-width="${innerStrokeWidth.toFixed(
+          3,
+        )}" stroke-linecap="round" stroke-linejoin="round"/>`,
+      ].join("");
+      break;
+    }
     case "greek-key-frame": {
       const pathData = buildGreekKeyFramePathData(
         normalizedWidth,
@@ -288,9 +365,69 @@ export function buildPrimitiveIconDataUrl({
       ].join("");
       break;
     }
+    case "vintage-label-frame": {
+      const frameShapeOptions = {
+        sideBulgeMultiplier: 1.32,
+        shoulderInsetMultiplier: 1.32,
+      } as const;
+      const outerPathData = buildVintageLabelFramePathData(
+        normalizedWidth,
+        normalizedHeight,
+        halfStroke,
+        frameShapeOptions,
+      );
+      // Double-frame experiment kept here for reference:
+      // const referenceSize =
+      //   typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
+      //     ? Math.max(strokeReferenceSize, 1)
+      //     : Math.min(normalizedWidth, normalizedHeight);
+      // const horizontalStretch = Math.max(0, normalizedWidth / Math.max(normalizedHeight, 1) - 1);
+      // const verticalStretch = Math.max(0, normalizedHeight / Math.max(normalizedWidth, 1) - 1);
+      // const aspectRatio =
+      //   Math.max(normalizedWidth, normalizedHeight) /
+      //   Math.max(1, Math.min(normalizedWidth, normalizedHeight));
+      // const aspectStretch = Math.max(0, aspectRatio - 1);
+      // const innerStrokeWidth = Math.max(
+      //   FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH,
+      //   strokeWidth * 0.58,
+      // );
+      // const innerGap = Math.max(
+      //   referenceSize * (0.038 + Math.min(aspectStretch, 2) * 0.02),
+      //   2.4,
+      // );
+      // const innerLandscapeFactor = Math.min(horizontalStretch, 2);
+      // const innerPortraitFactor = Math.min(verticalStretch, 2);
+      // const outerSpanX = Math.max(1, normalizedWidth - strokeWidth);
+      // const outerSpanY = Math.max(1, normalizedHeight - strokeWidth);
+      // const innerHorizontalGap = Math.max(
+      //   innerGap *
+      //     Math.min(
+      //       1.14,
+      //       Math.max(0.72, 1 - innerLandscapeFactor * 0.18 + innerPortraitFactor * 0.1),
+      //     ),
+      //   1.8,
+      // );
+      // const innerVerticalGap = Math.max(
+      //   innerGap * Math.min(1.04, Math.max(0.74, 1 - innerLandscapeFactor * 0.12)),
+      //   1.8,
+      // );
+      // const innerScaleX = Math.max(0.1, (outerSpanX - innerHorizontalGap * 2) / outerSpanX);
+      // const innerScaleY = Math.max(0.1, (outerSpanY - innerVerticalGap * 2) / outerSpanY);
+      // const centerX = normalizedWidth / 2;
+      // const centerY = normalizedHeight / 2;
+      // const negativeCenterX = (-centerX).toFixed(3);
+      // const negativeCenterY = (-centerY).toFixed(3);
+      // const innerTransform = `translate(${centerX.toFixed(3)} ${centerY.toFixed(
+      //   3,
+      // )}) scale(${innerScaleX.toFixed(4)} ${innerScaleY.toFixed(4)}) translate(${negativeCenterX} ${negativeCenterY})`;
+      shapeMarkup = `<path d="${outerPathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        3,
+      )}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      break;
+    }
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" fill="none">${shapeMarkup}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" fill="none" shape-rendering="crispEdges" color-rendering="optimizeQuality">${shapeMarkup}</svg>`;
   return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
@@ -386,8 +523,10 @@ function getPrimitiveStrokeWidth(
   const baseStrokeRatio =
     kind === "double-rectangle-frame" ||
     kind === "scalloped-frame" ||
+    kind === "double-scalloped-frame" ||
     kind === "greek-key-frame" ||
-    kind === "greek-key-frame-shadow"
+    kind === "greek-key-frame-shadow" ||
+    kind === "vintage-label-frame"
       ? FRAME_PRIMITIVE_STROKE_RATIO
       : DEFAULT_PRIMITIVE_STROKE_RATIO;
   const renderedSize = Math.min(width, height);
@@ -601,16 +740,325 @@ function buildGreekKeyFramePathData(
   ].join(" ");
 }
 
+function buildVintageLabelFramePathData(
+  width: number,
+  height: number,
+  inset: number,
+  options?: {
+    flatInsetProgressMultiplier?: number;
+    proportionReferenceMinDimension?: number;
+    sideBulgeMultiplier?: number;
+    shoulderInsetMultiplier?: number;
+    shoulderLedgeMultiplier?: number;
+    shoulderDropMultiplier?: number;
+    shoulderLineMultiplier?: number;
+    horizontalInsetMultiplier?: number;
+    verticalInsetMultiplier?: number;
+  },
+): string {
+  const horizontalInsetMultiplier =
+    typeof options?.horizontalInsetMultiplier === "number" &&
+    Number.isFinite(options.horizontalInsetMultiplier)
+      ? options.horizontalInsetMultiplier
+      : 1;
+  const verticalInsetMultiplier =
+    typeof options?.verticalInsetMultiplier === "number" &&
+    Number.isFinite(options.verticalInsetMultiplier)
+      ? options.verticalInsetMultiplier
+      : 1;
+  const horizontalInset = inset * horizontalInsetMultiplier;
+  const verticalInset = inset * verticalInsetMultiplier;
+  const left = horizontalInset;
+  const top = verticalInset;
+  const right = Math.max(left, width - horizontalInset);
+  const bottom = Math.max(top, height - verticalInset);
+  const innerWidth = Math.max(1, right - left);
+  const innerHeight = Math.max(1, bottom - top);
+  const minDimension = Math.max(1, Math.min(innerWidth, innerHeight));
+  const proportionReferenceMinDimension =
+    typeof options?.proportionReferenceMinDimension === "number" &&
+    Number.isFinite(options.proportionReferenceMinDimension)
+      ? Math.max(options.proportionReferenceMinDimension, 1)
+      : minDimension;
+  const flatInsetProgressMultiplier =
+    typeof options?.flatInsetProgressMultiplier === "number" &&
+    Number.isFinite(options.flatInsetProgressMultiplier)
+      ? options.flatInsetProgressMultiplier
+      : 1;
+  const flatInset = Math.min(
+    Math.max(proportionReferenceMinDimension * 0.3 * flatInsetProgressMultiplier, 22),
+    innerWidth / 2 - Math.max(proportionReferenceMinDimension * 0.12, 10),
+  );
+  const baseShoulderInset = Math.min(
+    Math.max(proportionReferenceMinDimension * 0.085, 6),
+    flatInset - Math.max(proportionReferenceMinDimension * 0.08, 6),
+  );
+  const shoulderInsetMultiplier =
+    typeof options?.shoulderInsetMultiplier === "number" &&
+    Number.isFinite(options.shoulderInsetMultiplier)
+      ? options.shoulderInsetMultiplier
+      : 1;
+  const shoulderInset = Math.min(
+    baseShoulderInset * shoulderInsetMultiplier,
+    flatInset - Math.max(proportionReferenceMinDimension * 0.04, 4),
+  );
+  const shoulderLedgeMultiplier =
+    typeof options?.shoulderLedgeMultiplier === "number" &&
+    Number.isFinite(options.shoulderLedgeMultiplier)
+      ? options.shoulderLedgeMultiplier
+      : 1;
+  const shoulderDropMultiplier =
+    typeof options?.shoulderDropMultiplier === "number" &&
+    Number.isFinite(options.shoulderDropMultiplier)
+      ? options.shoulderDropMultiplier
+      : 1;
+  const shoulderDrop = Math.min(
+    Math.max(proportionReferenceMinDimension * 0.13 * shoulderDropMultiplier, 10),
+    innerHeight / 2 - Math.max(proportionReferenceMinDimension * 0.18, 10),
+  );
+  const shoulderLineMultiplier =
+    typeof options?.shoulderLineMultiplier === "number" &&
+    Number.isFinite(options.shoulderLineMultiplier)
+      ? options.shoulderLineMultiplier
+      : 1;
+  const shoulderLedgeLength = Math.max(
+    proportionReferenceMinDimension * 0.11 * shoulderLedgeMultiplier,
+    8,
+  );
+  const shoulderLineLength = Math.max(
+    proportionReferenceMinDimension * 0.12 * shoulderLineMultiplier,
+    10,
+  );
+  const sideCurveStartY = top + shoulderDrop + shoulderLineLength;
+  const sideCurveEndY = bottom - shoulderDrop - shoulderLineLength;
+  const rightShoulderX = right - shoulderInset;
+  const leftShoulderX = left + shoulderInset;
+  const rightShoulderCurveEndX = rightShoulderX - shoulderLedgeLength;
+  const leftShoulderCurveEndX = leftShoulderX + shoulderLedgeLength;
+  const sideBulgeBase = Math.max(innerWidth * 0.42, proportionReferenceMinDimension * 0.56);
+  const sideBulgeMultiplier =
+    typeof options?.sideBulgeMultiplier === "number" && Number.isFinite(options.sideBulgeMultiplier)
+      ? options.sideBulgeMultiplier
+      : 1;
+  const sideBulgeOffset = sideBulgeBase * sideBulgeMultiplier;
+  const rightBulgeX = Math.min(width - inset / 2, right + sideBulgeOffset);
+  const leftBulgeX = Math.max(inset / 2, left - sideBulgeOffset);
+  const topFlatStartX = left + flatInset;
+  const topFlatEndX = right - flatInset;
+  const bottomFlatStartX = left + flatInset;
+  const bottomFlatEndX = right - flatInset;
+  const topShoulderY = top + shoulderDrop;
+  const bottomShoulderY = bottom - shoulderDrop;
+  const upperCurveControlY = top + innerHeight * 0.32;
+  const lowerCurveControlY = bottom - innerHeight * 0.32;
+  const topShoulderSteepControlY = top + shoulderDrop * 1.02;
+  const topShoulderTaperControlY = top + shoulderDrop * 1.005;
+  const bottomShoulderSteepControlY = bottom - shoulderDrop * 1.02;
+  const bottomShoulderTaperControlY = bottom - shoulderDrop * 1.005;
+  const shoulderSteepControlOffset = shoulderInset * 0.015;
+  const shoulderTaperControlOffset = shoulderInset * 0.72;
+
+  return [
+    `M ${topFlatStartX.toFixed(3)} ${top.toFixed(3)}`,
+    `L ${topFlatEndX.toFixed(3)} ${top.toFixed(3)}`,
+    `C ${(topFlatEndX + shoulderSteepControlOffset).toFixed(3)} ${topShoulderSteepControlY.toFixed(3)} ${(rightShoulderCurveEndX - shoulderTaperControlOffset).toFixed(3)} ${topShoulderTaperControlY.toFixed(3)} ${rightShoulderCurveEndX.toFixed(3)} ${topShoulderY.toFixed(3)}`,
+    `L ${rightShoulderX.toFixed(3)} ${topShoulderY.toFixed(3)}`,
+    `L ${rightShoulderX.toFixed(3)} ${sideCurveStartY.toFixed(3)}`,
+    `C ${rightBulgeX.toFixed(3)} ${upperCurveControlY.toFixed(3)} ${rightBulgeX.toFixed(3)} ${lowerCurveControlY.toFixed(3)} ${rightShoulderX.toFixed(3)} ${sideCurveEndY.toFixed(3)}`,
+    `L ${rightShoulderX.toFixed(3)} ${bottomShoulderY.toFixed(3)}`,
+    `L ${rightShoulderCurveEndX.toFixed(3)} ${bottomShoulderY.toFixed(3)}`,
+    `C ${(rightShoulderCurveEndX - shoulderTaperControlOffset).toFixed(3)} ${bottomShoulderTaperControlY.toFixed(3)} ${(bottomFlatEndX + shoulderSteepControlOffset).toFixed(3)} ${bottomShoulderSteepControlY.toFixed(3)} ${bottomFlatEndX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `L ${bottomFlatStartX.toFixed(3)} ${bottom.toFixed(3)}`,
+    `C ${(bottomFlatStartX - shoulderSteepControlOffset).toFixed(3)} ${bottomShoulderSteepControlY.toFixed(3)} ${(leftShoulderCurveEndX + shoulderTaperControlOffset).toFixed(3)} ${bottomShoulderTaperControlY.toFixed(3)} ${leftShoulderCurveEndX.toFixed(3)} ${bottomShoulderY.toFixed(3)}`,
+    `L ${leftShoulderX.toFixed(3)} ${bottomShoulderY.toFixed(3)}`,
+    `L ${leftShoulderX.toFixed(3)} ${sideCurveEndY.toFixed(3)}`,
+    `C ${leftBulgeX.toFixed(3)} ${lowerCurveControlY.toFixed(3)} ${leftBulgeX.toFixed(3)} ${upperCurveControlY.toFixed(3)} ${leftShoulderX.toFixed(3)} ${sideCurveStartY.toFixed(3)}`,
+    `L ${leftShoulderX.toFixed(3)} ${topShoulderY.toFixed(3)}`,
+    `L ${leftShoulderCurveEndX.toFixed(3)} ${topShoulderY.toFixed(3)}`,
+    `C ${(leftShoulderCurveEndX + shoulderTaperControlOffset).toFixed(3)} ${topShoulderTaperControlY.toFixed(3)} ${(topFlatStartX - shoulderSteepControlOffset).toFixed(3)} ${topShoulderSteepControlY.toFixed(3)} ${topFlatStartX.toFixed(3)} ${top.toFixed(3)}`,
+    "Z",
+  ].join(" ");
+}
+
 function buildScallopedFramePathData(
   width: number,
   height: number,
   inset: number,
   patternScale: number,
+  referenceMetrics?: {
+    scallopAmplitude: number;
+    cornerRadius: number;
+    waveCount: number;
+    sampleCount: number;
+  },
 ): string {
+  const metrics = getScallopedFrameMetrics(
+    width,
+    height,
+    inset,
+    patternScale,
+    referenceMetrics,
+  );
+  return buildClosedPointPathData(buildScallopedFramePoints(metrics));
+}
+
+function buildScallopedFramePoints(metrics: {
+  scallopAmplitude: number;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  cornerRadius: number;
+  perimeter: number;
+  waveCount: number;
+  sampleCount: number;
+}): { x: number; y: number }[] {
+  const { scallopAmplitude, left, top, right, bottom, cornerRadius, perimeter, waveCount, sampleCount } =
+    metrics;
+  const targetWavelength = perimeter / Math.max(waveCount, 1);
+  const cornerRadiusAdjustment =
+    (targetWavelength - cornerRadius * 2) * SCALLOP_CORNER_WIDENING_STRENGTH;
+  const adjustedCornerRadius = Math.max(
+    cornerRadius * SCALLOP_CORNER_MIN_RADIUS_RATIO,
+    cornerRadius + cornerRadiusAdjustment,
+  );
+  const widenedCornerRadius = Math.min(
+    Math.min(right - left, bottom - top) / 2,
+    adjustedCornerRadius,
+  );
+  const straightWidth = Math.max(0, right - left - widenedCornerRadius * 2);
+  const straightHeight = Math.max(0, bottom - top - widenedCornerRadius * 2);
+  const cornerArcLength = (Math.PI / 2) * widenedCornerRadius;
+  const horizontalWaveCount = Math.max(
+    1,
+    Math.round(straightWidth / Math.max(targetWavelength, 1)),
+  );
+  const verticalWaveCount = Math.max(
+    1,
+    Math.round(straightHeight / Math.max(targetWavelength, 1)),
+  );
+  const horizontalSamples = Math.max(16, Math.round((straightWidth / Math.max(perimeter, 1)) * sampleCount));
+  const verticalSamples = Math.max(16, Math.round((straightHeight / Math.max(perimeter, 1)) * sampleCount));
+  const cornerSamples = Math.max(12, Math.round((cornerArcLength / Math.max(perimeter, 1)) * sampleCount));
+
+  const points: { x: number; y: number }[] = [];
+
+  appendScallopedLineSegment(points, {
+    startX: left + widenedCornerRadius,
+    startY: top,
+    endX: right - widenedCornerRadius,
+    endY: top,
+    normalX: 0,
+    normalY: -1,
+    amplitude: scallopAmplitude,
+    waveCount: horizontalWaveCount,
+    sampleCount: horizontalSamples,
+    includeStart: true,
+  });
+  appendScallopedCornerSegment(points, {
+    centerX: right - widenedCornerRadius,
+    centerY: top + widenedCornerRadius,
+    radius: widenedCornerRadius,
+    startAngle: -Math.PI / 2,
+    endAngle: 0,
+    amplitude: scallopAmplitude,
+    sampleCount: cornerSamples,
+  });
+  appendScallopedLineSegment(points, {
+    startX: right,
+    startY: top + widenedCornerRadius,
+    endX: right,
+    endY: bottom - widenedCornerRadius,
+    normalX: 1,
+    normalY: 0,
+    amplitude: scallopAmplitude,
+    waveCount: verticalWaveCount,
+    sampleCount: verticalSamples,
+    includeStart: false,
+  });
+  appendScallopedCornerSegment(points, {
+    centerX: right - widenedCornerRadius,
+    centerY: bottom - widenedCornerRadius,
+    radius: widenedCornerRadius,
+    startAngle: 0,
+    endAngle: Math.PI / 2,
+    amplitude: scallopAmplitude,
+    sampleCount: cornerSamples,
+  });
+  appendScallopedLineSegment(points, {
+    startX: right - widenedCornerRadius,
+    startY: bottom,
+    endX: left + widenedCornerRadius,
+    endY: bottom,
+    normalX: 0,
+    normalY: 1,
+    amplitude: scallopAmplitude,
+    waveCount: horizontalWaveCount,
+    sampleCount: horizontalSamples,
+    includeStart: false,
+  });
+  appendScallopedCornerSegment(points, {
+    centerX: left + widenedCornerRadius,
+    centerY: bottom - widenedCornerRadius,
+    radius: widenedCornerRadius,
+    startAngle: Math.PI / 2,
+    endAngle: Math.PI,
+    amplitude: scallopAmplitude,
+    sampleCount: cornerSamples,
+  });
+  appendScallopedLineSegment(points, {
+    startX: left,
+    startY: bottom - widenedCornerRadius,
+    endX: left,
+    endY: top + widenedCornerRadius,
+    normalX: -1,
+    normalY: 0,
+    amplitude: scallopAmplitude,
+    waveCount: verticalWaveCount,
+    sampleCount: verticalSamples,
+    includeStart: false,
+  });
+  appendScallopedCornerSegment(points, {
+    centerX: left + widenedCornerRadius,
+    centerY: top + widenedCornerRadius,
+    radius: widenedCornerRadius,
+    startAngle: Math.PI,
+    endAngle: (Math.PI * 3) / 2,
+    amplitude: scallopAmplitude,
+    sampleCount: cornerSamples,
+  });
+
+  return points;
+}
+
+function getScallopedFrameMetrics(
+  width: number,
+  height: number,
+  inset: number,
+  patternScale: number,
+  referenceMetrics?: {
+    scallopAmplitude: number;
+    cornerRadius: number;
+    waveCount: number;
+    sampleCount: number;
+  },
+): {
+  scallopAmplitude: number;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  cornerRadius: number;
+  perimeter: number;
+  waveCount: number;
+  sampleCount: number;
+} {
   const safeWidth = Math.max(1, width - inset * 2);
   const safeHeight = Math.max(1, height - inset * 2);
   const minDimension = Math.max(1, Math.min(safeWidth, safeHeight));
-  const scallopAmplitude = Math.max(minDimension * 0.028, 2);
+  const scallopAmplitude = referenceMetrics
+    ? referenceMetrics.scallopAmplitude
+    : Math.max(minDimension * 0.028, 2);
   const baseInset = inset + scallopAmplitude;
   const left = baseInset;
   const top = baseInset;
@@ -619,7 +1067,9 @@ function buildScallopedFramePathData(
   const baseWidth = Math.max(1, right - left);
   const baseHeight = Math.max(1, bottom - top);
   const cornerRadius = Math.min(
-    Math.max(minDimension * 0.06, scallopAmplitude * 1.8),
+    referenceMetrics
+      ? referenceMetrics.cornerRadius
+      : Math.max(minDimension * 0.06, scallopAmplitude * 1.8),
     Math.min(baseWidth, baseHeight) / 2,
   );
   const straightWidth = Math.max(0, baseWidth - cornerRadius * 2);
@@ -632,33 +1082,257 @@ function buildScallopedFramePathData(
     minDimension * 0.14 * normalizedPatternScale,
     10 * normalizedPatternScale,
   );
-  const waveCount = Math.max(12, Math.round(perimeter / targetScallopWavelength));
-  const sampleCount = Math.max(180, waveCount * 24);
+  const waveCount = referenceMetrics
+    ? referenceMetrics.waveCount
+    : Math.max(12, Math.round(perimeter / targetScallopWavelength));
+  const sampleCount = referenceMetrics
+    ? referenceMetrics.sampleCount
+    : Math.max(180, waveCount * 24);
 
-  const points = Array.from({ length: sampleCount }, (_, index) => {
-    const distance = (index / sampleCount) * perimeter;
-    const basePoint = getRoundedRectPerimeterPoint(
-      left,
-      top,
-      right,
-      bottom,
-      cornerRadius,
-      distance,
-    );
-    const waveOffset =
-      scallopAmplitude *
-      Math.sin((distance / perimeter) * waveCount * Math.PI * 2 - Math.PI / 2);
+  return {
+    scallopAmplitude,
+    left,
+    top,
+    right,
+    bottom,
+    cornerRadius,
+    perimeter,
+    waveCount,
+    sampleCount,
+  };
+}
 
-    return {
-      x: basePoint.x + basePoint.normalX * waveOffset,
-      y: basePoint.y + basePoint.normalY * waveOffset,
-    };
-  });
-
+function buildClosedPointPathData(points: { x: number; y: number }[]): string {
   return points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`)
     .concat("Z")
     .join(" ");
+}
+
+function scaleClosedPathPointsInward(
+  points: { x: number; y: number }[],
+  insetX: number,
+  insetY: number,
+): { x: number; y: number }[] {
+  if (points.length === 0) {
+    return [];
+  }
+
+  const bounds = points.reduce(
+    (accumulator, point) => ({
+      minX: Math.min(accumulator.minX, point.x),
+      maxX: Math.max(accumulator.maxX, point.x),
+      minY: Math.min(accumulator.minY, point.y),
+      maxY: Math.max(accumulator.maxY, point.y),
+    }),
+    {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    },
+  );
+  const spanX = Math.max(1, bounds.maxX - bounds.minX);
+  const spanY = Math.max(1, bounds.maxY - bounds.minY);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const scaleX = Math.max(0.1, (spanX - insetX * 2) / spanX);
+  const scaleY = Math.max(0.1, (spanY - insetY * 2) / spanY);
+
+  return points.map((point) => ({
+    x: centerX + (point.x - centerX) * scaleX,
+    y: centerY + (point.y - centerY) * scaleY,
+  }));
+}
+
+function crampClosedPathCorners(
+  points: { x: number; y: number }[],
+  amount: number,
+): { x: number; y: number }[] {
+  if (points.length === 0 || amount <= 0) {
+    return points;
+  }
+
+  const bounds = points.reduce(
+    (accumulator, point) => ({
+      minX: Math.min(accumulator.minX, point.x),
+      maxX: Math.max(accumulator.maxX, point.x),
+      minY: Math.min(accumulator.minY, point.y),
+      maxY: Math.max(accumulator.maxY, point.y),
+    }),
+    {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    },
+  );
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const halfSpanX = Math.max(1, (bounds.maxX - bounds.minX) / 2);
+  const halfSpanY = Math.max(1, (bounds.maxY - bounds.minY) / 2);
+
+  return points.map((point) => {
+    const normalizedX = Math.abs(point.x - centerX) / halfSpanX;
+    const normalizedY = Math.abs(point.y - centerY) / halfSpanY;
+    const cornerMix = smoothstep(0.34, 0.86, Math.min(normalizedX, normalizedY));
+    const cornerX = point.x < centerX ? bounds.minX : bounds.maxX;
+    const cornerY = point.y < centerY ? bounds.minY : bounds.maxY;
+    const pull = amount * cornerMix;
+
+    return {
+      x: point.x + (cornerX - point.x) * pull,
+      y: point.y + (cornerY - point.y) * pull,
+    };
+  });
+}
+
+function elongateClosedPathEdgeWaves(
+  points: { x: number; y: number }[],
+  amount: number,
+): { x: number; y: number }[] {
+  if (points.length === 0 || amount <= 0) {
+    return points;
+  }
+
+  const bounds = points.reduce(
+    (accumulator, point) => ({
+      minX: Math.min(accumulator.minX, point.x),
+      maxX: Math.max(accumulator.maxX, point.x),
+      minY: Math.min(accumulator.minY, point.y),
+      maxY: Math.max(accumulator.maxY, point.y),
+    }),
+    {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    },
+  );
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const halfSpanX = Math.max(1, (bounds.maxX - bounds.minX) / 2);
+  const halfSpanY = Math.max(1, (bounds.maxY - bounds.minY) / 2);
+
+  return points.map((point) => {
+    const normalizedX = Math.abs(point.x - centerX) / halfSpanX;
+    const normalizedY = Math.abs(point.y - centerY) / halfSpanY;
+    const edgeMix = smoothstep(0.32, 0.82, Math.max(normalizedX, normalizedY));
+    const cornerMix = smoothstep(0.48, 0.9, Math.min(normalizedX, normalizedY));
+    const localAmount = amount * edgeMix * (1 - cornerMix * 0.55);
+
+    if (normalizedY >= normalizedX) {
+      return {
+        x: centerX + (point.x - centerX) * (1 + localAmount),
+        y: point.y,
+      };
+    }
+
+    return {
+      x: point.x,
+      y: centerY + (point.y - centerY) * (1 + localAmount),
+    };
+  });
+}
+
+function appendScallopedLineSegment(
+  points: { x: number; y: number }[],
+  options: {
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    normalX: number;
+    normalY: number;
+    amplitude: number;
+    waveCount: number;
+    sampleCount: number;
+    includeStart: boolean;
+  },
+): void {
+  const {
+    startX,
+    startY,
+    endX,
+    endY,
+    normalX,
+    normalY,
+    amplitude,
+    waveCount,
+    sampleCount,
+    includeStart,
+  } = options;
+  const firstIndex = includeStart ? 0 : 1;
+
+  for (let index = firstIndex; index <= sampleCount; index += 1) {
+    const t = sampleCount === 0 ? 1 : index / sampleCount;
+    const baseX = startX + (endX - startX) * t;
+    const baseY = startY + (endY - startY) * t;
+    const waveOffset =
+      amplitude * getRepeatedScallopProfile(t, waveCount, SCALLOP_JOIN_INSET_RATIO);
+    points.push({
+      x: baseX + normalX * waveOffset,
+      y: baseY + normalY * waveOffset,
+    });
+  }
+}
+
+function appendScallopedCornerSegment(
+  points: { x: number; y: number }[],
+  options: {
+    centerX: number;
+    centerY: number;
+    radius: number;
+    startAngle: number;
+    endAngle: number;
+    amplitude: number;
+    sampleCount: number;
+  },
+): void {
+  const {
+    centerX,
+    centerY,
+    radius,
+    startAngle,
+    endAngle,
+    amplitude,
+    sampleCount,
+  } = options;
+
+  for (let index = 1; index <= sampleCount; index += 1) {
+    const t = sampleCount === 0 ? 1 : index / sampleCount;
+    const angle = startAngle + (endAngle - startAngle) * t;
+    const normalX = Math.cos(angle);
+    const normalY = Math.sin(angle);
+    const waveOffset =
+      amplitude * getSingleScallopProfile(t, SCALLOP_JOIN_INSET_RATIO);
+    points.push({
+      x: centerX + normalX * (radius + waveOffset),
+      y: centerY + normalY * (radius + waveOffset),
+    });
+  }
+}
+
+function getRepeatedScallopProfile(
+  t: number,
+  waveCount: number,
+  joinInsetRatio: number,
+): number {
+  const cycle = ((t * waveCount) % 1 + 1) % 1;
+  return getSingleScallopProfile(cycle, joinInsetRatio);
+}
+
+function getSingleScallopProfile(t: number, joinInsetRatio: number): number {
+  return ((1 + joinInsetRatio) * (1 - Math.cos(Math.PI * 2 * t))) / 2 - joinInsetRatio;
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  if (edge0 === edge1) {
+    return value < edge0 ? 0 : 1;
+  }
+
+  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
 }
 
 function getRoundedRectPerimeterPoint(

@@ -33,10 +33,12 @@ const ICON_PREVIEW_LIMIT = ICON_PREVIEW_ROWS * ICON_COLUMNS;
 const ICON_PREVIEW_VISIBLE_ICONS = ICON_PREVIEW_LIMIT - 1;
 const ICON_PREVIEW_SIZE = 72;
 const PRIMITIVE_ICON_PREVIEW_DRAW_SIZE = 50;
+const LARGE_FRAME_PREVIEW_MAX_SIZE = 180;
 const DEFAULT_FRAME_INITIAL_SIZE_RATIO = 0.82;
 const ICON_INITIAL_MIN_SCALE = 0.005;
 const ICON_INITIAL_MAX_SCALE = 64;
 const ICON_SKELETON_MIN_DURATION_MS = 220;
+const SCALLOPED_FRAME_PREVIEW_PATTERN_SCALE = 0.84;
 const ICON_SKELETON_CATEGORY_COUNT = 4;
 const ICON_SKELETON_OVERVIEW_CARD_COUNT = ICON_PREVIEW_LIMIT;
 const ICON_SKELETON_CATEGORY_CARD_COUNT = 12;
@@ -439,17 +441,22 @@ export function IconsPanelPage({
         const themedPrimitiveColors = icon.primitiveKind
           ? resolvePrimitivePreviewColors(themedPrimitiveColorSlots)
           : null;
+        const primitivePreviewSize = getPrimitivePreviewSize(icon);
 
         accumulator[icon.id] = icon.primitiveKind
           ? buildPrimitiveIconDataUrl({
               kind: icon.primitiveKind,
-              width: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
-              height: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
+              width: primitivePreviewSize.width,
+              height: primitivePreviewSize.height,
               strokeColor: themedPrimitiveColors?.stroke ?? primitivePreviewStrokeColor,
               secondaryStrokeColor: themedPrimitiveColors?.shadow,
               fillColor: themedPrimitiveColors?.fill,
-              strokeReferenceSize: PRIMITIVE_ICON_PREVIEW_DRAW_SIZE,
+              strokeReferenceSize: Math.min(
+                primitivePreviewSize.width,
+                primitivePreviewSize.height,
+              ),
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
+              patternScale: getPrimitivePreviewPatternScale(icon),
               spacingScale: getPrimitiveDefaultSpacingScale(icon.primitiveKind),
             })
           : icon.src;
@@ -484,6 +491,9 @@ export function IconsPanelPage({
             width={ICON_PREVIEW_SIZE}
             height={ICON_PREVIEW_SIZE}
             className={styles.iconLibraryPreviewImage}
+            style={{
+              imageRendering: item.primitiveKind ? "pixelated" : "auto",
+            }}
           />
         </span>
       </button>
@@ -719,6 +729,32 @@ export function IconsPanelPage({
       </div>
     </section>
   );
+}
+
+function getPrimitivePreviewSize(
+  icon: Pick<ShapeIconLibraryItem, "primitiveKind" | "intrinsicWidth" | "intrinsicHeight">,
+): { width: number; height: number } {
+  const maxSize =
+    icon.primitiveKind === "vintage-label-frame"
+      ? LARGE_FRAME_PREVIEW_MAX_SIZE
+      : PRIMITIVE_ICON_PREVIEW_DRAW_SIZE;
+  const intrinsicWidth = Math.max(1, icon.intrinsicWidth);
+  const intrinsicHeight = Math.max(1, icon.intrinsicHeight);
+  const scale = maxSize / Math.max(intrinsicWidth, intrinsicHeight);
+
+  return {
+    width: Number((intrinsicWidth * scale).toFixed(3)),
+    height: Number((intrinsicHeight * scale).toFixed(3)),
+  };
+}
+
+function getPrimitivePreviewPatternScale(
+  icon: Pick<ShapeIconLibraryItem, "primitiveKind">,
+): number | undefined {
+  return icon.primitiveKind === "scalloped-frame" ||
+    icon.primitiveKind === "double-scalloped-frame"
+    ? SCALLOPED_FRAME_PREVIEW_PATTERN_SCALE
+    : undefined;
 }
 
 async function loadIconOverview(): Promise<ShapeIconLibraryOverviewGroup[]> {

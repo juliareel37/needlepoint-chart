@@ -19,7 +19,10 @@ import {
 } from "@/components/design-system";
 import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
-import { getPrimitiveStrokeWidthScaleRange } from "@/lib/editor-v2/editor/icons/primitiveIcon";
+import {
+  getPrimitiveSpacingScaleRange,
+  getPrimitiveStrokeWidthScaleRange,
+} from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type {
   CustomPalette,
   EditorStore,
@@ -236,6 +239,7 @@ function IconColorSlotSwatchPopover({
             activeColorId={activeColorId}
             className={styles.toolbarColorLibrary}
             colors={colors}
+            defaultView="all"
             featuredColorIds={featuredColorIds}
             includeTransparentSwatch={Boolean(onTransparentSelect)}
             onManagePalettes={() => {
@@ -348,22 +352,32 @@ export function IconPlacementToolbar({
     ),
   );
   const strokeWidthLabel = `${normalizedStrokeWidth.toFixed(1)}x`;
-  const supportsPatternScale = placement.primitiveKind === "scalloped-frame";
+  const supportsPatternScale =
+    placement.primitiveKind === "scalloped-frame" ||
+    placement.primitiveKind === "double-scalloped-frame";
   const normalizedPatternScale = placement.primitivePatternScale;
   const patternTooltipPercent = Math.max(
     0,
     Math.min(100, ((normalizedPatternScale - 0.5) / (2.5 - 0.5)) * 100),
   );
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
-  const supportsSpacingScale = placement.primitiveKind === "double-rectangle-frame";
+  const supportsSpacingScale =
+    placement.primitiveKind === "double-rectangle-frame" ||
+    placement.primitiveKind === "double-scalloped-frame";
   const canEraseUploadedGraphic =
     placement.isUserUploaded &&
     placement.mimeType !== "image/svg+xml" &&
     typeof onBeginEraser === "function";
   const normalizedSpacingScale = placement.primitiveSpacingScale;
+  const { min: spacingScaleMin, max: spacingScaleMax } = getPrimitiveSpacingScaleRange(
+    placement.primitiveKind,
+  );
   const spacingTooltipPercent = Math.max(
     0,
-    Math.min(100, ((normalizedSpacingScale - 0.5) / (2 - 0.5)) * 100),
+    Math.min(
+      100,
+      ((normalizedSpacingScale - spacingScaleMin) / (spacingScaleMax - spacingScaleMin)) * 100,
+    ),
   );
   const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
   const hasColorSlots = placement.colorSlots.length > 0;
@@ -522,6 +536,7 @@ export function IconPlacementToolbar({
                         activeColorId={activeColorId}
                         className={styles.toolbarColorLibrary}
                         colors={palette}
+                        defaultView="all"
                         featuredColorIds={featuredColorIds}
                         onManagePalettes={() => {
                           setColorLibraryOpen(false);
@@ -756,8 +771,8 @@ export function IconPlacementToolbar({
                             {spacingLabel}
                           </div>
                           <Slider
-                            min={0.5}
-                            max={2}
+                            min={spacingScaleMin}
+                            max={spacingScaleMax}
                             step={0.1}
                             value={normalizedSpacingScale}
                             aria-label="Frame spacing"

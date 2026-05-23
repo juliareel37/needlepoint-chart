@@ -1142,12 +1142,14 @@ export function FloatingToolbar({
                 activeColorId={activeColorId}
                 className={styles.toolbarColorLibrary}
                 colors={palette}
+                defaultView="all"
                 featuredColorIds={featuredColorIds}
                 onManagePalettes={() => {
                   closeColorLibrary();
                   onOpenCustomPalettesPanel();
                 }}
                 paletteSections={paletteSections}
+                persistView={false}
                 persistenceKey="floating-toolbar-color-library"
                 scrollActiveColorIntoView
                 showFeaturedSymbols={showSymbols}

@@ -585,7 +585,8 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
-                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
+                  imageRendering:
+                    useCellSampledPreview || placement.primitiveKind ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
@@ -723,7 +724,8 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
-                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
+                  imageRendering:
+                    useCellSampledPreview || placement.primitiveKind ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
