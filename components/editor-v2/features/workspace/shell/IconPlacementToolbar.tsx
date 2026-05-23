@@ -340,6 +340,8 @@ export function IconPlacementToolbar({
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
       : palette.length > 0 || Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
+  const supportsStrokeWidthControl =
+    placement.supportsStrokeWidth && placement.primitiveKind !== "linked-circle-frame";
   const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
     placement.primitiveKind,
     placement.primitiveStrokeReferenceSize,
@@ -382,7 +384,7 @@ export function IconPlacementToolbar({
   const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
   const hasColorSlots = placement.colorSlots.length > 0;
   const showDividerAfterBaseColor =
-    placement.supportsStrokeWidth || supportsPatternScale || supportsSpacingScale || hasColorSlots;
+    supportsStrokeWidthControl || supportsPatternScale || supportsSpacingScale || hasColorSlots;
   const showDividerAfterStrokeWidth = supportsPatternScale || supportsSpacingScale || hasColorSlots;
   const showDividerAfterPattern = supportsSpacingScale || hasColorSlots;
   const showDividerAfterSpacing = hasColorSlots;
@@ -559,7 +561,7 @@ export function IconPlacementToolbar({
             </>
           ) : null}
 
-          {placement.supportsStrokeWidth ? (
+          {supportsStrokeWidthControl ? (
             <>
               <ToolbarGroup>
                 <ToolbarAnchor ref={strokeWidthAnchorRef}>

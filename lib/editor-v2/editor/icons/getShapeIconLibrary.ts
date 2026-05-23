@@ -350,9 +350,10 @@ async function buildIconAsset(
           : extractIconColorSlotsFromSvg(svg),
       primitiveKind,
       lockAspectRatio,
-      supportsStrokeWidth: primitiveKind
-        ? true
-        : supportsStrokeWidthControl(normalizedRelativePath, svg),
+      supportsStrokeWidth:
+        primitiveKind && primitiveKind !== "linked-circle-frame"
+          ? true
+          : supportsStrokeWidthControl(normalizedRelativePath, svg),
     };
   }
 

@@ -197,7 +197,10 @@ export function IconPlacementLayer({
             secondaryStrokeColor: primitiveColors?.secondary,
             fillColor: primitiveColors?.fill,
             strokeReferenceSize: placement.primitiveStrokeReferenceSize,
-            strokeWidthScale: placement.strokeWidthScale,
+            strokeWidthScale:
+              placement.primitiveKind === "linked-circle-frame"
+                ? 1
+                : placement.strokeWidthScale,
             patternScale: placement.primitivePatternScale,
             spacingScale: placement.primitiveSpacingScale,
           })

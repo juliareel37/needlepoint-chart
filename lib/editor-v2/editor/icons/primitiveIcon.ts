@@ -10,6 +10,7 @@ export type PrimitiveIconKind =
   | "heart"
   | "star"
   | "double-rectangle-frame"
+  | "linked-circle-frame"
   | "scalloped-frame"
   | "double-scalloped-frame"
   | "greek-key-frame"
@@ -38,11 +39,11 @@ const FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH = 0.3;
 const DEFAULT_SHAPE_STROKE_WIDTH_SCALE = 0.45;
 const DEFAULT_FRAME_STROKE_WIDTH_SCALE = 0.7;
 const DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
-const DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE = 1.15;
+const DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE = 2.25;
 const DOUBLE_SCALLOPED_INNER_CORNER_CRAMP = 0.18;
 const DOUBLE_SCALLOPED_INNER_EDGE_WAVE_ELONGATION = 0.05;
 const SCALLOP_JOIN_INSET_RATIO = 0.32;
-const SCALLOP_CORNER_WIDENING_STRENGTH = 0.2;
+const SCALLOP_CORNER_WIDENING_STRENGTH = 0.8;
 const SCALLOP_CORNER_MIN_RADIUS_RATIO = 0.58;
 const RESPONSIVE_STROKE_REFERENCE_MIN = 96;
 const RESPONSIVE_STROKE_REFERENCE_MAX = 180;
@@ -51,6 +52,7 @@ const RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN = 0.7;
 export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined): boolean {
   return (
     kind === "double-rectangle-frame" ||
+    kind === "linked-circle-frame" ||
     kind === "scalloped-frame" ||
     kind === "double-scalloped-frame" ||
     kind === "greek-key-frame" ||
@@ -101,6 +103,10 @@ export function getPrimitiveDefaultSpacingScale(
     return DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE;
   }
 
+  if (kind === "linked-circle-frame") {
+    return 1;
+  }
+
   if (kind === "double-scalloped-frame") {
     return DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE;
   }
@@ -115,6 +121,10 @@ export function getPrimitiveSpacingScaleRange(
     return { min: 0.8, max: 3 };
   }
 
+  if (kind === "linked-circle-frame") {
+    return { min: 0.6, max: 2.4 };
+  }
+
   return { min: 0.5, max: 2 };
 }
 
@@ -126,6 +136,8 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "heart";
     case "frames/double-rectangle-frame.svg":
       return "double-rectangle-frame";
+    case "frames/linked-circle-frame.svg":
+      return "linked-circle-frame";
     case "frames/scalloped-frame.svg":
       return "scalloped-frame";
     case "frames/double-scalloped-frame.svg":
@@ -266,6 +278,23 @@ export function buildPrimitiveIconDataUrl({
           3,
         )}"/>`,
       ].join("");
+      break;
+    }
+    case "linked-circle-frame": {
+      const referenceSize =
+        typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
+          ? Math.max(strokeReferenceSize, 1)
+          : Math.min(normalizedWidth, normalizedHeight);
+      const normalizedSpacingScale =
+        Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
+      shapeMarkup = buildLinkedCircleFrameMarkup({
+        width: normalizedWidth,
+        height: normalizedHeight,
+        strokeWidth,
+        strokeColor: escapedStroke,
+        referenceSize,
+        spacingScale: normalizedSpacingScale,
+      });
       break;
     }
     case "scalloped-frame": {
@@ -522,6 +551,7 @@ function getPrimitiveStrokeWidth(
 ): number {
   const baseStrokeRatio =
     kind === "double-rectangle-frame" ||
+    kind === "linked-circle-frame" ||
     kind === "scalloped-frame" ||
     kind === "double-scalloped-frame" ||
     kind === "greek-key-frame" ||
@@ -738,6 +768,206 @@ function buildGreekKeyFramePathData(
     `L ${topLeftExitX.toFixed(3)} ${topLeftInsetY.toFixed(3)}`,
     `L ${topLeftExitX.toFixed(3)} ${top.toFixed(3)}`,
   ].join(" ");
+}
+
+function buildLinkedCircleFrameMarkup(options: {
+  width: number;
+  height: number;
+  strokeWidth: number;
+  strokeColor: string;
+  referenceSize: number;
+  spacingScale: number;
+}): string {
+  const { width, height, strokeWidth, strokeColor, referenceSize, spacingScale } = options;
+  const outerInset = Math.max(strokeWidth * 0.3, 0.5);
+  const minDimension = Math.max(1, Math.min(width, height));
+  const circleDiameter = Math.min(
+    minDimension * 0.22,
+    Math.max(strokeWidth * 2.6, minDimension * 0.135),
+  );
+  const outerCircleRadius = Math.max(1, circleDiameter / 2);
+  const grooveThickness = Math.max(strokeWidth * 0.44, outerCircleRadius * 0.14, 0.5);
+  const connectorThickness = grooveThickness;
+  const restoredCenterRadius = Math.max(0.8, outerCircleRadius - grooveThickness);
+  const innerOutlineStrokeWidth = Math.max(
+    FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH,
+    strokeWidth * 0.5,
+  );
+  const motifOuterPadding = Math.max(grooveThickness * 1.15, outerCircleRadius * 0.2, 1);
+  const motifInnerPadding = Math.max(grooveThickness * 0.25, outerCircleRadius * 0.03, 0.2);
+  const bandThickness = motifOuterPadding + circleDiameter + motifInnerPadding;
+  const windowInset = outerInset + bandThickness;
+  const innerOutlineInset = windowInset + innerOutlineStrokeWidth / 2;
+  const innerWidth = Math.max(1, width - windowInset * 2);
+  const innerHeight = Math.max(1, height - windowInset * 2);
+  const outlineWidth = Math.max(1, innerWidth - innerOutlineStrokeWidth);
+  const outlineHeight = Math.max(1, innerHeight - innerOutlineStrokeWidth);
+
+  const centerOffset = outerInset + motifOuterPadding + outerCircleRadius;
+  const leftX = centerOffset;
+  const rightX = Math.max(leftX, width - centerOffset);
+  const topY = centerOffset;
+  const bottomY = Math.max(topY, height - centerOffset);
+  const targetPitch = Math.max(outerCircleRadius * 2.2, referenceSize * 0.09);
+  const topBottomCenters = buildDistributedEdgeCenters(leftX, rightX, targetPitch);
+  const leftRightCenters = buildDistributedEdgeCenters(topY, bottomY, targetPitch);
+  const cutoutShapes = buildLinkedCircleMaskShapes({
+    topBottomCenters,
+    leftRightCenters,
+    leftX,
+    rightX,
+    topY,
+    bottomY,
+    circleRadius: outerCircleRadius,
+    connectorThickness,
+    circleFill: "black",
+    connectorFill: "black",
+    restoreRadius: restoredCenterRadius,
+  });
+  const maskId = [
+    "linked-circle-frame",
+    Math.round(width),
+    Math.round(height),
+    Math.round(strokeWidth * 100),
+    Math.round(spacingScale * 100),
+  ].join("-");
+
+  return [
+    `<defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="${width.toFixed(
+      3,
+    )}" height="${height.toFixed(3)}">`,
+    `<rect x="${outerInset.toFixed(3)}" y="${outerInset.toFixed(3)}" width="${Math.max(
+      1,
+      width - outerInset * 2,
+    ).toFixed(3)}" height="${Math.max(1, height - outerInset * 2).toFixed(
+      3,
+    )}" fill="white"/>`,
+    `<rect x="${windowInset.toFixed(3)}" y="${windowInset.toFixed(3)}" width="${innerWidth.toFixed(
+      3,
+    )}" height="${innerHeight.toFixed(3)}" fill="black"/>`,
+    cutoutShapes,
+    "</mask></defs>",
+    `<rect x="${outerInset.toFixed(3)}" y="${outerInset.toFixed(3)}" width="${Math.max(
+      1,
+      width - outerInset * 2,
+    ).toFixed(3)}" height="${Math.max(1, height - outerInset * 2).toFixed(
+      3,
+    )}" fill="${strokeColor}" mask="url(#${maskId})"/>`,
+    `<rect x="${innerOutlineInset.toFixed(3)}" y="${innerOutlineInset.toFixed(
+      3,
+    )}" width="${outlineWidth.toFixed(3)}" height="${outlineHeight.toFixed(
+      3,
+    )}" fill="none" stroke="${strokeColor}" stroke-width="${innerOutlineStrokeWidth.toFixed(
+      3,
+    )}"/>`,
+  ].join("");
+}
+
+function buildDistributedEdgeCenters(
+  start: number,
+  end: number,
+  targetPitch: number,
+): number[] {
+  const span = Math.max(0, end - start);
+  if (span === 0) {
+    return [start];
+  }
+
+  const count = Math.max(3, Math.round(span / Math.max(targetPitch, 1)) + 1);
+  return Array.from({ length: count }, (_, index) => {
+    const progress = count === 1 ? 0 : index / (count - 1);
+    return start + span * progress;
+  });
+}
+
+function buildLinkedCircleMaskShapes(options: {
+  topBottomCenters: number[];
+  leftRightCenters: number[];
+  leftX: number;
+  rightX: number;
+  topY: number;
+  bottomY: number;
+  circleRadius: number;
+  connectorThickness: number;
+  circleFill: "white" | "black";
+  connectorFill: "white" | "black";
+  restoreRadius?: number;
+}): string {
+  const {
+    topBottomCenters,
+    leftRightCenters,
+    leftX,
+    rightX,
+    topY,
+    bottomY,
+    circleRadius,
+    connectorThickness,
+    circleFill,
+    connectorFill,
+    restoreRadius,
+  } = options;
+  const circleMarkup: string[] = [];
+  const connectorMarkup: string[] = [];
+  const restoreMarkup: string[] = [];
+  const circleKeys = new Set<string>();
+
+  const appendCircle = (cx: number, cy: number) => {
+    const key = `${cx.toFixed(3)}:${cy.toFixed(3)}`;
+    if (circleKeys.has(key)) {
+      return;
+    }
+
+    circleKeys.add(key);
+    circleMarkup.push(
+      `<circle cx="${cx.toFixed(3)}" cy="${cy.toFixed(3)}" r="${circleRadius.toFixed(
+        3,
+      )}" fill="${circleFill}"/>`,
+    );
+    if (typeof restoreRadius === "number" && restoreRadius > 0) {
+      restoreMarkup.push(
+        `<circle cx="${cx.toFixed(3)}" cy="${cy.toFixed(3)}" r="${restoreRadius.toFixed(
+          3,
+        )}" fill="white"/>`,
+      );
+    }
+  };
+
+  const appendHorizontalRuns = (y: number) => {
+    topBottomCenters.forEach((cx) => appendCircle(cx, y));
+    for (let index = 0; index < topBottomCenters.length - 1; index += 1) {
+      connectorMarkup.push(
+        `<line x1="${topBottomCenters[index].toFixed(3)}" y1="${y.toFixed(
+          3,
+        )}" x2="${topBottomCenters[index + 1].toFixed(3)}" y2="${y.toFixed(
+          3,
+        )}" stroke="${connectorFill}" stroke-width="${connectorThickness.toFixed(
+          3,
+        )}" stroke-linecap="round"/>`,
+      );
+    }
+  };
+
+  const appendVerticalRuns = (x: number) => {
+    leftRightCenters.forEach((cy) => appendCircle(x, cy));
+    for (let index = 0; index < leftRightCenters.length - 1; index += 1) {
+      connectorMarkup.push(
+        `<line x1="${x.toFixed(3)}" y1="${leftRightCenters[index].toFixed(
+          3,
+        )}" x2="${x.toFixed(3)}" y2="${leftRightCenters[index + 1].toFixed(
+          3,
+        )}" stroke="${connectorFill}" stroke-width="${connectorThickness.toFixed(
+          3,
+        )}" stroke-linecap="round"/>`,
+      );
+    }
+  };
+
+  appendHorizontalRuns(topY);
+  appendHorizontalRuns(bottomY);
+  appendVerticalRuns(leftX);
+  appendVerticalRuns(rightX);
+
+  return [...connectorMarkup, ...circleMarkup, ...restoreMarkup].join("");
 }
 
 function buildVintageLabelFramePathData(

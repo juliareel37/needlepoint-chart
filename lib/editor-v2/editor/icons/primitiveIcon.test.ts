@@ -80,6 +80,24 @@ describe("buildPrimitiveIconDataUrl", () => {
     expect(svg).toContain('shape-rendering="crispEdges"');
     expect((outerPath.match(/L/g) ?? []).length).toBe((innerPath.match(/L/g) ?? []).length);
   });
+
+  it("renders the linked circle frame with circular cutouts and a solid body", () => {
+    const svg = decodeDataUrlSvg(
+      buildPrimitiveIconDataUrl({
+        kind: "linked-circle-frame",
+        width: 180,
+        height: 120,
+        strokeColor: "#121923",
+      }),
+    );
+
+    expect(svg).toContain("<mask");
+    expect(svg).toContain('mask="url(#linked-circle-frame-180-120-600-100)"');
+    expect(svg).toContain("<circle");
+    expect(svg).toContain("<line");
+    expect(svg.match(/<circle /g)?.length).toBeGreaterThan(16);
+    expect(svg).toContain('<rect x="');
+  });
 });
 
 describe("getPrimitiveIconKind", () => {
@@ -92,11 +110,15 @@ describe("getPrimitiveIconKind", () => {
       "double-scalloped-frame",
     );
   });
+
+  it("maps the linked circle frame asset to its primitive kind", () => {
+    expect(getPrimitiveIconKind("frames/linked-circle-frame.svg")).toBe("linked-circle-frame");
+  });
 });
 
 describe("double scalloped spacing defaults", () => {
   it("starts with a wider default gap", () => {
-    expect(getPrimitiveDefaultSpacingScale("double-scalloped-frame")).toBe(1.15);
+    expect(getPrimitiveDefaultSpacingScale("double-scalloped-frame")).toBe(2.25);
   });
 
   it("allows a wider spacing range", () => {
