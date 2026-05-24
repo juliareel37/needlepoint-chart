@@ -445,14 +445,15 @@ export function IconsPanelPage({
 
         accumulator[icon.id] = icon.primitiveKind
           ? buildPrimitiveIconDataUrl({
-              kind: icon.primitiveKind,
-              width: primitivePreviewSize.width,
-              height: primitivePreviewSize.height,
-              strokeColor: themedPrimitiveColors?.stroke ?? primitivePreviewStrokeColor,
-              secondaryStrokeColor: themedPrimitiveColors?.shadow,
-              fillColor: themedPrimitiveColors?.fill,
-              strokeReferenceSize: Math.min(
-                primitivePreviewSize.width,
+            kind: icon.primitiveKind,
+            width: primitivePreviewSize.width,
+            height: primitivePreviewSize.height,
+            strokeColor: themedPrimitiveColors?.stroke ?? primitivePreviewStrokeColor,
+            secondaryStrokeColor: themedPrimitiveColors?.shadow,
+            strokeColorsBySlotId: themedPrimitiveColors?.bySlotId,
+            fillColor: themedPrimitiveColors?.fill,
+            strokeReferenceSize: Math.min(
+              primitivePreviewSize.width,
                 primitivePreviewSize.height,
               ),
               strokeWidthScale: getPrimitiveDefaultStrokeWidthScale(icon.primitiveKind),
@@ -912,7 +913,7 @@ function getThemedPrimitiveColorSlots(
   const shadowColor = resolvedThemeMode === "dark" ? "#d4d4d8" : "#6b7280";
 
   return slots.map((slot) => {
-    if (slot.id === "stroke") {
+    if (slot.id === "stroke" || slot.id.startsWith("stroke-")) {
       return {
         ...slot,
         sourceHex: strokeColor,
@@ -942,10 +943,17 @@ function resolvePrimitivePreviewColors(slots: IconColorSlot[]): {
   fill: string | null;
   shadow: string | null;
   stroke: string | null;
+  bySlotId: Record<string, string>;
 } {
+  const bySlotId = Object.fromEntries(slots.map((slot) => [slot.id, slot.sourceHex]));
+
   return {
-    stroke: slots.find((slot) => slot.id === "stroke")?.sourceHex ?? null,
+    stroke:
+      slots.find((slot) => slot.id === "stroke")?.sourceHex ??
+      slots.find((slot) => slot.id === "stroke-outer")?.sourceHex ??
+      null,
     shadow: slots.find((slot) => slot.id === "shadow")?.sourceHex ?? null,
     fill: slots.find((slot) => slot.id === "fill")?.sourceHex ?? null,
+    bySlotId,
   };
 }

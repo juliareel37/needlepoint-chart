@@ -18,11 +18,19 @@ const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png", ".jpg", ".jpeg", ".webp"]);
 const iconSearchKeywordMap = iconSearchKeywords as Record<string, string[]>;
 const SHAPES_CATEGORY = "Shapes";
+const FRAMES_CATEGORY = "Frames";
 const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
   Square: 0,
   Rectangle: 0,
   Circle: 1,
   Triangle: 2,
+};
+const FRAMES_PRIORITY_BY_NAME: Record<string, number> = {
+  "Double Rectangle Frame": 0,
+  "Triple Rectangle Frame": 1,
+  "Striped Rectangle Frame": 2,
+  "Scalloped Frame": 3,
+  "Double Scalloped Frame": 4,
 };
 const OVERVIEW_PREVIEW_POSITION_ORDER = [0.08, 0.52, 0.24, 0.76, 0.4, 0.92];
 
@@ -162,6 +170,15 @@ function compareShapeIconDescriptors(
   if (left.category === SHAPES_CATEGORY && right.category === SHAPES_CATEGORY) {
     const leftPriority = SHAPES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
     const rightPriority = SHAPES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+  }
+
+  if (left.category === FRAMES_CATEGORY && right.category === FRAMES_CATEGORY) {
+    const leftPriority = FRAMES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
+    const rightPriority = FRAMES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
 
     if (leftPriority !== rightPriority) {
       return leftPriority - rightPriority;
@@ -351,7 +368,9 @@ async function buildIconAsset(
       primitiveKind,
       lockAspectRatio,
       supportsStrokeWidth:
-        primitiveKind && primitiveKind !== "linked-circle-frame"
+        primitiveKind &&
+        primitiveKind !== "linked-circle-frame" &&
+        primitiveKind !== "striped-rectangle-frame"
           ? true
           : supportsStrokeWidthControl(normalizedRelativePath, svg),
     };

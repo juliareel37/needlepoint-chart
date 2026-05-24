@@ -195,6 +195,7 @@ export function IconPlacementLayer({
             height: displayBounds.height,
             strokeColor: primitiveColors?.primary ?? previewColor,
             secondaryStrokeColor: primitiveColors?.secondary,
+            strokeColorsBySlotId: primitiveColors?.bySlotId,
             fillColor: primitiveColors?.fill,
             strokeReferenceSize: placement.primitiveStrokeReferenceSize,
             strokeWidthScale:

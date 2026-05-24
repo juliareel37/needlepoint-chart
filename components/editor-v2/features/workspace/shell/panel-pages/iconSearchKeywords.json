@@ -164,6 +164,8 @@
   "greek-key-frame.svg": ["frame", "border", "greek key", "meander", "ornamental frame"],
   "greek-key-frame-shadow.svg": ["frame", "border", "greek key", "meander", "shadow frame", "ornamental frame"],
   "double-rectangle-frame.svg": ["frame", "border", "double line", "double rectangle", "nested rectangles", "simple frame"],
+  "triple-rectangle-frame.svg": ["frame", "border", "triple line", "triple rectangle", "nested rectangles", "simple frame"],
+  "striped-rectangle-frame.svg": ["frame", "border", "striped rectangle", "tick frame", "needlepoint frame", "decorative frame"],
   "linked-circle-frame.svg": ["frame", "border", "linked circles", "circle frame", "chain border", "needlepoint frame", "decorative frame"],
   "scalloped-frame.svg": ["frame", "border", "scalloped", "wavy frame", "rick rack", "decorative frame"],
   "double-scalloped-frame.svg": ["frame", "border", "double scalloped", "double wavy frame", "rick rack", "decorative frame"],

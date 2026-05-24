@@ -10,6 +10,8 @@ export type PrimitiveIconKind =
   | "heart"
   | "star"
   | "double-rectangle-frame"
+  | "triple-rectangle-frame"
+  | "striped-rectangle-frame"
   | "linked-circle-frame"
   | "scalloped-frame"
   | "double-scalloped-frame"
@@ -23,6 +25,7 @@ interface PrimitiveIconSvgOptions {
   height: number;
   strokeColor: string;
   secondaryStrokeColor?: string | null;
+  strokeColorsBySlotId?: Partial<Record<string, string | null>>;
   fillColor?: string | null;
   strokeReferenceSize?: number | null;
   strokeWidthScale?: number;
@@ -39,6 +42,7 @@ const FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH = 0.3;
 const DEFAULT_SHAPE_STROKE_WIDTH_SCALE = 0.45;
 const DEFAULT_FRAME_STROKE_WIDTH_SCALE = 0.7;
 const DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
+const TRIPLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE = 0.75;
 const DOUBLE_SCALLOPED_FRAME_DEFAULT_SPACING_SCALE = 2.25;
 const DOUBLE_SCALLOPED_INNER_CORNER_CRAMP = 0.18;
 const DOUBLE_SCALLOPED_INNER_EDGE_WAVE_ELONGATION = 0.05;
@@ -52,6 +56,8 @@ const RESPONSIVE_STROKE_SCALE_MULTIPLIER_MIN = 0.7;
 export function isPrimitiveFrameKind(kind: PrimitiveIconKind | null | undefined): boolean {
   return (
     kind === "double-rectangle-frame" ||
+    kind === "triple-rectangle-frame" ||
+    kind === "striped-rectangle-frame" ||
     kind === "linked-circle-frame" ||
     kind === "scalloped-frame" ||
     kind === "double-scalloped-frame" ||
@@ -89,9 +95,13 @@ export function getPrimitiveStrokeWidthScaleRange(
   }
 
   return {
-    min: roundStrokeScale(Math.max(0.25, 0.3 * responsiveMultiplier)),
-    max: roundStrokeScale(
-      Math.max(0.9, (kind === "double-rectangle-frame" ? 1.4 : 2.2) * responsiveMultiplier),
+      min: roundStrokeScale(Math.max(0.25, 0.3 * responsiveMultiplier)),
+      max: roundStrokeScale(
+      Math.max(
+        0.9,
+        (kind === "double-rectangle-frame" || kind === "triple-rectangle-frame" ? 1.4 : 2.2) *
+          responsiveMultiplier,
+      ),
     ),
   };
 }
@@ -101,6 +111,10 @@ export function getPrimitiveDefaultSpacingScale(
 ): number {
   if (kind === "double-rectangle-frame") {
     return DOUBLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE;
+  }
+
+  if (kind === "triple-rectangle-frame") {
+    return TRIPLE_RECTANGLE_FRAME_DEFAULT_SPACING_SCALE;
   }
 
   if (kind === "linked-circle-frame") {
@@ -117,6 +131,10 @@ export function getPrimitiveDefaultSpacingScale(
 export function getPrimitiveSpacingScaleRange(
   kind: PrimitiveIconKind | null | undefined,
 ): { min: number; max: number } {
+  if (kind === "double-rectangle-frame" || kind === "triple-rectangle-frame") {
+    return { min: 0, max: 2 };
+  }
+
   if (kind === "double-scalloped-frame") {
     return { min: 0.8, max: 3 };
   }
@@ -136,6 +154,10 @@ export function getPrimitiveIconKind(relativePath: string): PrimitiveIconKind | 
       return "heart";
     case "frames/double-rectangle-frame.svg":
       return "double-rectangle-frame";
+    case "frames/triple-rectangle-frame.svg":
+      return "triple-rectangle-frame";
+    case "frames/striped-rectangle-frame.svg":
+      return "striped-rectangle-frame";
     case "frames/linked-circle-frame.svg":
       return "linked-circle-frame";
     case "frames/scalloped-frame.svg":
@@ -165,6 +187,7 @@ export function buildPrimitiveIconDataUrl({
   height,
   strokeColor,
   secondaryStrokeColor,
+  strokeColorsBySlotId,
   fillColor,
   strokeReferenceSize,
   strokeWidthScale = 1,
@@ -184,6 +207,8 @@ export function buildPrimitiveIconDataUrl({
   const svgWidth = normalizedWidth.toFixed(3);
   const svgHeight = normalizedHeight.toFixed(3);
   const escapedStroke = escapeXmlAttribute(strokeColor || DEFAULT_STROKE_COLOR);
+  const resolveStrokeSlotColor = (slotId: string, fallback: string) =>
+    escapeXmlAttribute(strokeColorsBySlotId?.[slotId] || fallback);
   const escapedFill = normalizePrimitiveFillPaint(fillColor);
 
   let shapeMarkup = "";
@@ -253,11 +278,13 @@ export function buildPrimitiveIconDataUrl({
           ? Math.max(strokeReferenceSize, 1)
           : Math.min(normalizedWidth, normalizedHeight);
       const normalizedSpacingScale =
-        Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
-      const innerStrokeWidth = Math.max(FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH, strokeWidth * 0.58);
-      const innerGap = Math.max(referenceSize * 0.055 * normalizedSpacingScale, 3);
+        Number.isFinite(spacingScale) && spacingScale >= 0 ? spacingScale : 1;
+      const innerStrokeWidth = strokeWidth;
+      const innerGap = referenceSize * 0.055 * normalizedSpacingScale;
       const innerHalfStroke = innerStrokeWidth / 2;
       const innerOffset = strokeWidth + innerGap + innerHalfStroke;
+      const outerStrokeColor = resolveStrokeSlotColor("stroke-outer", escapedStroke);
+      const innerStrokeColor = resolveStrokeSlotColor("stroke-inner", escapedStroke);
 
       shapeMarkup = [
         `<rect x="${halfStroke.toFixed(3)}" y="${halfStroke.toFixed(3)}" width="${Math.max(
@@ -265,7 +292,7 @@ export function buildPrimitiveIconDataUrl({
           normalizedWidth - strokeWidth,
         ).toFixed(3)}" height="${Math.max(0, normalizedHeight - strokeWidth).toFixed(
           3,
-        )}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        )}" fill="none" stroke="${outerStrokeColor}" stroke-width="${strokeWidth.toFixed(
           3,
         )}"/>`,
         `<rect x="${innerOffset.toFixed(3)}" y="${innerOffset.toFixed(3)}" width="${Math.max(
@@ -274,9 +301,134 @@ export function buildPrimitiveIconDataUrl({
         ).toFixed(3)}" height="${Math.max(
           0,
           normalizedHeight - innerOffset * 2,
-        ).toFixed(3)}" fill="none" stroke="${escapedStroke}" stroke-width="${innerStrokeWidth.toFixed(
+        ).toFixed(3)}" fill="none" stroke="${innerStrokeColor}" stroke-width="${innerStrokeWidth.toFixed(
           3,
         )}"/>`,
+      ].join("");
+      break;
+    }
+    case "triple-rectangle-frame": {
+      const referenceSize =
+        typeof strokeReferenceSize === "number" && Number.isFinite(strokeReferenceSize)
+          ? Math.max(strokeReferenceSize, 1)
+          : Math.min(normalizedWidth, normalizedHeight);
+      const normalizedSpacingScale =
+        Number.isFinite(spacingScale) && spacingScale >= 0 ? spacingScale : 1;
+      const innerStrokeWidth = strokeWidth;
+      const centerStrokeWidth = strokeWidth;
+      const gap = referenceSize * 0.04 * normalizedSpacingScale;
+      const centerHalfStroke = centerStrokeWidth / 2;
+      const innerHalfStroke = innerStrokeWidth / 2;
+      const centerOffset = strokeWidth + gap + centerHalfStroke;
+      const innerOffset = centerOffset + centerHalfStroke + gap + innerHalfStroke;
+      const outerStrokeColor = resolveStrokeSlotColor("stroke-outer", escapedStroke);
+      const centerStrokeColor = resolveStrokeSlotColor("stroke-middle", escapedStroke);
+      const innerStrokeColor = resolveStrokeSlotColor("stroke-inner", escapedStroke);
+
+      shapeMarkup = [
+        `<rect x="${halfStroke.toFixed(3)}" y="${halfStroke.toFixed(3)}" width="${Math.max(
+          0,
+          normalizedWidth - strokeWidth,
+        ).toFixed(3)}" height="${Math.max(0, normalizedHeight - strokeWidth).toFixed(
+          3,
+        )}" fill="none" stroke="${outerStrokeColor}" stroke-width="${strokeWidth.toFixed(
+          3,
+        )}"/>`,
+        `<rect x="${centerOffset.toFixed(3)}" y="${centerOffset.toFixed(3)}" width="${Math.max(
+          0,
+          normalizedWidth - centerOffset * 2,
+        ).toFixed(3)}" height="${Math.max(
+          0,
+          normalizedHeight - centerOffset * 2,
+        ).toFixed(3)}" fill="none" stroke="${centerStrokeColor}" stroke-width="${centerStrokeWidth.toFixed(
+          3,
+        )}"/>`,
+        `<rect x="${innerOffset.toFixed(3)}" y="${innerOffset.toFixed(3)}" width="${Math.max(
+          0,
+          normalizedWidth - innerOffset * 2,
+        ).toFixed(3)}" height="${Math.max(
+          0,
+          normalizedHeight - innerOffset * 2,
+        ).toFixed(3)}" fill="none" stroke="${innerStrokeColor}" stroke-width="${innerStrokeWidth.toFixed(
+          3,
+        )}"/>`,
+      ].join("");
+      break;
+    }
+    case "striped-rectangle-frame": {
+      const minDimension = Math.max(1, Math.min(normalizedWidth, normalizedHeight));
+      const accentColor = resolveStrokeSlotColor("stroke", escapedStroke);
+      const stripeWhite = resolveStrokeSlotColor("stripe-white", "#ffffff");
+      const stripeThickness = Math.max(1.4, minDimension * 0.016);
+      const tickLength = Math.max(stripeThickness * 2.5, minDimension * 0.075);
+      const bandThickness = Math.max(stripeThickness * 2.7, minDimension * 0.09);
+      const outerMargin = Math.max(halfStroke, minDimension * 0.02);
+      const solidLeft = outerMargin + tickLength;
+      const solidTop = outerMargin + tickLength;
+      const solidRight = Math.max(solidLeft, normalizedWidth - outerMargin - tickLength);
+      const solidBottom = Math.max(solidTop, normalizedHeight - outerMargin - tickLength);
+      const innerLeft = solidLeft + bandThickness;
+      const innerTop = solidTop + bandThickness;
+      const innerRight = Math.max(innerLeft, solidRight - bandThickness);
+      const innerBottom = Math.max(innerTop, solidBottom - bandThickness);
+      const solidBandPath = [
+        `M ${solidLeft.toFixed(3)} ${solidTop.toFixed(3)}`,
+        `H ${solidRight.toFixed(3)}`,
+        `V ${solidBottom.toFixed(3)}`,
+        `H ${solidLeft.toFixed(3)}`,
+        "Z",
+        `M ${innerLeft.toFixed(3)} ${innerTop.toFixed(3)}`,
+        `H ${innerRight.toFixed(3)}`,
+        `V ${innerBottom.toFixed(3)}`,
+        `H ${innerLeft.toFixed(3)}`,
+        "Z",
+      ].join(" ");
+      const stripes = [
+        ...buildStripedBandRectangles({
+          start: solidLeft,
+          end: solidRight,
+          thickness: stripeThickness,
+          horizontal: true,
+          bandStart: outerMargin,
+          bandEnd: solidTop,
+          accentColor,
+          whiteColor: stripeWhite,
+        }),
+        ...buildStripedBandRectangles({
+          start: solidLeft,
+          end: solidRight,
+          thickness: stripeThickness,
+          horizontal: true,
+          bandStart: solidBottom,
+          bandEnd: normalizedHeight - outerMargin,
+          accentColor,
+          whiteColor: stripeWhite,
+        }),
+        ...buildStripedBandRectangles({
+          start: solidTop,
+          end: solidBottom,
+          thickness: stripeThickness,
+          horizontal: false,
+          bandStart: outerMargin,
+          bandEnd: solidLeft,
+          accentColor,
+          whiteColor: stripeWhite,
+        }),
+        ...buildStripedBandRectangles({
+          start: solidTop,
+          end: solidBottom,
+          thickness: stripeThickness,
+          horizontal: false,
+          bandStart: solidRight,
+          bandEnd: normalizedWidth - outerMargin,
+          accentColor,
+          whiteColor: stripeWhite,
+        }),
+      ].join("");
+
+      shapeMarkup = [
+        `<path d="${solidBandPath}" fill="${accentColor}" fill-rule="evenodd"/>`,
+        stripes,
       ].join("");
       break;
     }
@@ -316,10 +468,7 @@ export function buildPrimitiveIconDataUrl({
           : Math.min(normalizedWidth, normalizedHeight);
       const normalizedSpacingScale =
         Number.isFinite(spacingScale) && spacingScale > 0 ? spacingScale : 1;
-      const innerStrokeWidth = Math.max(
-        FRAME_PRIMITIVE_SECONDARY_MIN_STROKE_WIDTH,
-        strokeWidth * 0.58,
-      );
+      const innerStrokeWidth = strokeWidth;
       const innerGap = Math.max(referenceSize * 0.055 * normalizedSpacingScale, 3);
       const innerInset = strokeWidth + innerGap + innerStrokeWidth / 2;
       const outerScallopMetrics = getScallopedFrameMetrics(
@@ -343,12 +492,14 @@ export function buildPrimitiveIconDataUrl({
       );
       const outerPathData = buildClosedPointPathData(outerPoints);
       const innerPathData = buildClosedPointPathData(innerPoints);
+      const outerStrokeColor = resolveStrokeSlotColor("stroke-outer", escapedStroke);
+      const innerStrokeColor = resolveStrokeSlotColor("stroke-inner", escapedStroke);
 
       shapeMarkup = [
-        `<path d="${outerPathData}" fill="none" stroke="${escapedStroke}" stroke-width="${strokeWidth.toFixed(
+        `<path d="${outerPathData}" fill="none" stroke="${outerStrokeColor}" stroke-width="${strokeWidth.toFixed(
           3,
         )}" stroke-linecap="round" stroke-linejoin="round"/>`,
-        `<path d="${innerPathData}" fill="none" stroke="${escapedStroke}" stroke-width="${innerStrokeWidth.toFixed(
+        `<path d="${innerPathData}" fill="none" stroke="${innerStrokeColor}" stroke-width="${innerStrokeWidth.toFixed(
           3,
         )}" stroke-linecap="round" stroke-linejoin="round"/>`,
       ].join("");
@@ -472,17 +623,28 @@ export function resolvePrimitiveColorSlots(
   slots: IconColorSlot[],
   paletteById: Record<string, PaletteColor>,
   fallbackColor: string | null,
-): { primary: string; secondary: string | null; fill: string | null } {
-  const resolvedById = new Map(
-    slots.map((slot) => [
+): {
+  primary: string;
+  secondary: string | null;
+  fill: string | null;
+  bySlotId: Record<string, string>;
+} {
+  const resolvedById = new Map<string, string>();
+
+  for (const slot of slots) {
+    resolvedById.set(
       slot.id,
       slot.paletteColorId ? (paletteById[slot.paletteColorId]?.hex ?? slot.sourceHex) : slot.sourceHex,
-    ]),
-  );
+    );
+  }
   const resolvedColors = slots.map((slot) => resolvedById.get(slot.id) ?? slot.sourceHex);
 
   const primary =
-    resolvedById.get("stroke") ?? resolvedColors[0] ?? fallbackColor ?? DEFAULT_STROKE_COLOR;
+    resolvedById.get("stroke") ??
+    resolvedById.get("stroke-outer") ??
+    resolvedColors[0] ??
+    fallbackColor ??
+    DEFAULT_STROKE_COLOR;
   const secondary = resolvedById.get("shadow") ?? resolvedColors[1] ?? null;
   const fill = resolvedById.get("fill") ?? null;
 
@@ -490,10 +652,40 @@ export function resolvePrimitiveColorSlots(
     primary,
     secondary,
     fill,
+    bySlotId: Object.fromEntries(resolvedById.entries()),
   };
 }
 
 export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColorSlot[] {
+  if (kind === "double-rectangle-frame") {
+    return [
+      createPrimitiveColorSlot("stroke-outer", "#121923"),
+      createPrimitiveColorSlot("stroke-inner", "#121923"),
+    ];
+  }
+
+  if (kind === "triple-rectangle-frame") {
+    return [
+      createPrimitiveColorSlot("stroke-outer", "#121923"),
+      createPrimitiveColorSlot("stroke-middle", "#121923"),
+      createPrimitiveColorSlot("stroke-inner", "#121923"),
+    ];
+  }
+
+  if (kind === "double-scalloped-frame") {
+    return [
+      createPrimitiveColorSlot("stroke-outer", "#121923"),
+      createPrimitiveColorSlot("stroke-inner", "#121923"),
+    ];
+  }
+
+  if (kind === "striped-rectangle-frame") {
+    return [
+      createPrimitiveColorSlot("stroke", "#121923"),
+      createPrimitiveColorSlot("stripe-white", "#ffffff", { isLocked: true }),
+    ];
+  }
+
   if (
     kind === "circle" ||
     kind === "rectangle" ||
@@ -502,14 +694,7 @@ export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColo
     kind === "star"
   ) {
     return [
-      {
-        id: "stroke",
-        sourceHex: "#121923",
-        paletteColorId: findClosestPaletteColorId(
-          DMC_COLOR_LIBRARY_BY_ID,
-          hexToRgb("#121923") as Rgb,
-        ),
-      },
+      createPrimitiveColorSlot("stroke", "#121923"),
       {
         id: "fill",
         sourceHex: "transparent",
@@ -520,26 +705,64 @@ export function getPrimitiveDefaultColorSlots(kind: PrimitiveIconKind): IconColo
 
   if (kind === "greek-key-frame-shadow") {
     return [
-      {
-        id: "stroke",
-        sourceHex: "#121923",
-        paletteColorId: findClosestPaletteColorId(
-          DMC_COLOR_LIBRARY_BY_ID,
-          hexToRgb("#121923") as Rgb,
-        ),
-      },
-      {
-        id: "shadow",
-        sourceHex: "#8e99ab",
-        paletteColorId: findClosestPaletteColorId(
-          DMC_COLOR_LIBRARY_BY_ID,
-          hexToRgb("#8e99ab") as Rgb,
-        ),
-      },
+      createPrimitiveColorSlot("stroke", "#121923"),
+      createPrimitiveColorSlot("shadow", "#8e99ab"),
     ];
   }
 
   return [];
+}
+
+function createPrimitiveColorSlot(
+  id: string,
+  sourceHex: string,
+  options: { isLocked?: boolean } = {},
+): IconColorSlot {
+  return {
+    id,
+    sourceHex,
+    paletteColorId: findClosestPaletteColorId(
+      DMC_COLOR_LIBRARY_BY_ID,
+      hexToRgb(sourceHex) as Rgb,
+    ),
+    isLocked: options.isLocked,
+  };
+}
+
+function buildStripedBandRectangles(options: {
+  start: number;
+  end: number;
+  thickness: number;
+  horizontal: boolean;
+  bandStart: number;
+  bandEnd: number;
+  accentColor: string;
+  whiteColor: string;
+}): string[] {
+  const { start, end, thickness, horizontal, bandStart, bandEnd, accentColor, whiteColor } = options;
+  const span = Math.max(0, end - start);
+  const bandSize = Math.max(0, bandEnd - bandStart);
+  if (span <= 0 || bandSize <= 0) {
+    return [];
+  }
+
+  const stripeCount = Math.max(1, Math.ceil(span / thickness));
+
+  return Array.from({ length: stripeCount }, (_, index) => {
+    const stripeStart = start + index * thickness;
+    const stripeSpan = Math.min(thickness, end - stripeStart);
+    const fill = index % 2 === 0 ? accentColor : whiteColor;
+
+    if (horizontal) {
+      return `<rect x="${stripeStart.toFixed(3)}" y="${bandStart.toFixed(3)}" width="${stripeSpan.toFixed(
+        3,
+      )}" height="${bandSize.toFixed(3)}" fill="${fill}"/>`;
+    }
+
+    return `<rect x="${bandStart.toFixed(3)}" y="${stripeStart.toFixed(3)}" width="${bandSize.toFixed(
+      3,
+    )}" height="${stripeSpan.toFixed(3)}" fill="${fill}"/>`;
+  });
 }
 
 function getPrimitiveStrokeWidth(
@@ -551,6 +774,7 @@ function getPrimitiveStrokeWidth(
 ): number {
   const baseStrokeRatio =
     kind === "double-rectangle-frame" ||
+    kind === "triple-rectangle-frame" ||
     kind === "linked-circle-frame" ||
     kind === "scalloped-frame" ||
     kind === "double-scalloped-frame" ||

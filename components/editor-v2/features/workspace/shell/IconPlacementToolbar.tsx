@@ -365,7 +365,9 @@ export function IconPlacementToolbar({
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
   const supportsSpacingScale =
     placement.primitiveKind === "double-rectangle-frame" ||
+    placement.primitiveKind === "triple-rectangle-frame" ||
     placement.primitiveKind === "double-scalloped-frame";
+  const editableColorSlots = placement.colorSlots.filter((slot) => !slot.isLocked);
   const canEraseUploadedGraphic =
     placement.isUserUploaded &&
     placement.mimeType !== "image/svg+xml" &&
@@ -804,7 +806,7 @@ export function IconPlacementToolbar({
             <>
               <ToolbarGroup>
                 <div className={styles.iconPlacementSwatchList} role="list" aria-label="Icon colors">
-                  {placement.colorSlots.map((slot) => {
+                  {editableColorSlots.map((slot) => {
                     const assignedColor = slot.paletteColorId
                       ? palette.find((color) => color.id === slot.paletteColorId) ?? null
                       : null;
@@ -815,10 +817,11 @@ export function IconPlacementToolbar({
                       (slot.sourceHex === "transparent" || slot.sourceHex === "none");
                     const allowTransparent = slot.id === "fill";
                     const primitiveCaption =
-                      placement.primitiveKind && (slot.id === "fill" || slot.id === "stroke")
+                      placement.primitiveKind &&
+                      (slot.id === "fill" || slot.id === "stroke" || slot.id.startsWith("stroke-"))
                         ? slot.id === "fill"
                           ? "Fill"
-                          : "Outline"
+                          : getPrimitiveStrokeCaption(slot.id)
                         : null;
 
                     return (
@@ -974,11 +977,32 @@ function getIconColorSlotLabel(slotId: string): string {
   switch (slotId) {
     case "stroke":
       return "Stroke color";
+    case "stripe-white":
+      return "White stripe color";
+    case "stroke-outer":
+      return "Outer stroke color";
+    case "stroke-middle":
+      return "Middle stroke color";
+    case "stroke-inner":
+      return "Inner stroke color";
     case "fill":
       return "Fill color";
     case "shadow":
       return "Shadow color";
     default:
       return "Icon color";
+  }
+}
+
+function getPrimitiveStrokeCaption(slotId: string): string {
+  switch (slotId) {
+    case "stroke-outer":
+      return "Outer";
+    case "stroke-middle":
+      return "Middle";
+    case "stroke-inner":
+      return "Inner";
+    default:
+      return "Outline";
   }
 }

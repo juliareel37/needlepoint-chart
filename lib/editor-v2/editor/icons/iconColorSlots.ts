@@ -5,6 +5,7 @@ export interface IconColorSlot {
   id: string;
   sourceHex: string;
   paletteColorId: string | null;
+  isLocked?: boolean;
 }
 
 const SVG_COLOR_ATTRIBUTE_REGEX = /\b(?:fill|stroke)=["']([^"']+)["']/gi;
