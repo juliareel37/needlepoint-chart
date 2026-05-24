@@ -343,6 +343,13 @@
 }
 
 .buildingBlocksSection {
+  --building-blocks-stack-shadow:
+    drop-shadow(0 1px 1px rgba(24, 20, 34, 0.10))
+    drop-shadow(0 6px 6px rgba(24, 20, 34, 0.12))
+    drop-shadow(0 8px 6px rgba(24, 20, 34, 0.08));
+  --building-blocks-side-stack-shadow:
+    drop-shadow(-5px 0 5px rgba(24, 20, 34, 0.08))
+    drop-shadow(5px 0 5px rgba(24, 20, 34, 0.08));
   box-sizing: border-box;
   width: min(1680px, 100%);
   margin: 0 auto;
@@ -360,8 +367,7 @@
 
 .buildingBlocksLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(16rem, 1fr);
-  gap: clamp(16px, 2vw, 28px);
+  gap: clamp(16px, 2vw, 24px);
   align-items: stretch;
 }
 
@@ -373,8 +379,8 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 6 / 5;
-  padding: clamp(10px, 1.2vw, 16px);
+  aspect-ratio: 16 / 9;
+  padding: clamp(10px, 1.1vw, 16px);
   border-radius: clamp(22px, 2vw, 30px);
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 72%, white);
   background:
@@ -406,21 +412,18 @@
 
 .buildingBlocksPanelGrid {
   display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: clamp(10px, 1.1vw, 14px);
-  height: 100%;
-  min-height: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 1.4vw, 18px);
+  align-items: start;
   align-self: stretch;
-  container-type: inline-size;
 }
 
 .buildingBlocksPanel {
   min-width: 0;
-  min-height: 0;
   display: grid;
-  gap: clamp(6px, 3.2cqi, 12px);
+  grid-template-rows: auto auto;
   align-content: start;
-  padding: clamp(10px, 4cqi, 16px);
+  padding: 0;
   border-radius: clamp(18px, 1.5vw, 22px);
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, white);
   box-shadow: 0 18px 38px rgba(20, 24, 36, 0.08);
@@ -429,8 +432,8 @@
 
 .buildingBlocksPanelFonts {
   background:
-    radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.76), transparent 26%),
-    linear-gradient(150deg, color-mix(in srgb, white 40%, #f8d7dd) 0%, color-mix(in srgb, white 18%, #f4ebc7) 100%);
+    radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.72), transparent 26%),
+    linear-gradient(150deg, color-mix(in srgb, white 56%, #eef6e8) 0%, color-mix(in srgb, white 24%, #e8f3df) 100%);
 }
 
 .buildingBlocksPanelIcons {
@@ -445,6 +448,234 @@
     linear-gradient(155deg, color-mix(in srgb, white 42%, #d7f0e4) 0%, color-mix(in srgb, white 18%, #d7e5ff) 100%);
 }
 
+.buildingBlocksPanelMedia {
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  min-height: clamp(180px, 20vw, 240px);
+  padding-inline: clamp(12px, 1.5vw, 18px);
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+}
+
+.buildingBlocksPanelMediaFrame {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  align-items: start;
+  justify-items: center;
+}
+
+.buildingBlocksPanelMediaFrameWide {
+  align-items: start;
+}
+
+.buildingBlocksPanelMediaFrameSquare {
+  align-items: center;
+}
+
+.buildingBlocksPanelOverlay {
+  position: relative;
+  width: min(100%, clamp(14rem, 28vw, 22rem));
+  min-height: 0;
+  overflow: visible;
+}
+
+.buildingBlocksPanelOverlayWide {
+  width: min(100%, clamp(16rem, 30vw, 24rem));
+  aspect-ratio: 2.05 / 1;
+  justify-self: center;
+  align-self: start;
+}
+
+.buildingBlocksPanelOverlaySquare {
+  width: min(100%, clamp(12rem, 24vw, 18rem));
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+  align-self: center;
+}
+
+.buildingBlocksPanelLayerBack,
+.buildingBlocksPanelLayerMiddle,
+.buildingBlocksPanelLayerFront {
+  position: absolute;
+}
+
+.buildingBlocksPanelIcons .buildingBlocksPanelLayerBack,
+.buildingBlocksPanelIcons .buildingBlocksPanelLayerFront,
+.buildingBlocksPanelShapes .buildingBlocksPanelLayerBack,
+.buildingBlocksPanelShapes .buildingBlocksPanelLayerMiddle,
+.buildingBlocksPanelShapes .buildingBlocksPanelLayerFront {
+  filter: var(--building-blocks-stack-shadow);
+}
+
+.buildingBlocksPanelLayerBack {
+  top: 10%;
+  right: 0;
+  width: 78%;
+  z-index: 1;
+}
+
+.buildingBlocksPanelLayerFront {
+  left: -10%;
+  bottom: 4%;
+  width: 60%;
+  z-index: 2;
+}
+
+.buildingBlocksPanelLayerBackIcons {
+  top: 12%;
+  left: auto;
+  right: 1%;
+  width: 62%;
+}
+
+.buildingBlocksPanelLayerFrontText {
+  left: -2%;
+  bottom: auto;
+  top: 38%;
+  width: 74%;
+  z-index: 3;
+}
+
+.buildingBlocksPanelFonts .buildingBlocksPanelMedia {
+  min-height: clamp(250px, 20vw, 320px);
+}
+
+.buildingBlocksPanelFonts .buildingBlocksPanelOverlayWide {
+  width: min(100%, clamp(18rem, 34vw, 29rem));
+  aspect-ratio: 1.55 / 1;
+  align-self: start;
+  transform: translateY(2%);
+}
+
+.buildingBlocksPanelFonts .buildingBlocksPanelLayerBack {
+  top: 29%;
+  right: 0;
+  width: 82%;
+}
+
+.buildingBlocksPanelFonts .buildingBlocksPanelLayerFrontText {
+  top: -22%;
+  left: 0;
+  width: 40%;
+}
+
+.buildingBlocksPanelLayerFrontIcons {
+  left: 2%;
+  right: auto;
+  top: 0;
+  bottom: auto;
+  width: 48%;
+  transform: none;
+  filter: var(--building-blocks-side-stack-shadow);
+  z-index: 3;
+}
+
+.buildingBlocksPanelIcons .buildingBlocksPanelMedia {
+  min-height: clamp(250px, 20vw, 320px);
+}
+
+.buildingBlocksPanelIcons .buildingBlocksPanelOverlaySquare {
+  width: min(100%, clamp(18rem, 34vw, 29rem));
+  aspect-ratio: 1.55 / 1;
+  align-self: start;
+}
+
+.buildingBlocksPanelIcons .buildingBlocksPanelLayerFrontIcons .buildingBlocksPanelLayerImage {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 8%, #000 16%, #000 50%, rgba(0, 0, 0, 0.72) 62%, transparent 74%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 8%, #000 16%, #000 80%, rgba(0, 0, 0, 0.72) 88%, transparent 94%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.buildingBlocksPanelLayerFrontFrame {
+  left: -4%;
+  bottom: auto;
+  top: 32%;
+  width: 72%;
+  z-index: 3;
+}
+
+.buildingBlocksPanelShapes .buildingBlocksPanelMedia {
+  min-height: clamp(250px, 20vw, 320px);
+}
+
+.buildingBlocksPanelShapes .buildingBlocksPanelOverlayWide {
+  width: min(100%, clamp(18rem, 34vw, 29rem));
+  aspect-ratio: 1.55 / 1;
+  align-self: start;
+}
+
+.buildingBlocksPanelLayerBackShapes {
+  top: 2%;
+  right: auto;
+  left: 2%;
+  width: 48%;
+  opacity: 0.2;
+}
+
+.buildingBlocksPanelLayerMiddleFrame {
+  top: 32%;
+  left: 56%;
+  width: 54%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.buildingBlocksPanelLayerFrontFrameControls {
+  top: 4%;
+  left: 50%;
+  bottom: auto;
+  width: 105%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.buildingBlocksPanelImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.buildingBlocksPanelLayerImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: unset;
+  object-position: initial;
+  filter: var(--building-blocks-layer-shadow, var(--building-blocks-stack-shadow));
+}
+
+.buildingBlocksPanelIcons,
+.buildingBlocksPanelShapes {
+  --building-blocks-layer-shadow: none;
+}
+
+.buildingBlocksPanelLayerImageMuted {
+  opacity: 0.56;
+  border-radius: 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.buildingBlocksPanelCopy {
+  display: grid;
+  gap: 8px;
+  align-content: end;
+  padding: 16px clamp(14px, 1.4vw, 18px) clamp(18px, 1.8vw, 24px) clamp(20px, 2vw, 28px);
+}
+
 .buildingBlocksPanelKicker {
   color: var(--text-secondary);
 }
@@ -453,141 +684,10 @@
   color: var(--text-primary);
 }
 
-.fontSamples {
-  display: grid;
-  gap: clamp(4px, 2.1cqi, 8px);
-}
-
-.fontSamples > span {
-  display: block;
-}
-
-.fontSampleSerif {
-  font-family: var(--font-marketing-heading), serif;
-  font-size: clamp(0.9rem, 5.4cqi, 1.25rem);
-  letter-spacing: -0.03em;
-}
-
-.fontSampleScript {
-  font-family: "Times New Roman", Georgia, serif;
-  font-size: clamp(0.78rem, 4.7cqi, 1.08rem);
-  font-style: italic;
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
-}
-
-.fontSampleCaps {
-  font-size: clamp(0.58rem, 3.2cqi, 0.74rem);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.iconCategoryGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(5px, 2.2cqi, 10px);
-}
-
-.iconCategoryChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: clamp(4px, 1.8cqi, 7px) clamp(5px, 2.4cqi, 9px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--text-primary);
-  font-size: clamp(0.58rem, 3cqi, 0.76rem);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
-}
-
-.iconCategoryGlyph {
-  flex: 0 0 auto;
-  width: clamp(12px, 5cqi, 18px);
-  height: clamp(12px, 5cqi, 18px);
-}
-
-.shapesFramePreview {
-  display: grid;
-  justify-items: center;
-  padding-top: 0;
-}
-
-.framePreviewOuter {
-  display: grid;
-  place-items: center;
-  width: min(100%, clamp(76px, 34cqi, 124px));
-  aspect-ratio: 1.12 / 1;
-  padding: clamp(5px, 2.2cqi, 8px);
-  border: 2px solid rgba(42, 74, 68, 0.48);
-  border-radius: clamp(12px, 5cqi, 18px);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.35)),
-    linear-gradient(135deg, rgba(133, 194, 171, 0.22), rgba(114, 151, 229, 0.2));
-}
-
-.framePreviewInner {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  border: 1.5px dashed rgba(42, 74, 68, 0.36);
-  border-radius: clamp(8px, 3.8cqi, 12px);
-}
-
-.framePreviewInner::before,
-.framePreviewInner::after {
-  content: "";
-  position: absolute;
-  width: clamp(8px, 4cqi, 14px);
-  height: clamp(8px, 4cqi, 14px);
-  border-radius: 4px;
-  background: rgba(42, 74, 68, 0.18);
-}
-
-.framePreviewInner::before {
-  left: clamp(5px, 2.4cqi, 10px);
-  top: clamp(5px, 2.4cqi, 10px);
-}
-
-.framePreviewInner::after {
-  right: clamp(5px, 2.4cqi, 10px);
-  bottom: clamp(5px, 2.4cqi, 10px);
-  transform: rotate(45deg);
-}
-
-.framePreviewRibbon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: clamp(44px, 18cqi, 62px);
-  padding: clamp(3px, 1.5cqi, 6px) clamp(6px, 2.8cqi, 10px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 8px 18px rgba(20, 24, 36, 0.08);
-  font-size: clamp(0.54rem, 2.6cqi, 0.72rem);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.shapesTagList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(4px, 1.8cqi, 6px);
-}
-
-.shapeTag {
-  display: inline-flex;
-  align-items: center;
-  padding: clamp(3px, 1.4cqi, 5px) clamp(5px, 2.2cqi, 8px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.66);
-  font-size: clamp(0.56rem, 2.5cqi, 0.72rem);
-  font-weight: 600;
+.buildingBlocksPanelBody {
+  color: var(--text-secondary);
+  max-width: 28ch;
+  text-wrap: pretty;
 }
 
 .featuresIntro {
@@ -1159,12 +1259,6 @@
     gap: 24px;
   }
 
-  .buildingBlocksLayout {
-    grid-template-columns: minmax(0, 1.58fr) minmax(14rem, 1fr);
-    gap: clamp(14px, 1.6vw, 22px);
-    align-items: start;
-  }
-
   .waitlistQuickForm {
     grid-template-columns: 1fr;
   }
@@ -1177,12 +1271,15 @@
   }
 
   .buildingBlocksPanelGrid {
-    grid-template-rows: repeat(3, minmax(0, auto));
-    min-height: auto;
+    grid-template-columns: 1fr;
   }
 
   .buildingBlocksPanel {
-    min-height: 210px;
+    min-height: auto;
+  }
+
+  .buildingBlocksPreviewFrame {
+    aspect-ratio: 6 / 5;
   }
 }
 

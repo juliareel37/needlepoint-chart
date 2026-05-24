@@ -55,30 +55,130 @@ const featureCards = [
   },
 ] as const;
 
-const buildingBlockCategoryIcons = [
+type BuildingBlockPanelImageLayer = {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className: string;
+  imageClassName?: string;
+};
+
+type BuildingBlockPanelMedia =
+  | {
+      kind: "single";
+      image: BuildingBlockPanelImageLayer;
+    }
+  | {
+      kind: "stacked";
+      frameClassName?: string;
+      overlayClassName?: string;
+      layers: BuildingBlockPanelImageLayer[];
+    };
+
+type BuildingBlockPanel = {
+  kicker: string;
+  title: string;
+  body: string;
+  className: string;
+  media: BuildingBlockPanelMedia;
+};
+
+const buildingBlockPanels: readonly BuildingBlockPanel[] = [
   {
-    label: "cocktails",
-    src: "/icons/shapes/food%20%26%20drink/cocktail-3.svg",
+    kicker: "Typography",
+    title: "Fonts",
+    body: "Mix monograms, scripts, and label-ready lettering without leaving the canvas.",
+    className: "buildingBlocksPanelFonts",
+    media: {
+      kind: "stacked",
+      frameClassName: "buildingBlocksPanelMediaFrameWide",
+      overlayClassName: "buildingBlocksPanelOverlayWide",
+      layers: [
+        {
+          src: "/ui/canvas-text-pink-right.png",
+          alt: "Editor canvas showing text placed in a design",
+          width: 1842,
+          height: 1176,
+          className: "buildingBlocksPanelLayerBack",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+        {
+          src: "/ui/font-menu-green-hover.png",
+          alt: "Text settings panel displayed over the editor canvas",
+          width: 376,
+          height: 824,
+          className: "buildingBlocksPanelLayerFront buildingBlocksPanelLayerFrontText",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+      ],
+    },
   },
   {
-    label: "pets",
-    src: "/icons/shapes/animals/dog-face-puppy.svg",
+    kicker: "Illustration",
+    title: "Icon Library",
+    body: "Browse ready-made motifs and drop in stitch-friendly shapes for themed layouts fast.",
+    className: "buildingBlocksPanelIcons",
+    media: {
+      kind: "stacked",
+      frameClassName: "buildingBlocksPanelMediaFrameSquare",
+      overlayClassName: "buildingBlocksPanelOverlaySquare",
+      layers: [
+        {
+          src: "/ui/icon-canvas-lemon-small.png",
+          alt: "Editor canvas showing multiple icon elements",
+          width: 1920,
+          height: 1080,
+          className: "buildingBlocksPanelLayerBack buildingBlocksPanelLayerBackIcons",
+          imageClassName: "buildingBlocksPanelLayerImage buildingBlocksPanelLayerImageMuted",
+        },
+        {
+          src: "/ui/graphics-menu.png",
+          alt: "Icon library panel displayed over the editor canvas",
+          width: 664,
+          height: 698,
+          className: "buildingBlocksPanelLayerFront buildingBlocksPanelLayerFrontIcons",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+      ],
+    },
   },
   {
-    label: "travel",
-    src: "/icons/shapes/metropolitan/plane.svg",
-  },
-  {
-    label: "holidays",
-    src: "/icons/shapes/seasonal/gift.svg",
-  },
-  {
-    label: "food",
-    src: "/icons/shapes/food%20%26%20drink/cherries.svg",
-  },
-  {
-    label: "sports",
-    src: "/icons/shapes/games%20%26%20activities/football.svg",
+    kicker: "Layout",
+    title: "Shapes + Frames",
+    body: "Wrap designs with labels, borders, and geometric structures that stay crisp in pattern form.",
+    className: "buildingBlocksPanelShapes",
+    media: {
+      kind: "stacked",
+      frameClassName: "buildingBlocksPanelMediaFrameWide",
+      overlayClassName: "buildingBlocksPanelOverlayWide",
+      layers: [
+        {
+          src: "/ui/frame-menu.png",
+          alt: "Editor canvas showing frame and label elements on a design",
+          width: 1920,
+          height: 1080,
+          className: "buildingBlocksPanelLayerBack buildingBlocksPanelLayerBackShapes",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+        {
+          src: "/ui/frame-canvas-double-scallop.png",
+          alt: "Selected double scallop frame on the canvas",
+          width: 1014,
+          height: 970,
+          className: "buildingBlocksPanelLayerMiddle buildingBlocksPanelLayerMiddleFrame",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+        {
+          src: "/ui/double-scallop-frame-controls.png",
+          alt: "Frame controls displayed over the editor canvas",
+          width: 1178,
+          height: 226,
+          className: "buildingBlocksPanelLayerFront buildingBlocksPanelLayerFrontFrameControls",
+          imageClassName: "buildingBlocksPanelLayerImage",
+        },
+      ],
+    },
   },
 ] as const;
 
@@ -459,76 +559,83 @@ export default function Page() {
                   alt="Editor preview showing the design workspace and sidebar tools"
                   width={2940}
                   height={1472}
-                  sizes="(max-width: 1100px) 100vw, 68vw"
+                  sizes="(max-width: 1100px) 100vw, 90vw"
                   className={styles.buildingBlocksPreviewImage}
                 />
               </div>
             </article>
 
             <div className={styles.buildingBlocksPanelGrid}>
-              <article
-                className={[
-                  styles.buildingBlocksPanel,
-                  styles.buildingBlocksPanelFonts,
-                ].join(" ")}
-              >
-                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
-                  Panel 1
-                </p>
-                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
-                  Fonts
-                </h3>
-                <div className={styles.fontSamples} aria-label="Font style examples">
-                  <span className={styles.fontSampleSerif}>Monogram Magic</span>
-                  <span className={styles.fontSampleScript}>stitch club</span>
-                  <span className={styles.fontSampleCaps}>WIPPA LABEL SET</span>
-                </div>
-              </article>
-
-              <article className={[styles.buildingBlocksPanel, styles.buildingBlocksPanelIcons].join(" ")}>
-                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
-                  Panel 2
-                </p>
-                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
-                  Icon Library
-                </h3>
-                <div className={styles.iconCategoryGrid}>
-                  {buildingBlockCategoryIcons.map((item) => (
-                    <div key={item.label} className={styles.iconCategoryChip}>
-                      <Image src={item.src} alt="" width={20} height={20} className={styles.iconCategoryGlyph} />
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article
-                className={[
-                  styles.buildingBlocksPanel,
-                  styles.buildingBlocksPanelShapes,
-                ].join(" ")}
-              >
-                <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
-                  Panel 3
-                </p>
-                <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
-                  Shapes + Frames
-                </h3>
-                <div className={styles.shapesFramePreview} aria-hidden="true">
-                  <div className={styles.framePreviewOuter}>
-                    <div className={styles.framePreviewInner}>
-                      <span className={styles.framePreviewRibbon}>label</span>
-                    </div>
+              {buildingBlockPanels.map((panel) => (
+                <article
+                  key={panel.title}
+                  className={[styles.buildingBlocksPanel, styles[panel.className]].join(" ")}
+                >
+                  <div className={styles.buildingBlocksPanelMedia}>
+                    {panel.media.kind === "single" ? (
+                      <Image
+                        src={panel.media.image.src}
+                        alt={panel.media.image.alt}
+                        width={panel.media.image.width}
+                        height={panel.media.image.height}
+                        sizes="(max-width: 980px) 100vw, 30vw"
+                        className={[
+                          styles.buildingBlocksPanelImage,
+                          panel.media.image.imageClassName ? styles[panel.media.image.imageClassName] : "",
+                        ].join(" ")}
+                      />
+                    ) : (
+                      <div
+                        className={[
+                          styles.buildingBlocksPanelMediaFrame,
+                          panel.media.frameClassName ? styles[panel.media.frameClassName] : "",
+                        ].join(" ")}
+                        aria-hidden="true"
+                      >
+                        <div
+                          className={[
+                            styles.buildingBlocksPanelOverlay,
+                            panel.media.overlayClassName ? styles[panel.media.overlayClassName] : "",
+                          ].join(" ")}
+                        >
+                          {panel.media.layers.map((layer) => (
+                            <div
+                              key={layer.src}
+                              className={layer.className
+                                .split(" ")
+                                .map((className) => styles[className])
+                                .join(" ")}
+                            >
+                              <Image
+                                src={layer.src}
+                                alt={layer.alt}
+                                width={layer.width}
+                                height={layer.height}
+                                sizes="(max-width: 980px) 100vw, 30vw"
+                                className={[
+                                  styles.buildingBlocksPanelImage,
+                                  layer.imageClassName ? styles[layer.imageClassName] : "",
+                                ].join(" ")}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className={styles.shapesTagList}>
-                  {["borders", "ribbons", "labels", "geometric shapes"].map((item) => (
-                    <span key={item} className={styles.shapeTag}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </article>
+                  <div className={styles.buildingBlocksPanelCopy}>
+                    {/* <p className={styles.buildingBlocksPanelKicker} style={marketingTypographyStyles.eyebrow}>
+                      {panel.kicker}
+                    </p> */}
+                    <h3 className={styles.buildingBlocksPanelTitle} style={marketingTypographyStyles.featureTitle}>
+                      {panel.title}
+                    </h3>
+                    <p className={styles.buildingBlocksPanelBody} style={marketingTypographyStyles.bodySm}>
+                      {panel.body}
+                    </p>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
