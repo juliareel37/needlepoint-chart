@@ -182,6 +182,49 @@ const buildingBlockPanels: readonly BuildingBlockPanel[] = [
   },
 ] as const;
 
+const workflowCards = [
+  {
+    title: "Import",
+    body: "Start from a favorite image and translate it into a stitchable foundation.",
+    image: {
+      src: "/ui/upload-image.png",
+      alt: "Upload image panel for adding source artwork to the editor",
+      width: 1536,
+      height: 1024,
+    },
+  },
+  {
+    title: "Convert",
+    body: "Tune the chart conversion until the preview matches the way you want to stitch.",
+    image: {
+      src: "/ui/convert-image.png",
+      alt: "Pattern conversion controls shown beside a canvas preview",
+      width: 1536,
+      height: 1024,
+    },
+  },
+  {
+    title: "Refine",
+    body: "Edit colors, details, and layout with tools that stay close to the canvas.",
+    image: {
+      src: "/ui/selection_tools.png",
+      alt: "Selection tools displayed in the needlepoint chart editor",
+      width: 1536,
+      height: 1024,
+    },
+  },
+  {
+    title: "Palette",
+    body: "Keep design colors organized as you build toward a clean finished chart.",
+    image: {
+      src: "/ui/design-colors-list.png",
+      alt: "Design color list in the editor sidebar",
+      width: 1536,
+      height: 1024,
+    },
+  },
+] as const;
+
 type WaitlistStatus =
   | { tone: "success"; title: string; description: string }
   | { tone: "destructive"; title: string; description: string }
@@ -393,14 +436,16 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              Designing your own needlepoint patterns just got easier
+              A better way to start your WIPs.
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
-            A better way to create, refine, and finish your designs,
-            so every pattern starts as a work in progress and ends exactly how you want it.
+              Meet Wippa, a needlepoint pattern editing tool designed to make your creative process smoother, faster, and more enjoyable. 
+              Go from idea to stitch-ready pattern in minutes.
+
+
             </p>
             {!waitlistStatus && (showPendingApprovalNotice || showApprovalRequiredNotice) ? (
               <Notification
@@ -552,7 +597,7 @@ export default function Page() {
           </div>
 
           <div className={styles.buildingBlocksLayout}>
-            <article className={styles.buildingBlocksPreviewCard}>
+            {/* <article className={styles.buildingBlocksPreviewCard}>
               <div className={styles.buildingBlocksPreviewFrame}>
                 <Image
                   src="/ui/editor-dachsund-color-tab.png"
@@ -563,7 +608,7 @@ export default function Page() {
                   className={styles.buildingBlocksPreviewImage}
                 />
               </div>
-            </article>
+            </article> */}
 
             <div className={styles.buildingBlocksPanelGrid}>
               {buildingBlockPanels.map((panel) => (
@@ -640,6 +685,52 @@ export default function Page() {
           </div>
         </section>
 
+        {/* <section className={styles.workflowSection} aria-labelledby="workflow-heading">
+          <div className={styles.workflowIntro}>
+            <div>
+              <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>
+                Pattern workflow
+              </p>
+              <h2
+                id="workflow-heading"
+                className={styles.sectionTitle}
+                style={marketingTypographyStyles.sectionTitle}
+              >
+                Move from source artwork to an organized chart without losing momentum.
+              </h2>
+            </div>
+            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+              Each step keeps the design visible, editable, and grounded in the choices
+              stitchers actually need before printing or exporting.
+            </p>
+          </div>
+
+          <div className={styles.workflowCardGrid}>
+            {workflowCards.map((card) => (
+              <article key={card.title} className={styles.workflowCard}>
+                <div className={styles.workflowCardCopy}>
+                  <h3 className={styles.workflowCardTitle} style={marketingTypographyStyles.featureTitle}>
+                    {card.title}
+                  </h3>
+                  <p className={styles.workflowCardBody} style={marketingTypographyStyles.bodySm}>
+                    {card.body}
+                  </p>
+                </div>
+                <div className={styles.workflowCardMedia}>
+                  <Image
+                    src={card.image.src}
+                    alt={card.image.alt}
+                    width={card.image.width}
+                    height={card.image.height}
+                    sizes="(max-width: 680px) 100vw, (max-width: 1100px) 50vw, 42vw"
+                    className={styles.workflowCardImage}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section> */}
+
         {/* <section className={styles.features} id="features">
           <div className={styles.featuresIntro}>
             <div>
@@ -680,9 +771,9 @@ export default function Page() {
                 className={styles.sectionTitle}
                 style={marketingTypographyStyles.sectionTitle}
               >
-                Creative tools built 
-                <span className={styles.sectionTitleEmphasis}> specifically </span>
-                for stitched canvases
+                Pattern design made faster and easier for everyone
+                {/* <span className={styles.sectionTitleEmphasis}> specifically </span>
+                for stitched canvases */}
               </h2>
             </div>
             {/* <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
@@ -696,15 +787,15 @@ export default function Page() {
               <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Flexible editing tools
+                    Paint and edit with precision
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                Select, move, duplicate, erase, and refine designs with tools built for fast, intuitive editing.                      </p>
+              Every tool you need (and more) to create and edit pattern canvases just the way you want them, in a seamless and intuitive editing interface.                  </p>
                 </div>
                 <div className={styles.bentoVisualFrame} aria-hidden="true">
                   <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
                     <Image
-                      src="/ui/copy-tool-new.png"
+                      src="/ui/cut-tool-ss.png"
                       alt=""
                       width={1600}
                       height={1000}
@@ -714,190 +805,62 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={[styles.bentoCard, styles.bentoCardSecondary].join(" ")}>
+              <article className={[styles.bentoCard, styles.bentoCardQuaternary, styles.bentoCardRightStack].join(" ")}>
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Turn any image into a pattern
-                  </h3>
-                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    Upload a photo, choose your color count and smoothing — get a stitch-ready pattern in seconds.
-                  </p>
-                </div>
-                <div className={styles.bentoVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoVisualAsset, styles.bentoVisualSecondary].join(" ")}>
-                    <Image
-                      src="/ui/convert-pattern-line.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                      className={styles.bentoVisualImage}
-                    />
-                  </div>
-                </div>
-              </article>
-            </div>
-
-            <div className={[styles.bentoGrid, styles.bentoGridBottom].join(" ")}>
-              <article className={[styles.bentoCard, styles.bentoCardTertiary, styles.bentoCardImageFirst].join(" ")}>
-                <div className={styles.bentoVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoVisualAsset, styles.bentoVisualTertiary].join(" ")}>
-                    <Image
-                      src="/ui/custom-palettes-simple.png"
-                      alt=""
-                      width={1200}
-                      height={1400}
-                      // className={styles.bentoVisualImage}
-                    />
-                  </div>
-                </div>
-                <div className={styles.bentoCopy}>
-                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                  Custom palettes
-                  </h3>
-                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    Build palettes from your own thread inventory or favorite shades 
-                    and reuse them across projects.
-                  </p>
-                </div>
-              </article>
-
-              <article className={[styles.bentoCard, styles.bentoCardQuaternary].join(" ")}>
-                <div className={styles.bentoSplitLayout}>
-                  <div className={[styles.bentoCopy, styles.bentoSplitCopy].join(" ")}>
-                    <h3 className={styles.bentoTitleStacked} style={marketingTypographyStyles.featureTitle}>
-                      Built-in graphics library
-                    </h3>
-                    <p className={styles.bentoBodyStacked} style={marketingTypographyStyles.bodySm}>
-                      Drop in icons or frames or upload your own elements to add to your pattern without breaking your flow.
-                    </p>
-                  </div>
-                  <div className={styles.bentoOverlayVisual} aria-hidden="true">
-                    <div className={[styles.bentoVisualAsset, styles.bentoVisualQuaternaryBack].join(" ")}>
-                      <Image 
-                      src="/ui/canvas-wide.png"
-                      alt=""
-                      width={1200}
-                      height={1400}
-                      className={styles.bentoPlaceholderBack} 
-                    />
-                    </div>
-                    <div className={[styles.bentoVisualAsset, styles.bentoVisualQuaternaryFront].join(" ")}>
-                      <Image 
-                      src="/ui/canvas-lemon.png"
-                      alt=""
-                      width={1200}
-                      height={1400}
-                      className={styles.bentoPlaceholderFront} 
-                      />
-                    </div>
-                  </div>
-                </div>
-              </article>
-            </div>
-
-               <div className={[styles.bentoGrid, styles.bentoGridTop, styles.bentoGridTopCompact].join(" ")}>
-              <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
-                <div className={styles.bentoCopy}>
-                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Convert text to stitches
-                  </h3>
-                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    Insert text and choose from dozens of fonts to instantly convert to pattern stitches.
-                  </p>
-                </div>
-                <div className={styles.bentoStackedVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualCompact].join(" ")}>
-                    <div
-                      className={[
-                        styles.bentoVisualAsset,
-                        styles.bentoVisualQuaternaryBack,
-                        styles.bentoVisualCompactBack,
-                      ].join(" ")}
-                    >
-                      <Image
-                        src="/ui/canvas-text-pink.png"
-                        alt=""
-                        width={1200}
-                        height={1400}
-                        className={styles.bentoPlaceholderBack}
-                      />
-                    </div>
-                    <div
-                      className={[
-                        styles.bentoVisualAsset,
-                        styles.bentoVisualQuaternaryFront,
-                        styles.bentoVisualCompactFront,
-                      ].join(" ")}
-                    >
-                      <Image
-                        src="/ui/text-settings-pink.png"
-                        alt=""
-                        width={1200}
-                        height={1400}
-                        className={styles.bentoPlaceholderFront}
-                      />
-                    </div>
-                  </div>
-                  {/* <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
-                    <Image
-                      src="/ui/copy-tool-new.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                      className={styles.bentoVisualImage}
-                    />
-                  </div> */}
-
-                  
-                </div>
-              </article>
-
-              <article className={[styles.bentoCard, styles.bentoCardSecondary, styles.bentoCardRightStack].join(" ")}>
-                <div className={styles.bentoCopy}>
-                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Edit design colors with ease
+                  Design color management
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
                     See every color in your design with stitch counts, and merge similar shades or bulk delete shades with low usage.
                   </p>
                 </div>
-                <div className={styles.bentoStackedVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")}>
-                    <div
-                      className={[
-                        styles.bentoVisualAsset,
-                        styles.bentoVisualQuaternaryBack,
-                        styles.bentoVisualRightStackBack,
-                      ].join(" ")}
-                    >
-                      <Image
-                        src="/ui/design-colors-list.png"
-                        alt=""
-                        width={1600}
-                        height={1000}
-                        className={styles.bentoPlaceholderBack}
-                      />
-                    </div>
-                    <div
-                      className={[
-                        styles.bentoVisualAsset,
-                        styles.bentoVisualQuaternaryFront,
-                        styles.bentoVisualRightStackFront,
-                      ].join(" ")}
-                    >
-                      <Image
-                        src="/ui/merge-selection-bar.png"
-                        alt=""
-                        width={1600}
-                        height={1000}
-                        // className={styles.bentoPlaceholderWideFront}
-                      />
-                    </div>
+                <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")} aria-hidden="true">
+                  <div
+                    className={[
+                      styles.bentoVisualAsset,
+                      styles.bentoVisualQuaternaryBack,
+                      styles.bentoVisualRightStackBack,
+                    ].join(" ")}
+                  >
+                    <Image
+                      src="/ui/selection-canvas-dog.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                      className={styles.bentoPlaceholderBack}
+                    />
+                  </div>
+                  <div
+                    className={[
+                      styles.bentoVisualAsset,
+                      styles.bentoVisualQuaternaryFront,
+                      styles.bentoVisualRightStackMiddle,
+                    ].join(" ")}
+                  >
+                    <Image
+                      src="/ui/selection-card.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                    />
+                  </div>
+                  <div
+                    className={[
+                      styles.bentoVisualAsset,
+                      styles.bentoVisualQuaternaryFront,
+                      styles.bentoVisualRightStackFront,
+                    ].join(" ")}
+                  >
+                    <Image
+                      src="/ui/selection-bar.png"
+                      alt=""
+                      width={1600}
+                      height={1000}
+                    />
                   </div>
                 </div>
               </article>
             </div>
-
 
           </div>
         </section>

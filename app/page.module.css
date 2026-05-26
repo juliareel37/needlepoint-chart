@@ -355,7 +355,11 @@
   margin: 0 auto;
   display: grid;
   gap: clamp(28px, 4vw, 44px);
-  padding-inline: var(--landing-page-gutter);
+  padding-inline: clamp(
+    var(--landing-page-gutter),
+    7vw,
+    calc(var(--landing-page-gutter) + 88px)
+  );
 }
 
 .buildingBlocksIntro {
@@ -690,6 +694,96 @@
   text-wrap: pretty;
 }
 
+.workflowSection {
+  box-sizing: border-box;
+  width: min(1680px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(28px, 4vw, 44px);
+  padding-inline: var(--landing-page-gutter);
+}
+
+.workflowIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: end;
+}
+
+.workflowCardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+}
+
+.workflowCard {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: clip;
+  border-radius: clamp(18px, 1.5vw, 24px);
+  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, white);
+  background:
+    radial-gradient(circle at 84% 12%, rgba(255, 255, 255, 0.78), transparent 25%),
+    linear-gradient(150deg, color-mix(in srgb, white 54%, #eef6e8) 0%, color-mix(in srgb, white 20%, #d8ecff) 100%);
+  box-shadow: 0 18px 38px rgba(20, 24, 36, 0.08);
+}
+
+.workflowCard:nth-child(2) {
+  background:
+    radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.78), transparent 25%),
+    linear-gradient(150deg, color-mix(in srgb, white 42%, #ffe4d6) 0%, color-mix(in srgb, white 22%, #f0d8ef) 100%);
+}
+
+.workflowCard:nth-child(3) {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.74), transparent 24%),
+    linear-gradient(155deg, color-mix(in srgb, white 40%, #d7f0e4) 0%, color-mix(in srgb, white 18%, #eadbff) 100%);
+}
+
+.workflowCard:nth-child(4) {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.78), transparent 25%),
+    linear-gradient(150deg, color-mix(in srgb, white 44%, #d7ebff) 0%, color-mix(in srgb, white 22%, #e8f3df) 100%);
+}
+
+.workflowCardCopy {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: clamp(18px, 2vw, 28px) clamp(20px, 2.4vw, 34px) 14px;
+}
+
+.workflowCardTitle {
+  color: var(--text-primary);
+}
+
+.workflowCardBody {
+  max-width: 36ch;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.workflowCardMedia {
+  box-sizing: border-box;
+  min-height: clamp(220px, 28vw, 420px);
+  padding: 0 clamp(14px, 1.6vw, 24px) clamp(14px, 1.6vw, 24px);
+  display: grid;
+  align-items: end;
+}
+
+.workflowCardImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: clamp(14px, 1.2vw, 18px);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  object-fit: cover;
+  object-position: top center;
+  box-shadow: 0 16px 32px rgba(12, 18, 28, 0.13);
+}
+
 .featuresIntro {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
@@ -745,7 +839,11 @@
   margin: 0 auto;
   display: grid;
   gap: clamp(32px, 4vw, 48px);
-  padding-inline: var(--landing-page-gutter);
+  padding-inline: clamp(
+    var(--landing-page-gutter),
+    7vw,
+    calc(var(--landing-page-gutter) + 88px)
+  );
 }
 
 .bentoIntro {
@@ -767,7 +865,15 @@
 }
 
 .bentoGridTop {
-  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bentoGridTop .bentoCard {
+  grid-template-rows: auto auto;
+  align-content: start;
+  min-height: auto;
+  gap: 18px;
+  padding: clamp(18px, 1.8vw, 24px);
 }
 
 .bentoGridTopCompact {
@@ -876,6 +982,10 @@
   align-content: start;
 }
 
+.bentoGridTop .bentoCardRightStack {
+  grid-template-rows: auto auto;
+}
+
 .bentoSplitLayout {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
@@ -947,12 +1057,45 @@
 }
 
 .bentoVisualPrimary {
-  width: min(100%, 700px);
+  width: min(82%, clamp(360px, 34vw, 540px));
+}
+
+.bentoGridTop .bentoVisualFrame {
+  min-height: 0;
+}
+
+.bentoGridTop .bentoVisualAsset {
+  align-self: end;
+}
+
+.bentoGridTop .bentoVisualImage {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  object-fit: contain;
+}
+
+.bentoGridTop .bentoCardPrimary .bentoVisualFrame {
+  justify-items: center;
+  align-self: end;
+  margin-bottom: calc(-1 * clamp(18px, 1.8vw, 24px));
+}
+
+.bentoGridTop .bentoCardPrimary .bentoVisualPrimary {
+  justify-self: center;
 }
 
 .bentoVisualSecondary {
-  width: min(100%, 380px);
+  width: min(100%, 260px);
   justify-self: end;
+}
+
+.bentoGridTop .bentoCardSecondary .bentoVisualFrame {
+  justify-items: end;
+}
+
+.bentoGridTop .bentoCardSecondary .bentoVisualImage {
+  max-height: 170px;
 }
 
 .bentoVisualTertiary {
@@ -1007,10 +1150,10 @@
 }
 
 .bentoOverlayVisualRightStack {
-  width: min(100%, clamp(15rem, 24vw, 20rem));
-  aspect-ratio: 1 / 1;
+  width: min(82%, clamp(15rem, 26vw, 23rem));
+  aspect-ratio: 1.35 / 1;
   justify-self: center;
-  align-self: start;
+  align-self: end;
   transform: none;
 }
 
@@ -1044,19 +1187,28 @@
 }
 
 .bentoVisualRightStackBack {
-  top: 10%;
-  left: -8%;
+  top: 9%;
+  left: 44%;
   right: auto;
-  width: 84%;
+  width: 68%;
+}
+
+.bentoVisualRightStackMiddle {
+  top: 4%;
+  left: 4%;
+  right: auto;
+  bottom: auto;
+  width: 42%;
+  z-index: 2;
 }
 
 .bentoVisualRightStackFront {
-  top: 50%;
+  top: auto;
   left: auto;
-  right: -10%;
-  bottom: auto;
-  width: 86%;
-  transform: translateY(-50%);
+  right: 50%;
+  bottom: 6%;
+  width: 46%;
+  transform: none;
   z-index: 3;
 }
 
@@ -1067,14 +1219,21 @@
 }
 
 .bentoVisualRightStackBack :global(img) {
-  opacity: 0.5;
-  border-radius: 28px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  opacity: 1;
+  border-radius: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
+}
+
+.bentoVisualRightStackMiddle :global(img),
+.bentoVisualRightStackFront :global(img) {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .bentoPlaceholderFront {
@@ -1259,6 +1418,11 @@
     gap: 24px;
   }
 
+  .workflowIntro {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
   .waitlistQuickForm {
     grid-template-columns: 1fr;
   }
@@ -1280,6 +1444,10 @@
 
   .buildingBlocksPreviewFrame {
     aspect-ratio: 6 / 5;
+  }
+
+  .workflowCardMedia {
+    min-height: clamp(220px, 42vw, 360px);
   }
 }
 
@@ -1355,6 +1523,10 @@
   }
 
   .buildingBlocksPanelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflowCardGrid {
     grid-template-columns: 1fr;
   }
 
@@ -1451,6 +1623,7 @@
 
   .heroCopy,
   .buildingBlocksSection,
+  .workflowSection,
   .features,
   .bentoSection,
   .footerInner {
