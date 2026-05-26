@@ -436,7 +436,7 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              A better way to start your WIPs.
+              A better way to create your WIPs.
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>
@@ -579,21 +579,18 @@ export default function Page() {
         <section className={styles.buildingBlocksSection} aria-labelledby="building-blocks-heading">
           <div className={styles.buildingBlocksIntro}>
             <div>
-              <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>
-                Design building blocks
-              </p>
               <h2
                 id="building-blocks-heading"
                 className={styles.sectionTitle}
                 style={marketingTypographyStyles.sectionTitle}
               >
-                Build with text, icons, graphics, and frames that convert cleanly to stitches.
+              Drag, drop, done - get going on your canvas in minutes
               </h2>
+              <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+                Add text, icons, frames, and shapes directly onto your pattern and instantly convert them into painted canvas cells.
+                No manual tracing. No clunky workflows.
+              </p>
             </div>
-            <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
-              The editor comes stocked with ready-to-use ingredients, so you can compose,
-              customize, and finish a pattern without bouncing between tools.
-            </p>
           </div>
 
           <div className={styles.buildingBlocksLayout}>
@@ -775,11 +772,10 @@ export default function Page() {
                 {/* <span className={styles.sectionTitleEmphasis}> specifically </span>
                 for stitched canvases */}
               </h2>
+              <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+                Core editing tools for the moments that matter most, plus supporting features that keep your pattern organized from first draft to final export.
+              </p>
             </div>
-            {/* <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
-              A more detailed look at the product experience: expressive tools, clearer previews,
-              and export moments that feel as finished as the design itself.
-            </p> */}
           </div>
 
           <div className={styles.bentoRows}>
@@ -790,7 +786,7 @@ export default function Page() {
                     Paint and edit with precision
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-              Every tool you need (and more) to create and edit pattern canvases just the way you want them, in a seamless and intuitive editing interface.                  </p>
+              Every tool you need (and more) to create and edit patterns just the way you want them, in a seamless and intuitive editing interface.                  </p>
                 </div>
                 <div className={styles.bentoVisualFrame} aria-hidden="true">
                   <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
@@ -858,6 +854,51 @@ export default function Page() {
                       height={1000}
                     />
                   </div>
+                </div>
+              </article>
+            </div>
+
+            <div className={styles.bentoSupportGrid}>
+              <article className={styles.bentoSupportCard}>
+                <span className={styles.bentoSupportIcon} aria-hidden="true">
+                  <Image src="/icons/lucide/image.svg" alt="" width={20} height={20} />
+                </span>
+                <div className={styles.bentoSupportCopy}>
+                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                    Upload images
+                  </h3>
+                  <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
+                    Use your own images as a traceable background, or convert to painted cells.
+                    Clean up your image right in the editor with the magic eraser.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.bentoSupportCard}>
+                <span className={styles.bentoSupportIcon} aria-hidden="true">
+                  <Image src="/icons/lucide/palette.svg" alt="" width={20} height={20} />
+                </span>
+                <div className={styles.bentoSupportCopy}>
+                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                    Custom palettes
+                  </h3>
+                  <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
+                    Build reusable palettes from favorite shades, thread inventory, or project-specific color rules.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.bentoSupportCard}>
+                <span className={styles.bentoSupportIcon} aria-hidden="true">
+                  <Image src="/icons/lucide/download.svg" alt="" width={20} height={20} />
+                </span>
+                <div className={styles.bentoSupportCopy}>
+                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                    Export stitch-ready PDFs
+                  </h3>
+                  <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
+                    Generate full-color symbol charts with DMC codes, stitch counts, and skein estimates.
+                  </p>
                 </div>
               </article>
             </div>

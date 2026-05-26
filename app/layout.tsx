@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist_Mono, Manrope } from "next/font/google";
+import { Figtree, Fraunces, Geist_Mono } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
@@ -10,7 +10,7 @@ import AppHeaderNav from "@/components/app/AppHeaderNav";
 import { getCurrentUserThemePreference } from "@/lib/auth/server";
 import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
 
-const uiSans = Manrope({
+const uiSans = Figtree({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
