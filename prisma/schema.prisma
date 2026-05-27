@@ -26,6 +26,12 @@ enum WaitlistApplicationStatus {
   REJECTED
 }
 
+enum WaitlistSubmissionAttemptStatus {
+  APPROVED
+  REJECTED
+  DUPLICATE
+}
+
 model AppUser {
   id              String              @id @default(cuid())
   createdAt       DateTime            @default(now())
@@ -67,10 +73,33 @@ model WaitlistApplication {
   accountCreatedAt   DateTime?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
+  submissionAttempts WaitlistSubmissionAttempt[]
 
   @@unique([email])
   @@index([status, createdAt])
   @@index([inviteTokenExpiresAt])
+}
+
+model WaitlistSubmissionAttempt {
+  id                    String                          @id @default(cuid())
+  status                WaitlistSubmissionAttemptStatus
+  rejectionReason       String?
+  email                 String?
+  normalizedEmail       String?
+  experienceLevel       String?
+  currentTools          String?
+  freeformResponse      String?
+  ipAddressHash         String?
+  userAgent             String?
+  waitlistApplicationId String?
+  createdAt             DateTime                        @default(now())
+
+  waitlistApplication WaitlistApplication? @relation(fields: [waitlistApplicationId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([normalizedEmail])
+  @@index([ipAddressHash, createdAt])
+  @@index([waitlistApplicationId])
 }
 
 model FeaturedGraphic {

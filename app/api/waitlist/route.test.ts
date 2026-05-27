@@ -4,6 +4,7 @@ const {
   findUniqueMock,
   createMock,
   updateMock,
+  attemptCreateMock,
   checkRateLimitMock,
   getClientIpFromRequestMock,
   validateEmailMxRecordsMock,
@@ -11,6 +12,7 @@ const {
   findUniqueMock: vi.fn(),
   createMock: vi.fn(),
   updateMock: vi.fn(),
+  attemptCreateMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   getClientIpFromRequestMock: vi.fn(),
   validateEmailMxRecordsMock: vi.fn(),
@@ -22,6 +24,9 @@ vi.mock("@/lib/db", () => ({
       findUnique: findUniqueMock,
       create: createMock,
       update: updateMock,
+    },
+    waitlistSubmissionAttempt: {
+      create: attemptCreateMock,
     },
   },
 }));
@@ -48,6 +53,7 @@ describe("POST /api/waitlist", () => {
       resetAt: new Date("2026-05-13T13:00:00.000Z"),
     });
     validateEmailMxRecordsMock.mockResolvedValue(true);
+    attemptCreateMock.mockResolvedValue({ id: "attempt_1" });
   });
 
   it("rejects invalid submissions", async () => {
@@ -66,6 +72,13 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "not-an-email",
+        rejectionReason: "INVALID_EMAIL",
+        status: "REJECTED",
+      }),
+    });
   });
 
   it("rejects submissions with a filled honeypot field", async () => {
@@ -85,6 +98,13 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@example.com",
+        rejectionReason: "HONEYPOT_FILLED",
+        status: "REJECTED",
+      }),
+    });
   });
 
   it("rejects submissions from disposable email domains", async () => {
@@ -103,6 +123,13 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@mailinator.com",
+        rejectionReason: "DISPOSABLE_EMAIL_DOMAIN",
+        status: "REJECTED",
+      }),
+    });
   });
 
   it("rejects submissions from disposable email subdomains", async () => {
@@ -156,6 +183,13 @@ describe("POST /api/waitlist", () => {
       error: "Too many waitlist submissions. Please try again later.",
     });
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@example.com",
+        rejectionReason: "RATE_LIMITED_HOURLY_IP",
+        status: "REJECTED",
+      }),
+    });
   });
 
   it("rejects submissions when the email domain has no MX records", async () => {
@@ -181,6 +215,13 @@ describe("POST /api/waitlist", () => {
     });
     expect(validateEmailMxRecordsMock).toHaveBeenCalledWith("maker@invalid.example");
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@invalid.example",
+        rejectionReason: "INVALID_EMAIL_MX",
+        status: "REJECTED",
+      }),
+    });
   });
 
   it("creates a new waitlist application", async () => {
@@ -233,6 +274,14 @@ describe("POST /api/waitlist", () => {
         updatedAt: true,
       },
     });
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@example.com",
+        rejectionReason: null,
+        status: "APPROVED",
+        waitlistApplicationId: "wait_1",
+      }),
+    });
     expect(body).toEqual({
       ok: true,
       created: true,
@@ -270,6 +319,14 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(200);
     expect(updateMock).not.toHaveBeenCalled();
+    expect(attemptCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        normalizedEmail: "maker@example.com",
+        rejectionReason: "DUPLICATE_EMAIL",
+        status: "DUPLICATE",
+        waitlistApplicationId: "wait_1",
+      }),
+    });
     expect(body).toEqual({
       ok: true,
       created: false,

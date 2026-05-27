@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { isDisposableEmailDomain } from "@/lib/waitlist/disposableEmailDomains";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 export interface WaitlistSubmissionInput {
   email: string;
@@ -19,6 +19,20 @@ export interface WaitlistSubmissionResult {
   };
   created: boolean;
   alreadySubmitted: boolean;
+}
+
+export interface WaitlistSubmissionAttemptSnapshot {
+  email: string | null;
+  normalizedEmail: string | null;
+  experienceLevel: string | null;
+  currentTools: string | null;
+  freeformResponse: string | null;
+}
+
+export interface WaitlistSubmissionParseResult {
+  submission: WaitlistSubmissionInput | null;
+  snapshot: WaitlistSubmissionAttemptSnapshot;
+  rejectionReason: string | null;
 }
 
 export interface WaitlistInviteValidationResult {
@@ -52,19 +66,35 @@ function getEmailDomain(email: string) {
   return email.split("@").pop() ?? "";
 }
 
-export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput | null {
+function createEmptyWaitlistSubmissionSnapshot(): WaitlistSubmissionAttemptSnapshot {
+  return {
+    email: null,
+    normalizedEmail: null,
+    experienceLevel: null,
+    currentTools: null,
+    freeformResponse: null,
+  };
+}
+
+function hashWaitlistAttemptIp(ip: string) {
+  const salt = process.env.WAITLIST_ATTEMPT_IP_HASH_SALT ?? "wippa-waitlist-attempts";
+  return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
+}
+
+export function parseWaitlistSubmissionWithReason(
+  input: unknown,
+): WaitlistSubmissionParseResult {
   if (!input || typeof input !== "object") {
-    return null;
+    return {
+      submission: null,
+      snapshot: createEmptyWaitlistSubmissionSnapshot(),
+      rejectionReason: "INVALID_BODY",
+    };
   }
 
   const record = input as Record<string, unknown>;
-
-  const honeypot = typeof record.website === "string" ? record.website.trim() : "";
-  if (honeypot.length > 0) {
-    return null;
-  }
-
-  const email = typeof record.email === "string" ? normalizeEmail(record.email) : "";
+  const rawEmail = typeof record.email === "string" ? record.email.trim() : "";
+  const email = normalizeEmail(rawEmail);
   const experienceLevel =
     typeof record.experienceLevel === "string"
       ? normalizeText(record.experienceLevel)
@@ -73,33 +103,84 @@ export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput
     typeof record.currentTools === "string" ? normalizeText(record.currentTools) : "";
   const freeformResponse =
     typeof record.freeformResponse === "string" ? record.freeformResponse.trim() : "";
+  const snapshot = {
+    email: rawEmail || null,
+    normalizedEmail: email || null,
+    experienceLevel: experienceLevel || null,
+    currentTools: currentTools || null,
+    freeformResponse: freeformResponse || null,
+  };
+
+  const honeypot = typeof record.website === "string" ? record.website.trim() : "";
+  if (honeypot.length > 0) {
+    return { submission: null, snapshot, rejectionReason: "HONEYPOT_FILLED" };
+  }
 
   if (!EMAIL_PATTERN.test(email)) {
-    return null;
+    return { submission: null, snapshot, rejectionReason: "INVALID_EMAIL" };
   }
 
   if (isDisposableEmailDomain(getEmailDomain(email))) {
-    return null;
+    return { submission: null, snapshot, rejectionReason: "DISPOSABLE_EMAIL_DOMAIN" };
   }
 
   if (!validateLength(experienceLevel, 120)) {
-    return null;
+    return { submission: null, snapshot, rejectionReason: "INVALID_EXPERIENCE_LEVEL" };
   }
 
   if (!validateLength(currentTools, 300)) {
-    return null;
+    return { submission: null, snapshot, rejectionReason: "INVALID_CURRENT_TOOLS" };
   }
 
   if (!validateLength(freeformResponse, 4000)) {
-    return null;
+    return { submission: null, snapshot, rejectionReason: "INVALID_FREEFORM_RESPONSE" };
   }
 
   return {
-    email,
-    experienceLevel,
-    currentTools,
-    freeformResponse,
+    submission: {
+      email,
+      experienceLevel,
+      currentTools,
+      freeformResponse,
+    },
+    snapshot,
+    rejectionReason: null,
   };
+}
+
+export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput | null {
+  return parseWaitlistSubmissionWithReason(input).submission;
+}
+
+export async function recordWaitlistSubmissionAttempt({
+  snapshot,
+  status,
+  rejectionReason = null,
+  ip,
+  userAgent,
+  waitlistApplicationId = null,
+}: {
+  snapshot: WaitlistSubmissionAttemptSnapshot;
+  status: "APPROVED" | "REJECTED" | "DUPLICATE";
+  rejectionReason?: string | null;
+  ip: string;
+  userAgent?: string | null;
+  waitlistApplicationId?: string | null;
+}) {
+  return prisma.waitlistSubmissionAttempt.create({
+    data: {
+      status,
+      rejectionReason,
+      email: snapshot.email,
+      normalizedEmail: snapshot.normalizedEmail,
+      experienceLevel: snapshot.experienceLevel,
+      currentTools: snapshot.currentTools,
+      freeformResponse: snapshot.freeformResponse,
+      ipAddressHash: ip ? hashWaitlistAttemptIp(ip) : null,
+      userAgent: userAgent?.trim() || null,
+      waitlistApplicationId,
+    },
+  });
 }
 
 export async function submitWaitlistApplication(
