@@ -437,7 +437,7 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              A better way to create your WIPs.
+              It's never been easier to create your WIPs.
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>

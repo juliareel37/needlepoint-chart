@@ -252,10 +252,11 @@
 }
 
 .heroPreviewCard {
+  box-sizing: border-box;
   width: 100%;
   height: auto;
   padding: 8px;
-  border-radius: 28px;
+  border-radius: 16px;
   border: 1px solid rgb(255 255 255 / 72%);
   background: rgb(255 255 255 / 54%);
   box-shadow: 0 34px 90px rgba(20, 24, 36, 0.18), 0 10px 28px rgba(20, 24, 36, 0.12);
@@ -272,7 +273,7 @@
   width: 100%;
   max-width: 100%;
   height: auto;
-  border-radius: 20px;
+  border-radius: 10px;
   border: 1px solid rgb(255 255 255 / 70%);
 }
 
@@ -1388,18 +1389,18 @@
   width: 100dvw;
   margin-left: -50dvw;
   background:
-    radial-gradient(circle at 14% 12%, rgb(255 255 255 / 88%) 0%, transparent 30%),
-    radial-gradient(circle at 52% 18%, color-mix(in srgb, white 38%, var(--butter-yellow)) 0%, transparent 42%),
-    radial-gradient(circle at 82% 10%, color-mix(in srgb, white 10%, var(--light-pink)) 0%, transparent 36%),
-    radial-gradient(circle at 20% 88%, color-mix(in srgb, white 18%, var(--brand-200)) 0%, transparent 34%),
-    radial-gradient(circle at 78% 86%, color-mix(in srgb, white 2%, var(--secondary-300)) 0%, transparent 30%),
+    radial-gradient(circle at 14% 12%, rgb(255 255 255 / 94%) 0%, transparent 34%),
+    radial-gradient(circle at 52% 18%, color-mix(in srgb, white 74%, var(--butter-yellow)) 0%, transparent 44%),
+    radial-gradient(circle at 82% 10%, color-mix(in srgb, white 66%, var(--light-pink)) 0%, transparent 38%),
+    radial-gradient(circle at 20% 88%, color-mix(in srgb, white 70%, var(--brand-200)) 0%, transparent 36%),
+    radial-gradient(circle at 78% 86%, color-mix(in srgb, white 72%, var(--secondary-300)) 0%, transparent 34%),
     linear-gradient(
       135deg,
       white 0%,
-      color-mix(in srgb, white 24%, var(--light-pink)) 30%,
-      color-mix(in srgb, white 48%, var(--butter-yellow)) 46%,
-      color-mix(in srgb, white 12%, var(--secondary-100)) 58%,
-      color-mix(in srgb, white 18%, var(--brand-300)) 100%
+      color-mix(in srgb, white 76%, var(--light-pink)) 30%,
+      color-mix(in srgb, white 82%, var(--butter-yellow)) 46%,
+      color-mix(in srgb, white 78%, var(--secondary-100)) 58%,
+      color-mix(in srgb, white 80%, var(--brand-300)) 100%
     );
   color: var(--text-primary);
 }
@@ -1591,7 +1592,7 @@
     justify-items: center;
     text-align: center;
     row-gap: 22px;
-    padding: 64px var(--landing-page-gutter) 36px;
+    padding: 88px var(--landing-page-gutter) 36px;
   }
 
   .heroTitle,
@@ -1601,6 +1602,7 @@
 
   .heroActions {
     width: min(100%, 30rem);
+    justify-content: center;
   }
 
   .heroPreviewWrap {
@@ -1706,11 +1708,11 @@
   }
 
   .heroCopy {
-    padding: 56px var(--landing-page-gutter) 0;
+    padding: 80px var(--landing-page-gutter) 0;
   }
 
   .heroPreviewWrap {
-    width: min(92vw, 760px);
+    width: min(82vw, 640px);
   }
 
   .featuresGrid {
@@ -1818,7 +1820,7 @@
 
 @media (max-width: 720px) {
   .shell {
-    padding-top: 18px;
+    padding-top: 0;
     padding-bottom: 24px;
   }
 
@@ -1833,14 +1835,21 @@
 
   .heroActions {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+    width: fit-content;
   }
 
-  .primaryCta,
   .waitlistQuickButton,
   .resumeCard {
     width: 100%;
     min-width: 0;
+  }
+
+  .primaryCta,
+  .secondaryCta {
+    width: auto;
+    max-width: 100%;
+    flex: none;
   }
 
   .waitlistCtaInner {
@@ -1858,10 +1867,12 @@
 
   .heroPreviewImage {
     width: 100%;
+    height: auto;
   }
 
   .heroPreviewCard {
-    max-height: clamp(200px, 36vw, 300px);
+    height: auto;
+    overflow: visible;
   }
 
   .bentoCard {

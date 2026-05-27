@@ -173,7 +173,7 @@ export default function AppHeaderNav() {
       <div style={landingHeaderLeftStyle}>
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/curly/green-white-square-full copy.png"
+            src="/logos/curly/sage-mint-full.png"
             alt="Wippa"
             width={344}
             height={72}
