@@ -80,6 +80,42 @@ describe("POST /api/waitlist", () => {
     expect(findUniqueMock).not.toHaveBeenCalled();
   });
 
+  it("rejects submissions from disposable email domains", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@mailinator.com",
+          experienceLevel: "Yes, regularly",
+          currentTools: "Illustrator and graph paper",
+          freeformResponse: "I want to design original canvases more quickly.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects submissions from disposable email subdomains", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@inbox.mailinator.com",
+          experienceLevel: "Yes, regularly",
+          currentTools: "Illustrator and graph paper",
+          freeformResponse: "I want to design original canvases more quickly.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
   it("rejects submissions after an IP rate limit is reached", async () => {
     checkRateLimitMock.mockResolvedValueOnce({
       limited: true,

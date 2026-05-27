@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isDisposableEmailDomain } from "@/lib/waitlist/disposableEmailDomains";
 import { randomBytes } from "node:crypto";
 
 export interface WaitlistSubmissionInput {
@@ -47,6 +48,10 @@ function validateLength(value: string, maxLength: number) {
   return value.length > 0 && value.length <= maxLength;
 }
 
+function getEmailDomain(email: string) {
+  return email.split("@").pop() ?? "";
+}
+
 export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput | null {
   if (!input || typeof input !== "object") {
     return null;
@@ -70,6 +75,10 @@ export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput
     typeof record.freeformResponse === "string" ? record.freeformResponse.trim() : "";
 
   if (!EMAIL_PATTERN.test(email)) {
+    return null;
+  }
+
+  if (isDisposableEmailDomain(getEmailDomain(email))) {
     return null;
   }
 
