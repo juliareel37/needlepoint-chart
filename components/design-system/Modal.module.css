@@ -9,6 +9,14 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
     rgba(10, 15, 26, 0.22);
   backdrop-filter: blur(1px);
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    backdrop-filter 180ms ease;
+}
+
+.overlay[data-state="open"] {
+  opacity: 1;
 }
 
 .card {
@@ -22,6 +30,17 @@
   border-radius: 16px;
   background: var(--surface-card);
   box-shadow: var(--ui-shadow-lg);
+  opacity: 0;
+  transform: translateY(8px) scale(0.985);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.card[data-state="open"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .body {
@@ -96,5 +115,16 @@
 
   .body {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .card {
+    transition-duration: 1ms;
+  }
+
+  .card {
+    transform: none;
   }
 }

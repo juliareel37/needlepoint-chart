@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { assetPath } from "@/lib/assetPath";
@@ -34,6 +34,8 @@ const toneConfig: Record<
     icon: "/icons/lucide/alert.svg",
   },
 };
+
+const MODAL_TRANSITION_MS = 180;
 
 export interface ModalProps {
   isOpen: boolean;
@@ -71,12 +73,58 @@ export function Modal({
   showCloseButton = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(false);
+  const openAnimationFrameRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleId = useId();
   const descriptionId = useId();
   const handleClose = onClose ?? onDismiss;
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (openAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(openAnimationFrameRef.current);
+      openAnimationFrameRef.current = null;
+    }
+
+    if (closeTimeoutRef.current !== null) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    if (isOpen) {
+      setIsVisible(false);
+      setShouldRender(true);
+      openAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        openAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          setIsVisible(true);
+          openAnimationFrameRef.current = null;
+        });
+      });
+      return;
+    }
+
+    setIsVisible(false);
+    closeTimeoutRef.current = setTimeout(() => {
+      setShouldRender(false);
+      closeTimeoutRef.current = null;
+    }, MODAL_TRANSITION_MS);
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (openAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(openAnimationFrameRef.current);
+      }
+
+      if (closeTimeoutRef.current !== null) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -125,7 +173,7 @@ export function Modal({
   }, [closeOnEscape, confirmDisabled, dismissDisabled, handleClose, isOpen, onConfirm]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!shouldRender) {
       return;
     }
 
@@ -135,9 +183,9 @@ export function Modal({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen]);
+  }, [shouldRender]);
 
-  if (!mounted || !isOpen) {
+  if (!mounted || !shouldRender) {
     return null;
   }
 
@@ -146,8 +194,9 @@ export function Modal({
   return createPortal(
     <div
       className={styles.overlay}
+      data-state={isVisible ? "open" : "closed"}
       onClick={() => {
-        if (closeOnBackdropClick) {
+        if (closeOnBackdropClick && isOpen) {
           handleClose();
         }
       }}
@@ -158,6 +207,7 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className={styles.card}
+        data-state={isVisible ? "open" : "closed"}
         onClick={(event) => event.stopPropagation()}
       >
         <div className={styles.body}>
