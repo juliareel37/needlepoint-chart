@@ -14,6 +14,7 @@ import {
   Modal,
   Notification,
 } from "@/components/design-system";
+import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { useAuthAccessState, useAuthSession } from "@/lib/auth/client";
 import styles from "./page.module.css";
 
@@ -248,6 +249,7 @@ export default function Page() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const openSignIn = useOpenSignIn();
   const { isLoaded, isSignedIn } = useAuthSession();
   const { accessState, hasAppAccess, isLoaded: isAccessStateLoaded } = useAuthAccessState();
   const showResumeCta = isLoaded && isAccessStateLoaded && hasAppAccess;
@@ -437,7 +439,7 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              It's never been easier to create your WIPs.
+            Designing your WIPs has never been easier.
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>
@@ -577,7 +579,7 @@ export default function Page() {
           </div> */}
         </section>
 
-        <section className={styles.buildingBlocksSection} aria-labelledby="building-blocks-heading">
+        <section className={styles.buildingBlocksSection} id="features" aria-labelledby="building-blocks-heading">
           <div className={styles.buildingBlocksIntro}>
             <div>
               <h2
@@ -840,20 +842,20 @@ export default function Page() {
                       width={1600}
                       height={1000}
                     />
-                  </div>
-                  <div
-                    className={[
-                      styles.bentoVisualAsset,
-                      styles.bentoVisualQuaternaryFront,
-                      styles.bentoVisualRightStackFront,
-                    ].join(" ")}
-                  >
-                    <Image
-                      src="/ui/selection-bar.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                    />
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryFront,
+                        styles.bentoVisualRightStackFront,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/selection-bar.png"
+                        alt=""
+                        width={1600}
+                        height={1000}
+                      />
+                    </div>
                   </div>
                 </div>
               </article>
@@ -861,13 +863,31 @@ export default function Page() {
 
             <div className={styles.bentoSupportGrid}>
               <article className={styles.bentoSupportCard}>
-                <span className={styles.bentoSupportIcon} aria-hidden="true">
-                  <Image src="/icons/lucide/image.svg" alt="" width={20} height={20} />
-                </span>
                 <div className={styles.bentoSupportCopy}>
-                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                    Upload images
-                  </h3>
+                  <div className={styles.bentoSupportHeading}>
+                    <span className={styles.bentoSupportIcon} aria-hidden="true">
+                      <Image src="/icons/lucide/proportions.svg" alt="" width={20} height={20} />
+                    </span>
+                    <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                      Start with canvas size presets
+                    </h3>
+                  </div>
+                  <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
+                    Quickly choose your canvas size based on what you’re making - coasters, bookmarks, stockings galore.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.bentoSupportCard}>
+                <div className={styles.bentoSupportCopy}>
+                  <div className={styles.bentoSupportHeading}>
+                    <span className={styles.bentoSupportIcon} aria-hidden="true">
+                      <Image src="/icons/lucide/image.svg" alt="" width={20} height={20} />
+                    </span>
+                    <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                      Upload images
+                    </h3>
+                  </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
                     Use your own images as a traceable background, or convert to painted cells.
                     Clean up your image right in the editor with the magic eraser.
@@ -876,13 +896,15 @@ export default function Page() {
               </article>
 
               <article className={styles.bentoSupportCard}>
-                <span className={styles.bentoSupportIcon} aria-hidden="true">
-                  <Image src="/icons/lucide/palette.svg" alt="" width={20} height={20} />
-                </span>
                 <div className={styles.bentoSupportCopy}>
-                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                    Custom palettes
-                  </h3>
+                  <div className={styles.bentoSupportHeading}>
+                    <span className={styles.bentoSupportIcon} aria-hidden="true">
+                      <Image src="/icons/lucide/palette.svg" alt="" width={20} height={20} />
+                    </span>
+                    <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                      Custom palettes
+                    </h3>
+                  </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
                     Build reusable palettes from favorite shades, thread inventory, or project-specific color rules.
                   </p>
@@ -890,13 +912,15 @@ export default function Page() {
               </article>
 
               <article className={styles.bentoSupportCard}>
-                <span className={styles.bentoSupportIcon} aria-hidden="true">
-                  <Image src="/icons/lucide/download.svg" alt="" width={20} height={20} />
-                </span>
                 <div className={styles.bentoSupportCopy}>
-                  <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                    Export stitch-ready PDFs
-                  </h3>
+                  <div className={styles.bentoSupportHeading}>
+                    <span className={styles.bentoSupportIcon} aria-hidden="true">
+                      <Image src="/icons/lucide/download.svg" alt="" width={20} height={20} />
+                    </span>
+                    <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
+                      Export stitch-ready PDFs
+                    </h3>
+                  </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
                     Generate full-color symbol charts with DMC codes, stitch counts, and skein estimates.
                   </p>
@@ -976,6 +1000,20 @@ export default function Page() {
               <Link href="/terms" className={styles.footerLegalLink}>
                 Terms
               </Link>
+              {isLoaded && !isSignedIn ? (
+                <button
+                  type="button"
+                  className={styles.footerLoginButton}
+                  onClick={() => {
+                    const queryString = searchParams.toString();
+                    openSignIn({
+                      redirectUrl: queryString ? `${pathname}?${queryString}` : pathname,
+                    });
+                  }}
+                >
+                  Log in
+                </button>
+              ) : null}
             </nav>
             <p className={styles.siteFooterMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. MMXXVI</p>
           </div>

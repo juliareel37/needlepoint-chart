@@ -897,56 +897,48 @@
 
 .bentoGridTop {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .bentoSupportGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(14px, 1.6vw, 20px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-block: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
 }
 
 .bentoSupportCard {
   box-sizing: border-box;
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 16px;
+  gap: 10px;
   align-items: start;
-  padding: clamp(18px, 2vw, 24px);
-  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
-  border-radius: clamp(18px, 1.6vw, 22px);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 68%), rgb(255 255 255 / 42%)),
-    color-mix(in srgb, var(--surface-card) 88%, var(--landing-accent-soft));
+  padding: clamp(18px, 2vw, 24px) clamp(18px, 2.2vw, 28px);
 }
 
-.bentoSupportCard:nth-child(2) {
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 68%), rgb(255 255 255 / 42%)),
-    color-mix(in srgb, var(--surface-card) 86%, var(--landing-secondary-soft));
-}
-
-.bentoSupportCard:nth-child(3) {
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 68%), rgb(255 255 255 / 42%)),
-    color-mix(in srgb, var(--surface-card) 86%, var(--landing-hero-center-glow));
+.bentoSupportCard + .bentoSupportCard {
+  border-left: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
 }
 
 .bentoSupportIcon {
-  width: 42px;
-  height: 42px;
+  width: 20px;
+  height: 20px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 74%, white);
-  border-radius: 14px;
-  background: rgb(255 255 255 / 68%);
 }
 
 .bentoSupportIcon :global(img) {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   opacity: 0.72;
+}
+
+.bentoSupportHeading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .bentoSupportCopy {
@@ -962,10 +954,11 @@
 }
 
 .bentoGridTop .bentoCard {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: start;
+  height: clamp(380px, 32vw, 520px);
   min-height: auto;
-  gap: 18px;
+  gap: clamp(10px, 1.2vw, 14px);
   padding: clamp(18px, 1.8vw, 24px);
 }
 
@@ -1074,7 +1067,7 @@
 }
 
 .bentoGridTop .bentoCardRightStack {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .bentoSplitLayout {
@@ -1135,7 +1128,7 @@
 }
 
 .bentoVisualPrimary {
-  width: min(82%, clamp(360px, 34vw, 540px));
+  width: min(90%, clamp(400px, 38vw, 620px));
 }
 
 .bentoGridTop .bentoVisualFrame {
@@ -1156,10 +1149,14 @@
 .bentoGridTop .bentoCardPrimary .bentoVisualFrame {
   justify-items: center;
   align-self: end;
+  align-items: end;
+  height: 100%;
   margin-bottom: calc(-1 * clamp(18px, 1.8vw, 24px));
+  transform: translateY(-8%);
 }
 
 .bentoGridTop .bentoCardPrimary .bentoVisualPrimary {
+  align-self: end;
   justify-self: center;
 }
 
@@ -1228,11 +1225,19 @@
 }
 
 .bentoOverlayVisualRightStack {
-  width: min(82%, clamp(15rem, 26vw, 23rem));
+  width: min(90%, clamp(17rem, 30vw, 27rem));
   aspect-ratio: 1.35 / 1;
   justify-self: center;
   align-self: end;
   transform: none;
+}
+
+.bentoGridTop .bentoCardQuaternary .bentoOverlayVisualRightStack {
+  align-self: end;
+  justify-self: end;
+  margin-right: calc(-1 * clamp(18px, 1.8vw, 24px));
+  margin-bottom: calc(-1 * clamp(18px, 1.8vw, 24px));
+  transform: translateY(-8%);
 }
 
 .bentoVisualQuaternaryBack {
@@ -1265,28 +1270,30 @@
 }
 
 .bentoVisualRightStackBack {
-  top: 9%;
-  left: 44%;
-  right: auto;
-  width: 68%;
+  top: auto;
+  right: 0;
+  bottom: -18%;
+  left: auto;
+  width: 92%;
 }
 
 .bentoVisualRightStackMiddle {
-  top: 4%;
-  left: 4%;
+  top: 0;
+  left: -26%;
   right: auto;
   bottom: auto;
-  width: 42%;
+  width: 48%;
   z-index: 2;
+  overflow: visible;
 }
 
 .bentoVisualRightStackFront {
   top: auto;
-  left: auto;
-  right: 50%;
-  bottom: 6%;
-  width: 46%;
-  transform: none;
+  left: 53%;
+  right: auto;
+  bottom: -6%;
+  width: 124%;
+  transform: translateX(-50%);
   z-index: 3;
 }
 
@@ -1511,7 +1518,8 @@
   flex-wrap: wrap;
 }
 
-.footerLegalLink {
+.footerLegalLink,
+.footerLoginButton {
   min-height: 34px;
   display: inline-flex;
   align-items: center;
@@ -1528,8 +1536,14 @@
   transition: color 140ms ease, background-color 140ms ease;
 }
 
+.footerLoginButton {
+  cursor: pointer;
+}
+
 .footerLegalLink:hover,
-.footerLegalLink:focus-visible {
+.footerLegalLink:focus-visible,
+.footerLoginButton:hover,
+.footerLoginButton:focus-visible {
   color: var(--brand-700);
   background: var(--brand-50);
 }
@@ -1638,11 +1652,15 @@
 
 @media (max-width: 1100px) {
   .bentoSupportGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bentoSupportCard {
-    grid-template-columns: 1fr;
+  .bentoSupportCard:nth-child(odd) {
+    border-left: none;
+  }
+
+  .bentoSupportCard:nth-child(n + 3) {
+    border-top: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
   }
 
   .bentoGridBottom .bentoCard {
@@ -1767,9 +1785,17 @@
     max-width: 100%;
   }
 
+  .bentoGridTop .bentoCard {
+    height: auto;
+  }
+
   .bentoSupportCard {
-    grid-template-columns: auto minmax(0, 1fr);
     padding: 18px;
+  }
+
+  .bentoSupportCard + .bentoSupportCard {
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
   }
 
   .bentoCardPrimary,

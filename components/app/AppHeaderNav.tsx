@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
-import { Button } from "@/components/design-system";
-import { useAuthAccessState } from "@/lib/auth/client";
 
 const landingHeaderWrapStyle = {
   display: "flex",
@@ -20,7 +18,7 @@ const landingHeaderWrapStyle = {
 const landingHeaderLeftStyle = {
   display: "flex",
   alignItems: "center",
-  gap: 20,
+  gap: 52,
   minWidth: 0,
   flex: "1 1 auto",
 } as const;
@@ -28,15 +26,8 @@ const landingHeaderLeftStyle = {
 const landingHeaderLinksStyle = {
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: 48,
   flexWrap: "wrap",
-} as const;
-
-const landingHeaderRightStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  flex: "0 0 auto",
 } as const;
 
 const brandStyle = {
@@ -66,19 +57,6 @@ const navLinkStyle = {
   minHeight: 36,
   display: "inline-flex",
   alignItems: "center",
-  padding: "0 10px",
-  borderRadius: 10,
-  color: "var(--text-secondary)",
-  textDecoration: "none",
-  whiteSpace: "nowrap" as const,
-} as const;
-
-const utilityLinkStyle = {
-  ...typographyStyles.p1,
-  minHeight: 36,
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "0 6px",
   color: "var(--text-secondary)",
   textDecoration: "none",
   whiteSpace: "nowrap" as const,
@@ -86,16 +64,15 @@ const utilityLinkStyle = {
 
 export default function AppHeaderNav() {
   const pathname = usePathname();
-  const { isLoaded, hasAppAccess } = useAuthAccessState();
   const showLandingHeader =
     pathname === "/" ||
     pathname === "/library" ||
     pathname === "/privacy" ||
     pathname === "/terms";
   const showHeroResponsiveHeader = pathname === "/";
+  const showLandingNavLinks = pathname === "/";
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
-  const showResumeCta = isLoaded && hasAppAccess;
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
@@ -181,27 +158,16 @@ export default function AppHeaderNav() {
             priority
           />
         </Link>
-        {/* <nav aria-label="Primary" style={landingHeaderLinksStyle}>
-          <Link href="/#canvas" style={navLinkStyle}>
-            The Canvas
-          </Link>
-          <Link href="/#features" style={navLinkStyle}>
-            Thread Library
-          </Link>
-          <Link href="/#begin" style={navLinkStyle}>
-            Community
-          </Link>
-        </nav> */}
-      </div>
-      <div className="landing-header-actions" style={landingHeaderRightStyle}>
-        {/* <Link href="/library" style={utilityLinkStyle}>
-          My Library
-        </Link> */}
-        <Link href={showResumeCta ? "/editor" : "/?waitlist=1"} style={{ textDecoration: "none" }}>
-          <Button type="button" variant="secondary" size="md" className="landing-header-cta">
-            {showResumeCta ? "Launch Editor" : "Join Waitlist"}
-          </Button>
-        </Link>
+        {showLandingNavLinks ? (
+          <nav aria-label="Primary" className="landing-header-nav" style={landingHeaderLinksStyle}>
+            <Link href="/#features" style={navLinkStyle}>
+              FEATURES
+            </Link>
+            <Link href="/#waitlist" style={navLinkStyle}>
+              WAITLIST
+            </Link>
+          </nav>
+        ) : null}
       </div>
     </div>
   );
