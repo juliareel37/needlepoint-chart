@@ -688,7 +688,7 @@ export function AuthSignInPageContent({
               Back to sign in
             </Link>
             <Link href="/" className={styles.link} style={typographyStyles.p2}>
-              Join the waitlist
+              Join waitlist
             </Link>
           </div>
         </form>
@@ -784,7 +784,7 @@ export function AuthSignInPageContent({
           </p>
           <div className={styles.linkRow}>
             <Link href="/" className={styles.link} style={typographyStyles.p2}>
-              Join the waitlist
+              Join Waitlist
             </Link>
             <Link
               href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`}

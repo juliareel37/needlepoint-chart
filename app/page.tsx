@@ -271,7 +271,7 @@ export default function Page() {
     : accessState === "pending_approval"
       ? "Your beta application has been received. We’ll email you as soon as your access is approved."
     : "Beta access is rolling out gradually. Join the waitlist and tell us a little about how you design today.";
-  const waitlistActionLabel = showResumeCta ? "View my designs" : " Join the Waitlist";
+  const waitlistActionLabel = showResumeCta ? "View my designs" : " Join Waitlist";
   const modalDescription = useMemo(
     () =>
       showResumeCta
@@ -557,8 +557,8 @@ export default function Page() {
                   <Image
                     src="/ui/editor-dachsund-color-tab.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
-                    width={2940}
-                    height={1472}
+                    width={2438}
+                    height={1448}
                     priority
                     sizes="100vw"
                     className={styles.heroPreviewImage}
@@ -977,7 +977,7 @@ export default function Page() {
                       openWaitlistModal(email);
                     }}
                   >
-                    {showResumeCta ? "View my designs" : "Join the waitlist"}
+                    {showResumeCta ? "View my designs" : "Join Waitlist"}
                     {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
                   </Button>
                   {showResumeCta ? (
@@ -1036,10 +1036,10 @@ export default function Page() {
       </div>
       <Modal
         isOpen={waitlistModalOpen}
-        title="Join the Waitlist"
+        title="Join Waitlist"
         description={
           <div className={styles.waitlistModalCopy}>
-            <p style={marketingTypographyStyles.body}>
+            <p className={styles.waitlistModalIntro} style={typographyStyles.p2}>
               {modalDescription} 
               </p>
             {!showResumeCta ? (
@@ -1064,8 +1064,12 @@ export default function Page() {
                 <Field
                   label={
                     <span
-                      className={waitlistFormErrors.email ? styles.errorText : undefined}
-                      style={typographyStyles.p1}
+                      className={[
+                        styles.waitlistFieldLabel,
+                        waitlistFormErrors.email ? styles.errorText : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       Email
                     </span>
@@ -1094,8 +1098,12 @@ export default function Page() {
                 <Field
                   label={
                     <span
-                      className={waitlistFormErrors.experienceLevel ? styles.errorText : undefined}
-                      style={typographyStyles.p1}
+                      className={[
+                        styles.waitlistFieldLabel,
+                        waitlistFormErrors.experienceLevel ? styles.errorText : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       Do you currently create your own needlepoint patterns?
                     </span>
@@ -1130,8 +1138,12 @@ export default function Page() {
                 <Field
                   label={
                     <span
-                      className={waitlistFormErrors.currentTools ? styles.errorText : undefined}
-                      style={typographyStyles.p1}
+                      className={[
+                        styles.waitlistFieldLabel,
+                        waitlistFormErrors.currentTools ? styles.errorText : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       What tools do you currently use?
                     </span>
@@ -1159,8 +1171,12 @@ export default function Page() {
                 <Field
                   label={
                     <span
-                      className={waitlistFormErrors.freeformResponse ? styles.errorText : undefined}
-                      style={typographyStyles.p1}
+                      className={[
+                        styles.waitlistFieldLabel,
+                        waitlistFormErrors.freeformResponse ? styles.errorText : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       What are you hoping to use Wippa for?
                     </span>
