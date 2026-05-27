@@ -6,12 +6,14 @@ const {
   updateMock,
   checkRateLimitMock,
   getClientIpFromRequestMock,
+  validateEmailMxRecordsMock,
 } = vi.hoisted(() => ({
   findUniqueMock: vi.fn(),
   createMock: vi.fn(),
   updateMock: vi.fn(),
   checkRateLimitMock: vi.fn(),
   getClientIpFromRequestMock: vi.fn(),
+  validateEmailMxRecordsMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -29,6 +31,10 @@ vi.mock("@/lib/rate-limit/server", () => ({
   getClientIpFromRequest: getClientIpFromRequestMock,
 }));
 
+vi.mock("@/lib/waitlist/emailDns", () => ({
+  validateEmailMxRecords: validateEmailMxRecordsMock,
+}));
+
 import { POST } from "./route";
 
 describe("POST /api/waitlist", () => {
@@ -41,6 +47,7 @@ describe("POST /api/waitlist", () => {
       remaining: 4,
       resetAt: new Date("2026-05-13T13:00:00.000Z"),
     });
+    validateEmailMxRecordsMock.mockResolvedValue(true);
   });
 
   it("rejects invalid submissions", async () => {
@@ -148,6 +155,31 @@ describe("POST /api/waitlist", () => {
     expect(body).toEqual({
       error: "Too many waitlist submissions. Please try again later.",
     });
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects submissions when the email domain has no MX records", async () => {
+    validateEmailMxRecordsMock.mockResolvedValue(false);
+
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@invalid.example",
+          experienceLevel: "Yes, regularly",
+          currentTools: "Illustrator and graph paper",
+          freeformResponse: "I want to design original canvases more quickly.",
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: "Please use an email address with a valid mail domain.",
+    });
+    expect(validateEmailMxRecordsMock).toHaveBeenCalledWith("maker@invalid.example");
     expect(findUniqueMock).not.toHaveBeenCalled();
   });
 

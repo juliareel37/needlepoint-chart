@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit/server";
+import { validateEmailMxRecords } from "@/lib/waitlist/emailDns";
 import {
   parseWaitlistSubmission,
   submitWaitlistApplication,
@@ -37,6 +38,14 @@ export async function POST(req: Request) {
 
   if (!submission) {
     return NextResponse.json({ error: "Invalid waitlist submission" }, { status: 400 });
+  }
+
+  const hasValidMailDomain = await validateEmailMxRecords(submission.email);
+  if (!hasValidMailDomain) {
+    return NextResponse.json(
+      { error: "Please use an email address with a valid mail domain." },
+      { status: 400 },
+    );
   }
 
   const result = await submitWaitlistApplication(submission);
