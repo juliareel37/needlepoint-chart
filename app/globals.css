@@ -8,7 +8,7 @@
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-primary);
-    --default-mono-font-family: var(--font-secondary);
+    --default-mono-font-family: var(--font-primary);
   }
 }
 @layer base {
@@ -348,7 +348,7 @@
 
   /* Text */
   --font-primary: ui-sans-serif, system-ui, sans-serif;
-  --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-secondary: var(--font-primary);
   --text-primary: var(--neutral-900);
   --text-secondary: var(--neutral-700);
 
@@ -627,7 +627,7 @@
   --brand-lightest: var(--brand-lightest);
   --text-primary: var(--text-primary);
   --font-primary: ui-sans-serif, system-ui, sans-serif;
-  --font-secondary: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-secondary: var(--font-primary);
   --text-muted: var(--text-secondary);
   --surface-card: var(--surface-card);
   --muted-bg: var(--neutral-100);
@@ -688,7 +688,8 @@
 html,
 body {
   --font-primary: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
-  --font-secondary: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-secondary: var(--font-primary);
+  --font-mono: var(--font-primary);
   background: var(--surface-app);
   color: var(--text-primary);
   font-family: var(--font-primary);

@@ -293,7 +293,8 @@
 .heroFeatureKicker,
 .sectionKicker,
 .featureIndex,
-.footerMeta {
+.footerMeta,
+.waitlistCtaMeta {
   color: var(--text-secondary);
   font-family: var(--font-secondary);
   letter-spacing: 0.14em;
@@ -311,7 +312,8 @@
 .heroFeatureBody,
 .featureBody,
 .sectionBody,
-.footerBody {
+.footerBody,
+.waitlistCtaBody {
   color: var(--landing-body-muted);
 }
 .demoFrame {
@@ -1380,89 +1382,162 @@
   border: 0;
 }
 
-.footerSection {
+.waitlistCtaSection {
   position: relative;
   left: 50%;
   width: 100dvw;
   margin-left: -50dvw;
   background:
-    radial-gradient(circle at 18% 18%, color-mix(in oklch, transparent 58%, var(--secondary-400)) 0%, transparent 34%),
-    radial-gradient(circle at 82% 0%, color-mix(in oklch, transparent 82%, var(--brand-300)) 0%, transparent 26%),
-    var(--landing-dark-surface);
-  color: var(--neutral-0);
-  margin-bottom: -32px;
+    radial-gradient(circle at 14% 12%, rgb(255 255 255 / 88%) 0%, transparent 30%),
+    radial-gradient(circle at 52% 18%, color-mix(in srgb, white 38%, var(--butter-yellow)) 0%, transparent 42%),
+    radial-gradient(circle at 82% 10%, color-mix(in srgb, white 10%, var(--light-pink)) 0%, transparent 36%),
+    radial-gradient(circle at 20% 88%, color-mix(in srgb, white 18%, var(--brand-200)) 0%, transparent 34%),
+    radial-gradient(circle at 78% 86%, color-mix(in srgb, white 2%, var(--secondary-300)) 0%, transparent 30%),
+    linear-gradient(
+      135deg,
+      white 0%,
+      color-mix(in srgb, white 24%, var(--light-pink)) 30%,
+      color-mix(in srgb, white 48%, var(--butter-yellow)) 46%,
+      color-mix(in srgb, white 12%, var(--secondary-100)) 58%,
+      color-mix(in srgb, white 18%, var(--brand-300)) 100%
+    );
+  color: var(--text-primary);
 }
 
-.footerInner {
+.waitlistCtaInner {
   box-sizing: border-box;
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 120px 0;
+  padding: 120px 0 112px;
   padding-inline: var(--landing-page-gutter);
   display: grid;
   gap: 40px;
 }
 
-.footerContent {
+.waitlistCtaContent {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  gap: 48px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 28px;
+  align-items: center;
+  text-align: center;
 }
 
-.footerCopy {
+.waitlistCtaCopy {
   display: grid;
+  justify-items: center;
   gap: 22px;
+  width: min(720px, 100%);
 }
 
-.footerTitle {
-  max-width: 14ch;
+.waitlistCtaTitle {
+  max-width: 15ch;
 }
 
-.footerTitleEmphasis {
-  color: var(--brand-300);
+.waitlistCtaTitleEmphasis {
+  color: var(--brand-700);
 }
 
-.footerBody {
-  color: var(--neutral-300);
+.waitlistCtaBody {
+  max-width: 52ch;
+  color: color-mix(in srgb, var(--text-primary) 82%, var(--brand-700));
 }
 
-.footerActions {
+.waitlistCtaActions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 18px;
   flex-wrap: wrap;
 }
 
-.footerPrimary {
+.waitlistCtaPrimary {
   min-width: 200px;
 }
 
-.footerSecondary {
+.waitlistCtaSecondary {
   min-width: 200px;
   color: var(--text-primary);
 }
 
-.footerBar {
-  border-top: 1px solid var(--neutral-700);
-  margin-top: 20px;
+.siteFooter {
+  position: relative;
+  left: 50%;
+  width: 100dvw;
+  margin-left: -50dvw;
+  margin-top: -72px;
+  margin-bottom: -32px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+.siteFooterInner {
+  border-top: 1px solid var(--ui-border-reg);
   box-sizing: border-box;
   width: min(1680px, 100%);
   margin-inline: auto;
-  padding: 26px 0;
+  min-height: 96px;
+  padding: 24px 0;
   padding-inline: var(--landing-page-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
   flex-wrap: wrap;
+}
+
+.siteFooterBrand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.siteFooterLogo {
+  width: auto;
+  height: 26px;
+  display: block;
+}
+
+.siteFooterMeta {
+  color: var(--text-secondary);
+}
+
+.footerLegalLinks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footerLegalLink {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.footerLegalLink:hover,
+.footerLegalLink:focus-visible {
+  color: var(--brand-700);
+  background: var(--brand-50);
 }
 
 @media (max-width: 1200px) {
   .hero,
   .featuresIntro,
   .bentoIntro,
-  .footerContent {
+  .waitlistCtaContent {
     grid-template-columns: 1fr;
   }
 
@@ -1478,7 +1553,7 @@
 
   .heroTitle,
   .sectionTitle,
-  .footerTitle {
+  .waitlistCtaTitle {
     max-width: none;
   }
 
@@ -1622,6 +1697,10 @@
     gap: 56px;
   }
 
+  .siteFooter {
+    margin-top: -56px;
+  }
+
   .hero {
     grid-template-columns: 1fr;
   }
@@ -1748,7 +1827,7 @@
   .workflowSection,
   .features,
   .bentoSection,
-  .footerInner {
+  .waitlistCtaInner {
     gap: 24px;
   }
 
@@ -1764,11 +1843,11 @@
     min-width: 0;
   }
 
-  .footerInner {
+  .waitlistCtaInner {
     padding-inline: var(--landing-page-gutter);
   }
 
-  .footerBar {
+  .siteFooterInner {
     padding-inline: var(--landing-page-gutter);
     align-items: flex-start;
     flex-direction: column;
@@ -1792,13 +1871,13 @@
 }
 
 @media (max-width: 350px) {
-  .footerActions {
+  .waitlistCtaActions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .footerPrimary,
-  .footerSecondary {
+  .waitlistCtaPrimary,
+  .waitlistCtaSecondary {
     width: 100%;
     min-width: 0;
   }

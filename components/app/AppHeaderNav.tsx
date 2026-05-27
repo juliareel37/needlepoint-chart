@@ -87,7 +87,11 @@ const utilityLinkStyle = {
 export default function AppHeaderNav() {
   const pathname = usePathname();
   const { isLoaded, hasAppAccess } = useAuthAccessState();
-  const showLandingHeader = pathname === "/" || pathname === "/library";
+  const showLandingHeader =
+    pathname === "/" ||
+    pathname === "/library" ||
+    pathname === "/privacy" ||
+    pathname === "/terms";
   const showHeroResponsiveHeader = pathname === "/";
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
@@ -149,7 +153,7 @@ export default function AppHeaderNav() {
     return (
       <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
         <Image
-          src="/logos/curly/full-bw.png"
+          src="/logos/curly/icon-bw.png"
           alt="Wippa"
           width={344}
           height={72}
@@ -169,7 +173,7 @@ export default function AppHeaderNav() {
       <div style={landingHeaderLeftStyle}>
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/curly/full-bw copy 2.png"
+            src="/logos/curly/green-white-square-full copy.png"
             alt="Wippa"
             width={344}
             height={72}

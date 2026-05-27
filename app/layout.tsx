@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Fraunces, Geist_Mono } from "next/font/google";
+import { Figtree, Fraunces } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
@@ -14,11 +14,6 @@ const uiSans = Figtree({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-code",
-  subsets: ["latin"],
 });
 
 const marketingHeadingFont = Fraunces({
@@ -99,7 +94,7 @@ export default async function RootLayout({
     return (
       <html lang="en">
         <body
-          className={`${uiSans.variable} ${geistMono.variable} ${marketingHeadingFont.variable} antialiased`}
+          className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
         >
           <div
             style={{
@@ -151,7 +146,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
       <body
-        className={`${uiSans.variable} ${geistMono.variable} ${marketingHeadingFont.variable} antialiased`}
+        className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
       >
         <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>

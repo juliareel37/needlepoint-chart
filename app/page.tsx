@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
@@ -267,7 +268,7 @@ export default function Page() {
     : accessState === "pending_approval"
       ? "Your beta application has been received. We’ll email you as soon as your access is approved."
     : "Beta access is rolling out gradually. Join the waitlist and tell us a little about how you design today.";
-  const waitlistActionLabel = showResumeCta ? "View my designs" : "Get Early Access";
+  const waitlistActionLabel = showResumeCta ? "View my designs" : " Join the Waitlist";
   const modalDescription = useMemo(
     () =>
       showResumeCta
@@ -906,27 +907,28 @@ export default function Page() {
           </div>
         </section>
 
-        <section className={styles.footerSection} id="begin">
-          <div className={styles.footerInner}>
-            <div className={styles.footerContent}>
-              <div className={styles.footerCopy}>
-                <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Waitlist</p>
-                <h2 className={styles.footerTitle}  style={marketingTypographyStyles.footerTitle} >
-                  Be one of the first to <span className={styles.footerTitleEmphasis}>join the community.</span> 
+        <section className={styles.waitlistCtaSection} id="begin">
+          <div className={styles.waitlistCtaInner}>
+            <div className={styles.waitlistCtaContent}>
+              <div className={styles.waitlistCtaCopy}>
+                <h2 className={styles.waitlistCtaTitle} style={marketingTypographyStyles.footerTitle}>
+                  Be one of the first to{" "}
+                  <span className={styles.waitlistCtaTitleEmphasis}>join the community.</span>
                 </h2>
               </div>
-              <div className={styles.footerCopy} id="waitlist">
-                <p className={styles.footerBody} style={marketingTypographyStyles.body}>
+              <div className={styles.waitlistCtaCopy} id="waitlist">
+                <p className={styles.waitlistCtaBody} style={marketingTypographyStyles.body}>
                   {showResumeCta
                     ? "Your beta access is already active. Jump back into your library whenever you’re ready."
-                    : "Share how you currently design needlepoint patterns and what you’re hoping to make with Wippa. We’re inviting people in gradually during beta."}
+                    : "Join the waitlist now to receive launch updates, priority beta access, and exclusive founding-member pricing at launch."
+                    }
                 </p>
-                <div className={styles.footerActions}>
+                <div className={styles.waitlistCtaActions}>
                   <Button
                     type="button"
                     variant="primary"
                     size="lg"
-                    className={styles.footerPrimary}
+                    className={styles.waitlistCtaPrimary}
                     onClick={() => {
                       if (showResumeCta) {
                         router.push("/library");
@@ -936,7 +938,7 @@ export default function Page() {
                       openWaitlistModal(email);
                     }}
                   >
-                    {showResumeCta ? "View my designs" : "Get early access"}
+                    {showResumeCta ? "View my designs" : "Join the waitlist"}
                     {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
                   </Button>
                   {showResumeCta ? (
@@ -944,7 +946,7 @@ export default function Page() {
                       type="button"
                       variant="secondary"
                       size="lg"
-                      className={styles.footerSecondary}
+                      className={styles.waitlistCtaSecondary}
                       onClick={() => router.push(editorRoute)}
                     >
                       Launch Editor
@@ -954,18 +956,39 @@ export default function Page() {
               </div>
             </div>
           </div>
-          <div className={styles.footerBar}>
-            <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. MMXXVI</p>
-            <p className={styles.footerMeta} style={marketingTypographyStyles.eyebrow}>V2.4 • Drafting on a precision canvas</p>
-          </div>
         </section>
+
+        <footer className={styles.siteFooter}>
+          <div className={styles.siteFooterInner}>
+            <Link href="/" className={styles.siteFooterBrand} aria-label="Wippa home">
+              <Image
+                src="/logos/curly/green-white-square-full.png"
+                alt="Wippa"
+                width={344}
+                height={72}
+                className={styles.siteFooterLogo}
+              />
+            </Link>
+            <nav className={styles.footerLegalLinks} aria-label="Legal">
+              <Link href="/privacy" className={styles.footerLegalLink}>
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className={styles.footerLegalLink}>
+                Terms
+              </Link>
+            </nav>
+            <p className={styles.siteFooterMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. MMXXVI</p>
+          </div>
+        </footer>
       </div>
       <Modal
         isOpen={waitlistModalOpen}
         title="Join the Waitlist"
         description={
           <div className={styles.waitlistModalCopy}>
-            <p style={marketingTypographyStyles.body}>{modalDescription}</p>
+            <p style={marketingTypographyStyles.body}>
+              {modalDescription} 
+              </p>
             {!showResumeCta ? (
               <form
                 id="waitlist-application-form"
