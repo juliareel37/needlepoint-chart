@@ -4,10 +4,14 @@ const {
   findUniqueMock,
   createMock,
   updateMock,
+  checkRateLimitMock,
+  getClientIpFromRequestMock,
 } = vi.hoisted(() => ({
   findUniqueMock: vi.fn(),
   createMock: vi.fn(),
   updateMock: vi.fn(),
+  checkRateLimitMock: vi.fn(),
+  getClientIpFromRequestMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -20,11 +24,23 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/rate-limit/server", () => ({
+  checkRateLimit: checkRateLimitMock,
+  getClientIpFromRequest: getClientIpFromRequestMock,
+}));
+
 import { POST } from "./route";
 
 describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getClientIpFromRequestMock.mockReturnValue("203.0.113.10");
+    checkRateLimitMock.mockResolvedValue({
+      limited: false,
+      limit: 5,
+      remaining: 4,
+      resetAt: new Date("2026-05-13T13:00:00.000Z"),
+    });
   });
 
   it("rejects invalid submissions", async () => {
@@ -61,6 +77,41 @@ describe("POST /api/waitlist", () => {
     );
 
     expect(response.status).toBe(400);
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects submissions after an IP rate limit is reached", async () => {
+    checkRateLimitMock.mockResolvedValueOnce({
+      limited: true,
+      limit: 5,
+      remaining: 0,
+      resetAt: new Date("2026-05-13T13:00:00.000Z"),
+    });
+    checkRateLimitMock.mockResolvedValueOnce({
+      limited: false,
+      limit: 20,
+      remaining: 19,
+      resetAt: new Date("2026-05-14T12:00:00.000Z"),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@example.com",
+          experienceLevel: "Yes, regularly",
+          currentTools: "Illustrator and graph paper",
+          freeformResponse: "I want to design original canvases more quickly.",
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body).toEqual({
+      error: "Too many waitlist submissions. Please try again later.",
+    });
     expect(findUniqueMock).not.toHaveBeenCalled();
   });
 
@@ -117,6 +168,7 @@ describe("POST /api/waitlist", () => {
     expect(body).toEqual({
       ok: true,
       created: true,
+      alreadySubmitted: false,
       application: {
         id: "wait_1",
         email: "maker@example.com",
@@ -125,20 +177,13 @@ describe("POST /api/waitlist", () => {
     });
   });
 
-  it("updates an existing waitlist application for repeat submissions", async () => {
+  it("returns an already-submitted response for repeat email submissions", async () => {
     findUniqueMock.mockResolvedValue({
       id: "wait_1",
       email: "maker@example.com",
       status: "PENDING",
       createdAt: new Date("2026-05-13T12:00:00.000Z"),
       updatedAt: new Date("2026-05-13T12:00:00.000Z"),
-    });
-    updateMock.mockResolvedValue({
-      id: "wait_1",
-      email: "maker@example.com",
-      status: "PENDING",
-      createdAt: new Date("2026-05-13T12:00:00.000Z"),
-      updatedAt: new Date("2026-05-14T12:00:00.000Z"),
     });
 
     const response = await POST(
@@ -156,24 +201,11 @@ describe("POST /api/waitlist", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(updateMock).toHaveBeenCalledWith({
-      where: { id: "wait_1" },
-      data: {
-        experienceLevel: "Sometimes",
-        currentTools: "Photoshop",
-        freeformResponse: "I want a cleaner pattern design workflow.",
-      },
-      select: {
-        id: true,
-        email: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    expect(updateMock).not.toHaveBeenCalled();
     expect(body).toEqual({
       ok: true,
       created: false,
+      alreadySubmitted: true,
       application: {
         id: "wait_1",
         email: "maker@example.com",

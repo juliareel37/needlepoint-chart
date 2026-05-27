@@ -81,6 +81,17 @@ model FeaturedGraphic {
   updatedAt      DateTime @updatedAt
 }
 
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
 model PatternDraft {
   id              String           @id @default(cuid())
   userId          String

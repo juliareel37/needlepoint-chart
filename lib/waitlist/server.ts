@@ -17,6 +17,7 @@ export interface WaitlistSubmissionResult {
     updatedAt: Date;
   };
   created: boolean;
+  alreadySubmitted: boolean;
 }
 
 export interface WaitlistInviteValidationResult {
@@ -121,28 +122,14 @@ export async function submitWaitlistApplication(
     return {
       application: created,
       created: true,
+      alreadySubmitted: false,
     };
   }
 
-  const updated = await prisma.waitlistApplication.update({
-    where: { id: existing.id },
-    data: {
-      experienceLevel: input.experienceLevel,
-      currentTools: input.currentTools,
-      freeformResponse: input.freeformResponse,
-    },
-    select: {
-      id: true,
-      email: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
   return {
-    application: updated,
+    application: existing,
     created: false,
+    alreadySubmitted: true,
   };
 }
 

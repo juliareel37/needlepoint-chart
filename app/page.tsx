@@ -400,7 +400,10 @@ export default function Page() {
           website,
         }),
       });
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      const body = (await response.json().catch(() => null)) as {
+        alreadySubmitted?: boolean;
+        error?: string;
+      } | null;
 
       if (!response.ok) {
         setWaitlistStatus({
@@ -411,12 +414,21 @@ export default function Page() {
         return;
       }
 
-      setWaitlistStatus({
-        tone: "success",
-        title: "You’re on the list",
-        description:
-          "Thanks for your interest in Wippa! We’ll reach out when your beta access is ready.",
-      });
+      setWaitlistStatus(
+        body?.alreadySubmitted
+          ? {
+              tone: "success",
+              title: "You’re already on the list",
+              description:
+                "We already have an application for that email. We’ll reach out when your beta access is ready.",
+            }
+          : {
+              tone: "success",
+              title: "You’re on the list",
+              description:
+                "Thanks for your interest in Wippa! We’ll reach out when your beta access is ready.",
+            },
+      );
       setWaitlistModalOpen(false);
       resetWaitlistForm();
     } catch {
