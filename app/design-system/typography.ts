@@ -226,7 +226,7 @@ export const marketingTypographySpecs: Record<
   },
   sectionTitle: {
     label: "sectionTitle",
-    size: "clamp(1.65rem, 2.8vw, 2.45rem)",
+    size: "clamp(1.8rem, 3vw, 2.65rem)",
     lineHeight: 1.02,
     weight: fontWeights.regular,
     usage: "section titles on marketing pages",

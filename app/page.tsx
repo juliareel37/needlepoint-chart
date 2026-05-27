@@ -227,6 +227,49 @@ const workflowCards = [
   },
 ] as const;
 
+// const detailBentoCards = [
+//   {
+//     title: "Export stitch-ready PDFs",
+//     body: "Generate full-color symbol charts with DMC codes, stitch counts, and skein estimates.",
+//     image: {
+//       src: "/ui/export-crop.png",
+//       alt: "Pattern conversion controls shown beside a canvas preview",
+//       width: 1536,
+//       height: 1024,
+//     },
+//   },
+//   {
+//     title: "Grid snapping and guides",
+//     body: "Place your shapes, icons, and text with precision.",
+//     image: {
+//       src: "/ui/flower-grid-snap.png",
+//       alt: "Text settings panel open in the editor",
+//       width: 1536,
+//       height: 1024,
+//     },
+//   },
+//   {
+//     title: "Build with reusable palettes",
+//     body: "Save favorite shade sets and keep project colors consistent from canvas to export.",
+//     image: {
+//       src: "/ui/custom-palettes-list.png",
+//       alt: "Custom palette list in the editor color tools",
+//       width: 1536,
+//       height: 1024,
+//     },
+//   },
+//   {
+//     title: "Frame, duplicate, and compose faster",
+//     body: "Use structured elements and quick-edit tools to build polished layouts without repetitive setup.",
+//     image: {
+//       src: "/ui/copy-tool-new.png",
+//       alt: "Editor canvas with copy controls for arranging design elements",
+//       width: 1536,
+//       height: 1024,
+//     },
+//   },
+// ] as const;
+
 type WaitlistStatus =
   | { tone: "success"; title: string; description: string }
   | { tone: "destructive"; title: string; description: string }
@@ -875,6 +918,40 @@ export default function Page() {
                 </div>
               </article>
             </div>
+
+            {/* <div className={styles.bentoFeatureGrid}>
+              {detailBentoCards.map((card, index) => (
+                <article
+                  key={card.title}
+                  className={[
+                    styles.bentoFeatureCard,
+                    index === 0 ? styles.bentoFeatureExportCard : null,
+                    index === 2 ? styles.bentoFeatureCardTall : null,
+                    index === 3 ? styles.bentoFeatureCardWide : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className={styles.bentoFeatureCopy}>
+                    <h3 className={styles.bentoFeatureTitle} style={marketingTypographyStyles.featureTitle}>
+                      {card.title}
+                    </h3>
+                    <p className={styles.bentoFeatureBody} style={marketingTypographyStyles.bodySm}>
+                      {card.body}
+                    </p>
+                  </div>
+                  <div className={styles.bentoFeatureMedia} aria-hidden="true">
+                    <Image
+                      src={card.image.src}
+                      alt=""
+                      width={card.image.width}
+                      height={card.image.height}
+                      className={styles.bentoFeatureImage}
+                    />
+                  </div>
+                </article>
+              ))}
+            </div> */}
 
             <div className={styles.bentoSupportGrid}>
               <article className={styles.bentoSupportCard}>

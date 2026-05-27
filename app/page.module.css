@@ -257,9 +257,9 @@
   height: auto;
   padding: 8px;
   border-radius: 16px;
-  border: 1px solid rgb(255 255 255 / 72%);
-  background: rgb(255 255 255 / 54%);
-  box-shadow: 0 34px 90px rgba(20, 24, 36, 0.18), 0 10px 28px rgba(20, 24, 36, 0.12);
+  border: 1px solid rgb(255 255 255 / 32%);
+  background: rgb(255 255 255 / 28%);
+  box-shadow: 0 18px 34px rgba(20, 24, 36, 0.13), 0 4px 12px rgba(20, 24, 36, 0.08);
   /* -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   -webkit-mask-repeat: no-repeat;
@@ -274,7 +274,7 @@
   max-width: 100%;
   height: auto;
   border-radius: 10px;
-  border: 1px solid rgb(255 255 255 / 70%);
+  border: 1px solid rgb(255 255 255 / 24%);
 }
 
 .heroFeatureGrid {
@@ -374,9 +374,9 @@
     drop-shadow(5px 0 5px rgba(24, 20, 34, 0.08));
   box-sizing: border-box;
   width: min(1680px, 100%);
-  margin: 0 auto clamp(32px, 5vw, 72px);
+  margin: clamp(24px, 4vw, 56px) auto clamp(32px, 5vw, 72px);
   display: grid;
-  gap: clamp(28px, 4vw, 44px);
+  gap: clamp(56px, 7vw, 96px);
   padding-inline: clamp(
     var(--landing-page-gutter),
     7vw,
@@ -386,13 +386,16 @@
 
 .buildingBlocksIntro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(28px, 4vw, 56px);
   align-items: end;
+  justify-items: center;
+  text-align: center;
 }
 
 .buildingBlocksIntro > div {
   display: grid;
+  justify-items: center;
   gap: 16px;
 }
 
@@ -461,24 +464,20 @@
 .buildingBlocksPanelFonts {
   background:
     radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.72), transparent 26%),
-    linear-gradient(150deg, color-mix(in srgb, white 56%, #eef6e8) 0%, color-mix(in srgb, white 24%, #e8f3df) 100%);
+    linear-gradient(180deg, color-mix(in srgb, white 22%, #f5b6d8) 0%, color-mix(in srgb, white 34%, #f5b6d8) 44%, color-mix(in srgb, white 86%, #ffdbf4) 74%, white 90%);
 }
 
 .buildingBlocksPanelIcons {
   background:
     radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.72), transparent 24%),
-    /* linear-gradient(160deg, color-mix(in srgb, white 36%, #ffdbf4) 0%, color-mix(in srgb, white 18%, #ffdbf4) 100%); */
-    linear-gradient(160deg, color-mix(in srgb, white 36%, #fdffd7) 0%, color-mix(in srgb, white 18%, #fdffd7) 100%);
-
-  }
+    linear-gradient(180deg, color-mix(in srgb, white 24%, #b9d6bd) 0%, color-mix(in srgb, white 36%, #b9d6bd) 44%, color-mix(in srgb, white 86%, #e3f1dc) 74%, white 90%);
+}
 
 .buildingBlocksPanelShapes {
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.82), transparent 24%),
-    /* linear-gradient(155deg, color-mix(in srgb, white 42%, #fdffd7) 0%, color-mix(in srgb, white 18%, #fdffd7) 100%); */
-    linear-gradient(155deg, color-mix(in srgb, white 42%, #ffdbf4) 0%, color-mix(in srgb, white 18%, #ffdbf4) 100%);
-
-  }
+    linear-gradient(180deg, color-mix(in srgb, white 18%, #f5df8f) 0%, color-mix(in srgb, white 32%, #f5df8f) 44%, color-mix(in srgb, white 86%, #fff2b8) 74%, white 90%);
+}
 
 .buildingBlocksPanelMedia {
   box-sizing: border-box;
@@ -810,7 +809,11 @@
 }
 
 .sectionTitle {
-  max-width: 26ch;
+  max-width: 23ch;
+}
+
+.sectionBody {
+  max-width: 52ch;
 }
 
 .sectionTitleEmphasis {
@@ -864,7 +867,7 @@
   width: min(1680px, 100%);
   margin: 0 auto;
   display: grid;
-  gap: clamp(32px, 4vw, 48px);
+  gap: clamp(56px, 7vw, 96px);
   padding-inline: clamp(
     var(--landing-page-gutter),
     7vw,
@@ -874,13 +877,16 @@
 
 .bentoIntro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(28px, 4vw, 56px);
   align-items: end;
+  justify-items: center;
+  text-align: center;
 }
 
 .bentoIntro > div {
   display: grid;
+  justify-items: center;
   gap: 16px;
 }
 
@@ -900,6 +906,128 @@
   align-items: stretch;
 }
 
+.bentoFeatureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(300px, auto);
+  gap: clamp(16px, 2vw, 20px);
+  align-items: stretch;
+}
+
+.bentoFeatureCard {
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(18px, 2vw, 24px);
+  min-width: 0;
+  min-height: clamp(300px, 24vw, 360px);
+  padding: clamp(22px, 2.4vw, 30px);
+  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 72%, white);
+  border-radius: clamp(24px, 2.2vw, 32px);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.74), transparent 28%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-card) 82%, #f0f5e9) 0%, color-mix(in srgb, white 60%, #eef3e7) 100%);
+  box-shadow:
+    0 18px 34px rgba(24, 20, 34, 0.10),
+    0 3px 8px rgba(24, 20, 34, 0.05);
+}
+
+.bentoFeatureCardTall {
+  grid-row: span 2;
+}
+
+.bentoFeatureExportCard {
+  padding-bottom: 0;
+}
+
+.bentoFeatureCardWide {
+  grid-column: span 2;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  min-height: clamp(300px, 23vw, 360px);
+}
+
+.bentoFeatureCopy {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  align-content: start;
+}
+
+.bentoFeatureTitle {
+  max-width: 22ch;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.bentoFeatureBody {
+  max-width: 34ch;
+  color: var(--landing-body-muted);
+  text-wrap: pretty;
+}
+
+.bentoFeatureMedia {
+  min-width: 0;
+  align-self: end;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 128px;
+  padding: clamp(8px, 1.2vw, 14px);
+  border-radius: clamp(14px, 1.4vw, 18px);
+  background: color-mix(in srgb, var(--surface-card) 58%, #d9d9d9);
+}
+
+.bentoFeatureImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: clamp(150px, 16vw, 220px);
+  object-fit: contain;
+  filter: var(--bento-image-shadow);
+}
+
+.bentoFeatureExportCard .bentoFeatureMedia {
+  align-self: end;
+  justify-self: stretch;
+  place-items: stretch;
+  width: calc(100% + clamp(22px, 2.4vw, 30px));
+  min-height: 0;
+  margin-left: calc(-1 * clamp(22px, 2.4vw, 30px));
+  margin-bottom: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.bentoFeatureExportCard .bentoFeatureImage {
+  max-height: none;
+  border-radius: 0 clamp(14px, 1.4vw, 18px) 0 0;
+}
+
+.bentoFeatureCardTall .bentoFeatureMedia {
+  min-height: clamp(360px, 40vw, 560px);
+}
+
+.bentoFeatureCardTall .bentoFeatureImage {
+  max-height: clamp(340px, 38vw, 540px);
+}
+
+.bentoFeatureCardWide .bentoFeatureMedia {
+  align-self: center;
+  min-height: clamp(150px, 16vw, 220px);
+}
+
+.bentoFeatureCardWide .bentoFeatureImage {
+  max-height: clamp(150px, 15vw, 210px);
+}
+
 .bentoSupportGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -913,11 +1041,7 @@
   display: grid;
   gap: 10px;
   align-items: start;
-  padding: clamp(18px, 2vw, 24px) clamp(18px, 2.2vw, 28px);
-}
-
-.bentoSupportCard + .bentoSupportCard {
-  border-left: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
+  padding: clamp(30px, 3.2vw, 44px) clamp(18px, 2.2vw, 28px);
 }
 
 .bentoSupportIcon {
@@ -1029,7 +1153,7 @@
 .bentoCardPrimary {
   background:
     radial-gradient(circle at 12% 16%, rgba(255, 255, 255, 0.72), transparent 30%),
-    linear-gradient(135deg, color-mix(in srgb, white 44%, #f7cfdb) 0%, color-mix(in srgb, white 18%, #f8e0c7) 100%);
+    linear-gradient(180deg, white 0%, white 16%, color-mix(in srgb, white 58%, #d8ecff) 34%, color-mix(in srgb, white 24%, #a9d4fb) 100%);
 }
 
 .bentoCardSecondary {
@@ -1050,7 +1174,7 @@
 .bentoCardQuaternary {
   background:
     radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.56), transparent 26%),
-    linear-gradient(135deg, color-mix(in srgb, white 38%, #ffd9c3) 0%, color-mix(in srgb, white 20%, #f3d7eb) 100%);
+    linear-gradient(180deg, white 0%, white 16%, color-mix(in srgb, white 58%, #ffd8ec) 34%, color-mix(in srgb, white 24%, #f2afd1) 100%);
 }
 
 .bentoCardImageFirst {
@@ -1597,7 +1721,7 @@
 
   .buildingBlocksIntro,
   .bentoIntro {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
 
@@ -1662,6 +1786,32 @@
 }
 
 @media (max-width: 1100px) {
+  .bentoFeatureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+  }
+
+  .bentoFeatureCardTall,
+  .bentoFeatureCardWide {
+    grid-column: span 2;
+    grid-row: auto;
+  }
+
+  .bentoFeatureCardTall {
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    min-height: clamp(300px, 34vw, 380px);
+  }
+
+  .bentoFeatureCardTall .bentoFeatureMedia {
+    min-height: clamp(180px, 26vw, 280px);
+  }
+
+  .bentoFeatureCardTall .bentoFeatureImage {
+    max-height: clamp(170px, 24vw, 260px);
+  }
+
   .bentoSupportGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1777,12 +1927,14 @@
 
   .bentoGridTop,
   .bentoGridBottom,
+  .bentoFeatureGrid,
   .bentoSupportGrid {
     grid-template-columns: 1fr;
   }
 
   .bentoGrid,
   .bentoCard,
+  .bentoFeatureCard,
   .bentoSplitLayout,
   .bentoCopy,
   .bentoVisualFrame,
@@ -1796,17 +1948,32 @@
     max-width: 100%;
   }
 
+  .bentoFeatureCard,
+  .bentoFeatureCardTall,
+  .bentoFeatureCardWide {
+    grid-column: auto;
+    grid-row: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 280px;
+  }
+
+  .bentoFeatureCardTall .bentoFeatureMedia,
+  .bentoFeatureMedia {
+    min-height: clamp(150px, 48vw, 240px);
+  }
+
+  .bentoFeatureCardTall .bentoFeatureImage,
+  .bentoFeatureImage {
+    max-height: clamp(150px, 44vw, 230px);
+  }
+
   .bentoGridTop .bentoCard {
     height: auto;
   }
 
   .bentoSupportCard {
     padding: 18px;
-  }
-
-  .bentoSupportCard + .bentoSupportCard {
-    border-left: none;
-    border-top: 1px solid color-mix(in srgb, var(--ui-border-reg) 82%, white);
   }
 
   .bentoCardPrimary,
