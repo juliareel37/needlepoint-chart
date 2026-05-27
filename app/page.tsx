@@ -264,6 +264,7 @@ export default function Page() {
   );
   const [currentTools, setCurrentTools] = useState("");
   const [freeformResponse, setFreeformResponse] = useState("");
+  const [website, setWebsite] = useState("");
   const [waitlistFormErrors, setWaitlistFormErrors] = useState<WaitlistFormErrors>({});
   const waitlistIntroCopy = showResumeCta
     ? "Your account is active. Head back into your library to keep designing."
@@ -301,6 +302,7 @@ export default function Page() {
     setExperienceLevel(experienceLevelOptions[0]);
     setCurrentTools("");
     setFreeformResponse("");
+    setWebsite("");
     setWaitlistFormErrors({});
   }
 
@@ -395,6 +397,7 @@ export default function Page() {
           experienceLevel: validation.trimmedExperienceLevel,
           currentTools: validation.trimmedCurrentTools,
           freeformResponse: validation.trimmedFreeformResponse,
+          website,
         }),
       });
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -1034,6 +1037,18 @@ export default function Page() {
                 onSubmit={handleWaitlistSubmit}
                 noValidate
               >
+                <div className={styles.visuallyHidden} aria-hidden="true">
+                  <label htmlFor="waitlist-website">Website</label>
+                  <input
+                    id="waitlist-website"
+                    type="text"
+                    name="website"
+                    autoComplete="off"
+                    tabIndex={-1}
+                    value={website}
+                    onChange={(event) => setWebsite(event.currentTarget.value)}
+                  />
+                </div>
                 <Field
                   label={
                     <span

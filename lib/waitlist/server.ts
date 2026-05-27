@@ -53,6 +53,11 @@ export function parseWaitlistSubmission(input: unknown): WaitlistSubmissionInput
 
   const record = input as Record<string, unknown>;
 
+  const honeypot = typeof record.website === "string" ? record.website.trim() : "";
+  if (honeypot.length > 0) {
+    return null;
+  }
+
   const email = typeof record.email === "string" ? normalizeEmail(record.email) : "";
   const experienceLevel =
     typeof record.experienceLevel === "string"

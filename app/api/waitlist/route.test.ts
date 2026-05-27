@@ -45,6 +45,25 @@ describe("POST /api/waitlist", () => {
     expect(findUniqueMock).not.toHaveBeenCalled();
   });
 
+  it("rejects submissions with a filled honeypot field", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@example.com",
+          experienceLevel: "Yes, regularly",
+          currentTools: "Illustrator and graph paper",
+          freeformResponse: "I want to design original canvases more quickly.",
+          website: "https://spam.example",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
   it("creates a new waitlist application", async () => {
     findUniqueMock.mockResolvedValue(null);
     createMock.mockResolvedValue({
