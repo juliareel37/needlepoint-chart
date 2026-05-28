@@ -4066,10 +4066,11 @@ function HeaderFileMenu({
         onClick={() => setOpen((currentValue) => !currentValue)}
         className={styles.headerFileMenuTrigger}
         style={{ minWidth: "auto", padding: "6px 8px" }}
+        aria-label="File menu"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className={styles.headerFileMenuTriggerLabel}>File</span>
+        <span className={styles.headerFileMenuTriggerIcon} aria-hidden="true" />
       </MenuTrigger>
       {open && mounted
         ? createPortal(

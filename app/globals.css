@@ -1103,6 +1103,10 @@ button:disabled {
   transform: translateY(0);
 }
 
+:root[data-theme="dark"] #app-shell-root[data-header-nav-mode="editor"] .editor-header-brand-logo {
+  filter: invert(1);
+}
+
 .app-top-banner-slot {
   position: relative;
   z-index: var(--z-app-top-banner);

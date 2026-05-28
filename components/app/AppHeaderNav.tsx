@@ -52,6 +52,21 @@ const editorBrandLogoStyle = {
   height: 24,
 } as const;
 
+const editorHeaderWrapStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 20,
+  minWidth: 0,
+} as const;
+
+const editorHeaderDividerStyle = {
+  width: 1,
+  height: 24,
+  flexShrink: 0,
+  backgroundColor: "var(--text-secondary)",
+  opacity: 0.2,
+} as const;
+
 const navLinkStyle = {
   ...typographyStyles.p1,
   minHeight: 36,
@@ -135,16 +150,20 @@ export default function AppHeaderNav() {
 
   if (showEditorBrandOnly) {
     return (
-      <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
-        <Image
-          src="/logos/curly/icon-bw.png"
-          alt="Wippa"
-          width={344}
-          height={72}
-          style={editorBrandLogoStyle}
-          priority
-        />
-      </Link>
+      <div style={editorHeaderWrapStyle}>
+        <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
+          <Image
+            src="/logos/curly/icon-bw.png"
+            alt="Wippa"
+            width={344}
+            height={72}
+            className="editor-header-brand-logo"
+            style={editorBrandLogoStyle}
+            priority
+          />
+        </Link>
+        <span aria-hidden="true" style={editorHeaderDividerStyle} />
+      </div>
     );
   }
 
