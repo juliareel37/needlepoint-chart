@@ -603,7 +603,7 @@ export default function Page() {
   }
 
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} landing-light-page`}>
       <div className={styles.shell}>
         <section className={styles.hero} id="canvas">
           <div className={styles.heroCopy}>

@@ -20,6 +20,7 @@
     );
   min-height: calc(100dvh - var(--app-top-offset, 52px));
   overflow-x: clip;
+  background: var(--surface-primary);
   color: var(--text-primary);
 }
 
@@ -78,25 +79,6 @@
   50% {
     background-position: 100% 50%;
   }
-}
-
-:global(:root[data-theme="dark"]) .page {
-  --landing-accent-soft: color-mix(in srgb, var(--light-blue) 12%, transparent);
-  --landing-secondary-soft: color-mix(in srgb, var(--light-pink) 42%, transparent);
-  --landing-secondary-surface: color-mix(in srgb, var(--surface-card) 92%, var(--secondary-400));
-  --landing-secondary-border: color-mix(in srgb, var(--ui-border-reg) 76%, var(--secondary-300));
-  --landing-hero-left-glow: color-mix(in srgb, var(--light-blue) 14%, transparent);
-  --landing-hero-right-glow: color-mix(in srgb, var(--light-pink) 46%, transparent);
-  --landing-hero-center-glow: color-mix(in srgb, var(--butter-yellow) 22%, transparent);
-  --landing-hero-bottom-glow: color-mix(in srgb, var(--light-pink) 28%, transparent);
-  --landing-body-muted: color-mix(in srgb, var(--text-secondary) 86%, white);
-  --landing-hero-base:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, #17171b 80%, var(--butter-yellow)) 0%,
-      color-mix(in srgb, #17171b 68%, var(--light-pink)) 44%,
-      color-mix(in srgb, #17171b 66%, var(--light-pink)) 100%
-    );
 }
 
 .shell {

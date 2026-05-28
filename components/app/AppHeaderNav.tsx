@@ -69,6 +69,7 @@ export default function AppHeaderNav() {
     pathname === "/library" ||
     pathname === "/privacy" ||
     pathname === "/terms";
+  const forceLightLandingTheme = pathname === "/";
   const showHeroResponsiveHeader = pathname === "/";
   const showLandingNavLinks = pathname === "/";
   const showEditorBrandOnly =
@@ -87,11 +88,17 @@ export default function AppHeaderNav() {
         : "default";
 
     appShellRoot.setAttribute("data-header-nav-mode", headerNavMode);
+    if (forceLightLandingTheme) {
+      appShellRoot.setAttribute("data-page-theme", "landing-light");
+    } else {
+      appShellRoot.removeAttribute("data-page-theme");
+    }
 
     return () => {
       appShellRoot.removeAttribute("data-header-nav-mode");
+      appShellRoot.removeAttribute("data-page-theme");
     };
-  }, [showEditorBrandOnly, showLandingHeader]);
+  }, [forceLightLandingTheme, showEditorBrandOnly, showLandingHeader]);
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
