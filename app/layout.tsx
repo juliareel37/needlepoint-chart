@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Geist_Mono } from "next/font/google";
+import { Figtree, Fraunces } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
@@ -10,15 +10,17 @@ import AppHeaderNav from "@/components/app/AppHeaderNav";
 import { getCurrentUserThemePreference } from "@/lib/auth/server";
 import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
 
-const uiSans = Manrope({
+const uiSans = Figtree({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-code",
+const marketingHeadingFont = Fraunces({
+  variable: "--font-marketing-heading",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +28,7 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/w.png"), type: "image/png" },
+      { url: assetPath("/favicon-green-on-green.png"), type: "image/png" },
       // { url: assetPath("/favicon.png"), type: "image/png" },
     ],
     shortcut: assetPath("/w.png"),
@@ -51,7 +53,7 @@ const appShellStyle: CSSProperties &
   padding: 0,
   display: "flex",
   flexDirection: "column",
-  "--app-header-height": "52px",
+  "--app-header-height": "64px",
   "--app-top-banner-height": "0px",
   "--app-top-offset": "calc(var(--app-header-height) + var(--app-top-banner-height))",
 };
@@ -91,7 +93,9 @@ export default async function RootLayout({
   if (!neonAuthBaseUrl || !neonAuthCookieSecret) {
     return (
       <html lang="en">
-        <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+        <body
+          className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
+        >
           <div
             style={{
               minHeight: "100vh",
@@ -141,7 +145,9 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
-      <body className={`${uiSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
+      >
         <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>
             <div id="app-top-banner" className="app-top-banner-slot" />
@@ -154,9 +160,7 @@ export default async function RootLayout({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "0 14px 0 14px",
-                background: "var(--surface-primary)",
-                borderBottom: "1px solid var(--ui-border-reg)",
+                padding: "0 var(--app-shell-inline-padding, 14px)",
                 position: "relative",
                 zIndex: "var(--z-app-header)",
               }}
@@ -187,7 +191,10 @@ export default async function RootLayout({
                 <div id="app-header-overflow-right" />
               </div>
             </div>
-            <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}>
+            <div
+              id="app-shell-scroll-region"
+              style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }}
+            >
               {children}
             </div>
           </div>

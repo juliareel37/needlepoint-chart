@@ -41,6 +41,8 @@ frame-1.svg
 frame-3.svg
 frame-2.svg
 noun-frame-7769731.svg
+triple-rectangle-frame.svg
+striped-rectangle-frame.svg
 wine.svg
 ice-cream-bowl.svg
 croissant.svg

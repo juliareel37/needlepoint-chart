@@ -341,6 +341,7 @@ export function TextPlacementToolbar({
                     activeColorId={activeColorId}
                     className={styles.toolbarColorLibrary}
                     colors={palette}
+                    defaultView="all"
                     featuredColorIds={featuredColorIds}
                     onManagePalettes={() => {
                       setColorLibraryOpen(false);

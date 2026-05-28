@@ -19,7 +19,10 @@ import {
 } from "@/components/design-system";
 import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import { convertIconPlacementToPaintGroups } from "@/lib/editor-v2/editor/icons/convertIconPlacementToCells";
-import { getPrimitiveStrokeWidthScaleRange } from "@/lib/editor-v2/editor/icons/primitiveIcon";
+import {
+  getPrimitiveSpacingScaleRange,
+  getPrimitiveStrokeWidthScaleRange,
+} from "@/lib/editor-v2/editor/icons/primitiveIcon";
 import type {
   CustomPalette,
   EditorStore,
@@ -236,6 +239,7 @@ function IconColorSlotSwatchPopover({
             activeColorId={activeColorId}
             className={styles.toolbarColorLibrary}
             colors={colors}
+            defaultView="all"
             featuredColorIds={featuredColorIds}
             includeTransparentSwatch={Boolean(onTransparentSelect)}
             onManagePalettes={() => {
@@ -336,6 +340,8 @@ export function IconPlacementToolbar({
       ? placement.colorSlots.some((slot) => Boolean(slot.paletteColorId))
       : palette.length > 0 || Boolean(activeColorId));
   const normalizedStrokeWidth = placement.strokeWidthScale;
+  const supportsStrokeWidthControl =
+    placement.supportsStrokeWidth && placement.primitiveKind !== "linked-circle-frame";
   const { min: strokeWidthMin, max: strokeWidthMax } = getPrimitiveStrokeWidthScaleRange(
     placement.primitiveKind,
     placement.primitiveStrokeReferenceSize,
@@ -348,27 +354,39 @@ export function IconPlacementToolbar({
     ),
   );
   const strokeWidthLabel = `${normalizedStrokeWidth.toFixed(1)}x`;
-  const supportsPatternScale = placement.primitiveKind === "scalloped-frame";
+  const supportsPatternScale =
+    placement.primitiveKind === "scalloped-frame" ||
+    placement.primitiveKind === "double-scalloped-frame";
   const normalizedPatternScale = placement.primitivePatternScale;
   const patternTooltipPercent = Math.max(
     0,
     Math.min(100, ((normalizedPatternScale - 0.5) / (2.5 - 0.5)) * 100),
   );
   const patternLabel = `${normalizedPatternScale.toFixed(1)}x`;
-  const supportsSpacingScale = placement.primitiveKind === "double-rectangle-frame";
+  const supportsSpacingScale =
+    placement.primitiveKind === "double-rectangle-frame" ||
+    placement.primitiveKind === "triple-rectangle-frame" ||
+    placement.primitiveKind === "double-scalloped-frame";
+  const editableColorSlots = placement.colorSlots.filter((slot) => !slot.isLocked);
   const canEraseUploadedGraphic =
     placement.isUserUploaded &&
     placement.mimeType !== "image/svg+xml" &&
     typeof onBeginEraser === "function";
   const normalizedSpacingScale = placement.primitiveSpacingScale;
+  const { min: spacingScaleMin, max: spacingScaleMax } = getPrimitiveSpacingScaleRange(
+    placement.primitiveKind,
+  );
   const spacingTooltipPercent = Math.max(
     0,
-    Math.min(100, ((normalizedSpacingScale - 0.5) / (2 - 0.5)) * 100),
+    Math.min(
+      100,
+      ((normalizedSpacingScale - spacingScaleMin) / (spacingScaleMax - spacingScaleMin)) * 100,
+    ),
   );
   const spacingLabel = `${normalizedSpacingScale.toFixed(1)}x`;
   const hasColorSlots = placement.colorSlots.length > 0;
   const showDividerAfterBaseColor =
-    placement.supportsStrokeWidth || supportsPatternScale || supportsSpacingScale || hasColorSlots;
+    supportsStrokeWidthControl || supportsPatternScale || supportsSpacingScale || hasColorSlots;
   const showDividerAfterStrokeWidth = supportsPatternScale || supportsSpacingScale || hasColorSlots;
   const showDividerAfterPattern = supportsSpacingScale || hasColorSlots;
   const showDividerAfterSpacing = hasColorSlots;
@@ -522,6 +540,7 @@ export function IconPlacementToolbar({
                         activeColorId={activeColorId}
                         className={styles.toolbarColorLibrary}
                         colors={palette}
+                        defaultView="all"
                         featuredColorIds={featuredColorIds}
                         onManagePalettes={() => {
                           setColorLibraryOpen(false);
@@ -544,7 +563,7 @@ export function IconPlacementToolbar({
             </>
           ) : null}
 
-          {placement.supportsStrokeWidth ? (
+          {supportsStrokeWidthControl ? (
             <>
               <ToolbarGroup>
                 <ToolbarAnchor ref={strokeWidthAnchorRef}>
@@ -756,8 +775,8 @@ export function IconPlacementToolbar({
                             {spacingLabel}
                           </div>
                           <Slider
-                            min={0.5}
-                            max={2}
+                            min={spacingScaleMin}
+                            max={spacingScaleMax}
                             step={0.1}
                             value={normalizedSpacingScale}
                             aria-label="Frame spacing"
@@ -787,7 +806,7 @@ export function IconPlacementToolbar({
             <>
               <ToolbarGroup>
                 <div className={styles.iconPlacementSwatchList} role="list" aria-label="Icon colors">
-                  {placement.colorSlots.map((slot) => {
+                  {editableColorSlots.map((slot) => {
                     const assignedColor = slot.paletteColorId
                       ? palette.find((color) => color.id === slot.paletteColorId) ?? null
                       : null;
@@ -798,10 +817,11 @@ export function IconPlacementToolbar({
                       (slot.sourceHex === "transparent" || slot.sourceHex === "none");
                     const allowTransparent = slot.id === "fill";
                     const primitiveCaption =
-                      placement.primitiveKind && (slot.id === "fill" || slot.id === "stroke")
+                      placement.primitiveKind &&
+                      (slot.id === "fill" || slot.id === "stroke" || slot.id.startsWith("stroke-"))
                         ? slot.id === "fill"
                           ? "Fill"
-                          : "Outline"
+                          : getPrimitiveStrokeCaption(slot.id)
                         : null;
 
                     return (
@@ -957,11 +977,32 @@ function getIconColorSlotLabel(slotId: string): string {
   switch (slotId) {
     case "stroke":
       return "Stroke color";
+    case "stripe-white":
+      return "White stripe color";
+    case "stroke-outer":
+      return "Outer stroke color";
+    case "stroke-middle":
+      return "Middle stroke color";
+    case "stroke-inner":
+      return "Inner stroke color";
     case "fill":
       return "Fill color";
     case "shadow":
       return "Shadow color";
     default:
       return "Icon color";
+  }
+}
+
+function getPrimitiveStrokeCaption(slotId: string): string {
+  switch (slotId) {
+    case "stroke-outer":
+      return "Outer";
+    case "stroke-middle":
+      return "Middle";
+    case "stroke-inner":
+      return "Inner";
+    default:
+      return "Outline";
   }
 }

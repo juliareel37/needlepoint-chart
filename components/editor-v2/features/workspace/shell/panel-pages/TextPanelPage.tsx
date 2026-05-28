@@ -26,16 +26,16 @@ const DEFAULT_INITIAL_WIDTH_RATIO = 0.5;
 const DEFAULT_TEXT_PLACEHOLDER = "Text";
 const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
   {
-    id: "hello-sunshine",
-    label: "Hello Sunshine",
-    text: "Hello Sunshine",
+    id: "homebody",
+    label: "Homebody",
+    text: "Homebody",
     fontFamily: "DM Serif Display",
     baseFontSize: 30,
     fontWeight: 400,
     fontStyle: "normal",
     underline: false,
     colorCode: "3822",
-    previewTone: "warm",
+    previewTone: "neutral",
   },
   {
     id: "stay-curious",
@@ -47,19 +47,19 @@ const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
     fontStyle: "normal",
     underline: false,
     colorCode: "3846",
-    previewTone: "cool",
+    previewTone: "neutral",
   },
   {
-    id: "thank-you",
-    label: "Thank You",
-    text: "Thank You",
+    id: "let-them",
+    label: "Let Them",
+    text: "Let Them",
     fontFamily: "Great Vibes",
     baseFontSize: 32,
     fontWeight: 400,
     fontStyle: "normal",
     underline: false,
     colorCode: "315",
-    previewTone: "berry",
+    previewTone: "neutral",
   },
   {
     id: "cozy-home",
@@ -83,19 +83,19 @@ const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
     fontStyle: "normal",
     underline: false,
     colorCode: "958",
-    previewTone: "rose",
+    previewTone: "neutral",
   },
   {
-    id: "maker-club",
-    label: "Maker Club",
-    text: "Maker Club",
+    id: "love-ya",
+    label: "Love ya. Mean it.",
+    text: "Love ya. Mean it.",
     fontFamily: "Bebas Neue",
     baseFontSize: 34,
     fontWeight: 700,
     fontStyle: "normal",
     underline: false,
-    colorCode: "820",
-    previewTone: "cool",
+    colorCode: "350",
+    previewTone: "neutral",
   },
   {
     id: "good-vibes",
@@ -107,7 +107,7 @@ const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
     fontStyle: "normal",
     underline: false,
     colorCode: "352",
-    previewTone: "warm",
+    previewTone: "neutral",
   },
   {
     id: "for-the-record",
@@ -117,21 +117,21 @@ const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
     baseFontSize: 24,
     fontWeight: 400,
     fontStyle: "italic",
-    underline: true,
+    underline: false,
     colorCode: "3371",
     previewTone: "neutral",
   },
   {
-    id: "love-you",
-    label: "Love You",
-    text: "Love You",
+    id: "tini-time",
+    label: "Tini time!",
+    text: "Tini time!",
     fontFamily: "Allura",
     baseFontSize: 34,
     fontWeight: 400,
     fontStyle: "normal",
     underline: false,
     colorCode: "761",
-    previewTone: "rose",
+    previewTone: "neutral",
   },
   {
     id: "new-arrivals",
@@ -143,7 +143,7 @@ const QUICK_ADD_PRESETS: TextQuickAddPreset[] = [
     fontStyle: "normal",
     underline: false,
     colorCode: "699",
-    previewTone: "cool",
+    previewTone: "neutral",
   },
 ];
 
@@ -283,7 +283,7 @@ interface TextQuickAddPreset {
   fontWeight: number;
   underline: boolean;
   colorCode: string;
-  previewTone: "warm" | "cool" | "rose" | "berry" | "neutral";
+  previewTone: "neutral" | "neutral" | "neutral" | "neutral" | "neutral";
 }
 
 function beginTextPlacement(

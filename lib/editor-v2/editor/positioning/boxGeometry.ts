@@ -394,6 +394,74 @@ export function getResizeSnappedBounds(
   };
 }
 
+export function getTranslatedResizeSnappedBounds(
+  resizedBounds: PositioningRect,
+  handle: PositioningHandleId,
+  containerBounds: PositioningRect,
+  currentSnap: PositioningMoveSnapState,
+  zoom: number,
+): PositioningResizeSnapResult {
+  const safeZoom = Math.max(zoom, 0.0001);
+  const snapTolerance = MOVE_CENTER_SNAP_PX / safeZoom;
+  const unsnapTolerance = MOVE_CENTER_UNSNAP_PX / safeZoom;
+  const containerLeft = containerBounds.left;
+  const containerTop = containerBounds.top;
+  const containerRight = containerBounds.left + containerBounds.width;
+  const containerBottom = containerBounds.top + containerBounds.height;
+  const containerCenterX = containerBounds.left + containerBounds.width / 2;
+  const containerCenterY = containerBounds.top + containerBounds.height / 2;
+  const boundsLeft = resizedBounds.left;
+  const boundsTop = resizedBounds.top;
+  const boundsRight = resizedBounds.left + resizedBounds.width;
+  const boundsBottom = resizedBounds.top + resizedBounds.height;
+  const boundsCenterX = resizedBounds.left + resizedBounds.width / 2;
+  const boundsCenterY = resizedBounds.top + resizedBounds.height / 2;
+  const snappedX = getTranslatedResizeAxisSnapTarget(
+    getTranslatedResizeHorizontalCandidates(
+      handle,
+      currentSnap,
+      boundsLeft,
+      boundsCenterX,
+      boundsRight,
+      containerLeft,
+      containerCenterX,
+      containerRight,
+    ),
+    snapTolerance,
+    unsnapTolerance,
+  );
+  const snappedY = getTranslatedResizeAxisSnapTarget(
+    getTranslatedResizeVerticalCandidates(
+      handle,
+      currentSnap,
+      boundsTop,
+      boundsCenterY,
+      boundsBottom,
+      containerTop,
+      containerCenterY,
+      containerBottom,
+    ),
+    snapTolerance,
+    unsnapTolerance,
+  );
+
+  return {
+    bounds: {
+      ...resizedBounds,
+      left: resizedBounds.left + (snappedX?.offset ?? 0),
+      top: resizedBounds.top + (snappedY?.offset ?? 0),
+    },
+    snap: {
+      left: snappedX?.key === "left" ? containerLeft : null,
+      right: snappedX?.key === "right" ? containerRight : null,
+      centerX: snappedX?.key === "centerX" ? containerCenterX : null,
+      top: snappedY?.key === "top" ? containerTop : null,
+      bottom: snappedY?.key === "bottom" ? containerBottom : null,
+      centerY: snappedY?.key === "centerY" ? containerCenterY : null,
+    },
+  };
+}
+
 export function getPinchSnappedBounds(
   bounds: PositioningRect,
   containerBounds: PositioningRect,
@@ -656,6 +724,170 @@ function getAxisSnapTarget(
     }))
     .filter((candidate) => candidate.distance <= snapTolerance)
     .sort((a, b) => a.distance - b.distance)[0];
+
+  if (!snappedCandidate) {
+    return null;
+  }
+
+  return {
+    key: snappedCandidate.key,
+    offset: snappedCandidate.delta,
+  };
+}
+
+function getTranslatedResizeHorizontalCandidates(
+  handle: PositioningHandleId,
+  currentSnap: PositioningMoveSnapState,
+  boundsLeft: number,
+  boundsCenterX: number,
+  boundsRight: number,
+  containerLeft: number,
+  containerCenterX: number,
+  containerRight: number,
+): Array<{
+  key: "left" | "right" | "centerX";
+  currentValue: number | null;
+  value: number;
+  target: number;
+  priority: number;
+}> {
+  const candidates: Array<{
+    key: "left" | "right" | "centerX";
+    currentValue: number | null;
+    value: number;
+    target: number;
+    priority: number;
+  }> = [];
+  const canResizeHorizontally = handle.includes("e") || handle.includes("w");
+
+  if (!canResizeHorizontally) {
+    return candidates;
+  }
+
+  if (handle.includes("w")) {
+    candidates.push({
+      key: "left",
+      currentValue: currentSnap.left,
+      value: boundsLeft,
+      target: containerLeft,
+      priority: 0,
+    });
+  }
+
+  if (handle.includes("e")) {
+    candidates.push({
+      key: "right",
+      currentValue: currentSnap.right,
+      value: boundsRight,
+      target: containerRight,
+      priority: 0,
+    });
+  }
+
+  candidates.push({
+    key: "centerX",
+    currentValue: currentSnap.centerX,
+    value: boundsCenterX,
+    target: containerCenterX,
+    priority: 1,
+  });
+
+  return candidates;
+}
+
+function getTranslatedResizeVerticalCandidates(
+  handle: PositioningHandleId,
+  currentSnap: PositioningMoveSnapState,
+  boundsTop: number,
+  boundsCenterY: number,
+  boundsBottom: number,
+  containerTop: number,
+  containerCenterY: number,
+  containerBottom: number,
+): Array<{
+  key: "top" | "bottom" | "centerY";
+  currentValue: number | null;
+  value: number;
+  target: number;
+  priority: number;
+}> {
+  const candidates: Array<{
+    key: "top" | "bottom" | "centerY";
+    currentValue: number | null;
+    value: number;
+    target: number;
+    priority: number;
+  }> = [];
+  const canResizeVertically = handle.includes("n") || handle.includes("s");
+
+  if (!canResizeVertically) {
+    return candidates;
+  }
+
+  if (handle.includes("n")) {
+    candidates.push({
+      key: "top",
+      currentValue: currentSnap.top,
+      value: boundsTop,
+      target: containerTop,
+      priority: 0,
+    });
+  }
+
+  if (handle.includes("s")) {
+    candidates.push({
+      key: "bottom",
+      currentValue: currentSnap.bottom,
+      value: boundsBottom,
+      target: containerBottom,
+      priority: 0,
+    });
+  }
+
+  candidates.push({
+    key: "centerY",
+    currentValue: currentSnap.centerY,
+    value: boundsCenterY,
+    target: containerCenterY,
+    priority: 1,
+  });
+
+  return candidates;
+}
+
+function getTranslatedResizeAxisSnapTarget(
+  candidates: Array<{
+    key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+    currentValue: number | null;
+    value: number;
+    target: number;
+    priority: number;
+  }>,
+  snapTolerance: number,
+  unsnapTolerance: number,
+): {
+  key: "left" | "right" | "top" | "bottom" | "centerX" | "centerY";
+  offset: number;
+} | null {
+  const latchedCandidate = candidates.find((candidate) => candidate.currentValue !== null);
+  if (
+    latchedCandidate &&
+    Math.abs(latchedCandidate.value - latchedCandidate.target) <= unsnapTolerance
+  ) {
+    return {
+      key: latchedCandidate.key,
+      offset: latchedCandidate.target - latchedCandidate.value,
+    };
+  }
+
+  const snappedCandidate = candidates
+    .map((candidate) => ({
+      ...candidate,
+      delta: candidate.target - candidate.value,
+      distance: Math.abs(candidate.target - candidate.value),
+    }))
+    .filter((candidate) => candidate.distance <= snapTolerance)
+    .sort((a, b) => a.priority - b.priority || a.distance - b.distance)[0];
 
   if (!snappedCandidate) {
     return null;

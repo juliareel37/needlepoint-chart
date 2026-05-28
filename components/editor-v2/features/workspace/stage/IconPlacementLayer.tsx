@@ -55,8 +55,6 @@ interface IconPlacementLayerProps {
   zoom: number;
 }
 
-const MAX_CELL_SAMPLED_PREVIEW_PIXELS = 8_388_608;
-
 export function IconPlacementLayer({
   dispatch,
   eraserBrushPreviewVisible = false,
@@ -197,9 +195,13 @@ export function IconPlacementLayer({
             height: displayBounds.height,
             strokeColor: primitiveColors?.primary ?? previewColor,
             secondaryStrokeColor: primitiveColors?.secondary,
+            strokeColorsBySlotId: primitiveColors?.bySlotId,
             fillColor: primitiveColors?.fill,
             strokeReferenceSize: placement.primitiveStrokeReferenceSize,
-            strokeWidthScale: placement.strokeWidthScale,
+            strokeWidthScale:
+              placement.primitiveKind === "linked-circle-frame"
+                ? 1
+                : placement.strokeWidthScale,
             patternScale: placement.primitivePatternScale,
             spacingScale: placement.primitiveSpacingScale,
           })
@@ -388,8 +390,9 @@ export function IconPlacementLayer({
         }
 
         const sourceCanvas = document.createElement("canvas");
-        sourceCanvas.width = Math.max(1, Math.ceil(displayBounds.width));
-        sourceCanvas.height = Math.max(1, Math.ceil(displayBounds.height));
+        const sourceCanvasSize = getCellSampledSourceCanvasSize(displayBounds, metrics);
+        sourceCanvas.width = sourceCanvasSize.width;
+        sourceCanvas.height = sourceCanvasSize.height;
         const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
         if (!sourceContext) {
           throw new Error("Unable to get icon preview context");
@@ -586,7 +589,8 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
-                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
+                  imageRendering:
+                    useCellSampledPreview || placement.primitiveKind ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
@@ -724,7 +728,8 @@ export function IconPlacementLayer({
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
-                  imageRendering: useCellSampledPreview ? "pixelated" : "auto",
+                  imageRendering:
+                    useCellSampledPreview || placement.primitiveKind ? "pixelated" : "auto",
                 }}
               />
             ) : placement.primitiveKind ? null : (
@@ -797,7 +802,19 @@ function shouldUseCellSampledIconPreview(
     return false;
   }
 
-  return visibleWidth * visibleHeight <= MAX_CELL_SAMPLED_PREVIEW_PIXELS;
+  return true;
+}
+
+function getCellSampledSourceCanvasSize(
+  bounds: { width: number; height: number },
+  metrics: GridWorldMetrics,
+) {
+  const pitch = Math.max(1, metrics.cellSize + metrics.cellGap);
+
+  return {
+    width: Math.max(1, Math.ceil(bounds.width / pitch) + 1),
+    height: Math.max(1, Math.ceil(bounds.height / pitch) + 1),
+  };
 }
 
 function loadPreviewImage(src: string): Promise<HTMLImageElement> {

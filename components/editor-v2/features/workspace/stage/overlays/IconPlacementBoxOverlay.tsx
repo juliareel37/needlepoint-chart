@@ -13,6 +13,7 @@ import {
   getHandleTop,
   getPinchSnappedBounds,
   getResizeSnappedBounds,
+  getTranslatedResizeSnappedBounds,
   getSnappedRotationDegrees,
   getRotationSnapTarget,
   getRotationCss,
@@ -384,14 +385,22 @@ export function IconPlacementBoxOverlay({
         latestBaseRectRef.current,
         nextTransform,
       );
-      const snappedBounds = getResizeSnappedBounds(
-        session.drag.startBounds,
-        rawBounds,
-        session.mode,
-        latestSnapContainerBoundsRef.current,
-        session.moveSnap,
-        latestSnapZoomRef.current,
-      );
+      const snappedBounds = nextTransform.freeCornerResize
+        ? getTranslatedResizeSnappedBounds(
+            rawBounds,
+            session.mode,
+            latestSnapContainerBoundsRef.current,
+            session.moveSnap,
+            latestSnapZoomRef.current,
+          )
+        : getResizeSnappedBounds(
+            session.drag.startBounds,
+            rawBounds,
+            session.mode,
+            latestSnapContainerBoundsRef.current,
+            session.moveSnap,
+            latestSnapZoomRef.current,
+          );
 
       nextTransform = {
         ...nextTransform,

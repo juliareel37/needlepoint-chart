@@ -5,6 +5,7 @@ import {
   getRotationSnapTarget,
   getSnappedRotationDegrees,
   getResizeSnappedBounds,
+  getTranslatedResizeSnappedBounds,
   type PositioningMoveSnapState,
   type PositioningRect,
 } from "./boxGeometry";
@@ -402,6 +403,64 @@ describe("getPinchSnappedBounds", () => {
         bottom: null,
         centerX: 50,
         centerY: 40,
+      },
+    });
+  });
+});
+
+describe("getTranslatedResizeSnappedBounds", () => {
+  it("snaps a frame resize by translating the resized bounds instead of rescaling them", () => {
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 18,
+      width: 85,
+      height: 42.5,
+    };
+
+    expect(
+      getTranslatedResizeSnappedBounds(resizedBounds, "e", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: {
+        left: 15,
+        top: 18,
+        width: 85,
+        height: 42.5,
+      },
+      snap: {
+        left: null,
+        right: 100,
+        top: null,
+        bottom: null,
+        centerX: null,
+        centerY: null,
+      },
+    });
+  });
+
+  it("supports midline snapping during resize without changing the resized shape", () => {
+    const resizedBounds: PositioningRect = {
+      left: 10,
+      top: 6,
+      width: 76,
+      height: 38,
+    };
+
+    expect(
+      getTranslatedResizeSnappedBounds(resizedBounds, "e", CONTAINER, emptySnap(), 1),
+    ).toEqual({
+      bounds: {
+        left: 12,
+        top: 6,
+        width: 76,
+        height: 38,
+      },
+      snap: {
+        left: null,
+        right: null,
+        top: null,
+        bottom: null,
+        centerX: 50,
+        centerY: null,
       },
     });
   });

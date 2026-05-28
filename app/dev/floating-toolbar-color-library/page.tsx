@@ -44,6 +44,7 @@ export default function FloatingToolbarColorLibraryPreviewPage() {
             activeColorId="dmc-761"
             className={shellStyles.toolbarColorLibrary}
             colors={DMC_COLOR_LIBRARY}
+            defaultView="all"
             featuredColorIds={[...FEATURED_COLOR_IDS]}
             onColorSelect={() => {}}
           />

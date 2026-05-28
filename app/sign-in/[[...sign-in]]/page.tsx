@@ -1,4 +1,5 @@
 import { AuthSignInPageContent } from "@/components/auth/AuthSignInPageContent";
+import { validateWaitlistInviteToken } from "@/lib/waitlist/server";
 
 const DEFAULT_REDIRECT_URL = "/";
 const DEFAULT_AUTH_PATHNAME = "sign-in";
@@ -42,12 +43,24 @@ export default async function Page({
   }>;
   searchParams: Promise<{
     redirect_url?: string | string[];
+    token?: string | string[];
   }>;
 }) {
   const routeParams = await params;
-  const { redirect_url: redirectUrlParam } = await searchParams;
+  const { redirect_url: redirectUrlParam, token: tokenParam } = await searchParams;
   const pathname = normalizeAuthPathname(routeParams["sign-in"]);
   const redirectUrl = normalizeRedirectUrl(redirectUrlParam);
+  const token = typeof tokenParam === "string" ? tokenParam : undefined;
+  const signUpInvite =
+    pathname === "sign-up"
+      ? await validateWaitlistInviteToken(token)
+      : null;
 
-  return <AuthSignInPageContent pathname={pathname} redirectUrl={redirectUrl} />;
+  return (
+    <AuthSignInPageContent
+      pathname={pathname}
+      redirectUrl={redirectUrl}
+      signUpInvite={signUpInvite}
+    />
+  );
 }
