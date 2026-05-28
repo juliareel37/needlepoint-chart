@@ -13,7 +13,11 @@ type EditorV2WindowWithDraftGetter = Window & {
   __editorV2ShouldPreserveDraftOnSignIn?: () => boolean;
 };
 
-export default function AuthButtons() {
+type AuthButtonsProps = {
+  hideSignedOut?: boolean;
+};
+
+export default function AuthButtons({ hideSignedOut = false }: AuthButtonsProps) {
   const openSignIn = useOpenSignIn();
   const [mounted, setMounted] = useState(false);
 
@@ -30,50 +34,52 @@ export default function AuthButtons() {
       <AuthSignedIn>
         <AuthUserMenu />
       </AuthSignedIn>
-      <AuthSignedOut>
-        <Button
-          type="button"
-          variant="ghostV2"
-          size="md"
-          className="app-header-sign-in-button"
-          onClick={() => {
-            if (typeof window === "undefined") {
-              openSignIn();
-              return;
-            }
-
-            const currentUrl = `${window.location.pathname}${window.location.search}`.replace(
-              /^\/editor-v2(?=\/|$)/,
-              "/editor",
-            );
-
-            if (
-              window.location.pathname.startsWith("/editor") ||
-              window.location.pathname.startsWith("/editor-v2")
-            ) {
-              const editorWindow = window as EditorV2WindowWithDraftGetter;
-              const shouldPreserveDraft =
-                editorWindow.__editorV2ShouldPreserveDraftOnSignIn?.() ?? true;
-              const currentDocument = editorWindow.__editorV2GetCurrentDocument?.();
-
-              if (shouldPreserveDraft && currentDocument) {
-                openSignIn({
-                  redirectUrl: createEditorV2AuthHandoffRedirectUrl(
-                    currentDocument,
-                    currentUrl,
-                  ),
-                });
+      {!hideSignedOut ? (
+        <AuthSignedOut>
+          <Button
+            type="button"
+            variant="ghostV2"
+            size="lg"
+            className="app-header-sign-in-button"
+            onClick={() => {
+              if (typeof window === "undefined") {
+                openSignIn();
                 return;
               }
-            }
 
-            openSignIn({ redirectUrl: currentUrl });
-          }}
-        >
-          <ButtonIcon icon="/icons/lucide/user.svg" />
-          Sign in
-        </Button>
-      </AuthSignedOut>
+              const currentUrl = `${window.location.pathname}${window.location.search}`.replace(
+                /^\/editor-v2(?=\/|$)/,
+                "/editor",
+              );
+
+              if (
+                window.location.pathname.startsWith("/editor") ||
+                window.location.pathname.startsWith("/editor-v2")
+              ) {
+                const editorWindow = window as EditorV2WindowWithDraftGetter;
+                const shouldPreserveDraft =
+                  editorWindow.__editorV2ShouldPreserveDraftOnSignIn?.() ?? true;
+                const currentDocument = editorWindow.__editorV2GetCurrentDocument?.();
+
+                if (shouldPreserveDraft && currentDocument) {
+                  openSignIn({
+                    redirectUrl: createEditorV2AuthHandoffRedirectUrl(
+                      currentDocument,
+                      currentUrl,
+                    ),
+                  });
+                  return;
+                }
+              }
+
+              openSignIn({ redirectUrl: currentUrl });
+            }}
+          >
+            {/* <ButtonIcon icon="/icons/lucide/user.svg" /> */}
+            Log in
+          </Button>
+        </AuthSignedOut>
+      ) : null}
     </>
   );
 }

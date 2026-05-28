@@ -69,6 +69,7 @@ interface ColorLibraryProps {
   activeColorId: string | null;
   className?: string;
   colors: PaletteColor[];
+  defaultView?: ColorLibraryView;
   featuredSectionDisplay?: "stacked" | "tabbed";
   featuredColorIds?: string[];
   featuredSectionActionLabel?: string;
@@ -79,6 +80,7 @@ interface ColorLibraryProps {
   paletteSections?: ColorLibraryPaletteSection[];
   onTransparentSelect?: () => void;
   persistScrollPosition?: boolean;
+  persistView?: boolean;
   persistenceKey?: string;
   selectedColorIds?: string[];
   selectionMode?: "single" | "multiple";
@@ -95,6 +97,7 @@ export function ColorLibrary({
   activeColorId,
   className,
   colors,
+  defaultView = "featured",
   featuredSectionDisplay = "tabbed",
   featuredColorIds = [],
   featuredSectionActionLabel,
@@ -105,6 +108,7 @@ export function ColorLibrary({
   paletteSections,
   onTransparentSelect,
   persistScrollPosition = false,
+  persistView = true,
   persistenceKey,
   selectedColorIds = [],
   selectionMode = "single",
@@ -119,10 +123,11 @@ export function ColorLibrary({
   const initialPersistenceState = getPersistenceState(persistenceKey);
   const showPalettesView = Array.isArray(paletteSections);
   const [searchQuery, setSearchQuery] = useState("");
+  const persistedView = persistView ? initialPersistenceState?.view : undefined;
   const [view, setViewState] = useState<ColorLibraryView>(() =>
-    initialPersistenceState?.view === "palettes" && !showPalettesView
-      ? "featured"
-      : (initialPersistenceState?.view ?? "featured"),
+    persistedView === "palettes" && !showPalettesView
+      ? defaultView
+      : (persistedView ?? defaultView),
   );
   const [familyFilter, setFamilyFilterState] = useState<DmcColorFamilyFilter | "all">(
     () => initialPersistenceState?.familyFilter ?? "all",

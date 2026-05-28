@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createAuthClient } from "@neondatabase/auth/next";
 
 const authClient = createAuthClient();
@@ -45,6 +45,74 @@ export function useAuthSession() {
 export function useAuthStatus() {
   const { isLoaded, isSignedIn } = useAuthSession();
   return { isLoaded, isSignedIn };
+}
+
+export function useAuthAccessState() {
+  const { isLoaded, isSignedIn } = useAuthSession();
+  const [accessState, setAccessState] = useState<
+    "loading" | "signed_out" | "approved" | "pending_approval"
+  >(isSignedIn ? "loading" : "signed_out");
+  const [resolvedEmail, setResolvedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      setAccessState("signed_out");
+      setResolvedEmail(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/auth/access-state", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const body = (await response.json().catch(() => null)) as
+          | { accessState?: unknown; hasAppAccess?: unknown; email?: unknown }
+          | null;
+
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedEmail(typeof body?.email === "string" ? body.email : null);
+
+        if (body?.accessState === "approved" && body?.hasAppAccess === true) {
+          setAccessState("approved");
+          return;
+        }
+
+        if (body?.accessState === "pending_approval") {
+          setAccessState("pending_approval");
+          return;
+        }
+
+        setAccessState("signed_out");
+      } catch {
+        if (!cancelled) {
+          setAccessState("signed_out");
+          setResolvedEmail(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn]);
+
+  return {
+    isLoaded: isLoaded && (!isSignedIn || accessState !== "loading"),
+    accessState,
+    hasAppAccess: accessState === "approved",
+    resolvedEmail,
+  };
 }
 
 export function useAuthActions() {

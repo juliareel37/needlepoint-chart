@@ -1056,6 +1056,7 @@ export function UsedColorsSummary({
                           activeColorId={entry.colorId}
                           className={styles.usedColorsMergeLibraryGrid}
                           colors={palette}
+                          defaultView="all"
                           featuredColorIds={featuredColorIds}
                           paletteSections={paletteSections}
                           showFeaturedSymbols={showSymbols}
@@ -1247,6 +1248,7 @@ export function UsedColorsSummary({
                                 activeColorId={mergeTargetColorId}
                                 className={styles.usedColorsMergeLibraryGrid}
                                 colors={palette}
+                                defaultView="all"
                                 featuredColorIds={featuredColorIds}
                                 paletteSections={paletteSections}
                                 showFeaturedSymbols={showSymbols}

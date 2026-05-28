@@ -20,6 +20,18 @@ enum AppThemePreference {
   DARK
 }
 
+enum WaitlistApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WaitlistSubmissionAttemptStatus {
+  APPROVED
+  REJECTED
+  DUPLICATE
+}
+
 model AppUser {
   id              String              @id @default(cuid())
   createdAt       DateTime            @default(now())
@@ -45,6 +57,86 @@ model AuthIdentity {
   @@unique([provider, providerUserId])
   @@index([appUserId])
   @@index([email])
+}
+
+model WaitlistApplication {
+  id                 String                    @id @default(cuid())
+  email              String
+  status             WaitlistApplicationStatus @default(PENDING)
+  experienceLevel    String?
+  currentTools       String?
+  freeformResponse   String?
+  approvedAt         DateTime?
+  approvedBy         String?
+  inviteToken        String?                   @unique
+  inviteTokenExpiresAt DateTime?
+  accountCreatedAt   DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  submissionAttempts WaitlistSubmissionAttempt[]
+  surveyResponses    WaitlistSurveyResponse[]
+
+  @@unique([email])
+  @@index([status, createdAt])
+  @@index([inviteTokenExpiresAt])
+}
+
+model WaitlistSurveyResponse {
+  id                    String   @id @default(cuid())
+  waitlistApplicationId String
+  email                 String
+  experienceLevel       String
+  betaTestingInterest   Boolean  @default(false)
+  currentTools          String
+  freeformResponse      String
+  createdAt             DateTime @default(now())
+
+  waitlistApplication WaitlistApplication @relation(fields: [waitlistApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([waitlistApplicationId, createdAt])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model WaitlistSubmissionAttempt {
+  id                    String                          @id @default(cuid())
+  status                WaitlistSubmissionAttemptStatus
+  rejectionReason       String?
+  email                 String?
+  normalizedEmail       String?
+  experienceLevel       String?
+  currentTools          String?
+  freeformResponse      String?
+  ipAddressHash         String?
+  userAgent             String?
+  waitlistApplicationId String?
+  createdAt             DateTime                        @default(now())
+
+  waitlistApplication WaitlistApplication? @relation(fields: [waitlistApplicationId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([normalizedEmail])
+  @@index([ipAddressHash, createdAt])
+  @@index([waitlistApplicationId])
+}
+
+model FeaturedGraphic {
+  id             String   @id @default(cuid())
+  iconId         String   @unique
+  updatedByEmail String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
 }
 
 model PatternDraft {

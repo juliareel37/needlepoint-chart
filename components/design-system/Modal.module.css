@@ -9,6 +9,14 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
     rgba(10, 15, 26, 0.22);
   backdrop-filter: blur(1px);
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    backdrop-filter 180ms ease;
+}
+
+.overlay[data-state="open"] {
+  opacity: 1;
 }
 
 .card {
@@ -16,12 +24,23 @@
   box-sizing: border-box;
   display: grid;
   gap: 20px;
-  width: min(100%, 360px);
+  width: min(100%, 540px);
   padding: 28px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: 16px;
   background: var(--surface-card);
   box-shadow: var(--ui-shadow-lg);
+  opacity: 0;
+  transform: translateY(8px) scale(0.985);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.card[data-state="open"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .body {
@@ -29,6 +48,32 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 16px;
+}
+
+.centeredCard .body {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.centeredCard .content {
+  justify-items: center;
+}
+
+.centeredCard .header {
+  width: 100%;
+  justify-content: center;
+}
+
+.centeredCard .titleWrap {
+  min-width: 0;
+}
+
+.centeredCard .closeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .content {
@@ -52,6 +97,12 @@
   flex: 0 0 40px;
 }
 
+.centeredCard .badge {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+}
+
 .badgeIcon {
   width: 20px;
   height: 20px;
@@ -62,6 +113,11 @@
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+}
+
+.centeredCard .badgeIcon {
+  width: 26px;
+  height: 26px;
 }
 
 .titleWrap,
@@ -96,5 +152,16 @@
 
   .body {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .card {
+    transition-duration: 1ms;
+  }
+
+  .card {
+    transform: none;
   }
 }

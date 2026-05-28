@@ -5,16 +5,19 @@ import {
   getShapeIconLibraryByCategory,
   getShapeIconLibraryOverview,
 } from "@/lib/editor-v2/editor/icons/getShapeIconLibrary";
+import { listFeaturedGraphicIds } from "@/lib/admin/server";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode") ?? "full";
+    const featuredIconIds = new Set(await listFeaturedGraphicIds());
 
     if (mode === "overview") {
       const previewLimit = Number(searchParams.get("previewLimit") ?? "6");
       const groups = await getShapeIconLibraryOverview(
         Number.isFinite(previewLimit) && previewLimit > 0 ? Math.floor(previewLimit) : 6,
+        { featuredIconIds },
       );
       return NextResponse.json({ groups });
     }
@@ -28,11 +31,11 @@ export async function GET(request: Request) {
         );
       }
 
-      const icons = await getShapeIconLibraryByCategory(category);
+      const icons = await getShapeIconLibraryByCategory(category, { featuredIconIds });
       return NextResponse.json({ icons });
     }
 
-    const icons = await getShapeIconLibrary();
+    const icons = await getShapeIconLibrary({ featuredIconIds });
     return NextResponse.json({ icons });
   } catch (error) {
     console.error("Failed to load icon library", error);
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
         colorSlots: item.colorSlots,
         primitiveKind: item.primitiveKind,
         isUserUploaded: item.isUserUploaded,
+        isFeatured: item.isFeatured,
         lockAspectRatio: item.lockAspectRatio,
         supportsStrokeWidth: item.supportsStrokeWidth,
       },

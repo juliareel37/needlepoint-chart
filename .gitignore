@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-visual/
 .next-playwright-3101/
 .env.local
 .env

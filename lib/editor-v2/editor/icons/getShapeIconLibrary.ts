@@ -18,12 +18,21 @@ const SHAPES_ROOT = path.join(process.cwd(), "public", "icons", "shapes");
 const SUPPORTED_EXTENSIONS = new Set([".svg", ".png", ".jpg", ".jpeg", ".webp"]);
 const iconSearchKeywordMap = iconSearchKeywords as Record<string, string[]>;
 const SHAPES_CATEGORY = "Shapes";
+const FRAMES_CATEGORY = "Frames";
 const SHAPES_PRIORITY_BY_NAME: Record<string, number> = {
   Square: 0,
   Rectangle: 0,
   Circle: 1,
   Triangle: 2,
 };
+const FRAMES_PRIORITY_BY_NAME: Record<string, number> = {
+  "Double Rectangle Frame": 0,
+  "Triple Rectangle Frame": 1,
+  "Striped Rectangle Frame": 2,
+  "Scalloped Frame": 3,
+  "Double Scalloped Frame": 4,
+};
+const OVERVIEW_PREVIEW_POSITION_ORDER = [0.08, 0.52, 0.24, 0.76, 0.4, 0.92];
 
 type ShapeIconLibraryDescriptor = {
   absolutePath: string;
@@ -35,37 +44,54 @@ type ShapeIconLibraryDescriptor = {
   searchKeywords: string[];
 };
 
-export async function getShapeIconLibrary(): Promise<ShapeIconLibraryItem[]> {
+type ShapeIconLibraryOptions = {
+  featuredIconIds?: ReadonlySet<string>;
+};
+
+export async function getShapeIconLibrary(
+  options: ShapeIconLibraryOptions = {},
+): Promise<ShapeIconLibraryItem[]> {
   const descriptors = await getSortedShapeIconDescriptors();
-  return Promise.all(descriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+  return Promise.all(
+    descriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor, options)),
+  );
 }
 
 export async function getShapeIconLibraryOverview(
   previewLimit: number,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryOverviewGroup[]> {
   const descriptors = await getSortedShapeIconDescriptors();
   const descriptorsByCategory = groupDescriptorsByCategory(descriptors);
-  const groups = await Promise.all(
+  const categoryGroups = await Promise.all(
     Array.from(descriptorsByCategory.entries()).map(async ([category, categoryDescriptors]) => ({
       category,
       count: categoryDescriptors.length,
       previewItems: await Promise.all(
-        categoryDescriptors
-          .slice(0, Math.max(previewLimit, 0))
-          .map((descriptor) => buildShapeIconLibraryItem(descriptor)),
+        selectOverviewPreviewDescriptors(categoryDescriptors, previewLimit).map((descriptor) =>
+          buildShapeIconLibraryItem(descriptor, options),
+        ),
       ),
     })),
   );
+  const groups = categoryGroups.sort((left, right) => compareCategories(left.category, right.category));
+  const featuredGroup = await buildFeaturedOverviewGroup(descriptors, previewLimit, options);
 
-  return groups.sort((left, right) => compareCategories(left.category, right.category));
+  return featuredGroup ? [featuredGroup, ...groups] : groups;
 }
 
 export async function getShapeIconLibraryByCategory(
   category: string,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryItem[]> {
   const descriptors = await getSortedShapeIconDescriptors();
-  const matchingDescriptors = descriptors.filter((descriptor) => descriptor.category === category);
-  return Promise.all(matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor)));
+  const matchingDescriptors =
+    category === "Featured"
+      ? descriptors.filter((descriptor) => options.featuredIconIds?.has(descriptor.id) ?? false)
+      : descriptors.filter((descriptor) => descriptor.category === category);
+  return Promise.all(
+    matchingDescriptors.map((descriptor) => buildShapeIconLibraryItem(descriptor, options)),
+  );
 }
 
 export async function buildUploadedShapeIconLibraryItem(options: {
@@ -93,6 +119,7 @@ export async function buildUploadedShapeIconLibraryItem(options: {
     id: `upload-${crypto.randomUUID()}`,
     name: humanizeIconName(baseName),
     category: "Uploads",
+    isFeatured: false,
     src,
     mimeType: extension === ".svg" ? "image/svg+xml" : getRasterMimeType(extension),
     intrinsicWidth: width,
@@ -149,6 +176,15 @@ function compareShapeIconDescriptors(
     }
   }
 
+  if (left.category === FRAMES_CATEGORY && right.category === FRAMES_CATEGORY) {
+    const leftPriority = FRAMES_PRIORITY_BY_NAME[left.name] ?? Number.POSITIVE_INFINITY;
+    const rightPriority = FRAMES_PRIORITY_BY_NAME[right.name] ?? Number.POSITIVE_INFINITY;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+  }
+
   return left.name.localeCompare(right.name);
 }
 
@@ -170,8 +206,60 @@ function groupDescriptorsByCategory(
   return descriptorsByCategory;
 }
 
+function selectOverviewPreviewDescriptors(
+  descriptors: ShapeIconLibraryDescriptor[],
+  previewLimit: number,
+): ShapeIconLibraryDescriptor[] {
+  const normalizedLimit = Math.max(Math.floor(previewLimit), 0);
+
+  if (normalizedLimit === 0) {
+    return [];
+  }
+
+  if (descriptors.length <= normalizedLimit) {
+    return descriptors.slice(0, normalizedLimit);
+  }
+
+  const selectedIndices = new Set<number>();
+  const selectedDescriptors: ShapeIconLibraryDescriptor[] = [];
+
+  for (const position of OVERVIEW_PREVIEW_POSITION_ORDER) {
+    if (selectedDescriptors.length >= normalizedLimit) {
+      break;
+    }
+
+    const index = Math.min(
+      descriptors.length - 1,
+      Math.max(0, Math.floor(position * descriptors.length)),
+    );
+
+    if (selectedIndices.has(index)) {
+      continue;
+    }
+
+    selectedIndices.add(index);
+    selectedDescriptors.push(descriptors[index]);
+  }
+
+  for (let index = 0; index < descriptors.length; index += 1) {
+    if (selectedDescriptors.length >= normalizedLimit) {
+      break;
+    }
+
+    if (selectedIndices.has(index)) {
+      continue;
+    }
+
+    selectedIndices.add(index);
+    selectedDescriptors.push(descriptors[index]);
+  }
+
+  return selectedDescriptors;
+}
+
 async function buildShapeIconLibraryItem(
   descriptor: ShapeIconLibraryDescriptor,
+  options: ShapeIconLibraryOptions = {},
 ): Promise<ShapeIconLibraryItem> {
   const fileContents = await fs.readFile(descriptor.absolutePath);
   const { src, width, height, colorSlots, primitiveKind, lockAspectRatio, supportsStrokeWidth } =
@@ -186,6 +274,7 @@ async function buildShapeIconLibraryItem(
     id: descriptor.id,
     name: descriptor.name,
     category: descriptor.category,
+    isFeatured: options.featuredIconIds?.has(descriptor.id) ?? false,
     src,
     mimeType: descriptor.extension === ".svg" ? "image/svg+xml" : getRasterMimeType(descriptor.extension),
     intrinsicWidth: width,
@@ -196,6 +285,33 @@ async function buildShapeIconLibraryItem(
     lockAspectRatio,
     supportsStrokeWidth,
     searchKeywords: descriptor.searchKeywords,
+  };
+}
+
+async function buildFeaturedOverviewGroup(
+  descriptors: ShapeIconLibraryDescriptor[],
+  previewLimit: number,
+  options: ShapeIconLibraryOptions,
+): Promise<ShapeIconLibraryOverviewGroup | null> {
+  const featuredIconIds = options.featuredIconIds;
+
+  if (!featuredIconIds || featuredIconIds.size === 0) {
+    return null;
+  }
+
+  const featuredDescriptors = descriptors.filter((descriptor) => featuredIconIds.has(descriptor.id));
+  if (featuredDescriptors.length === 0) {
+    return null;
+  }
+
+  return {
+    category: "Featured",
+    count: featuredDescriptors.length,
+    previewItems: await Promise.all(
+      selectOverviewPreviewDescriptors(featuredDescriptors, previewLimit).map((descriptor) =>
+        buildShapeIconLibraryItem(descriptor, options),
+      ),
+    ),
   };
 }
 
@@ -251,9 +367,12 @@ async function buildIconAsset(
           : extractIconColorSlotsFromSvg(svg),
       primitiveKind,
       lockAspectRatio,
-      supportsStrokeWidth: primitiveKind
-        ? true
-        : supportsStrokeWidthControl(normalizedRelativePath, svg),
+      supportsStrokeWidth:
+        primitiveKind &&
+        primitiveKind !== "linked-circle-frame" &&
+        primitiveKind !== "striped-rectangle-frame"
+          ? true
+          : supportsStrokeWidthControl(normalizedRelativePath, svg),
     };
   }
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUserId } from "@/lib/auth/server";
+import { getAuthSession } from "@/lib/auth/server";
 import { LibraryPageClient } from "./LibraryPageClient";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +9,15 @@ export default async function LibraryPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const appUserId = await getCurrentUserId();
+  const session = await getAuthSession();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  if (!appUserId) {
-    redirect("/sign-in");
+  if (!session.userId) {
+    redirect(
+      session.accessState === "pending_approval"
+        ? "/?notice=pending-approval"
+        : "/",
+    );
   }
 
   const requestedView = resolvedSearchParams?.view;

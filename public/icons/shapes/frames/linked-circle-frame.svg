@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="132" height="96" viewBox="0 0 132 96" fill="none">
+  <defs>
+    <mask id="linked-circle-frame-preview" maskUnits="userSpaceOnUse" x="0" y="0" width="132" height="96">
+      <rect x="5" y="5" width="122" height="86" rx="13" fill="white"/>
+      <rect x="27" y="27" width="78" height="42" fill="black"/>
+      <line x1="18" y1="18" x2="114" y2="18" stroke="black" stroke-width="4" stroke-linecap="round"/>
+      <line x1="18" y1="78" x2="114" y2="78" stroke="black" stroke-width="4" stroke-linecap="round"/>
+      <line x1="18" y1="18" x2="18" y2="78" stroke="black" stroke-width="4" stroke-linecap="round"/>
+      <line x1="114" y1="18" x2="114" y2="78" stroke="black" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="18" cy="18" r="6" fill="black"/>
+      <circle cx="30" cy="18" r="6" fill="black"/>
+      <circle cx="42" cy="18" r="6" fill="black"/>
+      <circle cx="54" cy="18" r="6" fill="black"/>
+      <circle cx="66" cy="18" r="6" fill="black"/>
+      <circle cx="78" cy="18" r="6" fill="black"/>
+      <circle cx="90" cy="18" r="6" fill="black"/>
+      <circle cx="102" cy="18" r="6" fill="black"/>
+      <circle cx="114" cy="18" r="6" fill="black"/>
+      <circle cx="18" cy="78" r="6" fill="black"/>
+      <circle cx="30" cy="78" r="6" fill="black"/>
+      <circle cx="42" cy="78" r="6" fill="black"/>
+      <circle cx="54" cy="78" r="6" fill="black"/>
+      <circle cx="66" cy="78" r="6" fill="black"/>
+      <circle cx="78" cy="78" r="6" fill="black"/>
+      <circle cx="90" cy="78" r="6" fill="black"/>
+      <circle cx="102" cy="78" r="6" fill="black"/>
+      <circle cx="114" cy="78" r="6" fill="black"/>
+      <circle cx="18" cy="30" r="6" fill="black"/>
+      <circle cx="18" cy="42" r="6" fill="black"/>
+      <circle cx="18" cy="54" r="6" fill="black"/>
+      <circle cx="18" cy="66" r="6" fill="black"/>
+      <circle cx="114" cy="30" r="6" fill="black"/>
+      <circle cx="114" cy="42" r="6" fill="black"/>
+      <circle cx="114" cy="54" r="6" fill="black"/>
+      <circle cx="114" cy="66" r="6" fill="black"/>
+    </mask>
+  </defs>
+  <rect x="5" y="5" width="122" height="86" rx="13" fill="#121923" mask="url(#linked-circle-frame-preview)"/>
+  <rect x="23" y="23" width="86" height="50" stroke="#121923" stroke-width="3"/>
+</svg>
