@@ -4,7 +4,12 @@ import { createHash, randomBytes } from "node:crypto";
 
 export interface WaitlistSubmissionInput {
   email: string;
+}
+
+export interface WaitlistSurveySubmissionInput {
+  email: string;
   experienceLevel: string;
+  betaTestingInterest: boolean;
   currentTools: string;
   freeformResponse: string;
 }
@@ -35,6 +40,21 @@ export interface WaitlistSubmissionParseResult {
   rejectionReason: string | null;
 }
 
+export interface WaitlistSurveySubmissionParseResult {
+  submission: WaitlistSurveySubmissionInput | null;
+  snapshot: WaitlistSubmissionAttemptSnapshot;
+  rejectionReason: string | null;
+}
+
+export interface WaitlistSurveySubmissionResult {
+  surveyResponse: {
+    id: string;
+    waitlistApplicationId: string;
+    email: string;
+    createdAt: Date;
+  };
+}
+
 export interface WaitlistInviteValidationResult {
   isValid: boolean;
   email: string | null;
@@ -62,6 +82,10 @@ function validateLength(value: string, maxLength: number) {
   return value.length > 0 && value.length <= maxLength;
 }
 
+function validateOptionalLength(value: string, maxLength: number) {
+  return value.length <= maxLength;
+}
+
 function getEmailDomain(email: string) {
   return email.split("@").pop() ?? "";
 }
@@ -81,15 +105,9 @@ function hashWaitlistAttemptIp(ip: string) {
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
 }
 
-export function parseWaitlistSubmissionWithReason(
-  input: unknown,
-): WaitlistSubmissionParseResult {
+function parseWaitlistRecord(input: unknown) {
   if (!input || typeof input !== "object") {
-    return {
-      submission: null,
-      snapshot: createEmptyWaitlistSubmissionSnapshot(),
-      rejectionReason: "INVALID_BODY",
-    };
+    return null;
   }
 
   const record = input as Record<string, unknown>;
@@ -103,47 +121,116 @@ export function parseWaitlistSubmissionWithReason(
     typeof record.currentTools === "string" ? normalizeText(record.currentTools) : "";
   const freeformResponse =
     typeof record.freeformResponse === "string" ? record.freeformResponse.trim() : "";
-  const snapshot = {
-    email: rawEmail || null,
-    normalizedEmail: email || null,
-    experienceLevel: experienceLevel || null,
-    currentTools: currentTools || null,
-    freeformResponse: freeformResponse || null,
-  };
-
+  const betaTestingInterest =
+    typeof record.betaTestingInterest === "boolean" ? record.betaTestingInterest : null;
   const honeypot = typeof record.website === "string" ? record.website.trim() : "";
-  if (honeypot.length > 0) {
-    return { submission: null, snapshot, rejectionReason: "HONEYPOT_FILLED" };
-  }
 
+  return {
+    email,
+    rawEmail,
+    experienceLevel,
+    betaTestingInterest,
+    currentTools,
+    freeformResponse,
+    honeypot,
+    snapshot: {
+      email: rawEmail || null,
+      normalizedEmail: email || null,
+      experienceLevel: experienceLevel || null,
+      currentTools: currentTools || null,
+      freeformResponse: freeformResponse || null,
+    },
+  };
+}
+
+function validateEmailForWaitlist(email: string) {
   if (!EMAIL_PATTERN.test(email)) {
-    return { submission: null, snapshot, rejectionReason: "INVALID_EMAIL" };
+    return "INVALID_EMAIL";
   }
 
   if (isDisposableEmailDomain(getEmailDomain(email))) {
-    return { submission: null, snapshot, rejectionReason: "DISPOSABLE_EMAIL_DOMAIN" };
+    return "DISPOSABLE_EMAIL_DOMAIN";
   }
 
-  if (!validateLength(experienceLevel, 120)) {
-    return { submission: null, snapshot, rejectionReason: "INVALID_EXPERIENCE_LEVEL" };
+  return null;
+}
+
+export function parseWaitlistSubmissionWithReason(
+  input: unknown,
+): WaitlistSubmissionParseResult {
+  const record = parseWaitlistRecord(input);
+  if (!record) {
+    return {
+      submission: null,
+      snapshot: createEmptyWaitlistSubmissionSnapshot(),
+      rejectionReason: "INVALID_BODY",
+    };
   }
 
-  if (!validateLength(currentTools, 300)) {
-    return { submission: null, snapshot, rejectionReason: "INVALID_CURRENT_TOOLS" };
+  if (record.honeypot.length > 0) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "HONEYPOT_FILLED" };
   }
 
-  if (!validateLength(freeformResponse, 4000)) {
-    return { submission: null, snapshot, rejectionReason: "INVALID_FREEFORM_RESPONSE" };
+  const emailRejectionReason = validateEmailForWaitlist(record.email);
+  if (emailRejectionReason) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: emailRejectionReason };
   }
 
   return {
     submission: {
-      email,
-      experienceLevel,
-      currentTools,
-      freeformResponse,
+      email: record.email,
     },
-    snapshot,
+    snapshot: record.snapshot,
+    rejectionReason: null,
+  };
+}
+
+export function parseWaitlistSurveySubmissionWithReason(
+  input: unknown,
+): WaitlistSurveySubmissionParseResult {
+  const record = parseWaitlistRecord(input);
+  if (!record) {
+    return {
+      submission: null,
+      snapshot: createEmptyWaitlistSubmissionSnapshot(),
+      rejectionReason: "INVALID_BODY",
+    };
+  }
+
+  if (record.honeypot.length > 0) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "HONEYPOT_FILLED" };
+  }
+
+  const emailRejectionReason = validateEmailForWaitlist(record.email);
+  if (emailRejectionReason) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: emailRejectionReason };
+  }
+
+  if (!validateLength(record.experienceLevel, 120)) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "INVALID_EXPERIENCE_LEVEL" };
+  }
+
+  if (record.betaTestingInterest === null) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "INVALID_BETA_TESTING_INTEREST" };
+  }
+
+  if (!validateOptionalLength(record.currentTools, 300)) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "INVALID_CURRENT_TOOLS" };
+  }
+
+  if (!validateOptionalLength(record.freeformResponse, 4000)) {
+    return { submission: null, snapshot: record.snapshot, rejectionReason: "INVALID_FREEFORM_RESPONSE" };
+  }
+
+  return {
+    submission: {
+      email: record.email,
+      experienceLevel: record.experienceLevel,
+      betaTestingInterest: record.betaTestingInterest,
+      currentTools: record.currentTools,
+      freeformResponse: record.freeformResponse,
+    },
+    snapshot: record.snapshot,
     rejectionReason: null,
   };
 }
@@ -199,7 +286,9 @@ export async function submitWaitlistApplication(
 
   if (!existing) {
     const created = await prisma.waitlistApplication.create({
-      data: input,
+      data: {
+        email: input.email,
+      },
       select: {
         id: true,
         email: true,
@@ -221,6 +310,38 @@ export async function submitWaitlistApplication(
     created: false,
     alreadySubmitted: true,
   };
+}
+
+export async function submitWaitlistSurveyResponse(
+  input: WaitlistSurveySubmissionInput,
+): Promise<WaitlistSurveySubmissionResult> {
+  const application = await prisma.waitlistApplication.findUnique({
+    where: { email: input.email },
+    select: { id: true },
+  });
+
+  if (!application) {
+    throw new Error(`No waitlist application found for ${input.email}.`);
+  }
+
+  const surveyResponse = await prisma.waitlistSurveyResponse.create({
+    data: {
+      waitlistApplicationId: application.id,
+      email: input.email,
+      experienceLevel: input.experienceLevel,
+      betaTestingInterest: input.betaTestingInterest,
+      currentTools: input.currentTools,
+      freeformResponse: input.freeformResponse,
+    },
+    select: {
+      id: true,
+      waitlistApplicationId: true,
+      email: true,
+      createdAt: true,
+    },
+  });
+
+  return { surveyResponse };
 }
 
 export function isWaitlistApplicationApproved(

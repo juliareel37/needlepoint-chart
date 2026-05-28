@@ -45,6 +45,7 @@ import { POST } from "./route";
 describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.WAITLIST_RATE_LIMIT_DISABLED;
     getClientIpFromRequestMock.mockReturnValue("203.0.113.10");
     checkRateLimitMock.mockResolvedValue({
       limited: false,
@@ -192,6 +193,31 @@ describe("POST /api/waitlist", () => {
     });
   });
 
+  it("skips IP rate limits when WAITLIST_RATE_LIMIT_DISABLED is true", async () => {
+    process.env.WAITLIST_RATE_LIMIT_DISABLED = "true";
+    findUniqueMock.mockResolvedValue(null);
+    createMock.mockResolvedValue({
+      id: "wait_1",
+      email: "maker@example.com",
+      status: "PENDING",
+      createdAt: new Date("2026-05-13T12:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T12:00:00.000Z"),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@example.com",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+  });
+
   it("rejects submissions when the email domain has no MX records", async () => {
     validateEmailMxRecordsMock.mockResolvedValue(false);
 
@@ -262,9 +288,6 @@ describe("POST /api/waitlist", () => {
     expect(createMock).toHaveBeenCalledWith({
       data: {
         email: "maker@example.com",
-        experienceLevel: "Yes, regularly",
-        currentTools: "Illustrator and graph paper",
-        freeformResponse: "I want to design original canvases more quickly.",
       },
       select: {
         id: true,

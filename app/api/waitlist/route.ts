@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit/server";
 import { validateEmailMxRecords } from "@/lib/waitlist/emailDns";
+import { isWaitlistRateLimitDisabled } from "@/lib/waitlist/rateLimit";
 import {
   parseWaitlistSubmissionWithReason,
   recordWaitlistSubmissionAttempt,
@@ -15,36 +16,39 @@ export async function POST(req: Request) {
   const userAgent = req.headers.get("user-agent");
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = parseWaitlistSubmissionWithReason(body);
-  const [hourlyLimit, dailyLimit] = await Promise.all([
-    checkRateLimit({
-      namespace: "waitlist:ip:hour",
-      identifier: ip,
-      limit: WAITLIST_HOURLY_IP_LIMIT,
-      windowMs: 1000 * 60 * 60,
-    }),
-    checkRateLimit({
-      namespace: "waitlist:ip:day",
-      identifier: ip,
-      limit: WAITLIST_DAILY_IP_LIMIT,
-      windowMs: 1000 * 60 * 60 * 24,
-    }),
-  ]);
 
-  if (hourlyLimit.limited || dailyLimit.limited) {
-    await recordWaitlistSubmissionAttempt({
-      snapshot: parsed.snapshot,
-      status: "REJECTED",
-      rejectionReason: hourlyLimit.limited
-        ? "RATE_LIMITED_HOURLY_IP"
-        : "RATE_LIMITED_DAILY_IP",
-      ip,
-      userAgent,
-    });
+  if (!isWaitlistRateLimitDisabled()) {
+    const [hourlyLimit, dailyLimit] = await Promise.all([
+      checkRateLimit({
+        namespace: "waitlist:ip:hour",
+        identifier: ip,
+        limit: WAITLIST_HOURLY_IP_LIMIT,
+        windowMs: 1000 * 60 * 60,
+      }),
+      checkRateLimit({
+        namespace: "waitlist:ip:day",
+        identifier: ip,
+        limit: WAITLIST_DAILY_IP_LIMIT,
+        windowMs: 1000 * 60 * 60 * 24,
+      }),
+    ]);
 
-    return NextResponse.json(
-      { error: "Too many waitlist submissions. Please try again later." },
-      { status: 429 },
-    );
+    if (hourlyLimit.limited || dailyLimit.limited) {
+      await recordWaitlistSubmissionAttempt({
+        snapshot: parsed.snapshot,
+        status: "REJECTED",
+        rejectionReason: hourlyLimit.limited
+          ? "RATE_LIMITED_HOURLY_IP"
+          : "RATE_LIMITED_DAILY_IP",
+        ip,
+        userAgent,
+      });
+
+      return NextResponse.json(
+        { error: "Too many waitlist submissions. Please try again later." },
+        { status: 429 },
+      );
+    }
   }
 
   if (!parsed.submission) {

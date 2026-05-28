@@ -20,6 +20,14 @@ type WaitlistApplicationRecord = {
   accountCreatedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  surveyResponses: {
+    id: string;
+    experienceLevel: string;
+    betaTestingInterest: boolean;
+    currentTools: string;
+    freeformResponse: string;
+    createdAt: string;
+  }[];
 };
 
 type ApprovalResult = {
@@ -170,6 +178,16 @@ export function WaitlistAdminPageClient({
             ) : (
               pendingApplications.map((application) => (
                 <article key={application.id} className={styles.applicationCard}>
+                  {(() => {
+                    const surveyResponse = application.surveyResponses[0];
+                    const experienceLevel =
+                      surveyResponse?.experienceLevel ?? application.experienceLevel;
+                    const currentTools = surveyResponse?.currentTools ?? application.currentTools;
+                    const freeformResponse =
+                      surveyResponse?.freeformResponse ?? application.freeformResponse;
+
+                    return (
+                      <>
                   <div className={styles.applicationHeader}>
                     <div>
                       <h3 className={styles.applicationTitle} style={typographyStyles.h5}>{application.email}</h3>
@@ -189,16 +207,30 @@ export function WaitlistAdminPageClient({
                   </div>
                   <div className={styles.answerBlock}>
                     <p className={styles.answerLabel} style={typographyStyles.s}>Do they create their own patterns?</p>
-                    <p className={styles.answerValue} style={typographyStyles.p2}>{application.experienceLevel ?? "No answer"}</p>
+                    <p className={styles.answerValue} style={typographyStyles.p2}>{experienceLevel ?? "No survey yet"}</p>
+                  </div>
+                  <div className={styles.answerBlock}>
+                    <p className={styles.answerLabel} style={typographyStyles.s}>Interested in beta testing or feedback?</p>
+                    <p className={styles.answerValue} style={typographyStyles.p2}>
+                      {surveyResponse ? (surveyResponse.betaTestingInterest ? "Yes" : "No") : "No survey yet"}
+                    </p>
                   </div>
                   <div className={styles.answerBlock}>
                     <p className={styles.answerLabel} style={typographyStyles.s}>Current tools</p>
-                    <p className={styles.answerValue} style={typographyStyles.p2}>{application.currentTools ?? "No answer"}</p>
+                    <p className={styles.answerValue} style={typographyStyles.p2}>{currentTools ?? "No survey yet"}</p>
                   </div>
                   <div className={styles.answerBlock}>
                     <p className={styles.answerLabel} style={typographyStyles.s}>What they want to use WIP for</p>
-                    <p className={styles.answerValue} style={typographyStyles.p2}>{application.freeformResponse ?? "No answer"}</p>
+                    <p className={styles.answerValue} style={typographyStyles.p2}>{freeformResponse ?? "No survey yet"}</p>
                   </div>
+                  {surveyResponse ? (
+                    <p className={styles.applicationMeta} style={typographyStyles.s}>
+                      Survey submitted {formatDateTime(surveyResponse.createdAt)}
+                    </p>
+                  ) : null}
+                      </>
+                    );
+                  })()}
                 </article>
               ))
             )}

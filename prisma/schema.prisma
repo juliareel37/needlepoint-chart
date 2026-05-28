@@ -74,10 +74,28 @@ model WaitlistApplication {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
   submissionAttempts WaitlistSubmissionAttempt[]
+  surveyResponses    WaitlistSurveyResponse[]
 
   @@unique([email])
   @@index([status, createdAt])
   @@index([inviteTokenExpiresAt])
+}
+
+model WaitlistSurveyResponse {
+  id                    String   @id @default(cuid())
+  waitlistApplicationId String
+  email                 String
+  experienceLevel       String
+  betaTestingInterest   Boolean  @default(false)
+  currentTools          String
+  freeformResponse      String
+  createdAt             DateTime @default(now())
+
+  waitlistApplication WaitlistApplication @relation(fields: [waitlistApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([waitlistApplicationId, createdAt])
+  @@index([email])
+  @@index([createdAt])
 }
 
 model WaitlistSubmissionAttempt {

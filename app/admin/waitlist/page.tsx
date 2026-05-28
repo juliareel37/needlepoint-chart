@@ -37,6 +37,10 @@ export default async function WaitlistAdminPage() {
         accountCreatedAt: application.accountCreatedAt?.toISOString() ?? null,
         createdAt: application.createdAt.toISOString(),
         updatedAt: application.updatedAt.toISOString(),
+        surveyResponses: application.surveyResponses.map((surveyResponse) => ({
+          ...surveyResponse,
+          createdAt: surveyResponse.createdAt.toISOString(),
+        })),
       }))}
       adminEmails={getAdminEmails()}
       currentAdminEmail={session.email}

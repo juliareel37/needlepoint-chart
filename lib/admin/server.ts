@@ -48,6 +48,18 @@ export async function listWaitlistApplicationsForAdmin() {
       accountCreatedAt: true,
       createdAt: true,
       updatedAt: true,
+      surveyResponses: {
+        orderBy: [{ createdAt: "desc" }],
+        take: 1,
+        select: {
+          id: true,
+          experienceLevel: true,
+          betaTestingInterest: true,
+          currentTools: true,
+          freeformResponse: true,
+          createdAt: true,
+        },
+      },
     },
   });
 }

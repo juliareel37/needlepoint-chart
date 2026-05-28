@@ -3,14 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
   ButtonIcon,
   Field,
   FieldInput,
-  FieldSelect,
   Modal,
   Notification,
 } from "@/components/design-system";
@@ -275,8 +274,15 @@ type WaitlistStatus =
   | { tone: "destructive"; title: string; description: string }
   | null;
 
-type WaitlistFieldName = "email" | "experienceLevel" | "currentTools" | "freeformResponse";
+type WaitlistFieldName =
+  | "email"
+  | "experienceLevel"
+  | "betaTestingInterest"
+  | "currentTools"
+  | "freeformResponse";
 type WaitlistFormErrors = Partial<Record<WaitlistFieldName, string>>;
+type WaitlistSurveyFieldName = Exclude<WaitlistFieldName, "email">;
+type WaitlistSurveyFormErrors = Partial<Record<WaitlistSurveyFieldName, string>>;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const requiredFieldMessage = "This field is required.";
 const invalidEmailMessage = "Please enter a valid email address.";
@@ -285,8 +291,14 @@ const invalidLengthMessage = "Please shorten this response.";
 const experienceLevelOptions = [
   "Yes, regularly",
   "Sometimes",
-  "Not yet, but I want to start",
+  "Not yet",
 ] as const;
+const betaTestingInterestOptions = [
+  { label: "Yes", value: "yes" },
+  { label: "Maybe later", value: "maybe" },
+  { label: "No", value: "no" },
+] as const;
+type BetaTestingInterestOption = (typeof betaTestingInterestOptions)[number]["value"];
 
 export default function Page() {
   const pathname = usePathname();
@@ -294,43 +306,39 @@ export default function Page() {
   const searchParams = useSearchParams();
   const openSignIn = useOpenSignIn();
   const { isLoaded, isSignedIn } = useAuthSession();
-  const { accessState, hasAppAccess, isLoaded: isAccessStateLoaded } = useAuthAccessState();
+  const { hasAppAccess, isLoaded: isAccessStateLoaded } = useAuthAccessState();
   const showResumeCta = isLoaded && isAccessStateLoaded && hasAppAccess;
   const showPendingApprovalNotice = searchParams.get("notice") === "pending-approval";
   const showApprovalRequiredNotice = searchParams.get("notice") === "approval-required";
-  const [waitlistModalOpen, setWaitlistModalOpen] = useState(false);
   const [isSubmittingWaitlist, setIsSubmittingWaitlist] = useState(false);
+  const [isSubmittingWaitlistSurvey, setIsSubmittingWaitlistSurvey] = useState(false);
   const [waitlistStatus, setWaitlistStatus] = useState<WaitlistStatus>(null);
+  const [submittedWaitlistEmail, setSubmittedWaitlistEmail] = useState<string | null>(null);
+  const [hasSubmittedWaitlistSurvey, setHasSubmittedWaitlistSurvey] = useState(false);
   const [email, setEmail] = useState("");
-  const [experienceLevel, setExperienceLevel] = useState<(typeof experienceLevelOptions)[number]>(
-    experienceLevelOptions[0],
-  );
+  const [experienceLevel, setExperienceLevel] = useState<
+    (typeof experienceLevelOptions)[number] | ""
+  >("");
+  const [betaTestingInterest, setBetaTestingInterest] =
+    useState<BetaTestingInterestOption | null>(null);
   const [currentTools, setCurrentTools] = useState("");
   const [freeformResponse, setFreeformResponse] = useState("");
   const [website, setWebsite] = useState("");
   const [waitlistFormErrors, setWaitlistFormErrors] = useState<WaitlistFormErrors>({});
-  const waitlistIntroCopy = showResumeCta
-    ? "Your account is active. Head back into your library to keep designing."
-    : accessState === "pending_approval"
-      ? "Your beta application has been received. We’ll email you as soon as your access is approved."
-    : "Beta access is rolling out gradually. Join the waitlist and tell us a little about how you design today.";
+  const [waitlistSurveyFormErrors, setWaitlistSurveyFormErrors] =
+    useState<WaitlistSurveyFormErrors>({});
   const waitlistActionLabel = showResumeCta ? "View my designs" : " Join Waitlist";
-  const modalDescription = useMemo(
-    () =>
-      showResumeCta
-        ? "You already have access to Wippa. Open your library to keep working."
-        : "We're rolling new users onto the beta in batches. Share some info and we'll let you know when your access is approved.",
-    [showResumeCta],
-  );
   const waitlistStatusModalTone = waitlistStatus?.tone === "success" ? "confirmation" : "fail";
   const editorRoute = "/editor";
+  const showOptionalSurvey =
+    waitlistStatus?.tone === "success" &&
+    submittedWaitlistEmail !== null &&
+    !hasSubmittedWaitlistSurvey;
 
   useEffect(() => {
-    if (searchParams.get("waitlist") !== "1" || waitlistModalOpen) {
+    if (searchParams.get("waitlist") !== "1") {
       return;
     }
-
-    setWaitlistModalOpen(true);
 
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete("waitlist");
@@ -338,23 +346,48 @@ export default function Page() {
     router.replace(nextParams.size > 0 ? `${pathname}?${nextParams.toString()}` : pathname, {
       scroll: false,
     });
-  }, [pathname, router, searchParams, waitlistModalOpen]);
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    const animatedElements = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-animate='pending']"),
+    );
+
+    if (animatedElements.length === 0) {
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      animatedElements.forEach((element) => {
+        element.dataset.animate = "visible";
+      });
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          const element = entry.target as HTMLElement;
+          element.dataset.animate = "visible";
+          observer.unobserve(element);
+        });
+      },
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.14 },
+    );
+
+    animatedElements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, []);
 
   function resetWaitlistForm() {
     setEmail("");
-    setExperienceLevel(experienceLevelOptions[0]);
-    setCurrentTools("");
-    setFreeformResponse("");
     setWebsite("");
     setWaitlistFormErrors({});
-  }
-
-  function openWaitlistModal(prefilledEmail?: string) {
-    if (prefilledEmail) {
-      setEmail(prefilledEmail);
-    }
-
-    setWaitlistModalOpen(true);
   }
 
   function clearWaitlistFieldError(field: WaitlistFieldName) {
@@ -369,12 +402,20 @@ export default function Page() {
     });
   }
 
-  function validateWaitlistForm() {
-    const trimmedEmail = email.trim();
-    const trimmedExperienceLevel = experienceLevel.trim();
-    const trimmedCurrentTools = currentTools.trim();
-    const trimmedFreeformResponse = freeformResponse.trim();
+  function clearWaitlistSurveyFieldError(field: WaitlistSurveyFieldName) {
+    setWaitlistSurveyFormErrors((currentErrors) => {
+      if (!currentErrors[field]) {
+        return currentErrors;
+      }
 
+      const nextErrors = { ...currentErrors };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  }
+
+  function validateWaitlistJoinForm() {
+    const trimmedEmail = email.trim();
     const nextErrors: WaitlistFormErrors = {};
 
     if (!trimmedEmail) {
@@ -383,30 +424,44 @@ export default function Page() {
       nextErrors.email = invalidEmailMessage;
     }
 
+    setWaitlistFormErrors(nextErrors);
+
+    return {
+      isValid: Object.keys(nextErrors).length === 0,
+      trimmedEmail,
+    };
+  }
+
+  function validateWaitlistSurveyForm() {
+    const trimmedExperienceLevel = experienceLevel.trim();
+    const trimmedCurrentTools = currentTools.trim();
+    const trimmedFreeformResponse = freeformResponse.trim();
+    const nextErrors: WaitlistSurveyFormErrors = {};
+
     if (!trimmedExperienceLevel) {
       nextErrors.experienceLevel = requiredFieldMessage;
     } else if (trimmedExperienceLevel.length > 120) {
       nextErrors.experienceLevel = invalidLengthMessage;
     }
 
-    if (!trimmedCurrentTools) {
-      nextErrors.currentTools = requiredFieldMessage;
-    } else if (trimmedCurrentTools.length > 300) {
+    if (trimmedCurrentTools.length > 300) {
       nextErrors.currentTools = invalidLengthMessage;
     }
 
-    if (!trimmedFreeformResponse) {
-      nextErrors.freeformResponse = requiredFieldMessage;
-    } else if (trimmedFreeformResponse.length > 4000) {
+    if (trimmedFreeformResponse.length > 4000) {
       nextErrors.freeformResponse = invalidLengthMessage;
     }
 
-    setWaitlistFormErrors(nextErrors);
+    if (betaTestingInterest === null) {
+      nextErrors.betaTestingInterest = requiredFieldMessage;
+    }
+
+    setWaitlistSurveyFormErrors(nextErrors);
 
     return {
       isValid: Object.keys(nextErrors).length === 0,
-      trimmedEmail,
       trimmedExperienceLevel,
+      betaTestingInterest: betaTestingInterest === "yes",
       trimmedCurrentTools,
       trimmedFreeformResponse,
     };
@@ -420,7 +475,7 @@ export default function Page() {
       return;
     }
 
-    const validation = validateWaitlistForm();
+    const validation = validateWaitlistJoinForm();
     if (!validation.isValid) {
       return;
     }
@@ -437,9 +492,6 @@ export default function Page() {
         credentials: "same-origin",
         body: JSON.stringify({
           email: validation.trimmedEmail,
-          experienceLevel: validation.trimmedExperienceLevel,
-          currentTools: validation.trimmedCurrentTools,
-          freeformResponse: validation.trimmedFreeformResponse,
           website,
         }),
       });
@@ -463,16 +515,18 @@ export default function Page() {
               tone: "success",
               title: "You’re already on the list",
               description:
-                "We already have an application for that email. We’ll reach out when your beta access is ready.",
+                "We already have an application for that email. We’ll keep you posted on launch timelines.",
             }
           : {
               tone: "success",
               title: "You’re on the list",
               description:
-                "Thanks for your interest in Wippa! We’ll reach out when your beta access is ready.",
+                "Thanks for your interest in Wippa! We’ll keep you posted on launch timelines.",
             },
       );
-      setWaitlistModalOpen(false);
+      setSubmittedWaitlistEmail(validation.trimmedEmail.toLowerCase());
+      setHasSubmittedWaitlistSurvey(false);
+      setWaitlistSurveyFormErrors({});
       resetWaitlistForm();
     } catch {
       setWaitlistStatus({
@@ -482,6 +536,69 @@ export default function Page() {
       });
     } finally {
       setIsSubmittingWaitlist(false);
+    }
+  }
+
+  async function handleWaitlistSurveySubmit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    if (!submittedWaitlistEmail) {
+      return;
+    }
+
+    const validation = validateWaitlistSurveyForm();
+    if (!validation.isValid) {
+      return;
+    }
+
+    setIsSubmittingWaitlistSurvey(true);
+
+    try {
+      const response = await fetch("/api/waitlist/survey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email: submittedWaitlistEmail,
+          experienceLevel: validation.trimmedExperienceLevel,
+          betaTestingInterest: validation.betaTestingInterest,
+          currentTools: validation.trimmedCurrentTools,
+          freeformResponse: validation.trimmedFreeformResponse,
+          website,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        setWaitlistStatus({
+          tone: "destructive",
+          title: "Couldn’t save the survey",
+          description: body?.error ?? "Please check your answers and try again.",
+        });
+        return;
+      }
+
+      setHasSubmittedWaitlistSurvey(true);
+      setWaitlistSurveyFormErrors({});
+      setExperienceLevel("");
+      setBetaTestingInterest(null);
+      setCurrentTools("");
+      setFreeformResponse("");
+      setWaitlistStatus({
+        tone: "success",
+        title: "Thanks for the extra context",
+        description: "Your survey response has been saved separately from your waitlist entry.",
+      });
+    } catch {
+      setWaitlistStatus({
+        tone: "destructive",
+        title: "Couldn’t save the survey",
+        description: "Something went wrong on our side. Please try again in a moment.",
+      });
+    } finally {
+      setIsSubmittingWaitlistSurvey(false);
     }
   }
 
@@ -524,64 +641,67 @@ export default function Page() {
                 neutralSurface
               />
             ) : null}
-            {/* <div className={styles.waitlistCallout}>
-              <p className={styles.waitlistEyebrow} style={marketingTypographyStyles.eyebrow}>
-                Private beta access
-              </p>
-              <p className={styles.waitlistIntro} style={marketingTypographyStyles.body}>
-                {waitlistIntroCopy}
-              </p>
+            <div className={styles.heroActions}>
               {!showResumeCta ? (
-                <form
-                  className={styles.waitlistQuickForm}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    openWaitlistModal(email);
-                  }}
-                >
+                <form className={styles.waitlistQuickForm} onSubmit={handleWaitlistSubmit} noValidate>
+                  <div className={styles.visuallyHidden} aria-hidden="true">
+                    <label htmlFor="waitlist-hero-website">Website</label>
+                    <input
+                      id="waitlist-hero-website"
+                      type="text"
+                      name="website"
+                      autoComplete="off"
+                      tabIndex={-1}
+                      value={website}
+                      onChange={(event) => setWebsite(event.currentTarget.value)}
+                    />
+                  </div>
                   <label className={styles.waitlistQuickField}>
                     <span className={styles.visuallyHidden}>Email</span>
                     <input
                       type="email"
                       autoComplete="email"
                       value={email}
-                      onChange={(event) => setEmail(event.currentTarget.value)}
+                      onChange={(event) => {
+                        setEmail(event.currentTarget.value);
+                        clearWaitlistFieldError("email");
+                      }}
                       placeholder="you@example.com"
-                      className={styles.waitlistQuickInput}
+                      aria-invalid={waitlistFormErrors.email ? "true" : undefined}
+                      className={[
+                        styles.waitlistQuickInput,
+                        waitlistFormErrors.email ? styles.invalidInput : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       required
                     />
+                    {waitlistFormErrors.email ? (
+                      <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
+                    ) : null}
                   </label>
                   <Button
-                    type="button"
+                    type="submit"
                     variant="primary"
                     size="lg"
                     className={styles.waitlistQuickButton}
-                    onClick={() => openWaitlistModal(email)}
+                    disabled={isSubmittingWaitlist}
                   >
-                    Continue application
+                    {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
                     <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
                   </Button>
                 </form>
-              ) : null}
-            </div> */}
-            <div className={styles.heroActions}>
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                className={styles.primaryCta}
-                onClick={() => {
-                  if (showResumeCta) {
-                    router.push("/library");
-                    return;
-                  }
-
-                  openWaitlistModal(email);
-                }}
-              >
-                <span className={styles.ctaLabel}>{waitlistActionLabel}</span>
-                {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
-              </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className={styles.primaryCta}
+                  onClick={() => router.push("/library")}
+                >
+                  <span className={styles.ctaLabel}>{waitlistActionLabel}</span>
+                </Button>
+              )}
               {showResumeCta ? (
                 <Button
                   type="button"
@@ -638,7 +758,7 @@ export default function Page() {
         </section>
 
         <section className={styles.buildingBlocksSection} id="features" aria-labelledby="building-blocks-heading">
-          <div className={styles.buildingBlocksIntro}>
+          <div className={styles.buildingBlocksIntro} data-animate="pending">
             <div>
               <h2
                 id="building-blocks-heading"
@@ -673,6 +793,7 @@ export default function Page() {
                 <article
                   key={panel.title}
                   className={[styles.buildingBlocksPanel, styles[panel.className]].join(" ")}
+                  data-animate="pending"
                 >
                   <div className={styles.buildingBlocksPanelMedia}>
                     {panel.media.kind === "single" ? (
@@ -821,7 +942,7 @@ export default function Page() {
         </section> */}
 
         <section className={styles.bentoSection} aria-labelledby="feature-detail-heading">
-          <div className={styles.bentoIntro}>
+          <div className={styles.bentoIntro} data-animate="pending">
             <div>
               {/* <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>In The Details</p> */}
               <h2
@@ -841,7 +962,10 @@ export default function Page() {
 
           <div className={styles.bentoRows}>
             <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
-              <article className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}>
+              <article
+                className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}
+                data-animate="pending"
+              >
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
                     Paint and edit with precision
@@ -862,7 +986,10 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={[styles.bentoCard, styles.bentoCardQuaternary, styles.bentoCardRightStack].join(" ")}>
+              <article
+                className={[styles.bentoCard, styles.bentoCardQuaternary, styles.bentoCardRightStack].join(" ")}
+                data-animate="pending"
+              >
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
                   Design color management
@@ -954,7 +1081,7 @@ export default function Page() {
             </div> */}
 
             <div className={styles.bentoSupportGrid}>
-              <article className={styles.bentoSupportCard}>
+              <article className={styles.bentoSupportCard} data-animate="pending">
                 <div className={styles.bentoSupportCopy}>
                   <div className={styles.bentoSupportHeading}>
                     <span className={styles.bentoSupportIcon} aria-hidden="true">
@@ -970,7 +1097,7 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={styles.bentoSupportCard}>
+              <article className={styles.bentoSupportCard} data-animate="pending">
                 <div className={styles.bentoSupportCopy}>
                   <div className={styles.bentoSupportHeading}>
                     <span className={styles.bentoSupportIcon} aria-hidden="true">
@@ -987,7 +1114,7 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={styles.bentoSupportCard}>
+              <article className={styles.bentoSupportCard} data-animate="pending">
                 <div className={styles.bentoSupportCopy}>
                   <div className={styles.bentoSupportHeading}>
                     <span className={styles.bentoSupportIcon} aria-hidden="true">
@@ -1003,7 +1130,7 @@ export default function Page() {
                 </div>
               </article>
 
-              <article className={styles.bentoSupportCard}>
+              <article className={styles.bentoSupportCard} data-animate="pending">
                 <div className={styles.bentoSupportCopy}>
                   <div className={styles.bentoSupportHeading}>
                     <span className={styles.bentoSupportIcon} aria-hidden="true">
@@ -1025,7 +1152,7 @@ export default function Page() {
 
         <section className={styles.waitlistCtaSection} id="begin">
           <div className={styles.waitlistCtaInner}>
-            <div className={styles.waitlistCtaContent}>
+            <div className={styles.waitlistCtaContent} data-animate="pending">
               <div className={styles.waitlistCtaCopy}>
                 <h2 className={styles.waitlistCtaTitle} style={marketingTypographyStyles.footerTitle}>
                   Be one of the first to{" "}
@@ -1040,23 +1167,66 @@ export default function Page() {
                     }
                 </p>
                 <div className={styles.waitlistCtaActions}>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="lg"
-                    className={styles.waitlistCtaPrimary}
-                    onClick={() => {
-                      if (showResumeCta) {
-                        router.push("/library");
-                        return;
-                      }
-
-                      openWaitlistModal(email);
-                    }}
-                  >
-                    {showResumeCta ? "View my designs" : "Join Waitlist"}
-                    {/* {!showResumeCta ? <ButtonIcon icon="/icons/lucide/arrow-right.svg" /> : null} */}
-                  </Button>
+                  {!showResumeCta ? (
+                    <form className={styles.waitlistQuickForm} onSubmit={handleWaitlistSubmit} noValidate>
+                      <div className={styles.visuallyHidden} aria-hidden="true">
+                        <label htmlFor="waitlist-footer-website">Website</label>
+                        <input
+                          id="waitlist-footer-website"
+                          type="text"
+                          name="website"
+                          autoComplete="off"
+                          tabIndex={-1}
+                          value={website}
+                          onChange={(event) => setWebsite(event.currentTarget.value)}
+                        />
+                      </div>
+                      <label className={styles.waitlistQuickField}>
+                        <span className={styles.visuallyHidden}>Email</span>
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={(event) => {
+                            setEmail(event.currentTarget.value);
+                            clearWaitlistFieldError("email");
+                          }}
+                          placeholder="you@example.com"
+                          aria-invalid={waitlistFormErrors.email ? "true" : undefined}
+                          className={[
+                            styles.waitlistQuickInput,
+                            waitlistFormErrors.email ? styles.invalidInput : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          required
+                        />
+                        {waitlistFormErrors.email ? (
+                          <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
+                        ) : null}
+                      </label>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        className={styles.waitlistCtaPrimary}
+                        disabled={isSubmittingWaitlist}
+                      >
+                        {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
+                        <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                      </Button>
+                    </form>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="lg"
+                      className={styles.waitlistCtaPrimary}
+                      onClick={() => router.push("/library")}
+                    >
+                      View my designs
+                    </Button>
+                  )}
                   {showResumeCta ? (
                     <Button
                       type="button"
@@ -1112,206 +1282,218 @@ export default function Page() {
         </footer>
       </div>
       <Modal
-        isOpen={waitlistModalOpen}
-        title="Join Waitlist"
+        isOpen={waitlistStatus !== null}
+        title={
+          <span className={styles.waitlistModalTitle}>{waitlistStatus?.title ?? ""}</span>
+        }
         description={
           <div className={styles.waitlistModalCopy}>
-            <p className={styles.waitlistModalIntro} style={typographyStyles.p2}>
-              {modalDescription} 
-              </p>
-            {!showResumeCta ? (
-              <form
-                id="waitlist-application-form"
-                className={styles.waitlistModalForm}
-                onSubmit={handleWaitlistSubmit}
-                noValidate
+            <p className={styles.waitlistModalIntro}>
+              {waitlistStatus?.description ?? ""}
+            </p>
+            {showOptionalSurvey ? (
+              <section
+                className={styles.waitlistSurveySection}
+                aria-labelledby="waitlist-survey-heading"
               >
-                <div className={styles.visuallyHidden} aria-hidden="true">
-                  <label htmlFor="waitlist-website">Website</label>
-                  <input
-                    id="waitlist-website"
-                    type="text"
-                    name="website"
-                    autoComplete="off"
-                    tabIndex={-1}
-                    value={website}
-                    onChange={(event) => setWebsite(event.currentTarget.value)}
-                  />
+                <div className={styles.waitlistSurveyHeader}>
+                  <h3 id="waitlist-survey-heading" className={styles.waitlistSurveyTitle}>
+                    If you have a second, help us out by answering a few questions
+                  </h3>
                 </div>
-                <Field
-                  label={
-                    <span
-                      className={[
-                        styles.waitlistFieldLabel,
-                        waitlistFormErrors.email ? styles.errorText : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      Email
-                    </span>
-                  }
-                  hint={
-                    waitlistFormErrors.email ? (
-                      <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
-                    ) : undefined
-                  }
+                <form
+                  id="waitlist-survey-form"
+                  className={styles.waitlistModalForm}
+                  onSubmit={handleWaitlistSurveySubmit}
+                  noValidate
                 >
-                  <FieldInput
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.currentTarget.value);
-                      clearWaitlistFieldError("email");
-                    }}
-                    placeholder="you@example.com"
-                    aria-invalid={waitlistFormErrors.email ? "true" : undefined}
-                    className={waitlistFormErrors.email ? styles.invalidInput : undefined}
-                    style={typographyStyles.p1}
-                    required
-                  />
-                </Field>
-                <Field
-                  label={
-                    <span
+                  <fieldset
+                    className={[
+                      styles.waitlistRadioField,
+                      waitlistSurveyFormErrors.experienceLevel ? styles.invalidRadioField : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-invalid={waitlistSurveyFormErrors.experienceLevel ? "true" : undefined}
+                  >
+                    <legend
                       className={[
                         styles.waitlistFieldLabel,
-                        waitlistFormErrors.experienceLevel ? styles.errorText : null,
+                        waitlistSurveyFormErrors.experienceLevel ? styles.errorText : null,
                       ]
                         .filter(Boolean)
                         .join(" ")}
                     >
                       Do you currently create your own needlepoint patterns?
-                    </span>
-                  }
-                  hint={
-                    waitlistFormErrors.experienceLevel ? (
+                    </legend>
+                    <div className={styles.waitlistRadioOptions}>
+                      {experienceLevelOptions.map((option) => (
+                        <label key={option} className={styles.waitlistRadioOption}>
+                          <input
+                            type="radio"
+                            name="experienceLevel"
+                            value={option}
+                            checked={experienceLevel === option}
+                            onChange={() => {
+                              setExperienceLevel(option);
+                              clearWaitlistSurveyFieldError("experienceLevel");
+                            }}
+                          />
+                          <span>{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {waitlistSurveyFormErrors.experienceLevel ? (
                       <span className={styles.fieldError}>
-                        {waitlistFormErrors.experienceLevel}
+                        {waitlistSurveyFormErrors.experienceLevel}
                       </span>
-                    ) : undefined
-                  }
-                >
-                  <FieldSelect
-                    value={experienceLevel}
-                    onChange={(event) => {
-                      setExperienceLevel(
-                        event.currentTarget.value as (typeof experienceLevelOptions)[number],
-                      );
-                      clearWaitlistFieldError("experienceLevel");
-                    }}
-                    aria-invalid={waitlistFormErrors.experienceLevel ? "true" : undefined}
-                    className={waitlistFormErrors.experienceLevel ? styles.invalidInput : undefined}
-                    style={typographyStyles.p1}
+                    ) : null}
+                  </fieldset>
+                  <Field
+                    label={
+                      <span
+                        className={[
+                          styles.waitlistFieldLabel,
+                          waitlistSurveyFormErrors.currentTools ? styles.errorText : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        What tools do you currently use?
+                      </span>
+                    }
+                    hint={
+                      waitlistSurveyFormErrors.currentTools ? (
+                        <span className={styles.fieldError}>
+                          {waitlistSurveyFormErrors.currentTools}
+                        </span>
+                      ) : undefined
+                    }
                   >
-                    {experienceLevelOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </FieldSelect>
-                </Field>
-                <Field
-                  label={
-                    <span
-                      className={[
-                        styles.waitlistFieldLabel,
-                        waitlistFormErrors.currentTools ? styles.errorText : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      What tools do you currently use?
-                    </span>
-                  }
-                  hint={
-                    waitlistFormErrors.currentTools ? (
-                      <span className={styles.fieldError}>{waitlistFormErrors.currentTools}</span>
-                    ) : undefined
-                  }
-                >
-                  <FieldInput
-                    type="text"
-                    value={currentTools}
-                    onChange={(event) => {
-                      setCurrentTools(event.currentTarget.value);
-                      clearWaitlistFieldError("currentTools");
-                    }}
-                    placeholder="Photoshop, Procreate, graph paper, stitch charts..."
-                    aria-invalid={waitlistFormErrors.currentTools ? "true" : undefined}
-                    className={waitlistFormErrors.currentTools ? styles.invalidInput : undefined}
-                    style={typographyStyles.p1}
-                    required
-                  />
-                </Field>
-                <Field
-                  label={
-                    <span
-                      className={[
-                        styles.waitlistFieldLabel,
-                        waitlistFormErrors.freeformResponse ? styles.errorText : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      What are you hoping to use Wippa for?
-                    </span>
-                  }
-                  hint={
-                    waitlistFormErrors.freeformResponse ? (
-                      <span className={styles.fieldError}>
-                        {waitlistFormErrors.freeformResponse}
+                    <FieldInput
+                      type="text"
+                      value={currentTools}
+                      onChange={(event) => {
+                        setCurrentTools(event.currentTarget.value);
+                        clearWaitlistSurveyFieldError("currentTools");
+                      }}
+                      placeholder="Photoshop, Procreate, graph paper, stitch charts..."
+                      aria-invalid={waitlistSurveyFormErrors.currentTools ? "true" : undefined}
+                      className={
+                        waitlistSurveyFormErrors.currentTools ? styles.invalidInput : undefined
+                      }
+                    />
+                  </Field>
+                  {/* <Field
+                    label={
+                      <span
+                        className={[
+                          styles.waitlistFieldLabel,
+                          waitlistSurveyFormErrors.freeformResponse ? styles.errorText : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        What are you hoping to use Wippa for?
                       </span>
-                    ) : undefined
-                  }
-                >
-                  <textarea
-                    value={freeformResponse}
-                    onChange={(event) => {
-                      setFreeformResponse(event.currentTarget.value);
-                      clearWaitlistFieldError("freeformResponse");
-                    }}
-                    placeholder="Tell us what you want to design, refine, or speed up."
-                    className={[
-                      styles.waitlistTextarea,
-                      waitlistFormErrors.freeformResponse ? styles.invalidInput : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    style={typographyStyles.p1}
-                    rows={5}
-                    aria-invalid={waitlistFormErrors.freeformResponse ? "true" : undefined}
-                    required
-                  />
-                </Field>
-              </form>
+                    }
+                    hint={
+                      waitlistSurveyFormErrors.freeformResponse ? (
+                        <span className={styles.fieldError}>
+                          {waitlistSurveyFormErrors.freeformResponse}
+                        </span>
+                      ) : undefined
+                    }
+                  >
+                    <textarea
+                      value={freeformResponse}
+                      onChange={(event) => {
+                        setFreeformResponse(event.currentTarget.value);
+                        clearWaitlistSurveyFieldError("freeformResponse");
+                      }}
+                      placeholder="Tell us what you want to design, refine, or speed up."
+                      className={[
+                        styles.waitlistTextarea,
+                        waitlistSurveyFormErrors.freeformResponse
+                          ? styles.invalidInput
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      rows={2}
+                      aria-invalid={
+                        waitlistSurveyFormErrors.freeformResponse ? "true" : undefined
+                      }
+                    />
+                  </Field> */}
+                  <fieldset
+                    className={
+                      [
+                        styles.waitlistRadioField,
+                        waitlistSurveyFormErrors.betaTestingInterest
+                          ? styles.invalidRadioField
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                    }
+                    aria-invalid={
+                      waitlistSurveyFormErrors.betaTestingInterest ? "true" : undefined
+                    }
+                  >
+                    <legend
+                      className={[
+                        styles.waitlistFieldLabel,
+                        waitlistSurveyFormErrors.betaTestingInterest ? styles.errorText : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      Would you be interested in beta testing or providing feedback during the development process?
+                    </legend>
+                    <div className={styles.waitlistRadioOptions}>
+                      {betaTestingInterestOptions.map((option) => (
+                        <label key={option.value} className={styles.waitlistRadioOption}>
+                          <input
+                            type="radio"
+                            name="betaTestingInterest"
+                            value={option.value}
+                            checked={betaTestingInterest === option.value}
+                            onChange={() => {
+                              setBetaTestingInterest(option.value);
+                              clearWaitlistSurveyFieldError("betaTestingInterest");
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {waitlistSurveyFormErrors.betaTestingInterest ? (
+                      <span className={styles.fieldError}>
+                        {waitlistSurveyFormErrors.betaTestingInterest}
+                      </span>
+                    ) : null}
+                  </fieldset>
+                </form>
+              </section>
             ) : null}
           </div>
         }
-        dismissLabel={showResumeCta ? "Close" : "Nevermind"}
-        confirmLabel={showResumeCta ? "Open library" : isSubmittingWaitlist ? "Submitting..." : "Join waitlist"}
-        onDismiss={() => setWaitlistModalOpen(false)}
-        onConfirm={() => {
-          if (showResumeCta) {
-            router.push("/library");
-            return;
-          }
-
-          void handleWaitlistSubmit();
+        dismissLabel={showOptionalSurvey ? "Skip" : "Close"}
+        confirmLabel={
+          showResumeCta
+            ? "Open library"
+            : showOptionalSurvey
+              ? isSubmittingWaitlistSurvey
+                ? "Saving..."
+                : "Submit survey"
+              : "Okay"
+        }
+        onDismiss={() => {
+          setWaitlistStatus(null);
+          setSubmittedWaitlistEmail(null);
+          setWaitlistSurveyFormErrors({});
         }}
-        onClose={() => setWaitlistModalOpen(false)}
-        closeOnBackdropClick
-        confirmDisabled={isSubmittingWaitlist}
-        showCloseButton
-      />
-      <Modal
-        isOpen={waitlistStatus !== null}
-        title={waitlistStatus?.title ?? ""}
-        description={waitlistStatus?.description ?? ""}
-        dismissLabel="Close"
-        confirmLabel={showResumeCta ? "Open library" : "Okay"}
-        onDismiss={() => setWaitlistStatus(null)}
         onConfirm={() => {
           if (showResumeCta) {
             setWaitlistStatus(null);
@@ -1319,11 +1501,23 @@ export default function Page() {
             return;
           }
 
+          if (showOptionalSurvey) {
+            void handleWaitlistSurveySubmit();
+            return;
+          }
+
           setWaitlistStatus(null);
+          setSubmittedWaitlistEmail(null);
         }}
-        onClose={() => setWaitlistStatus(null)}
+        onClose={() => {
+          setWaitlistStatus(null);
+          setSubmittedWaitlistEmail(null);
+          setWaitlistSurveyFormErrors({});
+        }}
         tone={waitlistStatusModalTone}
+        presentation={waitlistStatusModalTone === "confirmation" ? "centered" : "default"}
         confirmVariant="primary"
+        confirmDisabled={isSubmittingWaitlistSurvey}
         closeOnBackdropClick
         showCloseButton
       />
