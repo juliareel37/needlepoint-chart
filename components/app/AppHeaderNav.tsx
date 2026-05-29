@@ -77,8 +77,8 @@ const navLinkStyle = {
   color: "var(--text-secondary)",
   textDecoration: "none",
   whiteSpace: "nowrap" as const,
-  fontSize: 16,
-  lineHeight: "22px",
+  fontSize: 15,
+  lineHeight: "20px",
   fontWeight: 500,
 } as const;
 
@@ -174,6 +174,7 @@ export default function AppHeaderNav() {
   const forceLightLandingTheme = pathname === "/";
   const showHeroResponsiveHeader = pathname === "/";
   const showLandingNavLinks = pathname === "/";
+  const showAuthBrandOnly = pathname.startsWith("/sign-in");
   const showEditorBrandOnly =
     pathname.startsWith("/editor") || pathname.startsWith("/editor-v2");
 
@@ -224,6 +225,8 @@ export default function AppHeaderNav() {
 
     const headerNavMode = showLandingHeader
       ? "landing"
+      : showAuthBrandOnly
+        ? "auth"
       : showEditorBrandOnly
         ? "editor"
         : "default";
@@ -239,7 +242,7 @@ export default function AppHeaderNav() {
       appShellRoot.removeAttribute("data-header-nav-mode");
       appShellRoot.removeAttribute("data-page-theme");
     };
-  }, [forceLightLandingTheme, showEditorBrandOnly, showLandingHeader]);
+  }, [forceLightLandingTheme, showAuthBrandOnly, showEditorBrandOnly, showLandingHeader]);
 
   useEffect(() => {
     const appShellRoot = window.document.getElementById("app-shell-root");
@@ -305,6 +308,23 @@ export default function AppHeaderNav() {
     };
   }, [mobileMenuOpen]);
 
+  if (showAuthBrandOnly) {
+    return (
+      <div className="auth-header-brand">
+        <Link href="/" style={brandStyle} aria-label="Wippa home">
+          <Image
+            src="/logos/curly/full-bw-lime-plain.png"
+            alt="Wippa"
+            width={344}
+            height={72}
+            style={brandLogoStyle}
+            priority
+          />
+        </Link>
+      </div>
+    );
+  }
+
   if (showEditorBrandOnly) {
     return (
       <div style={editorHeaderWrapStyle}>
@@ -359,6 +379,13 @@ export default function AppHeaderNav() {
             >
               Waitlist
             </Link>
+            <Link
+              href="/sign-in?redirect_url=%2Flibrary"
+              className="landing-header-nav-link"
+              style={navLinkStyle}
+            >
+              Sign in
+            </Link>
           </nav>
         ) : null}
       </div>
@@ -407,6 +434,17 @@ export default function AppHeaderNav() {
               }}
             >
               Waitlist
+            </Link>
+            <Link
+              href="/sign-in?redirect_url=%2Flibrary"
+              className="landing-header-mobile-menu-link"
+              style={mobileMenuLinkStyle}
+              tabIndex={mobileMenuOpen ? undefined : -1}
+              onClick={() => {
+                setMobileMenuOpen(false);
+              }}
+            >
+              Sign in
             </Link>
           </nav>
         </div>

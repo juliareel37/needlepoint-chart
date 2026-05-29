@@ -124,7 +124,7 @@
     var(--landing-hero-base); */
 }
 
-.hero::before {
+/* .hero::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -136,7 +136,7 @@
   background-size: 28px 28px;
   -webkit-mask-image: radial-gradient(ellipse 48% 72% at 79% 52%, #000 0%, rgba(0, 0, 0, 0.76) 24%, rgba(0, 0, 0, 0.22) 50%, transparent 78%);
   mask-image: radial-gradient(ellipse 48% 72% at 79% 52%, #000 0%, rgba(0, 0, 0, 0.76) 24%, rgba(0, 0, 0, 0.22) 50%, transparent 78%);
-}
+} */
 
 /* .hero::after {
   content: "";

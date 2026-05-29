@@ -1,7 +1,7 @@
 import { AuthSignInPageContent } from "@/components/auth/AuthSignInPageContent";
 import { validateWaitlistInviteToken } from "@/lib/waitlist/server";
 
-const DEFAULT_REDIRECT_URL = "/";
+const DEFAULT_REDIRECT_URL = "/library";
 const DEFAULT_AUTH_PATHNAME = "sign-in";
 const VALID_AUTH_PATHNAMES = new Set([
   "accept-invitation",
@@ -23,6 +23,10 @@ function normalizeRedirectUrl(value: string | string[] | undefined): string {
   }
 
   if (!value.startsWith("/") || value.startsWith("//")) {
+    return DEFAULT_REDIRECT_URL;
+  }
+
+  if (value === "/") {
     return DEFAULT_REDIRECT_URL;
   }
 
