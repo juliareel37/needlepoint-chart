@@ -282,6 +282,9 @@
   --emerald-depths: #15563eff;
   --deep-forest: #11412dff;
 
+ 
+
+
   /* GREEN PALETTE */ 
 
   --brand-50: #f0fff9ff;
@@ -293,6 +296,8 @@
   --brand-600: #186a4fff;
   --brand-700: #15563eff;
   --brand-800: #11412dff;
+
+  --brand-400: #c0ecb1;
 
   /* BRAND PALETTE TOKENS */
   --light-pink: #ffdcf5;
@@ -385,7 +390,7 @@
   --ui-border-strong: var(--neutral-300);
 
   /* Buttons */
-  --button-primary-text: var(--neutral-0);
+  --button-primary-text: var(--text-primary);
   --button-primary-default: var(--brand-400);
   --button-primary-hover: var(--brand-500);
   --button-primary-active: var(--brand-500);
@@ -1019,7 +1024,7 @@ button:disabled {
   --ui-border-reg: var(--neutral-300);
   --ui-border-strong: var(--neutral-300);
   --button-primary-default: var(--brand-400);
-  --button-primary-hover: var(--brand-500);
+  --button-primary-hover: var(--brand-300);
   --button-primary-active: var(--brand-500);
   --button-secondary-default: #f3f3f3;
   --button-secondary-border: transparent;
@@ -1101,6 +1106,49 @@ button:disabled {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+.landing-header-menu-button:focus-visible,
+.landing-header-nav-link:focus-visible,
+.landing-header-mobile-menu-link:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+
+.landing-header-nav-link {
+  transition: color 180ms ease;
+}
+
+.landing-header-mobile-menu-surface {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.landing-header-mobile-menu-surface[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-header-nav-link:hover {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+  }
+
+  .landing-header-menu-button:hover {
+    opacity: 0.72;
+  }
+
+  .landing-header-mobile-menu-link:hover {
+    background: var(--menu-item-hover-bg);
+    color: var(--text-primary) !important;
+  }
 }
 
 :root[data-theme="dark"] #app-shell-root[data-header-nav-mode="editor"] .editor-header-brand-logo {
@@ -1380,6 +1428,15 @@ input[type="number"] {
   }
   #app-shell-root[data-header-nav-mode="landing"] .landing-header-actions {
     display: none !important;
+  }
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-nav {
+    display: none !important;
+  }
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-menu-button {
+    display: inline-flex !important;
+  }
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-mobile-menu-surface {
+    display: grid !important;
   }
   .app-shell-header-right {
     gap: 8px !important;

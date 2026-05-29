@@ -7,7 +7,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { marketingTypographyStyles, typographyStyles } from "@/app/design-system/typography";
 import {
   Button,
-  ButtonIcon,
   Field,
   FieldInput,
   Modal,
@@ -88,8 +87,8 @@ type BuildingBlockPanel = {
 const buildingBlockPanels: readonly BuildingBlockPanel[] = [
   {
     kicker: "Typography",
-    title: "Fonts",
-    body: "Mix monograms, scripts, and label-ready lettering without leaving the canvas.",
+    title: "Customizable text",
+    body: "Choose from an ever-growing collection of 200+ fonts to write anything you want in stitches.",
     className: "buildingBlocksPanelFonts",
     media: {
       kind: "stacked",
@@ -117,8 +116,8 @@ const buildingBlockPanels: readonly BuildingBlockPanel[] = [
   },
   {
     kicker: "Illustration",
-    title: "Icon Library",
-    body: "Browse ready-made motifs and drop in stitch-friendly shapes for themed layouts fast.",
+    title: "Hundreds of icons",
+    body: "Explore hundreds of icons (or upload your own) that instantly convert to stitchable grid cells.",
     className: "buildingBlocksPanelIcons",
     media: {
       kind: "stacked",
@@ -146,8 +145,8 @@ const buildingBlockPanels: readonly BuildingBlockPanel[] = [
   },
   {
     kicker: "Layout",
-    title: "Shapes + Frames",
-    body: "Wrap designs with labels, borders, and geometric structures that stay crisp in pattern form.",
+    title: "Pre-made frames",
+    body: "Pick out your favorite frame to find that missing piece that completes your design.",
     className: "buildingBlocksPanelShapes",
     media: {
       kind: "stacked",
@@ -614,15 +613,17 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-            Designing your WIPs has never been easier.
+             Creating your own needlepoint patterns just got easier.
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
-              Meet Wippa, a needlepoint pattern editing tool designed to make your creative process smoother, faster, and more enjoyable. 
+              Meet Wippa, an online editing tool for grid-based design like needlepoint, cross-stitch, and more.
               Go from idea to stitch-ready pattern in minutes.
 
+              {/* Designed to make your creative process smoother, faster, and more enjoyable.  */}
+              {/* Go from idea to stitch-ready pattern in minutes. */}
 
             </p>
             {!waitlistStatus && (showPendingApprovalNotice || showApprovalRequiredNotice) ? (
@@ -688,7 +689,6 @@ export default function Page() {
                     disabled={isSubmittingWaitlist}
                   >
                     {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
-                    <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
                   </Button>
                 </form>
               ) : (
@@ -765,9 +765,9 @@ export default function Page() {
                 className={styles.sectionTitle}
                 style={marketingTypographyStyles.sectionTitle}
               >
-              Drag, drop, done - get going on your canvas in minutes
+              Drag, drop, done – create a stitchable pattern in seconds
               </h2>
-              <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
+              <p className={styles.sectionBody} style={marketingTypographyStyles.bodyLg}>
                 Add text, icons, frames, and shapes directly onto your pattern and instantly convert them into painted canvas cells.
                 No manual tracing. No clunky workflows.
               </p>
@@ -941,7 +941,7 @@ export default function Page() {
           </div>
         </section> */}
 
-        <section className={styles.bentoSection} aria-labelledby="feature-detail-heading">
+        <section className={styles.bentoSection} id="tools" aria-labelledby="feature-detail-heading">
           <div className={styles.bentoIntro} data-animate="pending">
             <div>
               {/* <p className={styles.sectionKicker} style={marketingTypographyStyles.eyebrow}>In The Details</p> */}
@@ -950,12 +950,24 @@ export default function Page() {
                 className={styles.sectionTitle}
                 style={marketingTypographyStyles.sectionTitle}
               >
-                Pattern design made faster and easier for everyone
+                {/* Powerful design tools created specifically for stitched canvases. */}
+                Never buy another single-use digital download again
                 {/* <span className={styles.sectionTitleEmphasis}> specifically </span>
                 for stitched canvases */}
               </h2>
-              <p className={styles.sectionBody} style={marketingTypographyStyles.body}>
-                Core editing tools for the moments that matter most, plus supporting features that keep your pattern organized from first draft to final export.
+              <p className={styles.sectionBody} style={marketingTypographyStyles.bodyLg}>
+                {/* No more constantly purchasing single-use etsy downloads, dealing with clunky dated tools, 
+                or trying to stitch from a photo that doesn't translate well to thread.  */}
+                {/* Never buy another overpriced one-off pattern download again.  */}
+                {/* Stop relying on someone else to make the pattern you want to stitch. */}
+
+                Instead of relying on someone else every time you stitch,
+                make your own patterns exactly how you want them
+                with our powerful editing tools designed specifically for stitched canvases.
+
+                {/* Create one yourself and make it truly your own with Wippa's seamless 
+                and intuitive editing interface,
+                with powerful tools developed specifically for stitched canvases. */}
               </p>
             </div>
           </div>
@@ -971,7 +983,7 @@ export default function Page() {
                     Paint and edit with precision
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-              Every tool you need (and more) to create and edit patterns just the way you want them, in a seamless and intuitive editing interface.                  </p>
+              Every tool you need (and more) to create and edit patterns just how you want them, in a modern and intuitive interface.                  </p>
                 </div>
                 <div className={styles.bentoVisualFrame} aria-hidden="true">
                   <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
@@ -992,10 +1004,11 @@ export default function Page() {
               >
                 <div className={styles.bentoCopy}>
                   <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                  Design color management
+                  Manage your design colors
                   </h3>
                   <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    See every color in your design with stitch counts, and merge similar shades or bulk delete shades with low usage.
+                    Track thread color usage as you go. 
+                    Swap, merge, and delete design colors in a pinch.
                   </p>
                 </div>
                 <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")} aria-hidden="true">
@@ -1088,11 +1101,11 @@ export default function Page() {
                       <Image src="/icons/lucide/proportions.svg" alt="" width={20} height={20} />
                     </span>
                     <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                      Start with canvas size presets
+                      Start with the perfect dimensions 
                     </h3>
                   </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
-                    Quickly choose your canvas size based on what you’re making - coasters, bookmarks, stockings galore.
+                    Choose a canvas size based on how you're finishing. Pillows, stockings, coasters and more in just a click.
                   </p>
                 </div>
               </article>
@@ -1104,12 +1117,12 @@ export default function Page() {
                       <Image src="/icons/lucide/image.svg" alt="" width={20} height={20} />
                     </span>
                     <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                      Upload images
+                      Upload any image
                     </h3>
                   </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
-                    Use your own images as a traceable background, or convert to painted cells.
-                    Clean up your image right in the editor with the magic eraser.
+                    Use your own images as a traceable background, or instantly convert to pattern.
+                    Prepare your image right in the editor with the magic eraser.
                   </p>
                 </div>
               </article>
@@ -1121,11 +1134,13 @@ export default function Page() {
                       <Image src="/icons/lucide/palette.svg" alt="" width={20} height={20} />
                     </span>
                     <h3 className={styles.bentoSupportTitle} style={marketingTypographyStyles.featureTitle}>
-                      Custom palettes
+                      Create custom palettes
                     </h3>
                   </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
-                    Build reusable palettes from favorite shades, thread inventory, or project-specific color rules.
+                    Keep track of your inventory or favorite thread colors in palettes, so they're always within reach
+                    while you design.
+            
                   </p>
                 </div>
               </article>
@@ -1141,7 +1156,7 @@ export default function Page() {
                     </h3>
                   </div>
                   <p className={styles.bentoSupportBody} style={marketingTypographyStyles.bodySm}>
-                    Generate full-color symbol charts with DMC codes, stitch counts, and skein estimates.
+                    Generate full pattern chart PDFs with color symbol mapping, DMC codes, stitch counts, and skein estimates.
                   </p>
                 </div>
               </article>
@@ -1155,15 +1170,15 @@ export default function Page() {
             <div className={styles.waitlistCtaContent} data-animate="pending">
               <div className={styles.waitlistCtaCopy}>
                 <h2 className={styles.waitlistCtaTitle} style={marketingTypographyStyles.footerTitle}>
-                  Be one of the first to{" "}
-                  <span className={styles.waitlistCtaTitleEmphasis}>join the community.</span>
+                  Be first in line for access to Wippa. {" "}
+                  {/* <span className={styles.waitlistCtaTitleEmphasis}>join the community.</span> */}
                 </h2>
               </div>
               <div className={styles.waitlistCtaCopy} id="waitlist">
-                <p className={styles.waitlistCtaBody} style={marketingTypographyStyles.body}>
+                <p className={styles.waitlistCtaBody} style={marketingTypographyStyles.bodyLg}>
                   {showResumeCta
                     ? "Your beta access is already active. Jump back into your library whenever you’re ready."
-                    : "Join the waitlist now to receive launch updates, priority beta access, and exclusive founding-member pricing at launch."
+                    : "Join the waitlist for launch updates, beta access, and founding-member pricing. No spam."
                     }
                 </p>
                 <div className={styles.waitlistCtaActions}>
@@ -1213,7 +1228,6 @@ export default function Page() {
                         disabled={isSubmittingWaitlist}
                       >
                         {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
-                        <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
                       </Button>
                     </form>
                   ) : (
@@ -1277,7 +1291,7 @@ export default function Page() {
                 </button>
               ) : null}
             </nav>
-            <p className={styles.siteFooterMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. MMXXVI</p>
+            <p className={styles.siteFooterMeta} style={marketingTypographyStyles.eyebrow}>Wippa Studio • Est. 2026</p>
           </div>
         </footer>
       </div>
