@@ -429,7 +429,7 @@
   padding: 0 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
-  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  color: color-mix(in srgb, var(--brand-600) 78%, var(--text-primary));
   letter-spacing: 0.02em;
 }
 
@@ -499,7 +499,7 @@
   padding: 0 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
-  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  color: color-mix(in srgb, var(--brand-600) 78%, var(--text-primary));
   letter-spacing: 0.02em;
 }
 
@@ -669,11 +669,11 @@
 }
 
 :global(:root[data-theme="dark"]) .authMethodBadge {
-  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  background: color-mix(in srgb, var(--brand-600) 38%, var(--surface-card));
   color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }
 
 :global(:root[data-theme="dark"]) .sessionBadge {
-  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  background: color-mix(in srgb, var(--brand-600) 38%, var(--surface-card));
   color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }

@@ -620,7 +620,8 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-             Creating your own needlepoint patterns just got easier.
+              Creating your own needlepoint patterns just got{" "}
+              <span className={styles.heroHighlightWord}>easier.</span>
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
               <span> </span>
@@ -688,15 +689,25 @@ export default function Page() {
                       <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
                     ) : null}
                   </label>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    className={styles.waitlistQuickButton}
-                    disabled={isSubmittingWaitlist}
-                  >
-                    {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
-                  </Button>
+                  <span className={styles.waitlistQuickButtonWrap}>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      className={styles.waitlistQuickButton}
+                      disabled={isSubmittingWaitlist}
+                    >
+                      {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
+                    </Button>
+                    <Image
+                      src="/ui/pink-doodle-arrow.png"
+                      alt=""
+                      width={1388}
+                      height={1114}
+                      className={styles.waitlistArrow}
+                      aria-hidden="true"
+                    />
+                  </span>
                 </form>
               ) : (
                 <Button
