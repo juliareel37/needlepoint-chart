@@ -258,7 +258,8 @@ export default function AppHeaderNav() {
     }
 
     const updateHeaderVisual = () => {
-      const visualMode = scrollRegion.scrollTop <= 1 ? "transparent" : "solid";
+      // const visualMode = scrollRegion.scrollTop <= 1 ? "transparent" : "solid";
+      const visualMode = "solid";
       appShellRoot.setAttribute("data-landing-header-visual", visualMode);
     };
 
@@ -332,7 +333,7 @@ export default function AppHeaderNav() {
       <div style={landingHeaderLeftStyle}>
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/curly/full-bw copy 2.png"
+            src="/logos/curly/full-bw-lime-plain.png"
             alt="Wippa"
             width={344}
             height={72}

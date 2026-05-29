@@ -113,13 +113,45 @@
   grid-template-columns: 1fr;
   align-items: start;
   padding-bottom: 28px;
+  isolation: isolate;
   background:
+    linear-gradient(220deg, color-mix(in srgb, white 88%, var(--brand-600)) 0%, white 68%);
+  /* background:
     radial-gradient(circle at 84% 10%, var(--landing-hero-right-glow) 0%, transparent 36%),
     radial-gradient(circle at 14% 12%, var(--landing-hero-left-glow) 0%, transparent 34%),
     radial-gradient(circle at 52% 28%, var(--landing-hero-center-glow) 0%, transparent 40%),
     radial-gradient(circle at 48% 100%, var(--landing-hero-bottom-glow) 0%, transparent 46%),
-    var(--landing-hero-base);
+    var(--landing-hero-base); */
 }
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(34, 64, 48, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 64, 48, 0.16) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 48% 72% at 79% 52%, #000 0%, rgba(0, 0, 0, 0.76) 24%, rgba(0, 0, 0, 0.22) 50%, transparent 78%);
+  mask-image: radial-gradient(ellipse 48% 72% at 79% 52%, #000 0%, rgba(0, 0, 0, 0.76) 24%, rgba(0, 0, 0, 0.22) 50%, transparent 78%);
+}
+
+/* .hero::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -96px -160px -64px;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='2160' height='1000' viewBox='-180 -220 2160 1000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M760 -238 C 872 -120 878 38 1038 72 C 1182 102 1246 -42 1392 -78 C 1538 -114 1652 -52 1688 68 C 1720 164 1602 242 1518 176 C 1430 108 1518 -36 1662 -52 C 1788 -66 1884 -130 1988 -238' fill='none' stroke='%23ff73c7' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 58% 14%;
+  background-size: 104% auto;
+  opacity: 0.13;
+  transform: rotate(-4deg);
+  transform-origin: center;
+} */
 
 .heroCopy {
   --hero-side-padding: clamp(
@@ -139,6 +171,8 @@
   justify-items: start;
   text-align: left;
   padding: clamp(128px, 13vw, 176px) 0 clamp(80px, 8vw, 112px) var(--hero-side-padding);
+  position: relative;
+  z-index: 1;
 }
 
 .eyebrow {
@@ -564,20 +598,46 @@
 
 .buildingBlocksPanelFonts {
   background:
-    radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.72), transparent 26%),
-    linear-gradient(180deg, color-mix(in srgb, white 22%, #f5b6d8) 0%, color-mix(in srgb, white 34%, #f5b6d8) 44%, color-mix(in srgb, white 86%, #ffdbf4) 74%, white 90%);
+    /* radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.72), transparent 26%), */
+    linear-gradient(
+      180deg, 
+      color-mix(in srgb, white 22%, #f5b6d8) 0%, 
+      color-mix(in srgb, white 34%, #f5b6d8) 44%, 
+      color-mix(in srgb, white 86%, #ffdbef) 74%, 
+      white 90%
+    );
 }
 
 .buildingBlocksPanelIcons {
   background:
-    radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.72), transparent 24%),
-    linear-gradient(180deg, color-mix(in srgb, white 24%, #b9d6bd) 0%, color-mix(in srgb, white 36%, #b9d6bd) 44%, color-mix(in srgb, white 86%, #e3f1dc) 74%, white 90%);
+    /* radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.72), transparent 24%), */
+    linear-gradient(
+      180deg, 
+      /* color-mix(in srgb, white 24%, #b8fcb2) 0%, 
+      color-mix(in srgb, white 36%, #a7eea7) 44%, 
+      color-mix(in srgb, white 86%, #aaeda8) 74%, 
+       */
+      color-mix(in srgb, white 24%, #fcffac) 0%, 
+      color-mix(in srgb, white 38%, #f8ff93) 44%, 
+      color-mix(in srgb, white 88%, #f6ffa2) 74%, 
+      white 90%
+    );
 }
 
 .buildingBlocksPanelShapes {
   background:
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.82), transparent 24%),
-    linear-gradient(180deg, color-mix(in srgb, white 18%, #f5df8f) 0%, color-mix(in srgb, white 32%, #f5df8f) 44%, color-mix(in srgb, white 86%, #fff2b8) 74%, white 90%);
+    /* radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.82), transparent 24%), */
+    linear-gradient(
+      180deg, 
+      /* color-mix(in srgb, white 24%, #fcffac) 0%, 
+      color-mix(in srgb, white 38%, #f8ff93) 44%, 
+      color-mix(in srgb, white 88%, #f6ffa2) 74%,  */
+      color-mix(in srgb, white 24%, #b8fcb2) 0%, 
+      color-mix(in srgb, white 36%, #a7eea7) 44%, 
+      color-mix(in srgb, white 86%, #aaeda8) 74%, 
+      
+      white 90%
+    );
 }
 
 .buildingBlocksPanelMedia {
@@ -1978,6 +2038,20 @@
 }
 
 @media (max-width: 820px) {
+  .hero::before {
+    background-size: 24px 24px;
+    -webkit-mask-image: radial-gradient(ellipse 72% 44% at 50% 76%, #000 0%, rgba(0, 0, 0, 0.68) 24%, rgba(0, 0, 0, 0.2) 48%, transparent 76%);
+    mask-image: radial-gradient(ellipse 72% 44% at 50% 76%, #000 0%, rgba(0, 0, 0, 0.68) 24%, rgba(0, 0, 0, 0.2) 48%, transparent 76%);
+  }
+
+  /* .hero::after {
+    inset: -72px -120px -48px;
+    background-position: 52% 18%;
+    background-size: 250% auto;
+    opacity: 0.082;
+    transform: rotate(-5deg);
+  } */
+
   .heroCopy {
     grid-template-columns: 1fr;
     justify-items: center;

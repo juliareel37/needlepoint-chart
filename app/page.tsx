@@ -718,7 +718,7 @@ export default function Page() {
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/ui/editor-dachsund-color-tab.png"
+                    src="/ui/editor-dog-tanning-6.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2438}
                     height={1448}
