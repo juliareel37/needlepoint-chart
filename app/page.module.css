@@ -1,7 +1,7 @@
 .page {
   --landing-accent-soft: color-mix(in srgb, white 90%, var(--light-blue));
   --landing-accent-strong: var(--brand-400);
-  --landing-secondary-soft: color-mix(in srgb, white 28%, var(--light-pink));
+  --landing-secondary-soft: color-mix(in srgb, white 28%, var(--accent-pink));
   --landing-secondary-surface: color-mix(in oklch, var(--surface-primary) 80%, var(--secondary-50));
   --landing-secondary-border: color-mix(in oklch, var(--ui-border-reg) 60%, var(--secondary-100));
   --landing-surface-elevated: var(--surface-card);
@@ -9,18 +9,23 @@
   --landing-hero-left-glow: var(--landing-accent-soft);
   --landing-hero-right-glow: var(--landing-secondary-soft);
   --landing-hero-center-glow: color-mix(in srgb, white 58%, var(--butter-yellow));
-  --landing-hero-bottom-glow: color-mix(in srgb, white 54%, var(--light-pink));
+  --landing-hero-bottom-glow: color-mix(in srgb, white 54%, var(--accent-pink));
   --landing-body-muted: color-mix(in srgb, var(--text-secondary) 82%, white);
+  --landing-button-height: 46px;
+  --landing-button-padding-inline: 20px;
+  --landing-button-font-size: 0.9375rem;
+  --landing-button-line-height: 18px;
+  --landing-page-bg: #faf9f4;
   --landing-hero-base:
     linear-gradient(
       180deg,
       color-mix(in srgb, white 82%, var(--butter-yellow)) 0%,
-      color-mix(in srgb, white 64%, var(--light-pink)) 42%,
-      color-mix(in srgb, white 72%, var(--light-pink)) 100%
+      color-mix(in srgb, white 64%, var(--accent-pink)) 42%,
+      color-mix(in srgb, white 72%, var(--accent-pink)) 100%
     );
   min-height: calc(100dvh - var(--app-top-offset, 52px));
   overflow-x: clip;
-  background: var(--surface-primary);
+  background: var(--landing-page-bg);
   color: var(--text-primary);
 }
 
@@ -114,8 +119,7 @@
   align-items: start;
   padding-bottom: 28px;
   isolation: isolate;
-  background:
-    linear-gradient(220deg, color-mix(in srgb, white 88%, var(--brand-600)) 0%, white 68%);
+  background: transparent;
   /* background:
     radial-gradient(circle at 84% 10%, var(--landing-hero-right-glow) 0%, transparent 36%),
     radial-gradient(circle at 14% 12%, var(--landing-hero-left-glow) 0%, transparent 34%),
@@ -154,23 +158,20 @@
 } */
 
 .heroCopy {
-  --hero-side-padding: clamp(
-    calc(var(--landing-page-gutter) + 24px),
-    8vw,
-    calc(var(--landing-page-gutter) + 96px)
-  );
+  --hero-title-width: min(100%, 68rem);
+  --hero-body-width: min(78%, 38rem);
+  --hero-actions-width: min(58%, 30rem);
   box-sizing: border-box;
   width: 100%;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(24rem, 0.9fr) minmax(0, 1.1fr);
-  column-gap: clamp(48px, 5.8vw, 92px);
-  row-gap: 22px;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 34px;
   align-content: center;
-  align-items: center;
-  justify-items: start;
-  text-align: left;
-  padding: clamp(128px, 13vw, 176px) 0 clamp(80px, 8vw, 112px) var(--hero-side-padding);
+  align-items: start;
+  justify-items: center;
+  text-align: center;
+  padding: clamp(128px, 13vw, 176px) var(--landing-page-gutter) clamp(56px, 6vw, 88px);
   position: relative;
   z-index: 1;
 }
@@ -200,11 +201,33 @@
   box-shadow: 0 0 0 5px var(--brand-100);
 }
 
+.heroLaunchBadge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--accent-pink) 72%, var(--secondary-300));
+  border-radius: 8px;
+  background: var(--accent-pink);
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
+}
+
 .heroTitle {
-  max-width: 13ch;
+  width: var(--hero-title-width);
+  max-width: var(--hero-title-width);
   margin: 0;
+  margin-inline: auto;
   text-wrap: balance;
   animation: landingFadeUp 620ms ease-out both;
+}
+
+.heroTitleLine {
+  display: block;
 }
 
 .accentWord {
@@ -223,17 +246,24 @@
   position: absolute;
   inset: 0.16em -0.1em 0.03em -0.12em;
   z-index: -1;
-  border-radius: 0.24em;
-  background: var(--pink-secondary);
+  border-radius: 0.05em;
+  /* background: var(--accent-pink); */
+  background: var(--green-lighter);
   transform: rotate(-1.5deg);
 }
 
 .heroBody {
-  max-width: 32rem;
+  width: var(--hero-body-width);
+  max-width: var(--hero-body-width);
   margin: 0;
+  margin-inline: auto;
   text-wrap: pretty;
   color: var(--text-secondary);
   animation: landingFadeUp 620ms ease-out 120ms both;
+}
+
+.heroBodyLine {
+  display: block;
 }
 
 .waitlistCallout {
@@ -264,7 +294,7 @@
   align-items: start;
   gap: 10px;
   width: 100%;
-  max-width: 400px;
+  max-width: 34rem;
 }
 
 .waitlistQuickField {
@@ -287,11 +317,11 @@
 }
 
 .waitlistQuickInput {
-  height: 46px;
+  height: var(--landing-button-height);
   padding: 0 14px;
   border-radius: 10px;
-  font-size: 1rem;
-  line-height: 1.25;
+  font-size: var(--landing-button-font-size);
+  line-height: var(--landing-button-line-height);
 }
 
 .waitlistQuickInput::placeholder,
@@ -319,12 +349,19 @@
   border-color: color-mix(in srgb, var(--brand-primary) 42%, var(--ui-border-subtle));
 }
 
-.waitlistQuickButton {
-  min-height: 46px;
-  padding: 0 20px !important;
-  border-radius: 10px !important;
-  font-size: 1rem !important;
-  line-height: 1.25 !important;
+.waitlistQuickButton,
+.primaryCta,
+.secondaryCta,
+.waitlistCtaPrimary,
+.waitlistCtaSecondary {
+  min-height: var(--landing-button-height);
+  padding: 0 var(--landing-button-padding-inline) !important;
+  border-radius: 8px !important;
+  font-family: var(--font-primary);
+  font-size: var(--landing-button-font-size) !important;
+  font-weight: 600 !important;
+  line-height: var(--landing-button-line-height) !important;
+  letter-spacing: 0;
   white-space: nowrap;
   transition:
     background-color 140ms ease,
@@ -343,7 +380,7 @@
 
 .waitlistArrow {
   position: absolute;
-  left: calc(100% + 10px);
+  left: calc(100% + 28px);
   top: calc(50% + 34px);
   width: 112px;
   height: auto;
@@ -356,12 +393,19 @@
   transform: translateY(-1px);
 }
 
+.waitlistQuickButton,
+.primaryCta,
+.waitlistCtaPrimary {
+  color: var(--button-primary-text);
+}
+
 .heroActions {
   display: flex;
   align-items: stretch;
+  justify-content: center;
   gap: 12px;
   flex-wrap: nowrap;
-  width: min(540px, 100%);
+  width: var(--hero-actions-width);
   max-width: 100%;
   animation: landingFadeUp 620ms ease-out 220ms both;
 }
@@ -376,6 +420,12 @@
   flex: 1 1 0;
   min-width: 0;
   justify-content: center;
+  color: var(--button-outlined-default-text);
+}
+
+.waitlistCtaSecondary {
+  color: var(--text-primary);
+  font-weight: 500 !important;
 }
 
 .ctaLabel {
@@ -387,11 +437,9 @@
 .heroPreviewWrap {
   box-sizing: border-box;
   position: relative;
-  grid-column: 2;
-  grid-row: 1 / span 5;
-  justify-self: end;
-  width: 100%;
-  margin-top: clamp(-56px, -3vw, -32px);
+  justify-self: center;
+  width: min(92vw, 1120px);
+  margin-top: clamp(32px, 4vw, 64px);
   display: grid;
   justify-items: center;
   overflow: visible;
@@ -405,12 +453,11 @@
   box-sizing: border-box;
   width: 100%;
   height: auto;
-  padding: 8px 0 8px 8px;
-  border-radius: 16px 0 0 16px;
-  border: 1px solid rgb(255 255 255 / 32%);
-  border-right: 0;
-  background: rgb(255 255 255 / 28%);
-  box-shadow: 0 18px 34px rgba(20, 24, 36, 0.13), 0 4px 12px rgba(20, 24, 36, 0.08);
+  padding: 8px;
+  /* border-radius: 16px; */
+  /* border: 1px solid var(--ui-border-reg); */
+  /* background: rgb(255 255 255 / 28%); */
+  /* box-shadow: 0 18px 34px rgba(20, 24, 36, 0.13), 0 4px 12px rgba(20, 24, 36, 0.08); */
   /* -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   -webkit-mask-repeat: no-repeat;
@@ -427,9 +474,8 @@
   width: 100%;
   max-width: 100%;
   height: auto;
-  border-radius: 10px 0 0 10px;
+  border-radius: 10px;
   border: 1px solid rgb(255 255 255 / 24%);
-  border-right: 0;
 }
 
 .heroFeatureGrid {
@@ -619,10 +665,11 @@
   display: grid;
   grid-template-rows: auto auto;
   align-content: start;
-  padding: 0;
+  padding: clamp(10px, 1vw, 14px);
   border-radius: clamp(18px, 1.5vw, 22px);
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, white);
-  overflow: clip;
+  background: var(--surface-primary);
+  overflow: hidden;
 }
 
 .buildingBlocksPanel[data-animate="visible"]:nth-child(2) {
@@ -633,16 +680,17 @@
   animation-delay: 180ms;
 }
 
-.buildingBlocksPanelFonts {
-  background: #f8c8e2;
+.buildingBlocksPanelFonts .buildingBlocksPanelMedia {
+  background: var(--accent-purple);
+
 }
 
-.buildingBlocksPanelIcons {
-  background: #fbffb4;
+.buildingBlocksPanelIcons .buildingBlocksPanelMedia {
+  background: var(--green-lighter);
 }
 
-.buildingBlocksPanelShapes {
-  background: #c7f7c1;
+.buildingBlocksPanelShapes .buildingBlocksPanelMedia {
+  background: var(--accent-blue);
 }
 
 .buildingBlocksPanelMedia {
@@ -651,10 +699,7 @@
   overflow: hidden;
   min-height: clamp(180px, 20vw, 240px);
   padding-inline: clamp(12px, 1.5vw, 18px);
-  border-radius: inherit;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  background: transparent;
+  border-radius: clamp(14px, 1.25vw, 18px);
 }
 
 .buildingBlocksPanelMediaFrame {
@@ -870,7 +915,10 @@
   display: grid;
   gap: 8px;
   align-content: end;
-  padding: 16px clamp(14px, 1.4vw, 18px) clamp(18px, 1.8vw, 24px) clamp(20px, 2vw, 28px);
+  justify-items: center;
+  padding: 22px clamp(14px, 1.4vw, 18px) clamp(12px, 1.2vw, 16px);
+  background: var(--surface-primary);
+  text-align: center;
 }
 
 .buildingBlocksPanelKicker {
@@ -880,7 +928,7 @@
 .buildingBlocksPanelBody {
   margin: 0;
   color: var(--landing-body-muted);
-  max-width: 28ch;
+  max-width: 32ch;
   text-wrap: pretty;
 }
 
@@ -1324,7 +1372,7 @@
 }
 
 .bentoCardPrimary {
-  background: #d8ecff;
+  background: var(--accent-pink);
 }
 
 .bentoCardSecondary {
@@ -1338,7 +1386,7 @@
 }
 
 .bentoCardQuaternary {
-  background: #ffd8ec;
+  background: var(--accent-yellow);
 }
 
 .bentoCardImageFirst {
@@ -1811,7 +1859,11 @@
   left: 50%;
   width: 100dvw;
   margin-left: -50dvw;
-  background:
+  box-sizing: border-box;
+  padding-inline: var(--landing-page-gutter);
+  padding-bottom: clamp(48px, 6vw, 88px);
+  background: var(--landing-page-bg);
+  /* background:
     radial-gradient(circle at 14% 12%, rgb(255 255 255 / 94%) 0%, transparent 34%),
     radial-gradient(circle at 52% 18%, color-mix(in srgb, white 74%, var(--butter-yellow)) 0%, transparent 44%),
     radial-gradient(circle at 82% 10%, color-mix(in srgb, white 66%, var(--light-pink)) 0%, transparent 38%),
@@ -1824,23 +1876,48 @@
       color-mix(in srgb, white 82%, var(--butter-yellow)) 46%,
       color-mix(in srgb, white 78%, var(--secondary-100)) 58%,
       color-mix(in srgb, white 80%, var(--brand-300)) 100%
-  );
+  ); */
   color: var(--text-primary);
-  background-size: 150% 150%;
-  animation: landingGlowShift 14s ease-in-out infinite;
 }
 
 .waitlistCtaInner {
   box-sizing: border-box;
+  position: relative;
   width: min(1680px, 100%);
   margin: 0 auto;
-  padding: 120px 0 112px;
-  padding-inline: var(--landing-page-gutter);
+  padding: clamp(88px, 9vw, 132px) var(--landing-page-gutter);
   display: grid;
   gap: 40px;
+  overflow: hidden;
+  border-radius: clamp(20px, 2vw, 28px);
+  background: var(--green-lightest);
+  background-size: 150% 150%;
+  /* box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08); */
+  animation: landingGlowShift 14s ease-in-out infinite;
+}
+
+.waitlistCtaInner::before {
+  content: "";
+  --waitlist-cta-line-mask: url("data:image/svg+xml,%3Csvg width='1800' height='480' viewBox='0 0 1800 480' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-60 392 C 88 420 224 360 310 270 C 384 176 310 120 250 160 C 182 208 226 346 378 360 C 560 376 690 296 756 174 C 856 -12 1126 36 1300 106 C 1500 186 1498 372 1372 398 C 1246 424 1192 290 1278 196 C 1370 96 1558 106 1688 126 C 1770 138 1822 58 1874 -44' stroke='black' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  position: absolute;
+  inset: 13% -6% 10%;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--green-med);
+  -webkit-mask-image: var(--waitlist-cta-line-mask);
+  mask-image: var(--waitlist-cta-line-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: 112% 100%;
+  mask-size: 112% 100%;
+  opacity: 0.1;
 }
 
 .waitlistCtaContent {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
@@ -1906,9 +1983,9 @@
   left: 50%;
   width: 100dvw;
   margin-left: -50dvw;
-  margin-top: -72px;
+  margin-top: 0;
   margin-bottom: -32px;
-  background: var(--surface-primary);
+  background: var(--landing-page-bg);
   color: var(--text-primary);
 }
 
@@ -1993,13 +2070,6 @@
     gap: 40px;
   }
 
-  .heroCopy {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    column-gap: clamp(32px, 4vw, 56px);
-    row-gap: 20px;
-  }
-
-  .heroTitle,
   .sectionTitle,
   .waitlistCtaTitle {
     max-width: none;
@@ -2044,10 +2114,7 @@
   } */
 
   .heroCopy {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-    row-gap: 22px;
+    row-gap: 28px;
     padding: 88px var(--landing-page-gutter) 36px;
   }
 
@@ -2057,27 +2124,12 @@
   }
 
   .heroActions {
-    width: min(100%, 30rem);
     justify-content: center;
   }
 
   .heroPreviewWrap {
-    grid-column: auto;
-    grid-row: auto;
-    justify-self: center;
     width: min(92vw, 860px);
-    margin-top: 0;
-  }
-
-  .heroPreviewCard {
-    padding: 8px;
-    border-radius: 16px;
-    border-right: 1px solid rgb(255 255 255 / 32%);
-  }
-
-  .heroPreviewImage {
-    border-radius: 10px;
-    border-right: 1px solid rgb(255 255 255 / 24%);
+    margin-top: clamp(20px, 5vw, 40px);
   }
 }
 
@@ -2197,7 +2249,7 @@
   }
 
   .siteFooter {
-    margin-top: -56px;
+    margin-top: 0;
   }
 
   .hero {
@@ -2205,18 +2257,18 @@
   }
 
   .heroCopy {
-    row-gap: 20px;
+    --hero-body-width: min(90%, 38rem);
+    --hero-actions-width: min(78%, 30rem);
+    row-gap: 26px;
     padding: 132px var(--landing-page-gutter) 0;
   }
 
   .heroTitle {
-    max-width: 10.5ch;
     font-size: clamp(2.45rem, 10.8vw, 2.8rem) !important;
     line-height: 1.02 !important;
   }
 
   .heroBody {
-    max-width: 30ch;
     font-size: 1.02rem !important;
     line-height: 1.55 !important;
   }
@@ -2387,6 +2439,13 @@
     padding-inline: var(--landing-page-gutter);
   }
 
+  .waitlistCtaInner::before {
+    inset: 18% -52% 14%;
+    -webkit-mask-size: 185% 100%;
+    mask-size: 185% 100%;
+    opacity: 0.62;
+  }
+
   .heroPreviewStage {
   }
 
@@ -2410,7 +2469,6 @@
   .heroActions {
     flex-direction: column;
     align-items: center;
-    width: min(540px, 100%);
   }
 
   .resumeCard {

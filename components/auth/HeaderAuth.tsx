@@ -54,7 +54,7 @@ export default function HeaderAuth() {
           className="landing-header-cta"
           onClick={handleLandingWaitlistClick}
         >
-          Get early access
+          Join Waitlist
         </Link>
       </header>
     );

@@ -617,18 +617,31 @@ export default function Page() {
               <span className={styles.eyebrowDot} />
               W.I.P. • Version 2.4
             </div> */}
+            <div className={styles.heroLaunchBadge} style={marketingTypographyStyles.eyebrow}>
+              Coming summer 2026
+            </div>
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              Creating your own needlepoint patterns just got{" "}
-              <span className={styles.heroHighlightWord}>easier.</span>
+              <span className={styles.heroTitleLine}>Creating your own needlepoint patterns</span>
+              <span className={styles.heroTitleLine}>
+                just got {" "}
+                {/* easier. */}
+                <span className={styles.heroHighlightWord}>easier.</span>
+              </span>
               {/* <span className={styles.accentWord}>  needlepoint patterns </span> */}
               {/* just got easier */}
-              <span> </span>
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
-              Meet Wippa, an online editing tool for grid-based design like needlepoint, cross-stitch, and more.
-              Go from idea to stitch-ready pattern in minutes.
+              <span className={styles.heroBodyLine}>
+                Meet Wippa, an online editing tool for grid-based design
+              </span>
+              <span className={styles.heroBodyLine}>
+                like needlepoint, cross-stitch, and more.
+              </span>
+              <span className={styles.heroBodyLine}>
+                Go from idea to stitch-ready pattern in minutes.
+              </span>
 
               {/* Designed to make your creative process smoother, faster, and more enjoyable.  */}
               {/* Go from idea to stitch-ready pattern in minutes. */}
@@ -736,7 +749,7 @@ export default function Page() {
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/ui/editor-dog-tanning.png"
+                    src="/ui/editor-collage-2.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2438}
                     height={1448}
@@ -1188,7 +1201,7 @@ export default function Page() {
             <div className={styles.waitlistCtaContent} data-animate="pending">
               <div className={styles.waitlistCtaCopy}>
                 <h2 className={styles.waitlistCtaTitle} style={marketingTypographyStyles.footerTitle}>
-                  Be first in line for access to Wippa. {" "}
+                  Join the waitlist and be the first to try {" "}
                   {/* <span className={styles.waitlistCtaTitleEmphasis}>join the community.</span> */}
                 </h2>
               </div>
@@ -1196,7 +1209,7 @@ export default function Page() {
                 <p className={styles.waitlistCtaBody} style={marketingTypographyStyles.bodyLg}>
                   {showResumeCta
                     ? "Your beta access is already active. Jump back into your library whenever you’re ready."
-                    : "Join the waitlist for launch updates, beta access, and founding-member pricing. No spam."
+                    : "Get on the list to be notified when we launch. The first 100 people on the waitlist will receive exclusive founder discounts."
                     }
                 </p>
                 <div className={styles.waitlistCtaActions}>

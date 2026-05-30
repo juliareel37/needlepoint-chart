@@ -371,14 +371,14 @@ export default function AppHeaderNav() {
             >
                 Features
             </Link>
-            <Link
+            {/* <Link
               href="/#waitlist"
               className="landing-header-nav-link"
               style={navLinkStyle}
               onClick={(event) => handleLandingAnchorClick(event, "waitlist")}
             >
               Waitlist
-            </Link>
+            </Link> */}
             <Link
               href="/sign-in?redirect_url=%2Flibrary"
               className="landing-header-nav-link"

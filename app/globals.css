@@ -246,7 +246,8 @@
   --neutral-900: #1c1c1c;
 
   /* CORE BRAND COLORS */
-  --green-lightest: #C8E8BE;
+  --green-lightest: #dcefd7;
+  --green-lighter: #C8E8BE;
   --green-light: #A0CEA5;
   --green-med: #77B48C;
   --green-med-strong: #4F9A73;
@@ -262,18 +263,22 @@
 
 
   /* FINAL FULL GRADIENT */
-  --brand-50: var(--green-white-hover);
-  --brand-100: var(--green-lightest);
+  /* --brand-50: var(--green-white-hover); */
+  --brand-50: var(--green-lightest);
+  --brand-100: var(--green-lighter);
   --brand-200: var(--green-light);
   --brand-300: var(--green-med);
   --brand-400: var(--green-med-strong);
   --brand-500: var(--green-med-strong-dark);
   --brand-600: var(--green-med-strong-darkest);
 
-  --pink-secondary: #ffbbd3;
-
+  --accent-pink: #ffdcea;
+  --accent-blue: #ccebff;
+  --accent-yellow: #fff3a8;
+  --accent-purple: #efd0fb;
+ 
   /* BRAND PALETTE TOKENS */
-  --light-pink: #ffdcf5;
+  /* --light-pink: #ffdcf5; */
   --butter-yellow: #fff6a1;
   --light-blue: #bee3fc;
 
@@ -932,6 +937,9 @@ button:disabled {
 #app-shell-root[data-header-nav-mode="landing"][data-page-theme="landing-light"] .app-shell-header {
   --landing-floating-header-inline-gap: clamp(48px, 12vw, 220px);
   --landing-floating-header-top-gap: 10px;
+  height: var(--app-header-height) !important;
+  min-height: var(--app-header-height) !important;
+  flex: 0 0 var(--app-header-height) !important;
   width: min(calc(100% - (var(--landing-floating-header-inline-gap) * 2)), 1040px);
   margin-top: var(--landing-floating-header-top-gap);
   margin-right: auto;
@@ -940,11 +948,13 @@ button:disabled {
   );
   margin-left: auto;
   border-radius: 14px;
+  background: white;
   overflow: visible;
 }
 
 #app-shell-root[data-header-nav-mode="landing"] {
   --app-shell-inline-padding: var(--landing-page-gutter);
+  --app-header-height: 76px !important;
 }
 
 #app-shell-root[data-header-nav-mode="auth"] {
@@ -988,6 +998,7 @@ button:disabled {
   --control-disabled-text: var(--neutral-500);
   --control-disabled-border: color-mix(in srgb, var(--ui-border-subtle) 75%, var(--neutral-400));
   --surface-app: var(--neutral-0);
+  --landing-page-bg: #faf9f4;
   --surface-primary: white;
   --surface-card: var(--neutral-50);
   --canvas-stage-bg: var(--neutral-100);
@@ -1003,7 +1014,7 @@ button:disabled {
   --ui-border-reg: var(--neutral-300);
   --ui-border-strong: var(--neutral-300);
 
-  --button-primary-text: var(--text-primary);
+  --button-primary-text: var(--neutral-50);
   --button-primary-default: var(--brand-400);
   --button-primary-hover: color-mix(in srgb, var(--button-primary-default), black var(--button-primary-hover-darken));
   --button-primary-active: var(--brand-500);
@@ -1037,11 +1048,11 @@ button:disabled {
 
 #app-shell-root:has(.landing-light-page),
 #app-shell-scroll-region:has(.landing-light-page) {
-  background: var(--surface-primary);
+  background: var(--landing-page-bg);
 }
 
 #app-shell-root[data-header-nav-mode="landing"] .landing-header-cta {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 18px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -1087,14 +1098,14 @@ button:disabled {
 }
 
 #app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="solid"] .app-shell-header {
-  background: var(--surface-primary);
+  background: white;
   border-bottom-color: color-mix(in srgb, var(--ui-border-reg) 92%, transparent);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+  box-shadow: none;
 }
 
 #app-shell-root[data-header-nav-mode="landing"][data-page-theme="landing-light"][data-landing-header-visual="solid"] .app-shell-header {
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, transparent);
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 #app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="solid"] .landing-header-cta {
@@ -1418,6 +1429,27 @@ input[type="number"] {
   .canvas-toolbar .canvas-toolbar-scroll {
     flex-wrap: nowrap;
     width: max-content;
+  }
+}
+@media (max-width: 860px) {
+  #app-shell-root[data-header-nav-mode="landing"] .app-shell-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  #app-shell-root[data-header-nav-mode="landing"] .app-header-title-slot,
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-actions,
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-nav {
+    display: none !important;
+  }
+
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-menu-button {
+    display: inline-flex !important;
+  }
+
+  #app-shell-root[data-header-nav-mode="landing"] .landing-header-mobile-menu-surface {
+    display: grid !important;
   }
 }
 @media (max-width: 640px) {
