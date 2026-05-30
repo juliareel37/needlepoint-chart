@@ -313,7 +313,7 @@ export default function AppHeaderNav() {
       <div className="auth-header-brand">
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/curly/full-bw-lime-plain.png"
+            src="/logos/curly/full-bw-300.png"
             alt="Wippa"
             width={344}
             height={72}
@@ -353,7 +353,7 @@ export default function AppHeaderNav() {
       <div style={landingHeaderLeftStyle}>
         <Link href="/" style={brandStyle} aria-label="Wippa home">
           <Image
-            src="/logos/curly/full-bw-lime-plain.png"
+            src="/logos/curly/full-bw-300.png"
             alt="Wippa"
             width={344}
             height={72}

@@ -1293,7 +1293,7 @@ export default function Page() {
           <div className={styles.siteFooterInner}>
             <Link href="/" className={styles.siteFooterBrand} aria-label="Wippa home">
               <Image
-                src="/logos/curly/green-white-square-full.png"
+                src="/logos/curly/full-bw-300.png"
                 alt="Wippa"
                 width={344}
                 height={72}

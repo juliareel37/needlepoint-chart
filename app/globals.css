@@ -940,7 +940,7 @@ button:disabled {
   height: var(--app-header-height) !important;
   min-height: var(--app-header-height) !important;
   flex: 0 0 var(--app-header-height) !important;
-  width: min(calc(100% - (var(--landing-floating-header-inline-gap) * 2)), 1040px);
+  width: min(calc(100% - (var(--landing-floating-header-inline-gap) * 2)), 920px);
   margin-top: var(--landing-floating-header-top-gap);
   margin-right: auto;
   margin-bottom: calc(
