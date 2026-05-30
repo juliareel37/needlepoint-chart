@@ -2,7 +2,7 @@
   min-height: calc(100dvh - var(--app-top-offset, 64px));
   background:
     radial-gradient(circle at 18% 0%, color-mix(in srgb, white 72%, var(--light-blue)) 0%, transparent 30%),
-    radial-gradient(circle at 82% 4%, color-mix(in srgb, white 68%, var(--light-pink)) 0%, transparent 28%),
+    radial-gradient(circle at 82% 4%, color-mix(in srgb, white 68%, var(--accent-pink)) 0%, transparent 28%),
     var(--surface-primary);
   color: var(--text-primary);
 }
@@ -10,7 +10,7 @@
 :global(:root[data-theme="dark"]) .page {
   background:
     radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--light-blue) 16%, transparent) 0%, transparent 30%),
-    radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--light-pink) 28%, transparent) 0%, transparent 28%),
+    radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--accent-pink) 28%, transparent) 0%, transparent 28%),
     var(--surface-primary);
 }
 
@@ -117,7 +117,7 @@
 
 .footerLink {
   color: var(--brand-500);
-  font-weight: 700;
+  font-weight: 400;
   text-decoration: none;
 }
 

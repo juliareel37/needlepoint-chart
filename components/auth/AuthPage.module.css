@@ -40,8 +40,15 @@
 }
 
 .shellCompact {
-  width: min(520px, 100%);
-  grid-template-columns: minmax(0, 520px);
+  width: min(340px, 100%);
+  grid-template-columns: minmax(0, 340px);
+}
+
+.page:has(.shellPlain) {
+  min-height: 100dvh;
+  padding-top: calc(var(--app-header-height, 64px) + 24px);
+  padding-bottom: calc(var(--app-header-height, 64px) + 24px);
+  background: var(--surface-primary);
 }
 
 .aside {
@@ -109,12 +116,24 @@
 
 .mainPanel {
   padding: 22px;
-  gap: 18px;
+  gap: 24px;
+}
+
+.mainPanelPlain {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .header {
   display: grid;
   gap: 6px;
+}
+
+.headerPlain {
+  text-align: center;
 }
 
 .title {
@@ -125,6 +144,24 @@
 .description {
   margin: 0;
   color: var(--text-secondary);
+}
+
+.accessPrompt {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+}
+
+.accessPromptLink {
+  color: var(--auth-link-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.accessPromptLink:hover {
+  text-decoration: underline;
 }
 
 .errorText,
@@ -175,6 +212,50 @@
   gap: 14px;
 }
 
+.authDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.callbackPage {
+  min-height: calc(100dvh - var(--app-top-offset, 52px));
+  display: grid;
+  place-items: center;
+  background: var(--surface-app);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--text-secondary) 22%, transparent);
+  border-top-color: var(--text-primary);
+  animation: authSpin 720ms linear infinite;
+}
+
+.callbackText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .buttonRow {
   display: flex;
   flex-wrap: wrap;
@@ -201,6 +282,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.shellPlain .linkRow {
+  justify-content: center;
+  text-align: center;
 }
 
 .link {
@@ -343,7 +429,7 @@
   padding: 0 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
-  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  color: color-mix(in srgb, var(--brand-600) 78%, var(--text-primary));
   letter-spacing: 0.02em;
 }
 
@@ -413,7 +499,7 @@
   padding: 0 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--brand-100) 72%, var(--surface-card));
-  color: color-mix(in srgb, var(--brand-700) 78%, var(--text-primary));
+  color: color-mix(in srgb, var(--brand-600) 78%, var(--text-primary));
   letter-spacing: 0.02em;
 }
 
@@ -583,11 +669,11 @@
 }
 
 :global(:root[data-theme="dark"]) .authMethodBadge {
-  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  background: color-mix(in srgb, var(--brand-600) 38%, var(--surface-card));
   color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }
 
 :global(:root[data-theme="dark"]) .sessionBadge {
-  background: color-mix(in srgb, var(--brand-700) 38%, var(--surface-card));
+  background: color-mix(in srgb, var(--brand-600) 38%, var(--surface-card));
   color: color-mix(in srgb, var(--brand-100) 72%, var(--text-primary));
 }

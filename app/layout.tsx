@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Fraunces } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
@@ -10,7 +10,7 @@ import AppHeaderNav from "@/components/app/AppHeaderNav";
 import { getCurrentUserThemePreference } from "@/lib/auth/server";
 import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
 
-const uiSans = Figtree({
+const uiSans = Plus_Jakarta_Sans({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/favicon-green-on-green.png"), type: "image/png" },
+      { url: assetPath("/logos/curly/logo-300.png"), type: "image/png" },
       // { url: assetPath("/favicon.png"), type: "image/png" },
     ],
     shortcut: assetPath("/w.png"),

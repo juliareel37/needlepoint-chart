@@ -76,7 +76,7 @@ export default function AuthButtons({ hideSignedOut = false }: AuthButtonsProps)
             }}
           >
             {/* <ButtonIcon icon="/icons/lucide/user.svg" /> */}
-            Log in
+            Sign in
           </Button>
         </AuthSignedOut>
       ) : null}

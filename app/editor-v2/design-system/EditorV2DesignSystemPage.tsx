@@ -76,7 +76,6 @@ const paletteGroups = [
       { name: "brand-400", cssVar: "--brand-400", sourceType: "literal" },
       { name: "brand-500", cssVar: "--brand-500", sourceType: "literal" },
       { name: "brand-600", cssVar: "--brand-600", sourceType: "literal" },
-      { name: "brand-700", cssVar: "--brand-700", sourceType: "literal" },
     ],
   },
   {

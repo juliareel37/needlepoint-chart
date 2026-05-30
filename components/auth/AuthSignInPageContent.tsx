@@ -78,6 +78,10 @@ function normalizeEmail(email: string | null | undefined) {
   return typeof email === "string" && email.trim() ? email.trim().toLowerCase() : null;
 }
 
+function createAuthCompletionPath(redirectUrl: string) {
+  return `/sign-in/callback?redirect_url=${encodeURIComponent(redirectUrl)}`;
+}
+
 function getTitles(pathname: string) {
   switch (pathname as ViewName) {
     case "sign-up":
@@ -107,7 +111,7 @@ function getTitles(pathname: string) {
       };
     default:
       return {
-        title: "Sign in to Wippa",
+        title: "Beta Tester Login",
         description: "Welcome back! Please sign in to continue.",
       };
   }
@@ -405,14 +409,15 @@ export function AuthSignInPageContent({
     setIsSubmitting(true);
     setStatus(null);
 
+    const completionPath = createAuthCompletionPath(redirectUrl);
     const signUpCallbackPath =
       isSignUpPath && token
         ? `/sign-in/sign-up?token=${encodeURIComponent(token)}&redirect_url=${encodeURIComponent(redirectUrl)}`
         : null;
     const callbackURL =
       typeof window !== "undefined"
-        ? `${window.location.origin}${signUpCallbackPath ?? redirectUrl}`
-        : signUpCallbackPath ?? redirectUrl;
+        ? `${window.location.origin}${signUpCallbackPath ?? completionPath}`
+        : signUpCallbackPath ?? completionPath;
     const errorCallbackURL =
       typeof window !== "undefined"
         ? `${window.location.origin}${signUpCallbackPath ?? `/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`}`
@@ -439,7 +444,7 @@ export function AuthSignInPageContent({
         return;
       }
 
-      router.replace(redirectUrl);
+      router.replace(completionPath);
       router.refresh();
     } catch (error) {
       setStatus({
@@ -455,12 +460,13 @@ export function AuthSignInPageContent({
     event.preventDefault();
     setIsSubmitting(true);
     setStatus(null);
+    const completionPath = createAuthCompletionPath(redirectUrl);
 
     try {
       const result = await signInWithEmail({
         email,
         password,
-        callbackURL: redirectUrl,
+        callbackURL: completionPath,
         rememberMe,
       });
 
@@ -472,7 +478,7 @@ export function AuthSignInPageContent({
         return;
       }
 
-      router.replace(result.data.url ?? redirectUrl);
+      router.replace(result.data.url ?? completionPath);
       router.refresh();
     } catch (error) {
       setStatus({
@@ -811,6 +817,10 @@ export function AuthSignInPageContent({
           {isSignUp ? "Continue with Google" : "Continue with Google"}
         </Button>
 
+        <div className={styles.authDivider} role="separator" aria-label="or">
+          <span>or</span>
+        </div>
+
         {/* {!isSignUp ? (
           <>
             <div className={[styles.status, styles.statusMuted].join(" ")} style={typographyStyles.p2}>
@@ -894,27 +904,37 @@ export function AuthSignInPageContent({
         <Button type="submit" variant="primary" className={styles.fullWidthButton} disabled={isSubmitting}>
           {isSubmitting ? (isSignUp ? "Creating account..." : "Signing in...") : isSignUp ? "Create account" : "Sign in"}
         </Button>
-
-
-
-        <div className={styles.linkRow}>
-          {isSignUp ? (
+        {isSignUp ? (
+          <div className={styles.linkRow}>
             <Link href={`/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`} className={styles.link} style={typographyStyles.p2}>
               Already have an account? Sign in
             </Link>
-          ) : (
-            <Link href="/" className={styles.link} style={typographyStyles.p2}>
-              Need access? Join the waitlist
-            </Link>
-          )}
-        </div>
+          </div>
+        ) : null}
       </form>
+    );
+  }
+
+  if (pathname === "callback") {
+    return (
+      <div className={styles.callbackPage} role="status" aria-live="polite">
+        <div className={styles.spinner} aria-hidden="true" />
+        <span className={styles.callbackText}>Signing in...</span>
+      </div>
     );
   }
 
   return (
     <div className={styles.page}>
-      <div className={[styles.shell, !IS_DEV_APP_MODE ? styles.shellCompact : null].filter(Boolean).join(" ")}>
+      <div
+        className={[
+          styles.shell,
+          !IS_DEV_APP_MODE ? styles.shellCompact : null,
+          !IS_DEV_APP_MODE ? styles.shellPlain : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {IS_DEV_APP_MODE ? (
           <aside className={styles.aside}>
             <Panel className={styles.heroPanel}>
@@ -964,14 +984,41 @@ export function AuthSignInPageContent({
           </aside>
         ) : null}
 
-        <Panel className={styles.mainPanel}>
-          <div className={styles.header}>
-            <h2 className={styles.title} style={typographyStyles.h3}>
+        <Panel
+          className={[
+            styles.mainPanel,
+            !IS_DEV_APP_MODE ? styles.mainPanelPlain : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div
+            className={[
+              styles.header,
+              !IS_DEV_APP_MODE ? styles.headerPlain : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <h2
+              className={styles.title}
+              style={IS_DEV_APP_MODE ? typographyStyles.h3 : typographyStyles.h2}
+            >
               {titles.title}
             </h2>
-            <p className={styles.description} style={typographyStyles.p2}>
-              {titles.description}
-            </p>
+            {!IS_DEV_APP_MODE && pathname === "sign-in" ? (
+              <p className={styles.accessPrompt}>
+                Need access?{" "}
+                <Link href="/" className={styles.accessPromptLink}>
+                  Join the waitlist
+                </Link>
+              </p>
+            ) : null}
+            {IS_DEV_APP_MODE ? (
+              <p className={styles.description} style={typographyStyles.p2}>
+                {titles.description}
+              </p>
+            ) : null}
           </div>
           {renderStatus()}
           {renderForm()}

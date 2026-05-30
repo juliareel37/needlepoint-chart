@@ -1829,7 +1829,7 @@
 
 .iconLibraryMoreButton:focus-visible {
   background: color-mix(in srgb, var(--brand-100) 42%, transparent);
-  color: var(--brand-700);
+  color: var(--brand-600);
 }
 
 .iconLibraryPreview {
@@ -4422,7 +4422,7 @@
 
   .iconLibraryMoreButton:hover {
     background: color-mix(in srgb, var(--brand-100) 42%, transparent);
-    color: var(--brand-700);
+    color: var(--brand-600);
   }
 
   .libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch {

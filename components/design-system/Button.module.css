@@ -42,12 +42,12 @@
 .primary {
   background: var(--button-primary-default);
   color: var(--button-primary-text);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  /* box-shadow: 0 1px 2px rgba(0,0,0,0.08); */
 }
 
 .primary[data-active="true"] {
   background: var(--button-primary-active);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  /* box-shadow: 0 1px 2px rgba(0,0,0,0.08); */
 }
 
 .secondary {
@@ -152,7 +152,7 @@
 
   .primary:hover:not(:disabled) {
     background: var(--button-primary-hover);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    /* box-shadow: 0 4px 10px rgba(0,0,0,0.12); */
   }
 
   .primary[data-active="true"]:hover:not(:disabled) {

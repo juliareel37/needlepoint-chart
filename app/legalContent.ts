@@ -32,7 +32,7 @@ export const privacyPolicyContent = {
     {
       title: "Who we are",
       body: [
-        "Wippa is a web-based needlepoint pattern editing tool operated by Julia Reel. You can contact us about this Privacy Policy or your personal information at support@wippaeditor.com.",
+        "Wippa is a web-based needlepoint pattern editing tool operated by Julia Reel. You can contact us about this Privacy Policy or your personal information at contact@wippaeditor.com.",
         "Wippa is currently available as a web app. We may offer mobile apps in the future, and we will update this Privacy Policy if our practices materially change.",
       ],
     },
@@ -122,7 +122,7 @@ export const privacyPolicyContent = {
       title: "Account deletion and user controls",
       body: [
         "You may delete your account through account settings. When you delete your account, Wippa will delete your account and associated user data, subject to limited exceptions such as legal compliance, security, fraud prevention, backup retention, or legitimate operational needs.",
-        "You may also contact us at support@wippaeditor.com to request assistance with accessing, correcting, exporting, or deleting your personal information.",
+        "You may also contact us at contact@wippaeditor.com to request assistance with accessing, correcting, exporting, or deleting your personal information.",
       ],
     },
     {
@@ -131,7 +131,7 @@ export const privacyPolicyContent = {
         "California residents may have certain rights regarding their personal information, subject to legal limitations. These rights may include the right to know what personal information we collect, use, disclose, or share; the right to request access to personal information; the right to request deletion of personal information; the right to request correction of inaccurate personal information; and the right not to be discriminated against for exercising privacy rights.",
         "California residents may also have the right to opt out of the sale or sharing of personal information and the right to limit certain uses of sensitive personal information where applicable.",
         "We do not sell personal information, and we do not currently use advertising pixels or retargeting technologies. If our practices change, we will update this Privacy Policy and provide any legally required opt-out mechanisms.",
-        "To exercise privacy rights, contact us at support@wippaeditor.com. We may need to verify your identity before fulfilling certain requests.",
+        "To exercise privacy rights, contact us at contact@wippaeditor.com. We may need to verify your identity before fulfilling certain requests.",
       ],
     },
     {
@@ -170,7 +170,7 @@ export const privacyPolicyContent = {
     },
   ],
   contact:
-    "If you have questions, requests, or concerns about this Privacy Policy or your personal information, contact Wippa at support@wippaeditor.com.",
+    "If you have questions, requests, or concerns about this Privacy Policy or your personal information, contact Wippa at contact@wippaeditor.com.",
   alternatePolicy: {
     href: "/terms",
     label: "Terms",
@@ -358,7 +358,7 @@ export const termsContent = {
     },
   ],
   contact:
-    "If you have questions about these Terms, contact Wippa at support@wippaeditor.com.",
+    "If you have questions about these Terms, contact Wippa at contact@wippaeditor.com.",
   alternatePolicy: {
     href: "/privacy",
     label: "Privacy Policy",
