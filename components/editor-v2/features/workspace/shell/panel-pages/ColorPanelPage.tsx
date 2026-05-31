@@ -205,6 +205,7 @@ export function ColorPanelPage({
       className={[
         styles.sidebarSection,
         styles.colorPanelPageSection,
+        view === "design-colors" ? styles.designColorsPageSection : "",
         view === "custom-palette-create" ? styles.customPaletteCreateSection : "",
       ]
         .filter(Boolean)
@@ -399,7 +400,7 @@ export function ColorPanelPage({
 
           </>
         ) : view === "design-colors" ? (
-          <div className={styles.sidebarSubsection}>
+          <div className={[styles.sidebarSubsection, styles.designColorsPageBody].join(" ")}>
             <UsedColorsSummary
               activeColorId={activeColorId}
               usedColors={usedColors}
@@ -651,21 +652,35 @@ export function ColorPanelPage({
                     className={styles.customPaletteSelectionSummaryCaption}
                     style={typographyStyles.p2}
                   >
-                  Select colors in the library to add them to your palette.
+                  Select colors to add to your palette
                   </p>
                 )}
               </div>
 
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                className={styles.customPaletteCreateFooterButton}
-                disabled={!canSaveCustomPalette}
-                onClick={saveCustomPalette}
-              >
-                <span>Save palette</span>
-              </Button>
+              <div className={styles.customPaletteCreateFooterActions}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  className={styles.customPaletteCreateFooterButton}
+                  onClick={() => {
+                    onCustomPaletteDraftReset();
+                    onViewChange("custom-palettes");
+                  }}
+                >
+                  <span>Cancel</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  className={styles.customPaletteCreateFooterButton}
+                  disabled={!canSaveCustomPalette}
+                  onClick={saveCustomPalette}
+                >
+                  <span>Save palette</span>
+                </Button>
+              </div>
             </div>
           </div>
         )}

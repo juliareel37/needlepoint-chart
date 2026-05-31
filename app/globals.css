@@ -507,12 +507,12 @@
 
   /* OUTLINE: BRAND COLOR */
   --button-outlined-default: transparent;
-  --button-outlined-default-border: var(--brand-500);
-  --button-outlined-default-text: var(--brand-300);
-  --button-outlined-hover: var(--brand-600);
+  --button-outlined-default-border: var(--neutral-600);
+  --button-outlined-default-text: var(--text-primary);
+  --button-outlined-hover: var(--neutral-700);
   --button-outlined-active: var(--brand-600);
   --button-outlined-active-border: var(--brand-400);
-  --button-outlined-active-text: var(--brand-200);
+  --button-outlined-active-text: var(--brand-100);
 
   /* OUTLINE: NEUTRAL */
   /* --button-outlined-default: transparent;
@@ -1190,10 +1190,10 @@ button:disabled {
     color: var(--text-primary) !important;
   }
 }
-
+/* 
 :root[data-theme="dark"] #app-shell-root[data-header-nav-mode="editor"] .editor-header-brand-logo {
   filter: invert(1);
-}
+} */
 
 .app-top-banner-slot {
   position: relative;

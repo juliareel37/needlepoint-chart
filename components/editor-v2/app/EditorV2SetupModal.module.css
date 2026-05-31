@@ -108,7 +108,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   padding: 20px;
   border-radius: 20px;
   background: var(--surface-primary);
@@ -145,25 +145,38 @@
   gap: 14px;
 }
 
-.presetBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.sizingModeControl {
+  width: 100%;
 }
 
-.helperRow {
+.sizingModeControlItem {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.sizingModeLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sizingModeIcon {
+  opacity: 0.84;
+}
+
+.sizingTabBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quickPresetGroup,
+.meshSection {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* padding: 10px 4px; */
-  padding: 6px;
-  border-radius: 14px;
-  /* background: color-mix(in srgb, var(--surface-card) 72%, white); */
-}
-
-.presetLabel {
-  margin: 0;
-  color: var(--text-secondary);
 }
 
 .subtleLabel {
@@ -171,37 +184,40 @@
   color: color-mix(in srgb, var(--text-secondary) 88%, transparent);
 }
 
-.presetGrid,
-.optionGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.strongFieldLabel,
+.strongFieldLabelError {
+  margin: 0;
+  font-weight: 600;
+}
+
+.strongFieldLabel {
+  color: var(--text-primary);
+}
+
+.strongFieldLabelError {
+  color: var(--status-destructive-strong);
+}
+
+.presetGrid {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.presetButton {
-  width: 100%;
-  justify-content: center;
-  border-radius: 10px;
+.quickPresetButton.quickPresetButton {
+  background: var(--button-outlined-hover);
 }
 
-.tertiaryPresetButton {
-  width: 100%;
-  justify-content: center;
-  border-radius: 10px;
+@media (hover: hover) and (pointer: fine) {
+  .quickPresetButton.quickPresetButton:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--button-outlined-hover) 96%, var(--text-primary));
+  }
 }
 
 .inlineOptionGrid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.compactPresetButton {
-  justify-content: center;
-  border-radius: 999px;
-  padding-inline: 14px;
-  min-height: 30px;
-  white-space: nowrap;
 }
 
 .meshPresetButton {
@@ -212,51 +228,11 @@
   white-space: nowrap;
 }
 
-.tertiaryCompactPresetButton {
-  justify-content: center;
-  border-radius: 10px;
-  padding-inline: 14px;
-  min-height: 30px;
-  white-space: nowrap;
-}
-
-.tertiaryPresetButton.tertiaryPresetButton,
-.tertiaryCompactPresetButton.tertiaryCompactPresetButton {
-  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 88%, white);
-  background: color-mix(in srgb, var(--surface-card) 58%, white);
-  color: var(--text-secondary) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-.tertiaryPresetButton.tertiaryPresetButton[data-active="true"],
-.tertiaryCompactPresetButton.tertiaryCompactPresetButton[data-active="true"] {
-  border-color: color-mix(in srgb, var(--brand-primary) 28%, var(--ui-border-reg));
-  background: color-mix(in srgb, var(--brand-200) 26%, white);
-  color: var(--text-secondary) !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .tertiaryPresetButton.tertiaryPresetButton:hover:not(:disabled),
-  .tertiaryCompactPresetButton.tertiaryCompactPresetButton:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--brand-primary) 18%, var(--ui-border-reg));
-    background: color-mix(in srgb, var(--surface-card) 82%, white);
-    color: var(--text-secondary) !important;
-    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
-  }
-
-  .tertiaryPresetButton.tertiaryPresetButton[data-active="true"]:hover:not(:disabled),
-  .tertiaryCompactPresetButton.tertiaryCompactPresetButton[data-active="true"]:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--brand-primary) 34%, var(--ui-border-reg));
-    background: color-mix(in srgb, var(--brand-200) 32%, white);
-    color: var(--text-secondary) !important;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
-  }
-}
-
 .customMeshCountInput {
-  width: 60px;
+  width: 48px;
   min-width: 0;
+  min-height: 30px;
+  padding: 4px 8px;
   text-align: center;
   /* border-radius: 999px; */
   /* padding-inline: 26px; */
@@ -264,16 +240,53 @@
   box-shadow: none;
 }
 
+.canvasEstimateCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 18px 20px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-card) 72%, transparent);
+}
+
+.canvasEstimateIcon {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  background: var(--text-secondary);
+  opacity: 0.72;
+  mask: url("/icons/lucide/proportions.svg") center / contain no-repeat;
+}
+
+.canvasEstimateContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.canvasEstimateLabel,
+.canvasEstimateValue {
+  margin: 0;
+}
+
+.canvasEstimateLabel {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.canvasEstimateValue {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   justify-content: center;
   gap: 12px;
-}
-
-.inchesSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding-top: 2px;
 }
 
 @media (max-width: 800px) {
@@ -307,15 +320,6 @@
 }
 
 @media (max-width: 560px) {
-  /* .fieldGrid {
-    grid-template-columns: 1fr;
-  } */
-
-  .presetGrid,
-  .optionGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .actions > * {
     width: 100%;
   }

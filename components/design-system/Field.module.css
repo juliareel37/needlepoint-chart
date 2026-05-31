@@ -19,9 +19,9 @@
   box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid var(--ui-border-subtle);
-  background: var(--surface-card);
-  box-shadow: var(--ui-shadow-sm);
+  border: 1px solid var(--ui-border-strong);
+  background: transparent;
+  box-shadow: none;
   color: var(--text-primary);
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
