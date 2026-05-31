@@ -14,6 +14,7 @@ import {
 } from "@/components/design-system";
 import { useOpenSignIn } from "@/components/auth/useOpenSignIn";
 import { useAuthAccessState, useAuthSession } from "@/lib/auth/client";
+import { brandAssets } from "@/lib/brandAssets";
 import styles from "./page.module.css";
 
 const heroHighlights = [
@@ -224,6 +225,27 @@ const workflowCards = [
     },
   },
 ] as const;
+
+function FooterLogo() {
+  return (
+    <>
+      {brandAssets.footer.parts.map((logoPart) => (
+        <Image
+          key={logoPart.src}
+          src={logoPart.src}
+          alt={logoPart.alt}
+          width={logoPart.width}
+          height={logoPart.height}
+          style={{
+            display: "block",
+            width: "auto",
+            height: logoPart.displayHeight,
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 // const detailBentoCards = [
 //   {
@@ -623,7 +645,7 @@ export default function Page() {
             <h1 className={styles.heroTitle} style={marketingTypographyStyles.display}>
               {/* every <span className={styles.accentWord}>work</span> in progress,
               <br /> in one place. */}
-              <span className={styles.heroTitleLine}>Creating your own needlepoint patterns</span>
+              <span className={styles.heroTitleLine}>Making your own needlepoint patterns</span>
               <span className={styles.heroTitleLine}>
                 just got {" "}
                 {/* easier. */}
@@ -633,15 +655,8 @@ export default function Page() {
               {/* just got easier */}
             </h1>
             <p className={styles.heroBody} style={marketingTypographyStyles.bodyLg}>
-              <span className={styles.heroBodyLine}>
-                Meet Wippa, an online editing tool for grid-based design
-              </span>
-              <span className={styles.heroBodyLine}>
-                like needlepoint, cross-stitch, and more.
-              </span>
-              <span className={styles.heroBodyLine}>
-                Go from idea to stitch-ready pattern in minutes.
-              </span>
+              Meet Wippa, an online editing tool for grid-based designs like needlepoint, cross-stitch, and more.
+              Go from idea to stitch-ready pattern in minutes.
 
               {/* Designed to make your creative process smoother, faster, and more enjoyable.  */}
               {/* Go from idea to stitch-ready pattern in minutes. */}
@@ -678,49 +693,51 @@ export default function Page() {
                       onChange={(event) => setWebsite(event.currentTarget.value)}
                     />
                   </div>
-                  <label className={styles.waitlistQuickField}>
-                    <span className={styles.visuallyHidden}>Email</span>
-                    <input
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(event) => {
-                        setEmail(event.currentTarget.value);
-                        clearWaitlistFieldError("email");
-                      }}
-                      placeholder="you@example.com"
-                      aria-invalid={waitlistFormErrors.email ? "true" : undefined}
-                      className={[
-                        styles.waitlistQuickInput,
-                        waitlistFormErrors.email ? styles.invalidInput : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      required
-                    />
-                    {waitlistFormErrors.email ? (
-                      <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
-                    ) : null}
-                  </label>
-                  <span className={styles.waitlistQuickButtonWrap}>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="lg"
-                      className={styles.waitlistQuickButton}
-                      disabled={isSubmittingWaitlist}
-                    >
-                      {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
-                    </Button>
-                    <Image
-                      src="/ui/pink-doodle-arrow.png"
-                      alt=""
-                      width={1388}
-                      height={1114}
-                      className={styles.waitlistArrow}
-                      aria-hidden="true"
-                    />
-                  </span>
+                  <div className={styles.waitlistQuickControl}>
+                    <label className={styles.waitlistQuickField}>
+                      <span className={styles.visuallyHidden}>Email</span>
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(event) => {
+                          setEmail(event.currentTarget.value);
+                          clearWaitlistFieldError("email");
+                        }}
+                        placeholder="you@example.com"
+                        aria-invalid={waitlistFormErrors.email ? "true" : undefined}
+                        className={[
+                          styles.waitlistQuickInput,
+                          waitlistFormErrors.email ? styles.invalidInput : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        required
+                      />
+                    </label>
+                    <span className={styles.waitlistQuickButtonWrap}>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        className={styles.waitlistQuickButton}
+                        disabled={isSubmittingWaitlist}
+                      >
+                        {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
+                      </Button>
+                      <Image
+                        src="/ui/pink-doodle-arrow.png"
+                        alt=""
+                        width={1388}
+                        height={1114}
+                        className={styles.waitlistArrow}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </div>
+                  {waitlistFormErrors.email ? (
+                    <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
+                  ) : null}
                 </form>
               ) : (
                 <Button
@@ -1209,7 +1226,7 @@ export default function Page() {
                 <p className={styles.waitlistCtaBody} style={marketingTypographyStyles.bodyLg}>
                   {showResumeCta
                     ? "Your beta access is already active. Jump back into your library whenever you’re ready."
-                    : "Get on the list to be notified when we launch. The first 100 people on the waitlist will receive exclusive founder discounts."
+                    : "Get on the list to be notified when we launch. The first 100 sign-ups will receive exclusive founder discounts."
                     }
                 </p>
                 <div className={styles.waitlistCtaActions}>
@@ -1227,39 +1244,41 @@ export default function Page() {
                           onChange={(event) => setWebsite(event.currentTarget.value)}
                         />
                       </div>
-                      <label className={styles.waitlistQuickField}>
-                        <span className={styles.visuallyHidden}>Email</span>
-                        <input
-                          type="email"
-                          autoComplete="email"
-                          value={email}
-                          onChange={(event) => {
-                            setEmail(event.currentTarget.value);
-                            clearWaitlistFieldError("email");
-                          }}
-                          placeholder="you@example.com"
-                          aria-invalid={waitlistFormErrors.email ? "true" : undefined}
-                          className={[
-                            styles.waitlistQuickInput,
-                            waitlistFormErrors.email ? styles.invalidInput : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          required
-                        />
-                        {waitlistFormErrors.email ? (
-                          <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
-                        ) : null}
-                      </label>
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        size="lg"
-                        className={styles.waitlistCtaPrimary}
-                        disabled={isSubmittingWaitlist}
-                      >
-                        {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
-                      </Button>
+                      <div className={styles.waitlistQuickControl}>
+                        <label className={styles.waitlistQuickField}>
+                          <span className={styles.visuallyHidden}>Email</span>
+                          <input
+                            type="email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(event) => {
+                              setEmail(event.currentTarget.value);
+                              clearWaitlistFieldError("email");
+                            }}
+                            placeholder="you@example.com"
+                            aria-invalid={waitlistFormErrors.email ? "true" : undefined}
+                            className={[
+                              styles.waitlistQuickInput,
+                              waitlistFormErrors.email ? styles.invalidInput : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            required
+                          />
+                        </label>
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="lg"
+                          className={styles.waitlistCtaPrimary}
+                          disabled={isSubmittingWaitlist}
+                        >
+                          {isSubmittingWaitlist ? "Joining..." : "Join waitlist"}
+                        </Button>
+                      </div>
+                      {waitlistFormErrors.email ? (
+                        <span className={styles.fieldError}>{waitlistFormErrors.email}</span>
+                      ) : null}
                     </form>
                   ) : (
                     <Button
@@ -1291,14 +1310,13 @@ export default function Page() {
 
         <footer className={styles.siteFooter}>
           <div className={styles.siteFooterInner}>
-            <Link href="/" className={styles.siteFooterBrand} aria-label="Wippa home">
-              <Image
-                src="/logos/curly/full-bw-300.png"
-                alt="Wippa"
-                width={344}
-                height={72}
-                className={styles.siteFooterLogo}
-              />
+            <Link
+              href="/"
+              className={styles.siteFooterBrand}
+              style={{ gap: brandAssets.footer.gap }}
+              aria-label="Wippa home"
+            >
+              <FooterLogo />
             </Link>
             <nav className={styles.footerLegalLinks} aria-label="Legal">
               <Link href="/privacy" className={styles.footerLegalLink}>

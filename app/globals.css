@@ -247,9 +247,9 @@
 
   /* CORE BRAND COLORS */
   --green-lightest: #dcefd7;
-  --green-lighter: #C8E8BE;
-  --green-light: #A0CEA5;
-  --green-med: #77B48C;
+  --green-lighter: #def0d4;
+  --green-light: #AED3B4;
+  --green-med: #7FB793;
   --green-med-strong: #4F9A73;
 
   /* HOVER AND ACCENT STATES */
@@ -261,7 +261,6 @@
   --green-med-strong-dark: color-mix(in oklch, black 20%, var(--green-med-strong));
   --green-med-strong-darkest: color-mix(in oklch, black 25%, var(--green-med-strong));
 
-
   /* FINAL FULL GRADIENT */
   /* --brand-50: var(--green-white-hover); */
   --brand-50: var(--green-lightest);
@@ -271,6 +270,7 @@
   --brand-400: var(--green-med-strong);
   --brand-500: var(--green-med-strong-dark);
   --brand-600: var(--green-med-strong-darkest);
+
 
   --accent-pink: #ffdcea;
   --accent-blue: #ccebff;
@@ -375,10 +375,10 @@
 
   /* OUTLINE: BRAND COLOR */
   --button-outlined-default: transparent;
-  --button-outlined-default-border: var(--brand-500);
-  --button-outlined-default-text: var(--brand-600);
-  --button-outlined-hover: var(--brand-50);
-  --button-outlined-active: var(--brand-100);
+  --button-outlined-default-border: var(--neutral-300);
+  --button-outlined-default-text: var(--text-primary);
+  --button-outlined-hover: var(--neutral-100);
+  --button-outlined-active: transparent;
   --button-outlined-active-border: var(--brand-500);
   --button-outlined-active-text: var(--brand-600);
 
@@ -940,21 +940,21 @@ button:disabled {
   height: var(--app-header-height) !important;
   min-height: var(--app-header-height) !important;
   flex: 0 0 var(--app-header-height) !important;
-  width: min(calc(100% - (var(--landing-floating-header-inline-gap) * 2)), 920px);
+  width: min(calc(100% - (var(--landing-floating-header-inline-gap) * 2)), 760px);
   margin-top: var(--landing-floating-header-top-gap);
   margin-right: auto;
   margin-bottom: calc(
     -1 * (var(--app-header-height, 64px) + var(--landing-floating-header-top-gap))
   );
   margin-left: auto;
-  border-radius: 14px;
+  border-radius: 999px;
   background: white;
   overflow: visible;
 }
 
 #app-shell-root[data-header-nav-mode="landing"] {
-  --app-shell-inline-padding: var(--landing-page-gutter);
   --app-header-height: 76px !important;
+  --app-shell-inline-padding: calc((var(--app-header-height) - 28px) / 2);
 }
 
 #app-shell-root[data-header-nav-mode="auth"] {
@@ -1055,7 +1055,7 @@ button:disabled {
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1134,7 +1134,7 @@ button:disabled {
 #app-shell-root[data-header-nav-mode="landing"] .app-header-sign-in-button {
   min-height: 36px !important;
   padding: 0 !important;
-  border-radius: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 15px !important;
@@ -1158,6 +1158,11 @@ button:disabled {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0) scale(1);
+}
+
+#app-shell-root[data-header-nav-mode="landing"] .landing-header-menu-button,
+#app-shell-root[data-header-nav-mode="landing"] .landing-header-mobile-menu-link {
+  border-radius: 999px !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1432,6 +1437,14 @@ input[type="number"] {
   }
 }
 @media (max-width: 860px) {
+  #app-shell-root[data-header-nav-mode="landing"] {
+    --app-header-height: 64px !important;
+  }
+
+  #app-shell-root[data-header-nav-mode="landing"][data-page-theme="landing-light"] .app-shell-header {
+    --landing-floating-header-top-gap: 8px;
+  }
+
   #app-shell-root[data-header-nav-mode="landing"] .app-shell-header {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto;

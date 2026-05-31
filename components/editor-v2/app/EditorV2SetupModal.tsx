@@ -413,7 +413,7 @@ export function EditorV2SetupModal({
                           <Button
                             key={preset.label}
                             type="button"
-                            variant="outlined"
+                            variant="secondary"
                             size="sm"
                             // className={styles.tertiaryCompactPresetButton}
                             active={active}
@@ -450,14 +450,16 @@ export function EditorV2SetupModal({
                     >
                       {CELLS_PER_INCH_PRESETS.map((preset) => {
                         const active =
-                          !useCustomMeshCount &&
-                          selectedCellsPerInchPreset === preset;
+                          !useCustomMeshCount 
+                          &&
+                          selectedCellsPerInchPreset === preset
+                          ;
 
                         return (
                           <Button
                             key={preset}
                             type="button"
-                            variant="outlined"
+                            variant="secondary"
                             size="md"
                             className={styles.meshPresetButton}
                             active={active}
