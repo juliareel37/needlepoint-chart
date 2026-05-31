@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { typographyStyles } from "@/app/design-system/typography";
+import { brandAssets } from "@/lib/brandAssets";
 
 const landingHeaderWrapStyle = {
   display: "flex",
@@ -45,12 +46,12 @@ const editorBrandStyle = {
 const brandLogoStyle = {
   display: "block",
   width: "auto",
-  height: 28,
+  height: 32,
 } as const;
 
 const editorBrandLogoStyle = {
   ...brandLogoStyle,
-  height: 24,
+  height: 35,
 } as const;
 
 const editorHeaderWrapStyle = {
@@ -159,6 +160,42 @@ function MenuIcon({ open }: { open: boolean }) {
         strokeWidth="2"
       />
     </svg>
+  );
+}
+
+function HeaderLongLogo() {
+  return (
+    <>
+      {brandAssets.header.long.parts.map((logoPart) => (
+        <Image
+          key={logoPart.src}
+          src={logoPart.src}
+          alt={logoPart.alt}
+          width={logoPart.width}
+          height={logoPart.height}
+          style={{
+            display: "block",
+            width: "auto",
+            height: logoPart.displayHeight,
+          }}
+          priority
+        />
+      ))}
+    </>
+  );
+}
+
+function HeaderCompactLogo({ className }: { className?: string }) {
+  return (
+    <Image
+      src={brandAssets.header.compact.src}
+      alt={brandAssets.header.compact.alt}
+      width={brandAssets.header.compact.width}
+      height={brandAssets.header.compact.height}
+      className={className}
+      style={className === "editor-header-brand-logo" ? editorBrandLogoStyle : brandLogoStyle}
+      priority
+    />
   );
 }
 
@@ -311,15 +348,12 @@ export default function AppHeaderNav() {
   if (showAuthBrandOnly) {
     return (
       <div className="auth-header-brand">
-        <Link href="/" style={brandStyle} aria-label="Wippa home">
-          <Image
-            src="/logos/curly/full-bw-300.png"
-            alt="Wippa"
-            width={344}
-            height={72}
-            style={brandLogoStyle}
-            priority
-          />
+        <Link
+          href="/"
+          style={{ ...brandStyle, gap: brandAssets.header.long.gap }}
+          aria-label="Wippa home"
+        >
+          <HeaderLongLogo />
         </Link>
       </div>
     );
@@ -329,15 +363,7 @@ export default function AppHeaderNav() {
     return (
       <div style={editorHeaderWrapStyle}>
         <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
-          <Image
-            src="/logos/curly/icon-bw.png"
-            alt="Wippa"
-            width={344}
-            height={72}
-            className="editor-header-brand-logo"
-            style={editorBrandLogoStyle}
-            priority
-          />
+          <HeaderCompactLogo className="editor-header-brand-logo" />
         </Link>
         <span aria-hidden="true" style={editorHeaderDividerStyle} />
       </div>
@@ -351,15 +377,12 @@ export default function AppHeaderNav() {
   return (
     <div style={landingHeaderWrapStyle}>
       <div style={landingHeaderLeftStyle}>
-        <Link href="/" style={brandStyle} aria-label="Wippa home">
-          <Image
-            src="/logos/curly/full-bw-300.png"
-            alt="Wippa"
-            width={344}
-            height={72}
-            style={brandLogoStyle}
-            priority
-          />
+        <Link
+          href="/"
+          style={{ ...brandStyle, gap: brandAssets.header.long.gap }}
+          aria-label="Wippa home"
+        >
+          <HeaderLongLogo />
         </Link>
         {showLandingNavLinks ? (
           <nav aria-label="Primary" className="landing-header-nav" style={landingHeaderLinksStyle}>

@@ -136,7 +136,8 @@
   overflow-y: auto;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-  padding: 24px 0;
+  /* padding: 24px 0; */
+  padding-top: 24px;
 }
 
 .sidebarPanelBackRow {
@@ -215,6 +216,10 @@
   padding-inline: 24px;
 }
 
+/* .colorPanelPageSection {
+  padding-inline: 0px;
+} */
+
 .sidebarSectionHeader {
   display: flex;
   align-items: center;
@@ -257,6 +262,14 @@
   flex: 1 1 auto;
   min-height: 100%;
   overflow: visible;
+}
+
+.designColorsPageSection {
+  padding-inline: 20px;
+}
+
+.designColorsPageBody {
+  gap: 16px;
 }
 
 .customPaletteCreateSection {
@@ -441,7 +454,7 @@
 .documentPanelTitleRow .sidebarTitleBlock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -672,7 +685,7 @@
   justify-content: center;
   font-size: 14px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .documentRecentSeeAllButton:focus-visible {
@@ -1049,6 +1062,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
+  /* padding-inline:12px; */
 }
 
 .sidebarColorPreviewSwatch {
@@ -1310,7 +1324,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 28px;
   height: 24px;
   flex: 0 0 auto;
   margin: 0;
@@ -1389,6 +1403,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  padding-bottom: 12px;
 }
 
 .customPaletteCreatePage .sidebarColorLibraryCard {
@@ -1405,25 +1420,16 @@
 
 .customPaletteSelectionSummary {
   display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, transparent);
-  border-radius: 16px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-secondary) 40%, var(--surface-primary)),
-      color-mix(in srgb, var(--surface-primary) 96%, black)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 6px 16px rgba(15, 23, 42, 0.06);
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .customPaletteSelectionSummaryEmpty {
-  gap: 5px;
-  padding-top: 9px;
-  padding-bottom: 9px;
+  gap: 8px;
 }
 
 .customPaletteSelectionSummaryTop {
@@ -1513,35 +1519,41 @@
 
 .customPaletteCreateFooterBar {
   position: sticky;
-  bottom: -4px;
+  bottom: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 100%;
+  gap: 16px;
+  width: auto;
   flex: 0 0 auto;
   margin-top: 0;
-  margin-bottom: -4px;
-  padding: 1px 0 4px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-primary) 0%, transparent),
-      color-mix(in srgb, var(--surface-primary) 92%, var(--surface-primary)) 10%,
-      var(--surface-primary) 100%
-    );
+  /* margin-right: -24px; */
+  margin-bottom: 0;
+  /* margin-left: -24px; */
+  padding: 20px 24px calc(20px + env(safe-area-inset-bottom));
+  /* padding: 18px 20px calc(18px + env(safe-area-inset-bottom)); */
+  /* padding: 18px 0px calc(18px + env(safe-area-inset-bottom)); */
+  background: var(--surface-primary);
+  background-color: var(--surface-primary);
+  border-top: 1px solid var(--ui-border-strong);
+  box-shadow: var(--ui-shadow-md);
   backdrop-filter: blur(8px);
 }
 
 .customPaletteCreateFooterBarEmpty {
-  gap: 4px;
-  padding-top: 1px;
+  gap: 14px;
+}
+
+.customPaletteCreateFooterActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
 }
 
 .customPaletteCreateFooterButton {
   width: 100%;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
 }
 
 .customPaletteSelectionSwatches {
@@ -2266,7 +2278,7 @@
 .versionHistoryTimelineTitle {
   font-size: 14px;
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -2446,7 +2458,7 @@
   justify-content: center;
   font-size: 13px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   pointer-events: none;
 }
 
@@ -2570,7 +2582,7 @@
   border-radius: 10px;
   color: var(--text-primary);
   font-size: 13px !important;
-  padding: 8px 16px !important;
+  padding: 12px !important;
 }
 
 .headerFileMenuTriggerLabel {
@@ -3070,6 +3082,7 @@
 
 .activeColorRow {
   gap: 10px;
+  padding-top: 12px;
 }
 
 .activeColorValue {
@@ -3079,7 +3092,7 @@
 .activeColorName {
   min-width: 0;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
   white-space: nowrap;
@@ -3096,10 +3109,11 @@
 }
 
 .activeColorCode {
-  color: var(--text-secondary);
-  font-size: 12px;
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+  font-size: 10px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -3129,6 +3143,21 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.usedColorsStickyControls {
+  --used-colors-sticky-top-cover: 52px;
+  position: sticky;
+  top: calc(-1 * var(--used-colors-sticky-top-cover));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: calc(-1 * var(--used-colors-sticky-top-cover)) -20px 0;
+  padding: var(--used-colors-sticky-top-cover) 20px 12px;
+  background: var(--surface-primary);
+  background-color: var(--surface-primary);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ui-border-subtle) 70%, transparent);
 }
 
 .editorNotificationOverlay {
@@ -3236,7 +3265,7 @@
 
 .usedColorsScopeControl {
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .usedColorsScopeControlItem {
@@ -3342,12 +3371,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-inline: -20px;
+  margin-bottom: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--ui-border-reg);
+  border-bottom: 1px solid var(--ui-border-reg);
   overflow: visible;
 }
 
 .usedColorsActionToggle {
   min-width: 0;
+}
+
+:root[data-theme="dark"] .usedColorsActionToggle[data-active="true"] {
+  color: var(--neutral-900);
 }
 
 .usedColorsActionLabel {
@@ -3405,6 +3442,7 @@
 
 .usedColorsSortTriggerWrap {
   display: inline-flex;
+  margin-left: auto;
 }
 
 .usedColorsSortButton {
@@ -3444,22 +3482,66 @@
 .usedColorsMergeTriggerWrap {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .usedColorsMergeActionGroup {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: flex-start;
+  width: 100%;
   max-width: 100%;
-  padding: 0 8px;
-  border-radius: 12px;
-  background: var(--surface-card);
-  border: 1px solid var(--ui-border-subtle);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
 }
 
-.usedColorsMergeActionLabel {
-  color: var(--text-secondary);
+.usedColorsMergeTargetTrigger {
+  justify-content: flex-start;
+  width: 100%;
+  gap: 8px;
+  padding: 0 !important;
+  border-radius: 0;
+  text-align: left;
+}
+
+.usedColorsMergeTargetTrigger .libraryPopoverSwatchSymbol {
+  inset: auto;
+  top: 50%;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%);
+}
+
+.usedColorsMergeTargetText {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 6px;
+  text-align: left;
+}
+
+.usedColorsMergeTargetName {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usedColorsMergeTargetCode {
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -3484,7 +3566,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  gap: 4px;
+  gap: 8px;
   /* margin: 0; */
   list-style: none;
   /* height: 350px; */
@@ -3495,7 +3577,7 @@
 }
 
 .usedColorsList[data-selection-mode="true"] {
-  margin-bottom: 75px;
+  margin-bottom: 200px;
 }
 
 .usedColorsRow {
@@ -3503,19 +3585,19 @@
   align-items: center;
   width: 100%;
   min-width: 0;
-  gap: 6px;
+  gap: 0;
 }
 
 .usedColorsItem {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
-  width: 100%;
+  flex: 1 1 0;
+  width: auto;
   min-width: 0;
   gap: 0;
   color: var(--text-primary);
   margin: 0;
-  padding: 8px;
+  padding: 6px 4px 6px 8px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
@@ -3570,13 +3652,13 @@
   display: flex;
   align-items: center;
   align-self: stretch;
-  flex: 1 1 auto;
-  width: 100%;
+  flex: 1 1 0;
+  width: auto;
   min-width: 0;
   gap: 8px;
   color: inherit;
   margin: 0;
-  padding: 6px 8px;
+  padding: 6px 0 6px 6px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -3616,7 +3698,7 @@
 .usedColorsItemName {
   min-width: 0;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
   white-space: nowrap;
@@ -3625,10 +3707,11 @@
 }
 
 .usedColorsItemCode {
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
   font-size: 10px;
   font-weight: 500;
   line-height: 1.2;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -3644,7 +3727,6 @@
 
 .usedColorsRow[data-active-color="true"] .usedColorsItemButton {
   color: var(--text-primary);
-  font-weight: 600;
 }
 
 .usedColorsRow[data-active-color="true"] .usedColorSwatchButton .swatch {
@@ -3661,9 +3743,10 @@
   justify-content: center;
   flex: 0 0 auto;
   cursor: pointer;
-  width: 30px;
-  height: 30px;
-  margin-left: 4px;
+  width: 28px;
+  height: 28px;
+  margin-left: 0;
+  margin-right: -4px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -3681,8 +3764,8 @@
 }
 
 .usedColorsHighlightButton :global(.icon) {
-  width: 15px;
-  height: 15px;
+  width: 12px;
+  height: 12px;
 }
 
 .usedColorsHighlightButton :global(.glyph) {
@@ -3734,10 +3817,6 @@
 
 .usedColorsItem[data-selectable="true"] .usedColorSwatchTriggerWrap {
   pointer-events: none;
-}
-
-.usedColorsRow[data-selectable="true"] .usedColorsHighlightButton {
-  pointer-events: auto;
 }
 
 .usedColorSwatchTriggerWrap {
@@ -3833,46 +3912,31 @@
 }
 
 .usedColorsSelectionBar {
-  --used-colors-selection-dismiss-space: 36px;
   position: fixed;
-  right: calc(8px + var(--used-colors-selection-dismiss-space));
-  bottom: 3%;
-  left: 8px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
-  border-radius: 12px;
-  /* background: color-mix(in srgb, var(--surface-card) 86%, var(--brand-100)); */
+  gap: 16px;
+  padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 0;
   background: var(--surface-primary);
-  border: 1px solid var(--ui-border-reg);
-  /* border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 70%, var(--brand-200)); */
+  border: 0;
+  border-top: 1px solid var(--ui-border-reg);
   box-shadow: var(--ui-shadow-md);
   backdrop-filter: blur(8px);
   align-items: stretch;
   overflow: visible;
 }
 
-.usedColorsSelectionBarDismiss {
-  position: absolute;
-  top: 50%;
-  right: calc(-1 * var(--used-colors-selection-dismiss-space) - 2px);
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  transform: translateY(-50%);
-  background: var(--surface-primary);
-  box-shadow: var(--ui-shadow-sm);
-}
-
 .usedColorsSelectionBarTop {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 16px;
   width: 100%;
 }
 
@@ -3884,9 +3948,10 @@
 }
 
 .usedColorsMergeControls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
   flex: 0 0 auto;
 }
 
@@ -3894,11 +3959,30 @@
   color: var(--text-secondary);
 }
 
+.usedColorsSelectionPrompt {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.usedColorsSelectionButtonRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.usedColorsSelectionCancelButton {
+  width: 100%;
+  min-width: 0;
+}
+
 .usedColorsDeleteButton {
-  min-width: 108px;
+  width: 100%;
+  min-width: 0;
 }
 
 .usedColorsMergeConfirmButton {
+  width: 100%;
   flex: 0 0 auto;
 }
 

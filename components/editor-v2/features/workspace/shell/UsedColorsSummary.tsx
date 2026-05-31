@@ -723,6 +723,9 @@ export function UsedColorsSummary({
   const mergeTargetName = mergeTargetColorId
     ? (colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId)
     : "selected target color";
+  const mergeTargetColor = mergeTargetColorId ? colorsById[mergeTargetColorId] : null;
+  const mergeTargetLabel = mergeTargetColor?.name ?? mergeTargetColorId ?? "Choose target color";
+  const mergeTargetCode = mergeTargetColor ? formatColorCodeLabel(mergeTargetColor) : null;
   const mergeTitle =
     mergeColorCount === 1 ? "Merge 1 color?" : `Merge ${mergeColorCount} colors?`;
   const mergeDescription =
@@ -774,6 +777,7 @@ export function UsedColorsSummary({
   };
 
   const enterToolMode = (nextActionMode: UsedColorsActionMode = "none") => {
+    deactivateHighlight({ blurTrigger: true });
     setToolMode("select");
     setActionMode(nextActionMode);
     setSelectedColorIds([]);
@@ -826,89 +830,75 @@ export function UsedColorsSummary({
         : null}
 
       <div className={styles.usedColorsBlock}>
-      <SegmentedControl
-        ariaLabel="Colors used scope"
-        className={styles.usedColorsScopeControl}
-        itemClassName={styles.usedColorsScopeControlItem}
-        value={scopeMode}
-        options={scopeOptions}
-        onChange={onScopeModeChange}
-        onActiveClick={(value) => {
-          if (value === "selection") {
-            onScopeModeChange("full-canvas");
-          }
-        }}
-      />
+      <div className={styles.usedColorsStickyControls}>
+        <SegmentedControl
+          ariaLabel="Colors used scope"
+          className={styles.usedColorsScopeControl}
+          itemClassName={styles.usedColorsScopeControlItem}
+          value={scopeMode}
+          options={scopeOptions}
+          onChange={onScopeModeChange}
+          onActiveClick={(value) => {
+            if (value === "selection") {
+              onScopeModeChange("full-canvas");
+            }
+          }}
+        />
+        {!selectionPromptVisible && usedColors.length > 0 ? (
+          <div className={styles.usedColorsActionRow}>
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="sm"
+              active={actionMode === "merge"}
+              className={styles.usedColorsActionToggle}
+              onClick={() => activateActionMode("merge")}
+            >
+              <ButtonIcon icon="/icons/lucide/merge.svg" />
+              <span className={styles.usedColorsActionLabel}>
+                <span>Merge</span>
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="sm"
+              active={actionMode === "delete"}
+              className={styles.usedColorsActionToggle}
+              onClick={() => activateActionMode("delete")}
+            >
+              <ButtonIcon icon="/icons/lucide/trash.svg" />
+              <span className={styles.usedColorsActionLabel}>
+                <span>Delete</span>
+              </span>
+            </Button>
+            <SingleSelectDropdown
+              ariaLabel="Sort design colors"
+              items={sortOptions}
+              value={sortMode}
+              placeholder="Sort"
+              getItemLabel={(item) => item.label}
+              getItemValue={(item) => item.value}
+              onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
+              showChevron={false}
+              triggerVariant="selection"
+              triggerClassName={styles.usedColorsSortButton}
+              triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
+              wrapperClassName={styles.usedColorsSortTriggerWrap}
+              menuPlacement="bottom-end"
+              menuPortalToViewport
+              menuWidth={200}
+              minWidth={32}
+            />
+          </div>
+        ) : null}
+      </div>
       {selectionPromptVisible ? (
         <span className={styles.emptyMessage} style={typographyStyles.p2}>
           Drag a selection on the canvas to edit colors.
         </span>
       ) : (
         <>
-          <div className={styles.usedColorsHeaderRow}>
-            <div className={styles.usedColorsTitleRow}>
-              <p className={styles.usedColorsHeader} style={typographyStyles.h5}>
-                {scopeMode === "selection" ? "Selection colors" : "Canvas colors"}
-              </p>
-              <span className={styles.sidebarColorPreviewCountBadge} style={typographyStyles.p2}>
-                {usedColors.length}
-              </span>
-            </div>
-            {usedColors.length > 0 ? (
-              <div className={styles.usedColorsHeaderActions}>
-                <SingleSelectDropdown
-                  ariaLabel="Sort design colors"
-                  items={sortOptions}
-                  value={sortMode}
-                  placeholder="Sort"
-                  getItemLabel={(item) => item.label}
-                  getItemValue={(item) => item.value}
-                  onValueChange={(value) => setSortMode(value as UsedColorsSortMode)}
-                  showChevron={false}
-                  triggerVariant="selection"
-                  triggerClassName={styles.usedColorsSortButton}
-                  triggerLabel={<ButtonIcon icon="/icons/lucide/sort.svg" />}
-                  wrapperClassName={styles.usedColorsSortTriggerWrap}
-                  menuPlacement="bottom-end"
-                  menuPortalToViewport
-                  menuWidth={200}
-                  minWidth={32}
-                />
-              </div>
-            ) : null}
-          </div>
-
-          {usedColors.length > 0 ? (
-            <div className={styles.usedColorsActionRow}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                active={actionMode === "merge"}
-                className={styles.usedColorsActionToggle}
-                onClick={() => activateActionMode("merge")}
-              >
-                <ButtonIcon icon="/icons/lucide/merge.svg" />
-                <span className={styles.usedColorsActionLabel}>
-                  <span>Merge</span>
-                </span>
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                active={actionMode === "delete"}
-                className={styles.usedColorsActionToggle}
-                onClick={() => activateActionMode("delete")}
-              >
-                <ButtonIcon icon="/icons/lucide/trash.svg" />
-                <span className={styles.usedColorsActionLabel}>
-                  <span>Delete</span>
-                </span>
-              </Button>
-            </div>
-          ) : null}
-
           {usedColors.length === 0 ? (
             <span className={styles.emptyMessage} style={typographyStyles.p2}>
               No colors used yet.
@@ -1114,44 +1104,46 @@ export function UsedColorsSummary({
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  className={styles.usedColorsHighlightButton}
-                  aria-label={
-                    highlightedColorId === entry.colorId
-                      ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                      : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                  }
-                  aria-pressed={highlightedColorId === entry.colorId}
-                  title={
-                    highlightedColorId === entry.colorId
-                      ? "Stop highlight"
-                      : "Highlight on canvas"
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const nextHighlightedColorId =
-                      highlightedColorId === entry.colorId ? null : entry.colorId;
+                {!isSelecting ? (
+                  <button
+                    type="button"
+                    className={styles.usedColorsHighlightButton}
+                    aria-label={
+                      highlightedColorId === entry.colorId
+                        ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                        : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                    }
+                    aria-pressed={highlightedColorId === entry.colorId}
+                    title={
+                      highlightedColorId === entry.colorId
+                        ? "Stop highlight"
+                        : "Highlight on canvas"
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const nextHighlightedColorId =
+                        highlightedColorId === entry.colorId ? null : entry.colorId;
 
-                    if (nextHighlightedColorId) {
-                      onHighlightColorChange(nextHighlightedColorId);
+                      if (nextHighlightedColorId) {
+                        onHighlightColorChange(nextHighlightedColorId);
 
-                      if (!isBottomPanelLayout) {
+                        if (!isBottomPanelLayout) {
+                          return;
+                        }
+
+                        onEnterBottomPanelCanvasFocus();
                         return;
                       }
 
-                      onEnterBottomPanelCanvasFocus();
-                      return;
-                    }
-
-                    deactivateHighlight();
-                  }}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                  }}
-                >
-                  <ButtonIcon icon="/icons/lucide/search.svg" />
-                </button>
+                      deactivateHighlight();
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <ButtonIcon icon="/icons/lucide/search.svg" />
+                  </button>
+                ) : null}
               </li>
                 );
               })()
@@ -1159,142 +1151,184 @@ export function UsedColorsSummary({
             </ul>
             {isSelecting ? (
               <div className={styles.usedColorsSelectionBar}>
-                <Button
-                  type="button"
-                  variant="toolbarX"
-                  size="sm"
-                  className={styles.usedColorsSelectionBarDismiss}
-                  aria-label={actionMode === "merge" ? "Exit merge mode" : "Exit delete mode"}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    exitToolMode();
-                  }}
-                >
-                  <ButtonIcon icon="/icons/lucide/x.svg" />
-                </Button>
                 <div className={styles.usedColorsSelectionBarTop}>
-                  <div className={styles.usedColorsSelectionSummary}>
-                    <span
-                      className={styles.usedColorsSelectionCount}
-                      style={typographyStyles.p2}
-                    >
-                      {selectedColorIds.length > 0
-                        ? `${selectedColorIds.length} selected`
-                        : "0 selected"}
-                    </span>
-                  </div>
-
                   {actionMode === "merge" ? (
                     <div className={styles.usedColorsMergeControls}>
-                      <div
-                        ref={mergeTargetAnchorRef}
-                        className={styles.usedColorsMergeActionGroup}
-                      >
-                        <span className={styles.usedColorsMergeActionLabel} style={typographyStyles.p2}>
-                          Target
-                        </span>
-                        <ToolbarAnchor
-                          className={styles.usedColorsMergeTriggerWrap}
-                        >
-                          <ToolbarButton
-                            type="button"
-                            swatch
-                            active={mergePickerOpen}
-                            aria-pressed={mergePickerOpen}
-                            className={styles.libraryPopoverSwatchTrigger}
-                            aria-label={
-                              mergeTargetColorId
-                                ? `Merge target ${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
-                                : "Choose merge target color"
-                            }
-                            title={
-                              mergeTargetColorId
-                                ? `${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
-                                : "Choose merge target color"
-                            }
-                            onClick={() => setMergePickerOpen((current) => !current)}
-                          >
-                            <ToolbarSwatch
-                              className={styles.libraryPopoverSwatch}
-                              color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
-                            />
-                            {showSymbols && mergeTargetColorId && symbolAssignments[mergeTargetColorId] ? (
-                              <span
-                                aria-hidden="true"
-                                className={styles.libraryPopoverSwatchSymbol}
-                                style={{
-                                  color: getSwatchIconColor(
-                                    colorsById[mergeTargetColorId]?.hex ?? "#ffffff",
-                                  ),
-                                }}
-                              >
-                                {symbolAssignments[mergeTargetColorId]}
-                              </span>
-                            ) : null}
-                          </ToolbarButton>
-
-                          {mergePickerOpen ? (
-                            <UsedColorsPortalPopover
-                              anchorRef={mergeTargetAnchorRef}
-                              horizontalAlign="center"
-                              onRequestClose={() => setMergePickerOpen(false)}
-                              preferredDirection="up"
-                              role="dialog"
-                              aria-label="Merge target color library"
-                              className={styles.usedColorsMergePopover}
-                              style={{ whiteSpace: "normal" }}
+                      {selectedColorIds.length === 0 ? (
+                        <p className={styles.usedColorsSelectionPrompt} style={typographyStyles.p2}>
+                          Select colors to merge
+                        </p>
+                      ) : (
+                        <>
+                          <div className={styles.usedColorsSelectionSummary}>
+                            <span
+                              className={styles.usedColorsSelectionCount}
+                              style={typographyStyles.p2}
                             >
-                              <ColorLibrary
-                                activeColorId={mergeTargetColorId}
-                                className={styles.usedColorsMergeLibraryGrid}
-                                colors={palette}
-                                defaultView="all"
-                                featuredColorIds={featuredColorIds}
-                                paletteSections={paletteSections}
-                                showFeaturedSymbols={showSymbols}
-                                symbolAssignments={symbolAssignments}
-                                onColorSelect={(colorId) => {
-                                  setMergeTargetColorId(colorId);
-                                  setMergePickerOpen(false);
-                                }}
-                              />
-                            </UsedColorsPortalPopover>
-                          ) : null}
-                        </ToolbarAnchor>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        className={styles.usedColorsMergeConfirmButton}
-                        disabled={!canMerge}
-                        onClick={() => {
-                          if (!canMerge || !mergeTargetColorId) {
-                            return;
-                          }
-                          setMergeConfirmationOpen(true);
-                        }}
-                      >
-                        Merge
-                      </Button>
+                              Merge {selectedColorIds.length} colors into:
+                            </span>
+                          </div>
+                          <div
+                            ref={mergeTargetAnchorRef}
+                            className={styles.usedColorsMergeActionGroup}
+                          >
+                            <ToolbarAnchor
+                              className={styles.usedColorsMergeTriggerWrap}
+                            >
+                              <ToolbarButton
+                                type="button"
+                                swatch
+                                active={mergePickerOpen}
+                                aria-pressed={mergePickerOpen}
+                                className={[
+                                  styles.libraryPopoverSwatchTrigger,
+                                  styles.usedColorsMergeTargetTrigger,
+                                ].join(" ")}
+                                aria-label={
+                                  mergeTargetColorId
+                                    ? `Merge target ${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
+                                    : "Choose merge target color"
+                                }
+                                title={
+                                  mergeTargetColorId
+                                    ? `${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
+                                    : "Choose merge target color"
+                                }
+                                onClick={() => setMergePickerOpen((current) => !current)}
+                              >
+                                <ToolbarSwatch
+                                  className={styles.libraryPopoverSwatch}
+                                  color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
+                                />
+                                {showSymbols && mergeTargetColorId && symbolAssignments[mergeTargetColorId] ? (
+                                  <span
+                                    aria-hidden="true"
+                                    className={styles.libraryPopoverSwatchSymbol}
+                                    style={{
+                                      color: getSwatchIconColor(
+                                        colorsById[mergeTargetColorId]?.hex ?? "#ffffff",
+                                      ),
+                                    }}
+                                  >
+                                    {symbolAssignments[mergeTargetColorId]}
+                                  </span>
+                                ) : null}
+                                <span className={styles.usedColorsMergeTargetText}>
+                                  <span className={styles.usedColorsMergeTargetName}>
+                                    {mergeTargetLabel}
+                                  </span>
+                                  {mergeTargetCode ? (
+                                    <span className={styles.usedColorsMergeTargetCode}>
+                                      {mergeTargetCode}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </ToolbarButton>
+
+                              {mergePickerOpen ? (
+                                <UsedColorsPortalPopover
+                                  anchorRef={mergeTargetAnchorRef}
+                                  horizontalAlign="center"
+                                  onRequestClose={() => setMergePickerOpen(false)}
+                                  preferredDirection="up"
+                                  role="dialog"
+                                  aria-label="Merge target color library"
+                                  className={styles.usedColorsMergePopover}
+                                  style={{ whiteSpace: "normal" }}
+                                >
+                                  <ColorLibrary
+                                    activeColorId={mergeTargetColorId}
+                                    className={styles.usedColorsMergeLibraryGrid}
+                                    colors={palette}
+                                    defaultView="all"
+                                    featuredColorIds={featuredColorIds}
+                                    paletteSections={paletteSections}
+                                    showFeaturedSymbols={showSymbols}
+                                    symbolAssignments={symbolAssignments}
+                                    onColorSelect={(colorId) => {
+                                      setMergeTargetColorId(colorId);
+                                      setMergePickerOpen(false);
+                                    }}
+                                  />
+                                </UsedColorsPortalPopover>
+                              ) : null}
+                            </ToolbarAnchor>
+                          </div>
+                          <div className={styles.usedColorsSelectionButtonRow}>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="md"
+                              className={styles.usedColorsSelectionCancelButton}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                exitToolMode();
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              size="md"
+                              className={styles.usedColorsMergeConfirmButton}
+                              disabled={!canMerge}
+                              onClick={() => {
+                                if (!canMerge || !mergeTargetColorId) {
+                                  return;
+                                }
+                                setMergeConfirmationOpen(true);
+                              }}
+                            >
+                              Merge
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : actionMode === "delete" ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="md"
-                      className={styles.usedColorsDeleteButton}
-                      disabled={!canDelete}
-                      onClick={() => {
-                        if (!canDelete) {
-                          return;
-                        }
-                        setDeleteConfirmationOpen(true);
-                      }}
-                    >
-                      <ButtonIcon icon="/icons/lucide/trash.svg" />
-                      Delete
-                    </Button>
+                    <>
+                      <div className={styles.usedColorsSelectionSummary}>
+                        <span
+                          className={styles.usedColorsSelectionCount}
+                          style={typographyStyles.p2}
+                        >
+                          {selectedColorIds.length > 0
+                            ? `${selectedColorIds.length} selected`
+                            : "0 selected"}
+                        </span>
+                      </div>
+                      <div className={styles.usedColorsSelectionButtonRow}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="md"
+                          className={styles.usedColorsSelectionCancelButton}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            exitToolMode();
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="md"
+                          className={styles.usedColorsDeleteButton}
+                          disabled={!canDelete}
+                          onClick={() => {
+                            if (!canDelete) {
+                              return;
+                            }
+                            setDeleteConfirmationOpen(true);
+                          }}
+                        >
+                          <ButtonIcon icon="/icons/lucide/trash.svg" />
+                          Delete
+                        </Button>
+                      </div>
+                    </>
                   ) : null}
                 </div>
               </div>

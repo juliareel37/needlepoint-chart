@@ -117,7 +117,7 @@
   display: grid;
   grid-template-columns: 1fr;
   align-items: start;
-  padding-bottom: 28px;
+  padding-bottom: 0;
   isolation: isolate;
   background: transparent;
   /* background:
@@ -171,7 +171,7 @@
   align-items: start;
   justify-items: center;
   text-align: center;
-  padding: clamp(128px, 13vw, 176px) var(--landing-page-gutter) clamp(56px, 6vw, 88px);
+  padding: clamp(128px, 13vw, 132px) var(--landing-page-gutter) clamp(20px, 3vw, 40px);
   position: relative;
   z-index: 1;
 }
@@ -208,13 +208,14 @@
   justify-content: center;
   min-height: 34px;
   padding: 0 16px;
-  border: 1px solid color-mix(in srgb, var(--accent-pink) 72%, var(--secondary-300));
-  border-radius: 8px;
+  /* border: 1px solid color-mix(in srgb, var(--accent-pink) 72%, var(--secondary-300)); */
+  border-radius: 999px;
   background: var(--accent-pink);
   color: var(--text-primary);
   font-weight: 700;
   letter-spacing: 0.06em !important;
   text-transform: uppercase;
+  margin-bottom: -14px;
 }
 
 .heroTitle {
@@ -257,13 +258,9 @@
   max-width: var(--hero-body-width);
   margin: 0;
   margin-inline: auto;
-  text-wrap: pretty;
+  text-wrap: balance;
   color: var(--text-secondary);
   animation: landingFadeUp 620ms ease-out 120ms both;
-}
-
-.heroBodyLine {
-  display: block;
 }
 
 .waitlistCallout {
@@ -290,11 +287,44 @@
 
 .waitlistQuickForm {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   max-width: 34rem;
+}
+
+.waitlistQuickControl {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--landing-button-height);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 999px;
+  background: var(--surface-card);
+  overflow: visible;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.waitlistQuickControl:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 42%, var(--ui-border-subtle));
+}
+
+.waitlistQuickControl:focus-within {
+  border-color: var(--brand-primary);
+}
+
+.waitlistQuickControl:has(.invalidInput) {
+  border-color: var(--status-destructive-base);
+}
+
+.waitlistQuickControl:has(.invalidInput:focus-visible) {
+  border-color: var(--status-destructive-strong);
 }
 
 .waitlistQuickField {
@@ -309,7 +339,7 @@
   min-width: 0;
   box-sizing: border-box;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 999px;
   border: 1px solid var(--ui-border-subtle);
   background: var(--surface-card);
   color: var(--text-primary);
@@ -318,8 +348,10 @@
 
 .waitlistQuickInput {
   height: var(--landing-button-height);
-  padding: 0 14px;
-  border-radius: 10px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border-color: transparent;
+  background: transparent;
   font-size: var(--landing-button-font-size);
   line-height: var(--landing-button-line-height);
 }
@@ -345,8 +377,16 @@
   border-color: var(--brand-primary);
 }
 
+.waitlistQuickInput:focus-visible {
+  border-color: transparent;
+}
+
 .waitlistQuickInput:hover {
-  border-color: color-mix(in srgb, var(--brand-primary) 42%, var(--ui-border-subtle));
+  border-color: transparent;
+}
+
+.waitlistQuickInput.invalidInput {
+  border-color: transparent;
 }
 
 .waitlistQuickButton,
@@ -356,7 +396,7 @@
 .waitlistCtaSecondary {
   min-height: var(--landing-button-height);
   padding: 0 var(--landing-button-padding-inline) !important;
-  border-radius: 8px !important;
+  border-radius: 999px !important;
   font-family: var(--font-primary);
   font-size: var(--landing-button-font-size) !important;
   font-weight: 600 !important;
@@ -375,7 +415,14 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  align-self: stretch;
   width: fit-content;
+}
+
+.waitlistQuickControl .waitlistQuickButton,
+.waitlistQuickControl .waitlistCtaPrimary {
+  align-self: stretch;
+  min-height: 100%;
 }
 
 .waitlistArrow {
@@ -575,7 +622,7 @@
     drop-shadow(5px 0 5px rgba(24, 20, 34, 0.08));
   box-sizing: border-box;
   width: min(1680px, 100%);
-  margin: clamp(24px, 4vw, 56px) auto clamp(32px, 5vw, 72px);
+  margin: 0 auto clamp(32px, 5vw, 72px);
   display: grid;
   gap: clamp(56px, 7vw, 96px);
   padding-inline: clamp(
@@ -641,6 +688,8 @@
 }
 
 .buildingBlocksPanelGrid {
+  width: min(100%, 1000px);
+  justify-self: center;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(12px, 1.4vw, 18px);
@@ -697,7 +746,7 @@
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
-  min-height: clamp(180px, 20vw, 240px);
+  min-height: clamp(170px, 16vw, 220px);
   padding-inline: clamp(12px, 1.5vw, 18px);
   border-radius: clamp(14px, 1.25vw, 18px);
 }
@@ -720,20 +769,20 @@
 
 .buildingBlocksPanelOverlay {
   position: relative;
-  width: min(100%, clamp(14rem, 28vw, 22rem));
+  width: min(100%, clamp(13rem, 22vw, 19rem));
   min-height: 0;
   overflow: visible;
 }
 
 .buildingBlocksPanelOverlayWide {
-  width: min(100%, clamp(16rem, 30vw, 24rem));
+  width: min(100%, clamp(14rem, 24vw, 20rem));
   aspect-ratio: 2.05 / 1;
   justify-self: center;
   align-self: start;
 }
 
 .buildingBlocksPanelOverlaySquare {
-  width: min(100%, clamp(12rem, 24vw, 18rem));
+  width: min(100%, clamp(11rem, 20vw, 16rem));
   aspect-ratio: 1 / 1;
   justify-self: center;
   align-self: center;
@@ -783,11 +832,11 @@
 }
 
 .buildingBlocksPanelFonts .buildingBlocksPanelMedia {
-  min-height: clamp(250px, 20vw, 320px);
+  min-height: clamp(220px, 17vw, 280px);
 }
 
 .buildingBlocksPanelFonts .buildingBlocksPanelOverlayWide {
-  width: min(100%, clamp(18rem, 34vw, 29rem));
+  width: min(100%, clamp(16rem, 26vw, 24rem));
   aspect-ratio: 1.55 / 1;
   align-self: start;
   transform: translateY(2%);
@@ -817,11 +866,11 @@
 }
 
 .buildingBlocksPanelIcons .buildingBlocksPanelMedia {
-  min-height: clamp(250px, 20vw, 320px);
+  min-height: clamp(220px, 17vw, 280px);
 }
 
 .buildingBlocksPanelIcons .buildingBlocksPanelOverlaySquare {
-  width: min(100%, clamp(18rem, 34vw, 29rem));
+  width: min(100%, clamp(16rem, 26vw, 24rem));
   aspect-ratio: 1.55 / 1;
   align-self: start;
 }
@@ -844,11 +893,11 @@
 }
 
 .buildingBlocksPanelShapes .buildingBlocksPanelMedia {
-  min-height: clamp(250px, 20vw, 320px);
+  min-height: clamp(220px, 17vw, 280px);
 }
 
 .buildingBlocksPanelShapes .buildingBlocksPanelOverlayWide {
-  width: min(100%, clamp(18rem, 34vw, 29rem));
+  width: min(100%, clamp(16rem, 26vw, 24rem));
   aspect-ratio: 1.55 / 1;
   align-self: start;
 }
@@ -1349,7 +1398,7 @@
   align-content: space-between;
   min-height: clamp(300px, 30vw, 420px);
   padding: clamp(22px, 2.4vw, 30px);
-  border-radius: clamp(24px, 2.2vw, 32px);
+  border-radius: clamp(12px, 1.2vw, 16px);
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, white);
 }
 
@@ -2115,7 +2164,7 @@
 
   .heroCopy {
     row-gap: 28px;
-    padding: 88px var(--landing-page-gutter) 36px;
+    padding: clamp(120px, 16vw, 132px) var(--landing-page-gutter) 36px;
   }
 
   .heroTitle,
@@ -2264,17 +2313,20 @@
   }
 
   .heroTitle {
-    font-size: clamp(2.45rem, 10.8vw, 2.8rem) !important;
+    font-size: clamp(2.7rem, 11.8vw, 3.2rem) !important;
     line-height: 1.02 !important;
   }
 
   .heroBody {
-    font-size: 1.02rem !important;
+    font-size: clamp(0.92rem, 3.8vw, 1rem) !important;
     line-height: 1.55 !important;
+    max-width: 31ch;
+    text-wrap: pretty;
   }
 
   .heroPreviewWrap {
-    width: min(78vw, 600px);
+    width: 100vw;
+    max-width: none;
   }
 
   .featuresGrid {
@@ -2443,7 +2495,7 @@
     inset: 18% -52% 14%;
     -webkit-mask-size: 185% 100%;
     mask-size: 185% 100%;
-    opacity: 0.62;
+    opacity: 0.14;
   }
 
   .heroPreviewStage {
@@ -2461,7 +2513,7 @@
 
   .bentoCard {
     padding: 22px;
-    border-radius: 26px;
+    border-radius: 16px;
   }
 }
 
@@ -2469,6 +2521,49 @@
   .heroActions {
     flex-direction: column;
     align-items: center;
+  }
+
+  .waitlistQuickForm {
+    gap: 12px;
+  }
+
+  .waitlistQuickButtonWrap {
+    width: 100%;
+  }
+
+  .waitlistQuickButton,
+  .waitlistQuickForm .waitlistCtaPrimary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .waitlistQuickControl .waitlistQuickButton,
+  .waitlistQuickControl .waitlistCtaPrimary {
+    align-self: auto;
+    min-height: var(--landing-button-height);
+    padding-block: 0 !important;
+  }
+
+  .waitlistQuickControl {
+    display: contents;
+  }
+
+  .waitlistQuickInput {
+    border-color: var(--ui-border-subtle);
+    background: var(--surface-card);
+  }
+
+  .waitlistQuickInput:hover {
+    border-color: color-mix(in srgb, var(--brand-primary) 42%, var(--ui-border-subtle));
+  }
+
+  .waitlistQuickInput:focus-visible {
+    border-color: var(--brand-primary);
+  }
+
+  .waitlistQuickInput.invalidInput,
+  .waitlistQuickInput.invalidInput:focus-visible {
+    border-color: var(--status-destructive-base);
   }
 
   .resumeCard {
@@ -2495,14 +2590,11 @@
     grid-template-columns: 1fr;
   }
 
-  .waitlistQuickButtonWrap {
-    width: 100%;
-  }
-
-  .waitlistQuickButton,
-  .waitlistQuickForm .waitlistCtaPrimary {
+  .waitlistQuickControl .waitlistQuickButton,
+  .waitlistQuickControl .waitlistCtaPrimary {
     width: 100%;
     min-width: 0;
+    min-height: var(--landing-button-height);
   }
 
   .waitlistArrow {

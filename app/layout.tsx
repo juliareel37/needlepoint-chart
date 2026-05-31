@@ -9,6 +9,7 @@ import { AuthProvider } from "@/lib/auth/client";
 import AppHeaderNav from "@/components/app/AppHeaderNav";
 import { getCurrentUserThemePreference } from "@/lib/auth/server";
 import { THEME_MODE_ATTRIBUTE } from "@/lib/theme/themePreference";
+import { brandAssets } from "@/lib/brandAssets";
 
 const uiSans = Plus_Jakarta_Sans({
   variable: "--font-ui",
@@ -28,11 +29,13 @@ export const metadata: Metadata = {
   description: "Create and customize needlepoint patterns with ease.",
   icons: {
     icon: [
-      { url: assetPath("/logos/curly/logo-300.png"), type: "image/png" },
-      // { url: assetPath("/favicon.png"), type: "image/png" },
+      {
+        url: assetPath(brandAssets.favicon.src),
+        type: brandAssets.favicon.type,
+      },
     ],
-    shortcut: assetPath("/w.png"),
-    apple: assetPath("/w.png"),
+    shortcut: assetPath(brandAssets.favicon.src),
+    apple: assetPath(brandAssets.favicon.src),
   },
 };
 

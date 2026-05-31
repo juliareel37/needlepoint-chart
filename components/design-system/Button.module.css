@@ -177,7 +177,7 @@
 
   .outlined:hover:not(:disabled) {
     background: var(--button-outlined-hover);
-    box-shadow: var(--ui-shadow-sm);
+    /* box-shadow: var(--ui-shadow-sm); */
   }
 
   .outlined[data-active="true"]:hover:not(:disabled) {
