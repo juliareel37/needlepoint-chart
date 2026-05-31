@@ -321,14 +321,21 @@ const betaTestingInterestOptions = [
 ] as const;
 type BetaTestingInterestOption = (typeof betaTestingInterestOptions)[number]["value"];
 
-export default function Page() {
+type LandingPageClientProps = {
+  allowAuthenticatedPreview?: boolean;
+};
+
+export default function Page({ allowAuthenticatedPreview = false }: LandingPageClientProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const openSignIn = useOpenSignIn();
   const { isLoaded, isSignedIn } = useAuthSession();
   const { hasAppAccess, isLoaded: isAccessStateLoaded } = useAuthAccessState();
-  const showResumeCta = isLoaded && isAccessStateLoaded && hasAppAccess;
+  const previewLoggedOutExperience = allowAuthenticatedPreview;
+  const showResumeCta =
+    !previewLoggedOutExperience && isLoaded && isAccessStateLoaded && hasAppAccess;
+  const showFooterLogin = previewLoggedOutExperience || (isLoaded && !isSignedIn);
   const showPendingApprovalNotice = searchParams.get("notice") === "pending-approval";
   const showApprovalRequiredNotice = searchParams.get("notice") === "approval-required";
   const [isSubmittingWaitlist, setIsSubmittingWaitlist] = useState(false);
@@ -370,11 +377,11 @@ export default function Page() {
   }, [pathname, router, searchParams]);
 
   useEffect(() => {
-    if (isLoaded && isAccessStateLoaded && hasAppAccess) {
+    if (!allowAuthenticatedPreview && isLoaded && isAccessStateLoaded && hasAppAccess) {
       router.replace("/library");
       router.refresh();
     }
-  }, [hasAppAccess, isAccessStateLoaded, isLoaded, router]);
+  }, [allowAuthenticatedPreview, hasAppAccess, isAccessStateLoaded, isLoaded, router]);
 
   useEffect(() => {
     const animatedElements = Array.from(
@@ -1325,7 +1332,7 @@ export default function Page() {
               <Link href="/terms" className={styles.footerLegalLink}>
                 Terms
               </Link>
-              {isLoaded && !isSignedIn ? (
+              {showFooterLogin ? (
                 <button
                   type="button"
                   className={styles.footerLoginButton}

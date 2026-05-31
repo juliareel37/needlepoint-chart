@@ -53,6 +53,115 @@ const savedDesigns = [
   { id: "garden_28x20", label: "Garden Border (28x20)" },
 ];
 
+const waitlistCtaCurveFirstThirdPath =
+  "M-60 392 C 88 420 224 360 310 270 C 384 176 310 120 250 160 C 182 208 226 346 378 360 C 560 376 690 296 756 174 C 856 -12 1126 36 1300 106 C 1500 186 1498 372 1372 398 C 1246 424 1192 290 1278 196 C 1370 96 1558 106 1688 126 C 1770 138 1822 58 1874 -44";
+
+const marketingCurveMasterPath = `${waitlistCtaCurveFirstThirdPath} C 1970 -108 2118 -42 2198 82 C 2290 226 2130 318 2036 236 C 1958 168 2052 72 2188 116 C 2368 174 2388 346 2598 366 C 2744 378 2864 326 2912 244 C 2964 156 2884 68 2768 118 C 2638 174 2702 332 2864 350 C 3108 378 3198 18 3440 88 C 3630 142 3638 342 3820 388 C 4020 438 4218 332 4300 202 C 4380 56 4530 36 4700 126 C 4892 228 4838 392 4688 368 C 4558 348 4560 190 4708 166 C 4936 130 4962 380 5140 328 C 5320 288 5430 164 5582 42`;
+
+const marketingVectors = [
+  {
+    id: "marketing-curve-master",
+    name: "Marketing Curve Master",
+    status: "Source",
+    usage: "One continuous path that future decorative curve placements should slice from.",
+    path: marketingCurveMasterPath,
+    viewBox: "-60 -140 5660 700",
+    wide: true,
+  },
+  {
+    id: "waitlist-cta-curve",
+    name: "Waitlist CTA Curve",
+    status: "Live",
+    usage: "First third of the master curve, used behind the landing page waitlist call-to-action.",
+    path: marketingCurveMasterPath,
+    viewBox: "0 0 1800 480",
+    wide: false,
+  },
+  {
+    id: "hero-thread-loop",
+    name: "Hero Thread Loop",
+    status: "Available",
+    usage: "Middle third slice, reserved for a future hero or product-flow accent.",
+    path: marketingCurveMasterPath,
+    viewBox: "1800 0 1800 480",
+    wide: false,
+  },
+  {
+    id: "panel-stitch-wave",
+    name: "Panel Stitch Wave",
+    status: "Available",
+    usage: "Final third slice, reserved for a future feature divider or product education section.",
+    path: marketingCurveMasterPath,
+    viewBox: "3600 0 1800 480",
+    wide: false,
+  },
+] as const;
+
+const shortMarketingVectors = [
+  {
+    id: "playful-hook-loop",
+    name: "Playful Hook Loop",
+    status: "Available",
+    usage: "Compact accent for callouts, badges, or small editorial moments.",
+    path: "M-34 170 C 44 126 96 80 132 38 C 174 -10 224 42 176 92 C 134 136 112 186 168 198 C 234 214 298 142 258 92 C 220 44 156 88 178 154 C 208 244 374 246 560 208",
+    viewBox: "0 0 520 280",
+    wide: false,
+  },
+  {
+    id: "ribbon-switchback",
+    name: "Ribbon Switchback",
+    status: "Available",
+    usage: "Large hero crop or background flourish when the layout needs more motion.",
+    path: "M-56 76 C 74 156 220 -12 314 50 C 410 114 210 176 112 190 C -2 206 16 322 160 304 C 276 288 412 204 494 270 C 586 344 438 430 300 402 C 172 376 138 488 272 516 C 422 548 552 462 606 354",
+    viewBox: "0 0 560 520",
+    wide: false,
+  },
+  {
+    id: "wandering-stitch-line",
+    name: "Wandering Stitch Line",
+    status: "Available",
+    usage: "Tall crop for side panels, vertical promos, or image overlays.",
+    path: "M112 -42 C 216 40 22 70 54 176 C 86 286 226 132 284 196 C 344 264 192 284 216 360 C 242 442 380 292 420 390 C 466 504 268 540 148 514 C 28 488 28 626 176 624 C 314 622 450 542 528 606",
+    viewBox: "0 0 560 660",
+    wide: false,
+  },
+  {
+    id: "double-knot-sweep",
+    name: "Double Knot Sweep",
+    status: "Available",
+    usage: "Horizontal divider or form-adjacent accent with a little extra personality.",
+    path: "M-42 162 C 64 118 150 136 210 178 C 272 222 158 282 120 218 C 80 150 170 70 260 106 C 356 146 326 282 424 286 C 526 290 478 140 392 176 C 302 214 366 356 502 344 C 620 334 690 238 772 214",
+    viewBox: "0 0 760 420",
+    wide: false,
+  },
+  {
+    id: "landscape-text-frame",
+    name: "Landscape Text Accent",
+    status: "Available",
+    usage: "Calmer landscape accent that avoids the copy center while adding one playful side loop.",
+    path: "M-96 342 C 72 262 230 252 336 314 C 252 292 148 330 154 410 C 160 490 314 478 382 384 C 424 326 380 304 336 314 C 486 328 616 390 760 414 C 948 446 1104 424 1248 374 C 1418 312 1562 252 1768 218",
+    viewBox: "0 0 1720 520",
+    wide: true,
+  },
+] as const;
+
+const vectorDisplayBackgroundOptions = [
+  { id: "green", label: "Green", value: "var(--green-lightest)" },
+  { id: "cream", label: "Cream", value: "var(--butter-yellow)" },
+  { id: "pink", label: "Pink", value: "var(--accent-pink)" },
+  { id: "white", label: "White", value: "var(--neutral-0)" },
+  { id: "ink", label: "Ink", value: "var(--neutral-900)" },
+] as const;
+
+const vectorDisplayCurveOptions = [
+  { id: "green", label: "Green", value: "var(--green-med)" },
+  { id: "brand", label: "Deep green", value: "var(--brand-600)" },
+  { id: "pink", label: "Pink", value: "var(--secondary-300)" },
+  { id: "orange", label: "Orange", value: "#e44716" },
+  { id: "cream", label: "Cream", value: "var(--butter-yellow)" },
+  { id: "ink", label: "Ink", value: "var(--neutral-900)" },
+] as const;
+
 const paletteGroups = [
   {
     title: "Neutrals",
@@ -222,6 +331,19 @@ export function EditorV2DesignSystemPage() {
         <section className={styles.sectionCard}>
           <div>
             <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
+              Marketing Vectors
+            </h2>
+            <p className={styles.sectionBody} style={typographyStyles.p2}>
+              Shared decorative vector assets for landing and marketing surfaces.
+              These are slices of one long curve, so placements can line up side by side.
+            </p>
+          </div>
+          <MarketingVectorsDemo />
+        </section>
+
+        <section className={styles.sectionCard}>
+          <div>
+            <h2 className={styles.sectionTitle} style={typographyStyles.h4}>
               Controls
             </h2>
             <p className={styles.sectionBody} style={typographyStyles.p2}>
@@ -283,6 +405,157 @@ export function EditorV2DesignSystemPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function MarketingVectorsDemo() {
+  const [backgroundColorId, setBackgroundColorId] =
+    useState<(typeof vectorDisplayBackgroundOptions)[number]["id"]>("green");
+  const [curveColorId, setCurveColorId] =
+    useState<(typeof vectorDisplayCurveOptions)[number]["id"]>("green");
+  const selectedBackgroundColor =
+    vectorDisplayBackgroundOptions.find((option) => option.id === backgroundColorId) ??
+    vectorDisplayBackgroundOptions[0];
+  const selectedCurveColor =
+    vectorDisplayCurveOptions.find((option) => option.id === curveColorId) ??
+    vectorDisplayCurveOptions[0];
+  const vectorDisplayStyle = {
+    "--vector-preview-bg": selectedBackgroundColor.value,
+    "--vector-preview-line": selectedCurveColor.value,
+  } as CSSProperties;
+
+  return (
+    <div className={styles.vectorLibraryStack} style={vectorDisplayStyle}>
+      <div className={styles.vectorDisplayControls} aria-label="Vector preview colors">
+        <VectorColorPicker
+          label="Background"
+          options={vectorDisplayBackgroundOptions}
+          value={backgroundColorId}
+          onChange={setBackgroundColorId}
+        />
+        <VectorColorPicker
+          label="Curve"
+          options={vectorDisplayCurveOptions}
+          value={curveColorId}
+          onChange={setCurveColorId}
+        />
+      </div>
+
+      <div className={styles.vectorCollection}>
+        <div className={styles.vectorCollectionHeader}>
+          <h3 className={styles.vectorCollectionTitle} style={typographyStyles.h5}>
+            Long continuous curve
+          </h3>
+          <p className={styles.muted} style={typographyStyles.p2}>
+            One source path with viewBox slices for connected campaign moments.
+          </p>
+        </div>
+        <div className={styles.vectorGrid}>
+          {marketingVectors.map((vector) => (
+            <VectorCard key={vector.id} vector={vector} />
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.vectorCollection}>
+        <div className={styles.vectorCollectionHeader}>
+          <h3 className={styles.vectorCollectionTitle} style={typographyStyles.h5}>
+            Short playful curves
+          </h3>
+          <p className={styles.muted} style={typographyStyles.p2}>
+            Standalone accents for tighter surfaces, with the same stroke width as the master curve.
+          </p>
+        </div>
+        <div className={styles.vectorGrid}>
+          {shortMarketingVectors.map((vector) => (
+            <VectorCard key={vector.id} vector={vector} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type VectorDisplayColorOption<T extends string = string> = {
+  id: T;
+  label: string;
+  value: string;
+};
+
+function VectorColorPicker<T extends string>({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (value: T) => void;
+  options: readonly VectorDisplayColorOption<T>[];
+  value: T;
+}) {
+  return (
+    <div className={styles.vectorColorPicker}>
+      <span className={styles.vectorColorPickerLabel} style={typographyStyles.s}>
+        {label}
+      </span>
+      <div className={styles.vectorColorSwatches}>
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={styles.vectorColorSwatchButton}
+            aria-label={`${label}: ${option.label}`}
+            aria-pressed={value === option.id}
+            title={option.label}
+            onClick={() => onChange(option.id)}
+          >
+            <span
+              className={styles.vectorColorSwatch}
+              style={{ background: option.value }}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type MarketingVector = (typeof marketingVectors)[number] | (typeof shortMarketingVectors)[number];
+
+function VectorCard({ vector }: { vector: MarketingVector }) {
+  return (
+    <article
+      className={[styles.vectorCard, vector.wide ? styles.vectorCardWide : null]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className={styles.vectorPreview} aria-hidden="true">
+        <svg className={styles.vectorSvg} viewBox={vector.viewBox} role="img" focusable="false">
+          <path d={vector.path} />
+        </svg>
+      </div>
+      <div className={styles.vectorMeta}>
+        <div className={styles.vectorTitleRow}>
+          <h3 className={styles.cardTitle} style={typographyStyles.h5}>
+            {vector.name}
+          </h3>
+          <span
+            className={[
+              styles.vectorStatus,
+              vector.status === "Source" ? styles.vectorStatusSource : styles.vectorStatusLive,
+            ].join(" ")}
+            style={typographyStyles.s}
+          >
+            {vector.status}
+          </span>
+        </div>
+        <p className={styles.muted} style={typographyStyles.p2}>
+          {vector.usage}
+        </p>
+        <code className={styles.vectorCode}>{vector.id}</code>
+      </div>
+    </article>
   );
 }
 

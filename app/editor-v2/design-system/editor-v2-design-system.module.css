@@ -81,7 +81,8 @@
 }
 
 .paletteGrid,
-.controlsGrid {
+.controlsGrid,
+.vectorGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
@@ -205,6 +206,190 @@
   background: var(--brand-lightest);
   border-color: var(--brand-200);
   color: var(--brand-600);
+}
+
+.vectorCard {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 16px;
+  background: var(--surface-card);
+}
+
+.vectorCardWide {
+  grid-column: 1 / -1;
+}
+
+.vectorLibraryStack,
+.vectorCollection,
+.vectorCollectionHeader {
+  display: grid;
+}
+
+.vectorLibraryStack {
+  gap: 24px;
+}
+
+.vectorCollection {
+  gap: 12px;
+}
+
+.vectorCollectionHeader {
+  gap: 4px;
+}
+
+.vectorCollectionTitle {
+  margin: 0;
+}
+
+.vectorDisplayControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 12px;
+  background: var(--surface-card);
+}
+
+.vectorColorPicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vectorColorPickerLabel {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vectorColorSwatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vectorColorSwatchButton {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vectorColorSwatchButton[aria-pressed="true"] {
+  border-color: var(--text-primary);
+}
+
+.vectorColorSwatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 36%);
+}
+
+.vectorPreview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  padding: 18px;
+  overflow: hidden;
+  background: var(--vector-preview-bg, var(--green-lightest));
+}
+
+.vectorPreview::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px dashed color-mix(in srgb, var(--green-med) 36%, transparent);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.vectorSvg {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  height: auto;
+  color: var(--vector-preview-line, var(--green-med));
+  opacity: 0.72;
+}
+
+.vectorCardWide .vectorPreview {
+  min-height: 180px;
+}
+
+.vectorCardWide .vectorSvg {
+  width: 100%;
+  max-width: none;
+}
+
+.vectorSvg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 9;
+  vector-effect: non-scaling-stroke;
+}
+
+.vectorMeta {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.vectorTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vectorStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.vectorStatusLive {
+  background: var(--green-lightest);
+  border-color: color-mix(in srgb, var(--green-med) 28%, transparent);
+  color: var(--brand-600);
+}
+
+.vectorStatusSource {
+  background: var(--brand-lightest);
+  border-color: var(--brand-200);
+  color: var(--brand-600);
+}
+
+.vectorCode {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 6px;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  background: var(--neutral-100);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .typeMeta {
@@ -486,6 +671,7 @@
 
   .paletteGrid,
   .controlsGrid,
+  .vectorGrid,
   .feedbackGrid,
   .notificationGrid,
   .modalGrid {
