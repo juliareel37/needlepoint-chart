@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendWaitlistSignupConfirmationEmail } from "@/lib/email/transactional";
 import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit/server";
 import { validateEmailMxRecords } from "@/lib/waitlist/emailDns";
 import { isWaitlistRateLimitDisabled } from "@/lib/waitlist/rateLimit";
@@ -88,6 +89,14 @@ export async function POST(req: Request) {
     userAgent,
     waitlistApplicationId: result.application.id,
   });
+
+  if (result.created) {
+    try {
+      await sendWaitlistSignupConfirmationEmail(result.application.email);
+    } catch (error) {
+      console.error("Failed to send waitlist signup confirmation email", error);
+    }
+  }
 
   return NextResponse.json(
     {

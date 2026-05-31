@@ -8,6 +8,7 @@ const {
   checkRateLimitMock,
   getClientIpFromRequestMock,
   validateEmailMxRecordsMock,
+  sendWaitlistSignupConfirmationEmailMock,
 } = vi.hoisted(() => ({
   findUniqueMock: vi.fn(),
   createMock: vi.fn(),
@@ -16,6 +17,7 @@ const {
   checkRateLimitMock: vi.fn(),
   getClientIpFromRequestMock: vi.fn(),
   validateEmailMxRecordsMock: vi.fn(),
+  sendWaitlistSignupConfirmationEmailMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -40,6 +42,10 @@ vi.mock("@/lib/waitlist/emailDns", () => ({
   validateEmailMxRecords: validateEmailMxRecordsMock,
 }));
 
+vi.mock("@/lib/email/transactional", () => ({
+  sendWaitlistSignupConfirmationEmail: sendWaitlistSignupConfirmationEmailMock,
+}));
+
 import { POST } from "./route";
 
 describe("POST /api/waitlist", () => {
@@ -55,6 +61,7 @@ describe("POST /api/waitlist", () => {
     });
     validateEmailMxRecordsMock.mockResolvedValue(true);
     attemptCreateMock.mockResolvedValue({ id: "attempt_1" });
+    sendWaitlistSignupConfirmationEmailMock.mockResolvedValue({ messageId: "message_1" });
   });
 
   it("rejects invalid submissions", async () => {
@@ -73,6 +80,7 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "not-an-email",
@@ -99,6 +107,7 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "maker@example.com",
@@ -124,6 +133,7 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "maker@mailinator.com",
@@ -149,6 +159,7 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(400);
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
   });
 
   it("rejects submissions after an IP rate limit is reached", async () => {
@@ -184,6 +195,7 @@ describe("POST /api/waitlist", () => {
       error: "Too many waitlist submissions. Please try again later.",
     });
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "maker@example.com",
@@ -241,6 +253,7 @@ describe("POST /api/waitlist", () => {
     });
     expect(validateEmailMxRecordsMock).toHaveBeenCalledWith("maker@invalid.example");
     expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "maker@invalid.example",
@@ -305,6 +318,7 @@ describe("POST /api/waitlist", () => {
         waitlistApplicationId: "wait_1",
       }),
     });
+    expect(sendWaitlistSignupConfirmationEmailMock).toHaveBeenCalledWith("maker@example.com");
     expect(body).toEqual({
       ok: true,
       created: true,
@@ -342,6 +356,7 @@ describe("POST /api/waitlist", () => {
 
     expect(response.status).toBe(200);
     expect(updateMock).not.toHaveBeenCalled();
+    expect(sendWaitlistSignupConfirmationEmailMock).not.toHaveBeenCalled();
     expect(attemptCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         normalizedEmail: "maker@example.com",
@@ -360,5 +375,48 @@ describe("POST /api/waitlist", () => {
         status: "PENDING",
       },
     });
+  });
+
+  it("keeps the waitlist signup successful if the confirmation email fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    findUniqueMock.mockResolvedValue(null);
+    createMock.mockResolvedValue({
+      id: "wait_1",
+      email: "maker@example.com",
+      status: "PENDING",
+      createdAt: new Date("2026-05-13T12:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T12:00:00.000Z"),
+    });
+    sendWaitlistSignupConfirmationEmailMock.mockRejectedValue(new Error("Brevo unavailable"));
+
+    const response = await POST(
+      new Request("http://localhost/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "maker@example.com",
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      ok: true,
+      created: true,
+      alreadySubmitted: false,
+      application: {
+        id: "wait_1",
+        email: "maker@example.com",
+        status: "PENDING",
+      },
+    });
+    expect(sendWaitlistSignupConfirmationEmailMock).toHaveBeenCalledWith("maker@example.com");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Failed to send waitlist signup confirmation email",
+      expect.any(Error),
+    );
+
+    consoleErrorSpy.mockRestore();
   });
 });
