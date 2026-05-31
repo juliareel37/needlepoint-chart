@@ -3082,6 +3082,7 @@
 
 .activeColorRow {
   gap: 10px;
+  padding-top: 12px;
 }
 
 .activeColorValue {
