@@ -21,6 +21,11 @@ const adminLinks = [
     title: "Design System",
     description: "Open the internal UI and token reference.",
   },
+  {
+    href: "/admin/landing",
+    title: "Landing Page",
+    description: "Preview the public landing page while signed in as an admin.",
+  },
 ] as const;
 
 export default async function AdminPage() {
