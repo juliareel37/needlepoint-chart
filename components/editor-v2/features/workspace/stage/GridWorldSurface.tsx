@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ColorLibraryDismissGesture } from "../shell/FloatingToolbar";
+import { clampGridBrushSize } from "@/lib/editor-v2/editor/brushSize";
 import type {
   ActiveTool,
   EditorStore,
@@ -200,7 +201,7 @@ export function GridWorldSurface({
     x: 0,
     y: 0,
   });
-  const [brushPreviewCell, setBrushPreviewCell] = useState<GridPoint | null>(null);
+  const [brushCursorPoint, setBrushCursorPoint] = useState<{ x: number; y: number } | null>(null);
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -219,17 +220,14 @@ export function GridWorldSurface({
     traceEraserActive ||
     duplicatePlacementActive;
   const mainBrushToolActive = activeTool === "paint" || activeTool === "erase";
-  const normalizedBrushSize = Number.isFinite(brushSize)
-    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
-    : 1;
-  const brushLeadingOffset = Math.floor((normalizedBrushSize - 1) / 2);
+  const normalizedBrushSize = clampGridBrushSize(brushSize, grid.width, grid.height);
   const brushCursorSize = normalizedBrushSize * metrics.cellSize * viewport.zoom;
   const brushCursorVisible =
     !coarsePointer &&
     !interactionLocked &&
     !paintDisabled &&
     mainBrushToolActive &&
-    brushPreviewCell !== null;
+    brushCursorPoint !== null;
   const centeredBrushPreviewVisible =
     !coarsePointer &&
     !interactionLocked &&
@@ -329,7 +327,7 @@ export function GridWorldSurface({
       return;
     }
 
-    setBrushPreviewCell(null);
+    setBrushCursorPoint(null);
   }, [interactionLocked, mainBrushToolActive, paintDisabled]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -612,7 +610,16 @@ export function GridWorldSurface({
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
-        setBrushPreviewCell(point);
+        if (!point) {
+          setBrushCursorPoint(null);
+          return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        setBrushCursorPoint({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        });
       }}
       onPointerDown={(event) => {
         if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
@@ -620,10 +627,19 @@ export function GridWorldSurface({
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
-        setBrushPreviewCell(point);
+        if (!point) {
+          setBrushCursorPoint(null);
+          return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        setBrushCursorPoint({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        });
       }}
       onPointerLeave={() => {
-        setBrushPreviewCell(null);
+        setBrushCursorPoint(null);
       }}
       style={{
         position: "relative",
@@ -844,18 +860,11 @@ export function GridWorldSurface({
           aria-hidden="true"
           style={{
             position: "absolute",
-            left: `${
-              worldBounds.left -
-              stageBounds.left +
-              (brushPreviewCell.x - brushLeadingOffset) * metrics.cellSize * viewport.zoom
-            }px`,
-            top: `${
-              worldBounds.top -
-              stageBounds.top +
-              (brushPreviewCell.y - brushLeadingOffset) * metrics.cellSize * viewport.zoom
-            }px`,
+            left: `${brushCursorPoint.x}px`,
+            top: `${brushCursorPoint.y}px`,
             width: `${brushCursorSize}px`,
             height: `${brushCursorSize}px`,
+            transform: "translate(-50%, -50%)",
             border: "1.5px solid rgba(255, 255, 255, 0.96)",
             boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.42)",
             background: "rgba(255, 255, 255, 0.08)",

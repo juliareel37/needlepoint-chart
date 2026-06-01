@@ -62,6 +62,8 @@ export function useGridInteractions({
     brushSize,
     dispatch,
     disabled: paintDisabled,
+    gridHeight: state.document.grid.height,
+    gridWidth: state.document.grid.width,
   });
   const selectionDrag = useSelectionDrag({
     activeTool,

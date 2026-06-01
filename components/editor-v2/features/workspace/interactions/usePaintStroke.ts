@@ -6,6 +6,7 @@ import type {
   EditorStore,
   GridPoint,
 } from "@/lib/editor-v2/editor/store";
+import { clampGridBrushSize } from "@/lib/editor-v2/editor/brushSize";
 import { getGridCellKey } from "@/lib/editor-v2/editor/viewport";
 import {
   createEraseCellCommand,
@@ -20,6 +21,8 @@ interface UsePaintStrokeOptions {
   brushSize: number;
   disabled?: boolean;
   dispatch: EditorStore["dispatch"];
+  gridHeight: number;
+  gridWidth: number;
 }
 
 export function usePaintStroke({
@@ -28,6 +31,8 @@ export function usePaintStroke({
   brushSize,
   disabled = false,
   dispatch,
+  gridHeight,
+  gridWidth,
 }: UsePaintStrokeOptions) {
   const [paintStrokeId, setPaintStrokeId] = useState<string | null>(null);
 
@@ -149,7 +154,13 @@ export function usePaintStroke({
     colorId: string,
     strokeId: string,
   ): void {
-    const newCells = getNewCellsForBrush(point, brushSize, paintedCellKeysRef.current);
+    const newCells = getNewCellsForBrush(
+      point,
+      brushSize,
+      gridWidth,
+      gridHeight,
+      paintedCellKeysRef.current,
+    );
 
     if (newCells.length === 0) {
       return;
@@ -164,7 +175,13 @@ export function usePaintStroke({
   }
 
   function erasePoint(point: GridPoint, strokeId: string): void {
-    const newCells = getNewCellsForBrush(point, brushSize, paintedCellKeysRef.current);
+    const newCells = getNewCellsForBrush(
+      point,
+      brushSize,
+      gridWidth,
+      gridHeight,
+      paintedCellKeysRef.current,
+    );
 
     if (newCells.length === 0) {
       return;
@@ -235,9 +252,11 @@ function getLinePoints(from: GridPoint, to: GridPoint): GridPoint[] {
 function getNewCellsForBrush(
   center: GridPoint,
   brushSize: number,
+  gridWidth: number,
+  gridHeight: number,
   paintedCellKeys: Set<string>,
 ): GridPoint[] {
-  const cellsForBrush = getCellsFromBrush(center, brushSize);
+  const cellsForBrush = getCellsFromBrush(center, brushSize, gridWidth, gridHeight);
   const newCells: GridPoint[] = [];
 
   for (const cell of cellsForBrush) {
@@ -254,9 +273,14 @@ function getNewCellsForBrush(
   return newCells;
 }
 
-function getCellsFromBrush(center: GridPoint, brushSize: number): GridPoint[] {
+function getCellsFromBrush(
+  center: GridPoint,
+  brushSize: number,
+  gridWidth: number,
+  gridHeight: number,
+): GridPoint[] {
   const cells: GridPoint[] = [];
-  const size = Math.min(Math.max(Math.round(brushSize), 1), 10);
+  const size = clampGridBrushSize(brushSize, gridWidth, gridHeight);
   const leadingOffset = Math.floor((size - 1) / 2);
   const trailingOffset = size - leadingOffset - 1;
 

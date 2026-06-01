@@ -18,6 +18,10 @@ import {
   ToolbarSubtoolGroup,
   ToolbarSwatch,
 } from "@/components/design-system";
+import {
+  clampGridBrushSize,
+  getGridBrushSizeMax,
+} from "@/lib/editor-v2/editor/brushSize";
 import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import type {
   ActiveTool,
@@ -305,6 +309,8 @@ interface FloatingToolbarProps {
   customPalettesById: Record<string, CustomPalette>;
   dispatch: EditorStore["dispatch"];
   eyedropperReturnTool: ActiveTool | null;
+  gridHeight: number;
+  gridWidth: number;
   hasPaintedCells: boolean;
   palette: PaletteColor[];
   featuredColorIds: string[];
@@ -340,6 +346,8 @@ export function FloatingToolbar({
   customPalettesById,
   dispatch,
   eyedropperReturnTool,
+  gridHeight,
+  gridWidth,
   hasPaintedCells,
   palette,
   featuredColorIds,
@@ -394,13 +402,12 @@ export function FloatingToolbar({
   const [embeddedSelectionSliderTooltipPosition, setEmbeddedSelectionSliderTooltipPosition] =
     useState<{ left: number; top: number } | null>(null);
 
-  const normalizedBrushSize = Number.isFinite(brushSize)
-    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
-    : 1;
+  const brushSizeMax = getGridBrushSizeMax(gridWidth, gridHeight);
+  const normalizedBrushSize = clampGridBrushSize(brushSize, gridWidth, gridHeight);
   const brushFootprintSize = normalizedBrushSize;
   const brushFootprintLabel = `${brushFootprintSize}x${brushFootprintSize}`;
   const brushSizeTooltipPercent =
-    ((brushSizeSliderValue - 1) / 9) * 100;
+    brushSizeMax <= 1 ? 0 : ((brushSizeSliderValue - 1) / (brushSizeMax - 1)) * 100;
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
@@ -779,8 +786,8 @@ export function FloatingToolbar({
         ) : null}
         <Slider
           min={1}
-          max={10}
-          step={0.05}
+          max={brushSizeMax}
+          step={1}
           value={brushSizeSliderValue}
           aria-label="Brush size"
           aria-valuetext={`${brushFootprintLabel} paint area`}
@@ -807,7 +814,7 @@ export function FloatingToolbar({
           onChange={(e) => {
             const nextSliderValue = Number(e.currentTarget.value);
             setBrushSizeSliderValue(nextSliderValue);
-            const newSize = Math.min(Math.max(Math.round(nextSliderValue), 1), 10);
+            const newSize = clampGridBrushSize(nextSliderValue, gridWidth, gridHeight);
 
             if (newSize === normalizedBrushSize) {
               return;

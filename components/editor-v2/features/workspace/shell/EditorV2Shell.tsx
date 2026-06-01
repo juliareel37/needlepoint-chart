@@ -3722,6 +3722,8 @@ export function EditorV2Shell({
                         customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         eyedropperReturnTool={state.session.eyedropperReturnTool}
+                        gridHeight={document.grid.height}
+                        gridWidth={document.grid.width}
                         hasPaintedCells={hasPaintedCells}
                         featuredColorIds={featuredColorIds}
                         palette={palette}
