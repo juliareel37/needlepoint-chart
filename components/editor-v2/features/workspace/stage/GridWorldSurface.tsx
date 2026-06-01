@@ -7,6 +7,7 @@ import type {
   ActiveTool,
   EditorStore,
   EditorStoreState,
+  GridCellValue,
   GridPoint,
   PaletteColor,
   ViewportState,
@@ -63,6 +64,7 @@ interface GridWorldSurfaceProps {
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
   highlightedColorId: string | null;
+  cellPreviewOverride?: GridCellValue[] | null;
   interactionLocked?: boolean;
   onSurfaceReady?: () => void;
   previewMode: boolean;
@@ -104,6 +106,7 @@ export function GridWorldSurface({
   colorsById,
   dispatch,
   highlightedColorId,
+  cellPreviewOverride = null,
   interactionLocked = false,
   onSurfaceReady,
   previewMode,
@@ -760,7 +763,7 @@ export function GridWorldSurface({
             }}
           >
             <GridCanvasStage
-              cells={grid.cells}
+              cells={cellPreviewOverride ?? grid.cells}
               colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}

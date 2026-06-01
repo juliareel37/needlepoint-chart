@@ -159,6 +159,16 @@ export function ColorLibrary({
   const restoreFrameRef = useRef<number | null>(null);
   const featuredColorIdSet = new Set(featuredColorIds);
   const selectedColorIdSet = new Set(selectedColorIds);
+  const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
+  const canShowFeaturedView = showFeaturedSection;
+  const useTabbedFeaturedView = canShowFeaturedView && featuredSectionDisplay === "tabbed";
+  const showStackedFeaturedSection = canShowFeaturedView && featuredSectionDisplay === "stacked";
+  const activeView =
+    useTabbedFeaturedView
+      ? view === "palettes" && !showPalettesView
+        ? "all"
+        : view
+      : "all";
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const matchesSearch = (color: PaletteColor) =>
     normalizedSearchQuery.length === 0
@@ -171,26 +181,12 @@ export function ColorLibrary({
   const familyFilteredColors = filteredColors.filter(
     (color) => familyFilter === "all" || getDmcColorFamily(color) === familyFilter,
   );
-  const familyFilteredColorIdSet = new Set(familyFilteredColors.map((color) => color.id));
-  const featuredColors = familyFilteredColors.filter((color) => featuredColorIdSet.has(color.id));
+  const featuredColors = colors.filter((color) => featuredColorIdSet.has(color.id));
   const familySections = getDmcColorFamilySections(familyFilteredColors);
-  const filteredPaletteSections =
-    paletteSections?.map((section) => ({
-      ...section,
-      colors: section.colors.filter((color) => familyFilteredColorIdSet.has(color.id)),
-    })) ?? [];
-  const familyFilterOptions = getDmcColorFamilyFilterOptions(colors);
+  const filteredPaletteSections = paletteSections ?? [];
   const hasSearchQuery = normalizedSearchQuery.length > 0;
   const hasActiveFamilyFilter = familyFilter !== "all";
-  const canShowFeaturedView = showFeaturedSection;
-  const useTabbedFeaturedView = canShowFeaturedView && featuredSectionDisplay === "tabbed";
-  const showStackedFeaturedSection = canShowFeaturedView && featuredSectionDisplay === "stacked";
-  const activeView =
-    useTabbedFeaturedView
-      ? view === "palettes" && !showPalettesView
-        ? "all"
-        : view
-      : "all";
+  const showLibrarySearchHeader = activeView === "all";
   const segmentedOptions = [
     { label: "Library", value: "all" },
     { label: "Design", value: "featured" },
@@ -687,132 +683,142 @@ export function ColorLibrary({
         className={[styles.library, className].filter(Boolean).join(" ")}
         data-featured-display={featuredSectionDisplay}
       >
-        <div ref={stickyHeaderRef} className={styles.stickyHeader}>
+        <div ref={stickyHeaderRef} className={styles.stickyHeaders}>
           {useTabbedFeaturedView ? (
-            <SegmentedControl<ColorLibraryView>
-              ariaLabel="Color library view"
-              className={styles.viewControl}
-              itemClassName={styles.viewControlItem}
-              value={activeView}
-              options={segmentedOptions}
-              onChange={setView}
-            />
-          ) : null}
-
-          <div className={styles.searchRow}>
-            <div className={styles.searchField}>
-              <span aria-hidden="true" className={styles.searchIcon} />
-              <FieldInput
-                type="search"
-                name="search-query"
-                autoComplete="new-password"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                inputMode="search"
-                enterKeyHint="search"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
-                aria-autocomplete="none"
-                readOnly={!searchInputInteractive}
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                onPointerDown={() => {
-                  if (!searchInputInteractive) {
-                    setSearchInputInteractive(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (!searchInputInteractive) {
-                    setSearchInputInteractive(true);
-                  }
-                }}
-                onBlur={() => {
-                  if (searchQuery.length === 0) {
-                    setSearchInputInteractive(false);
-                  }
-                }}
-                placeholder="Color name or code"
-                aria-label="Search colors"
-                className={styles.searchInput}
+            <div className={styles.stickyHeader}>
+              <SegmentedControl<ColorLibraryView>
+                ariaLabel="Color library view"
+                className={styles.viewControl}
+                itemClassName={styles.viewControlItem}
+                value={activeView}
+                options={segmentedOptions}
+                onChange={setView}
               />
             </div>
-            <div className={styles.searchControls}>
-              <button
-                type="button"
-                className={styles.searchControlButton}
-                data-active={settingsOpen || hasActiveFamilyFilter ? "true" : "false"}
-                aria-label={
-                  settingsOpen ? "Hide color library settings" : "Show color library settings"
-                }
-                aria-expanded={settingsOpen}
-                onClick={() => setSettingsOpen((current) => !current)}
-              >
-                <ButtonIcon
-                  icon="/icons/lucide/list-filter.svg"
-                  className={styles.searchControlIcon}
-                />
-              </button>
+          ) : null}
 
-              <button
-                type="button"
-                className={styles.searchControlButton}
-                aria-label={
-                  layoutMode === "grid"
-                    ? "Switch color library to list view"
-                    : "Switch color library to grid view"
-                }
-                onClick={toggleLayoutMode}
-              >
-                <ButtonIcon
-                  icon={
-                    layoutMode === "grid"
-                      ? "/icons/lucide/list.svg"
-                      : "/icons/lucide/layout-grid.svg"
-                  }
-                  className={styles.searchControlIcon}
-                />
-              </button>
-            </div>
-          </div>
+          {showLibrarySearchHeader ? (
+            <div className={styles.stickySearchHeader}>
+              <div className={styles.searchRow}>
+                <div className={styles.searchField}>
+                  <span aria-hidden="true" className={styles.searchIcon} />
+                  <FieldInput
+                    type="search"
+                    name="search-query"
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    inputMode="search"
+                    enterKeyHint="search"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    aria-autocomplete="none"
+                    readOnly={!searchInputInteractive}
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onPointerDown={() => {
+                      if (!searchInputInteractive) {
+                        setSearchInputInteractive(true);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (!searchInputInteractive) {
+                        setSearchInputInteractive(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (searchQuery.length === 0) {
+                        setSearchInputInteractive(false);
+                      }
+                    }}
+                    placeholder="Color name or code"
+                    aria-label="Search colors"
+                    className={styles.searchInput}
+                  />
+                </div>
+                <div className={styles.searchControls}>
+                  <button
+                    type="button"
+                    className={styles.searchControlButton}
+                    data-active={settingsOpen || hasActiveFamilyFilter ? "true" : "false"}
+                    aria-label={
+                      settingsOpen ? "Hide color library settings" : "Show color library settings"
+                    }
+                    aria-expanded={settingsOpen}
+                    onClick={() => setSettingsOpen((current) => !current)}
+                  >
+                    <ButtonIcon
+                      icon="/icons/lucide/list-filter.svg"
+                      className={styles.searchControlIcon}
+                    />
+                  </button>
 
-          {settingsOpen ? (
-            <div
-              role="region"
-              aria-label="Color library settings"
-              className={styles.settingsPanel}
-            >
-              <div className={styles.settingsPanelContent}>
-                {familyFilterOptions.length > 0 ? (
-                  <div className={styles.settingsMenuSection}>
-                    {/* <p className={styles.settingsMenuLabel}>Family</p> */}
-                    <div className={styles.familyFilterRow} role="group" aria-label="Color family">
-                      <button
-                        type="button"
-                        className={styles.familyFilterChip}
-                        data-selected={familyFilter === "all" ? "true" : "false"}
-                        aria-pressed={familyFilter === "all"}
-                        onClick={() => setFamilyFilter("all")}
-                      >
-                        All
-                      </button>
-                      {familyFilterOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={styles.familyFilterChip}
-                          data-selected={familyFilter === option.value ? "true" : "false"}
-                          aria-pressed={familyFilter === option.value}
-                          onClick={() => setFamilyFilter(option.value)}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                  <button
+                    type="button"
+                    className={styles.searchControlButton}
+                    aria-label={
+                      layoutMode === "grid"
+                        ? "Switch color library to list view"
+                        : "Switch color library to grid view"
+                    }
+                    onClick={toggleLayoutMode}
+                  >
+                    <ButtonIcon
+                      icon={
+                        layoutMode === "grid"
+                          ? "/icons/lucide/list.svg"
+                          : "/icons/lucide/layout-grid.svg"
+                      }
+                      className={styles.searchControlIcon}
+                    />
+                  </button>
+                </div>
               </div>
+
+              {settingsOpen ? (
+                <div
+                  role="region"
+                  aria-label="Color library settings"
+                  className={styles.settingsPanel}
+                >
+                  <div className={styles.settingsPanelContent}>
+                    {familyFilterOptions.length > 0 ? (
+                      <div className={styles.settingsMenuSection}>
+                        {/* <p className={styles.settingsMenuLabel}>Family</p> */}
+                        <div
+                          className={styles.familyFilterRow}
+                          role="group"
+                          aria-label="Color family"
+                        >
+                          <button
+                            type="button"
+                            className={styles.familyFilterChip}
+                            data-selected={familyFilter === "all" ? "true" : "false"}
+                            aria-pressed={familyFilter === "all"}
+                            onClick={() => setFamilyFilter("all")}
+                          >
+                            All
+                          </button>
+                          {familyFilterOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={styles.familyFilterChip}
+                              data-selected={familyFilter === option.value ? "true" : "false"}
+                              aria-pressed={familyFilter === option.value}
+                              onClick={() => setFamilyFilter(option.value)}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -866,11 +872,7 @@ export function ColorLibrary({
                   )
                 ) : (
                   <p className={styles.emptyState}>
-                    {hasSearchQuery
-                      ? `No design colors found for "${searchQuery.trim()}".`
-                      : familyFilter === "all"
-                        ? "None yet."
-                        : "No design colors found in this family."}
+                    None yet.
                   </p>
                 )}
               </div>
@@ -963,11 +965,7 @@ export function ColorLibrary({
                   <p className={styles.emptyState}>
                     {!paletteSections || paletteSections.length === 0
                       ? "No palettes created yet."
-                      : hasSearchQuery
-                      ? `No palette colors found for "${searchQuery.trim()}".`
-                      : familyFilter === "all"
-                        ? "No palette colors found."
-                        : "No palette colors found in this family."}
+                      : "No palette colors found."}
                   </p>
                 )}
                 {onManagePalettes ? (

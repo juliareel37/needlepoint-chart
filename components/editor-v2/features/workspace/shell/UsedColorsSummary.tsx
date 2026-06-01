@@ -475,6 +475,7 @@ export function UsedColorsSummary({
   selectionPromptVisible,
   selectionScopeActive,
   symbolAssignments,
+  onColorSwapPreviewChange,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
@@ -497,6 +498,7 @@ export function UsedColorsSummary({
   selectionPromptVisible: boolean;
   selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
+  onColorSwapPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -508,12 +510,12 @@ export function UsedColorsSummary({
   const [mergeTargetColorId, setMergeTargetColorId] = useState<string | null>(null);
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
   const [swapSourceColorId, setSwapSourceColorId] = useState<string | null>(null);
+  const [swapPreviewTargetColorId, setSwapPreviewTargetColorId] = useState<string | null>(null);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [mergeConfirmationOpen, setMergeConfirmationOpen] = useState(false);
   const [successNotification, setSuccessNotification] =
     useState<UsedColorsSuccessNotification | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
-  const swapSourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
   const highlightColorChangeRef = useRef(onHighlightColorChange);
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
@@ -641,8 +643,17 @@ export function UsedColorsSummary({
 
     if (!usedColors.some((entry) => entry.colorId === swapSourceColorId)) {
       setSwapSourceColorId(null);
+      setSwapPreviewTargetColorId(null);
+      onColorSwapPreviewChange(null);
     }
-  }, [swapSourceColorId, usedColors]);
+  }, [onColorSwapPreviewChange, swapSourceColorId, usedColors]);
+
+  useEffect(
+    () => () => {
+      onColorSwapPreviewChange(null);
+    },
+    [onColorSwapPreviewChange],
+  );
 
   useEffect(() => {
     if (selectedColorIds.length === 0) {
@@ -740,6 +751,13 @@ export function UsedColorsSummary({
   const mergeTargetColor = mergeTargetColorId ? colorsById[mergeTargetColorId] : null;
   const mergeTargetLabel = mergeTargetColor?.name ?? mergeTargetColorId ?? "Choose target color";
   const mergeTargetCode = mergeTargetColor ? formatColorCodeLabel(mergeTargetColor) : null;
+  const swapPreviewTargetColor = swapPreviewTargetColorId
+    ? colorsById[swapPreviewTargetColorId]
+    : null;
+  const canCommitSwapPreview =
+    Boolean(swapSourceColorId) &&
+    Boolean(swapPreviewTargetColorId) &&
+    swapSourceColorId !== swapPreviewTargetColorId;
   const mergeTitle =
     mergeColorCount === 1 ? "Merge 1 color?" : `Merge ${mergeColorCount} colors?`;
   const mergeDescription =
@@ -774,8 +792,16 @@ export function UsedColorsSummary({
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
+    setSwapPreviewTargetColorId(null);
+    onColorSwapPreviewChange(null);
     setDeleteConfirmationOpen(false);
     setMergeConfirmationOpen(false);
+  };
+
+  const closeSwapPreview = () => {
+    setSwapSourceColorId(null);
+    setSwapPreviewTargetColorId(null);
+    onColorSwapPreviewChange(null);
   };
 
   const toggleColorSelection = (colorId: string) => {
@@ -798,6 +824,8 @@ export function UsedColorsSummary({
     setMergeTargetColorId(nextActionMode === "merge" ? defaultMergeTargetColorId : null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
+    setSwapPreviewTargetColorId(null);
+    onColorSwapPreviewChange(null);
   };
 
   const activateActionMode = (nextActionMode: Extract<UsedColorsActionMode, "merge" | "delete">) => {
@@ -979,14 +1007,7 @@ export function UsedColorsSummary({
                     </span>
                   ) : null}
 
-                  <ToolbarAnchor
-                    ref={
-                      swapSourceColorId === entry.colorId
-                        ? swapSourceAnchorRef
-                        : undefined
-                    }
-                    className={styles.usedColorSwatchTriggerWrap}
-                  >
+                  <ToolbarAnchor className={styles.usedColorSwatchTriggerWrap}>
                     <button
                       type="button"
                       className={styles.usedColorSwatchButton}
@@ -1007,9 +1028,14 @@ export function UsedColorsSummary({
                           return;
                         }
 
-                        setSwapSourceColorId((current) =>
-                          current === entry.colorId ? null : entry.colorId,
-                        );
+                        if (swapSourceColorId === entry.colorId) {
+                          closeSwapPreview();
+                          return;
+                        }
+
+                        setSwapSourceColorId(entry.colorId);
+                        setSwapPreviewTargetColorId(null);
+                        onColorSwapPreviewChange(null);
                       }}
                     >
                       {(() => {
@@ -1046,34 +1072,6 @@ export function UsedColorsSummary({
                         );
                       })()}
                     </button>
-
-                    {!isSelecting && swapSourceColorId === entry.colorId ? (
-                      <UsedColorsPortalPopover
-                        anchorRef={swapSourceAnchorRef}
-                        onRequestClose={() => setSwapSourceColorId(null)}
-                        role="dialog"
-                        aria-label={`Replace ${rowColorName}`}
-                        className={styles.usedColorsMergePopover}
-                        style={{ whiteSpace: "normal" }}
-                      >
-                        <ColorLibrary
-                          activeColorId={entry.colorId}
-                          className={styles.usedColorsMergeLibraryGrid}
-                          colors={palette}
-                          defaultView="all"
-                          featuredColorIds={featuredColorIds}
-                          paletteSections={paletteSections}
-                          showFeaturedSymbols={showSymbols}
-                          symbolAssignments={symbolAssignments}
-                          onColorSelect={(colorId) => {
-                            if (colorId !== entry.colorId) {
-                              onSwapColor(entry.colorId, colorId);
-                            }
-                            setSwapSourceColorId(null);
-                          }}
-                        />
-                      </UsedColorsPortalPopover>
-                    ) : null}
                   </ToolbarAnchor>
 
                   <button
@@ -1157,6 +1155,87 @@ export function UsedColorsSummary({
                   >
                     <ButtonIcon icon="/icons/lucide/search.svg" />
                   </button>
+                ) : null}
+
+                {!isSelecting && swapSourceColorId === entry.colorId ? (
+                  <div
+                    role="dialog"
+                    aria-label={`Replace ${rowColorName}`}
+                    className={styles.usedColorsInlineLibraryPanel}
+                  >
+                    <div className={styles.usedColorsInlineLibraryHeader}>
+                      <span className={styles.usedColorsInlineLibraryTitle}>
+                        Replace with
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.usedColorsInlineLibraryClose}
+                        aria-label="Close color library"
+                        onClick={closeSwapPreview}
+                      >
+                        <ButtonIcon icon="/icons/lucide/x.svg" />
+                      </button>
+                    </div>
+                    <ColorLibrary
+                      activeColorId={swapPreviewTargetColorId ?? entry.colorId}
+                      className={styles.usedColorsInlineLibrary}
+                      colors={palette}
+                      defaultView="all"
+                      featuredColorIds={featuredColorIds}
+                      paletteSections={paletteSections}
+                      showFeaturedSymbols={showSymbols}
+                      symbolAssignments={symbolAssignments}
+                      onColorSelect={(colorId) => {
+                        if (colorId === entry.colorId) {
+                          setSwapPreviewTargetColorId(null);
+                          onColorSwapPreviewChange(null);
+                          return;
+                        }
+
+                        setSwapPreviewTargetColorId(colorId);
+                        onColorSwapPreviewChange({
+                          fromColorId: entry.colorId,
+                          toColorId: colorId,
+                        });
+                      }}
+                    />
+                    <div className={styles.usedColorsSwapPreviewFooter}>
+                      <span
+                        className={styles.usedColorsSwapPreviewLabel}
+                        style={typographyStyles.p2}
+                      >
+                        {swapPreviewTargetColor
+                          ? `Previewing ${formatColorCodeLabel(swapPreviewTargetColor)}`
+                          : "Choose a color to preview"}
+                      </span>
+                      <div className={styles.usedColorsSwapPreviewButtons}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={closeSwapPreview}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          disabled={!canCommitSwapPreview || !swapPreviewTargetColorId}
+                          onClick={() => {
+                            if (!canCommitSwapPreview || !swapPreviewTargetColorId) {
+                              return;
+                            }
+
+                            onSwapColor(entry.colorId, swapPreviewTargetColorId);
+                            closeSwapPreview();
+                          }}
+                        >
+                          Replace
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ) : null}
               </li>
                 );

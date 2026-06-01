@@ -42,7 +42,9 @@ import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/edi
 import type {
   ActiveTool,
   EditorDocumentState,
+  GridCellValue,
 } from "@/lib/editor-v2/editor/store";
+import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   createFullTraceCrop,
@@ -457,6 +459,10 @@ export function EditorV2Shell({
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [exportAuthModalOpen, setExportAuthModalOpen] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [colorSwapPreview, setColorSwapPreview] = useState<{
+    fromColorId: string;
+    toColorId: string;
+  } | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
@@ -499,6 +505,46 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
+  const colorSwapPreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorSwapPreview) {
+      return null;
+    }
+
+    const { fromColorId, toColorId } = colorSwapPreview;
+
+    if (
+      fromColorId === toColorId ||
+      !colorsById[fromColorId] ||
+      !colorsById[toColorId]
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (cell !== fromColorId) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorSwapPreview, colorsById, state]);
   const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>(() =>
     currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : [],
   );
@@ -3522,6 +3568,7 @@ export function EditorV2Shell({
                       void onLoadDocument(selectedRecord);
                     }}
                     onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
+                    onColorSwapPreviewChange={setColorSwapPreview}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                     onDuplicateDocument={() => {
@@ -3792,6 +3839,7 @@ export function EditorV2Shell({
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
+                    cellPreviewOverride={colorSwapPreviewCells}
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={showGridlines}
