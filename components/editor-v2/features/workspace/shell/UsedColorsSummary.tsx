@@ -50,7 +50,7 @@ function formatColorCodeLabel(color: PaletteColor) {
 
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge" | "delete";
-type UsedColorsSortMode = "usage" | "color";
+type UsedColorsSortMode = "usage" | "usage-ascending" | "color";
 type UsedColorsScopeMode = "full-canvas" | "selection";
 type UsedColorsSuccessNotification = {
   title: string;
@@ -228,6 +228,19 @@ function sortUsedColorsForDisplay(
 
   if (sortMode === "usage") {
     return baseSorted;
+  }
+
+  if (sortMode === "usage-ascending") {
+    return [...baseSorted].sort((left, right) => {
+      if (left.count !== right.count) {
+        return left.count - right.count;
+      }
+
+      const leftColor = colorsById[left.colorId];
+      const rightColor = colorsById[right.colorId];
+
+      return comparePaletteCodes(leftColor?.code ?? left.colorId, rightColor?.code ?? right.colorId);
+    });
   }
 
   const metadataByColorId = new Map<string, UsedColorSortMetadata>();
@@ -533,8 +546,9 @@ export function UsedColorsSummary({
   );
   const sortOptions = useMemo(
     () => [
-      { value: "usage", label: "Most used first" },
-      { value: "color", label: "Group similar colors" },
+      { value: "usage", label: "Usage (high to low)" },
+      { value: "usage-ascending", label: "Usage (low to high)" },
+      { value: "color", label: "Color similarity" },
     ] satisfies Array<{ value: UsedColorsSortMode; label: string }>,
     [],
   );

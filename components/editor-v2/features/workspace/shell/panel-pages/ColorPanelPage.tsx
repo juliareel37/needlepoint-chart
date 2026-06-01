@@ -678,7 +678,7 @@ export function ColorPanelPage({
                   disabled={!canSaveCustomPalette}
                   onClick={saveCustomPalette}
                 >
-                  <span>Save palette</span>
+                  <span>Save</span>
                 </Button>
               </div>
             </div>
