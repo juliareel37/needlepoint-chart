@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Sans, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
@@ -13,6 +13,12 @@ import { brandAssets } from "@/lib/brandAssets";
 
 const uiSans = Plus_Jakarta_Sans({
   variable: "--font-ui",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const editorUiSans = DM_Sans({
+  variable: "--font-editor-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -97,7 +103,7 @@ export default async function RootLayout({
     return (
       <html lang="en">
         <body
-          className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
+          className={`${uiSans.variable} ${editorUiSans.variable} ${marketingHeadingFont.variable} antialiased`}
         >
           <div
             style={{
@@ -149,7 +155,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
       <body
-        className={`${uiSans.variable} ${marketingHeadingFont.variable} antialiased`}
+        className={`${uiSans.variable} ${editorUiSans.variable} ${marketingHeadingFont.variable} antialiased`}
       >
         <AuthProvider>
           <div id="app-shell-root" style={appShellStyle}>

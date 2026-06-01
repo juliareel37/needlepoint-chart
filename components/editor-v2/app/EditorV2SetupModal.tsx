@@ -388,7 +388,7 @@ export function EditorV2SetupModal({
                       </p>
                       <p
                         className={styles.canvasEstimateValue}
-                        style={{ ...typographyStyles.h5, fontWeight: 600 }}
+                        style={{ ...typographyStyles.h5, fontWeight: 500 }}
                       >
                         {formatStitchCount(estimatedStitchCount)} stitches
                       </p>
@@ -451,7 +451,7 @@ export function EditorV2SetupModal({
                 <section className={styles.meshSection}>
                   <h2
                     className={styles.strongFieldLabel}
-                    style={{ ...typographyStyles.p2, fontWeight: 600 }}
+                    style={{ ...typographyStyles.p2, fontWeight: 500 }}
                   >
                     Canvas mesh
                   </h2>
@@ -533,7 +533,7 @@ export function EditorV2SetupModal({
                       </p>
                       <p
                         className={styles.canvasEstimateValue}
-                        style={{ ...typographyStyles.h5, fontWeight: 600 }}
+                        style={{ ...typographyStyles.h5, fontWeight: 500 }}
                       >
                         {estimatedCanvasWidth} x {estimatedCanvasHeight} grid ={" "}
                         {formatStitchCount(estimatedCanvasWidth * estimatedCanvasHeight)} stitches

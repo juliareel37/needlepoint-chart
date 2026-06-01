@@ -319,7 +319,7 @@ export function DocumentPanelPage({
                     <div className={styles.documentRecentMeta}>
                       <p
                         className={styles.documentRecentName}
-                        style={{ ...typographyStyles.p2, fontWeight: 750 }}
+                        style={{ ...typographyStyles.p2, fontWeight: 600 }}
                       >
                         {record.title}
                       </p>

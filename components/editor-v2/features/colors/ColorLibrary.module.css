@@ -7,7 +7,10 @@
 
 .library {
   --color-library-track-size: 33px;
-  --color-library-grid-gap: 6px;
+  --color-library-track-max-size: 1fr;
+  --color-library-swatch-size: 25px;
+  --color-library-color-button-padding: 4px;
+  --color-library-grid-gap: 0px;
   --color-library-header-padding-top: 8px;
   --color-library-header-padding-right: 16px;
   --color-library-header-padding-bottom: 6px;
@@ -173,7 +176,7 @@
   border-color: var(--button-outlined-active-border);
   background: var(--button-outlined-active);
   color: var(--button-outlined-active-text);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .familyFilterChip:focus-visible {
@@ -277,7 +280,7 @@
   margin: 0;
   color: var(--neutral-500);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -322,7 +325,7 @@
   padding: 0;
   color: var(--neutral-500);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   line-height: 1.25;
   text-transform: uppercase;
@@ -349,7 +352,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition: color 140ms ease;
@@ -374,8 +377,12 @@
 
 .sectionGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--color-library-track-size), 1fr));
-  /* gap: var(--color-library-grid-gap); */
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(var(--color-library-track-size), var(--color-library-track-max-size))
+    );
+  gap: var(--color-library-grid-gap);
   align-items: start;
 }
 
@@ -406,7 +413,7 @@
   padding: 0;
   color: var(--neutral-500);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -417,7 +424,7 @@
   padding: 0;
   color: var(--neutral-500);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.25;
 }
@@ -468,7 +475,7 @@
 
 .colorListRow[data-active="true"] {
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .colorListRowSwatch {
@@ -498,7 +505,7 @@
   min-width: 0;
   color: var(--text-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -510,7 +517,7 @@
   justify-content: center;
   width: 100%;
   min-width: 0;
-  padding: 4px !important;
+  padding: var(--color-library-color-button-padding) !important;
 }
 
 .tooltipLayer {
@@ -540,7 +547,7 @@
   color: var(--text-primary);
   font-size: 12px;
   line-height: 16px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tooltipDetail {
@@ -576,18 +583,18 @@
 
 .colorButton[data-active="true"] .swatch {
   transform: scale(1.08);
-  border-color: var(--swatch-border-strong);
+  border-color: var(--swatch-border);
   box-shadow:
-    0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
+    0 0 0 1px var(--surface-primary),
+    0 0 0 2.5px color-mix(in srgb, var(--swatch-border-strong) 72%, #000000);
 }
 
 .swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 25px;
-  height: 25px;
+  width: var(--color-library-swatch-size);
+  height: var(--color-library-swatch-size);
   border-radius: 25%;
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
@@ -600,22 +607,23 @@
 
 .colorButton:focus-visible .swatch {
   transform: scale(1.08);
-  border-color: var(--swatch-border-strong);
+  border-color: var(--swatch-border);
   box-shadow:
-    0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
+    0 0 0 1px var(--surface-primary),
+    0 0 0 2.5px color-mix(in srgb, var(--swatch-border-strong) 72%, #000000);
 }
 
 .swatchCheck {
-  font-size: 14px;
+  font-size: 11px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .swatchSymbol {
   font-size: 13px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -655,9 +663,5 @@
   .colorListRow:hover:not(:disabled) .swatch,
   .colorButton:hover:not(:disabled) .swatch {
     transform: scale(1.14);
-    border-color: var(--swatch-border-strong);
-    box-shadow:
-      0 0 0 1px var(--swatch-ring-inner),
-      0 0 0 3px var(--swatch-ring-outer);
   }
 }

@@ -393,8 +393,9 @@ export function ColorLibrary({
     const stickyBottom = stickyHeaderRef.current?.getBoundingClientRect().bottom ?? 0;
     const tooltipHeightEstimate = 50;
     const headerGap = 8;
+    const visibleBottom = scrollMode === "page" ? window.innerHeight : shellRect.bottom;
     const obscuredByHeader = targetRect.top < stickyBottom + 4;
-    const obscuredByBottom = targetRect.bottom > shellRect.bottom - 4;
+    const obscuredByBottom = targetRect.bottom > visibleBottom - 4;
     const shouldPlaceBelow =
       targetRect.top - tooltipHeightEstimate < stickyBottom + headerGap;
 

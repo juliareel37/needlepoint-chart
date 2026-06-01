@@ -122,7 +122,7 @@ export function ViewportToolbar({
             triggerStyle={{
               minWidth: "auto",
               padding: "6px 8px",
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           />
         </ToolbarMeta>

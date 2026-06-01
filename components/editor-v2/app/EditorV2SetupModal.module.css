@@ -187,7 +187,7 @@
 .strongFieldLabel,
 .strongFieldLabelError {
   margin: 0;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .strongFieldLabel {
@@ -274,12 +274,12 @@
 
 .canvasEstimateLabel {
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .canvasEstimateValue {
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .actions {

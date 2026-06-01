@@ -388,7 +388,7 @@ export function TextPlacementToolbar({
                   updatePlacementStyle({ fontFamily: value });
                 }}
                 wrapperStyle={{ width: "fit-content", maxWidth: 180 }}
-                triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 700 }}
+                triggerStyle={{ minWidth: "auto", padding: "6px 8px", fontWeight: 600 }}
               />
             </ToolbarMeta>
 

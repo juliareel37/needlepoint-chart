@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { Button, ButtonIcon, Modal } from "@/components/design-system";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
+import { hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import type {
   CustomPalette,
   EditorStore,
@@ -32,6 +34,23 @@ export type ColorPanelView =
 
 const SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES = 14;
 const BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES = 16;
+
+function getSwatchCheckColor(hex: string) {
+  const rgb = hexToRgb(hex);
+
+  if (!rgb) {
+    return "#ffffff";
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  return luminance > 0.6 ? "#111111" : "#ffffff";
+}
+
+function formatColorCodeLabel(color: PaletteColor) {
+  return color.brand === "dmc" ? `DMC ${color.code}` : color.code;
+}
+
 interface ColorPanelPageProps {
   activeColor: PaletteColor | null;
   activeColorId: string | null;
@@ -100,7 +119,22 @@ export function ColorPanelPage({
   view,
 }: ColorPanelPageProps) {
   const pageRef = useRef<HTMLElement | null>(null);
+  const designColorTooltipRef = useRef<HTMLSpanElement | null>(null);
   const [paletteDeleteTarget, setPaletteDeleteTarget] = useState<CustomPalette | null>(null);
+  const [activeDesignColorTooltip, setActiveDesignColorTooltip] = useState<{
+    key: string;
+    label: string;
+    detail?: string;
+    anchorLeft: number;
+    anchorTop: number;
+    placement: "top" | "bottom";
+    target: HTMLButtonElement;
+  } | null>(null);
+  const [designColorTooltipLayout, setDesignColorTooltipLayout] = useState<{
+    left: number;
+    top: number;
+    arrowLeft: number;
+  } | null>(null);
   const colorPreviewMaxSwatches = isBottomPanelLayout
     ? BOTTOM_PANEL_COLOR_PREVIEW_MAX_SWATCHES
     : SIDEBAR_COLOR_PREVIEW_MAX_SWATCHES;
@@ -144,19 +178,126 @@ export function ColorPanelPage({
   const previewItems = usedColors.slice(0, visiblePreviewCount);
   const hiddenCount = Math.max(usedColors.length - visiblePreviewCount, 0);
   const showMoreButton = hiddenCount > 0;
+  const orderedOverviewUsedColors = useMemo(() => {
+    const usedColorEntryById = new Map(usedColors.map((entry) => [entry.colorId, entry]));
+    const paletteColorIdSet = new Set(palette.map((color) => color.id));
+    const paletteOrderedUsedColors = palette
+      .map((color) => usedColorEntryById.get(color.id))
+      .filter((entry): entry is { colorId: string; count: number } => Boolean(entry));
+    const nonPaletteUsedColors = usedColors.filter((entry) => !paletteColorIdSet.has(entry.colorId));
+
+    return [...paletteOrderedUsedColors, ...nonPaletteUsedColors];
+  }, [palette, usedColors]);
   const openDesignColorsView = () => onViewChange("design-colors");
   const openCustomPalettesView = () => onViewChange("custom-palettes");
   const openCustomPaletteCreateView = () => onCustomPaletteCreateOpen();
-  const activeColorCodeLabel = activeColor
-    ? activeColor.brand === "dmc"
-      ? `DMC ${activeColor.code}`
-      : activeColor.code
-    : null;
+  const activeColorCodeLabel = activeColor ? formatColorCodeLabel(activeColor) : null;
   const customPalettes = Object.values(customPalettesById);
   const customPaletteDraftColors = customPaletteDraftColorIds
     .map((colorId) => colorsById[colorId])
     .filter((color): color is PaletteColor => Boolean(color));
   const canSaveCustomPalette = customPaletteDraftColorIds.length > 0;
+
+  function updateDesignColorTooltip(target: HTMLButtonElement | null) {
+    if (!target || !pageRef.current?.contains(target)) {
+      setActiveDesignColorTooltip(null);
+      return;
+    }
+
+    const label = target.dataset.tooltip;
+    const detail = target.dataset.tooltipDetail;
+    const key = target.dataset.tooltipKey;
+
+    if (!label || !key) {
+      setActiveDesignColorTooltip(null);
+      return;
+    }
+
+    const targetRect = target.getBoundingClientRect();
+    const tooltipHeightEstimate = 50;
+    const headerGap = 8;
+    const shouldPlaceBelow = targetRect.top - tooltipHeightEstimate < headerGap;
+
+    setActiveDesignColorTooltip({
+      key,
+      label,
+      detail,
+      anchorLeft: targetRect.left + targetRect.width / 2,
+      anchorTop: shouldPlaceBelow ? targetRect.bottom : targetRect.top,
+      placement: shouldPlaceBelow ? "bottom" : "top",
+      target,
+    });
+  }
+
+  useEffect(() => {
+    if (!activeDesignColorTooltip) {
+      return;
+    }
+
+    const update = () => {
+      if (!document.body.contains(activeDesignColorTooltip.target)) {
+        setActiveDesignColorTooltip(null);
+        return;
+      }
+
+      updateDesignColorTooltip(activeDesignColorTooltip.target);
+    };
+
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [activeDesignColorTooltip]);
+
+  useLayoutEffect(() => {
+    if (!activeDesignColorTooltip || !designColorTooltipRef.current) {
+      setDesignColorTooltipLayout(null);
+      return;
+    }
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipWidth = designColorTooltipRef.current.offsetWidth;
+    const tooltipHeight = designColorTooltipRef.current.offsetHeight;
+    const sidePadding = 8;
+    const arrowInset = 10;
+    const arrowHalfWidth = 4;
+    const tooltipGap = 10;
+    const minLeft = sidePadding;
+    const maxLeft = Math.max(sidePadding, viewportWidth - sidePadding - tooltipWidth);
+    const minTop = sidePadding;
+    const maxTop = Math.max(sidePadding, viewportHeight - sidePadding - tooltipHeight);
+    const left = Math.min(
+      Math.max(activeDesignColorTooltip.anchorLeft - tooltipWidth / 2, minLeft),
+      maxLeft,
+    );
+    const unclampedTop =
+      activeDesignColorTooltip.placement === "top"
+        ? activeDesignColorTooltip.anchorTop - tooltipHeight - tooltipGap
+        : activeDesignColorTooltip.anchorTop + tooltipGap;
+    const top = Math.min(Math.max(unclampedTop, minTop), maxTop);
+    const arrowLeft = Math.min(
+      Math.max(activeDesignColorTooltip.anchorLeft, left + arrowInset),
+      left + tooltipWidth - arrowInset,
+    );
+
+    setDesignColorTooltipLayout((current) =>
+      current &&
+      current.left === left &&
+      current.top === top &&
+      current.arrowLeft === arrowLeft - arrowHalfWidth
+        ? current
+        : {
+            left,
+            top,
+            arrowLeft: arrowLeft - arrowHalfWidth,
+          },
+    );
+  }, [activeDesignColorTooltip]);
+
   const saveCustomPalette = () => {
     if (!canSaveCustomPalette) {
       return;
@@ -246,6 +387,150 @@ export function ColorPanelPage({
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
             <div
+              className={[
+                styles.sidebarSubsection,
+                styles.sidebarColorPreviewSection,
+                styles.sidebarDesignColorsGridSection,
+              ].join(" ")}
+            >
+              <div className={styles.sidebarSubsectionHeaderRow}>
+                <div className={styles.sidebarSubsectionHeader}>
+                  <div className={styles.sidebarColorPreviewTitleRow}>
+                    <h3 style={typographyStyles.h5}>
+                      {selectionScopeActive ? "Selection colors" : "Design colors"}
+                    </h3>
+                    <span
+                      className={styles.sidebarColorPreviewCountBadge}
+                      style={typographyStyles.p2}
+                    >
+                      {usedColors.length}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={styles.sidebarHeaderActionButtonIconOnly}
+                  aria-label="View all design colors"
+                  onClick={openDesignColorsView}
+                >
+                  <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                </button>
+              </div>
+
+              {usedColors.length > 0 ? (
+                <div
+                  className={styles.sidebarDesignColorsGrid}
+                  role="group"
+                  aria-label={selectionScopeActive ? "Selection colors" : "Design colors"}
+                  onMouseMove={(event) => {
+                    const target = event.target instanceof Element
+                      ? event.target.closest("button[data-tooltip]")
+                      : null;
+
+                    if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+                      setActiveDesignColorTooltip((current) =>
+                        current?.target.matches(":focus-visible") ? current : null,
+                      );
+                      return;
+                    }
+
+                    if (activeDesignColorTooltip?.target !== target) {
+                      updateDesignColorTooltip(target);
+                    }
+                  }}
+                  onMouseOver={(event) => {
+                    const target = event.target instanceof Element
+                      ? event.target.closest("button[data-tooltip]")
+                      : null;
+
+                    if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+                      setActiveDesignColorTooltip((current) =>
+                        current?.target.matches(":focus-visible") ? current : null,
+                      );
+                      return;
+                    }
+
+                    updateDesignColorTooltip(target);
+                  }}
+                  onMouseOut={(event) => {
+                    const relatedTarget = event.relatedTarget;
+
+                    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+                      return;
+                    }
+
+                    setActiveDesignColorTooltip((current) =>
+                      current?.target.matches(":focus-visible") ? current : null,
+                    );
+                  }}
+                  onFocusCapture={(event) => {
+                    const target = event.target instanceof Element
+                      ? event.target.closest("button[data-tooltip]")
+                      : null;
+
+                    if (!(target instanceof HTMLButtonElement) || !event.currentTarget.contains(target)) {
+                      return;
+                    }
+
+                    updateDesignColorTooltip(target);
+                  }}
+                  onBlurCapture={(event) => {
+                    const relatedTarget = event.relatedTarget;
+
+                    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+                      return;
+                    }
+
+                    setActiveDesignColorTooltip(null);
+                  }}
+                >
+                  {orderedOverviewUsedColors.map((entry) => {
+                    const color = colorsById[entry.colorId];
+
+                    if (!color) {
+                      return null;
+                    }
+
+                    const selected = color.id === activeColorId;
+                    const colorCodeLabel = formatColorCodeLabel(color);
+
+                    return (
+                      <button
+                        key={entry.colorId}
+                        type="button"
+                        className={styles.sidebarDesignColorButton}
+                        data-active={selected ? "true" : "false"}
+                        data-tooltip={color.name}
+                        data-tooltip-detail={colorCodeLabel}
+                        data-tooltip-key={color.id}
+                        aria-label={`${color.name} (${colorCodeLabel})`}
+                        aria-pressed={selected}
+                        onClick={() => dispatch(createSetActiveColorCommand(color.id))}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={styles.sidebarDesignColorSwatch}
+                          style={{ backgroundColor: color.hex }}
+                        >
+                          {selected ? (
+                            <span
+                              aria-hidden="true"
+                              className={styles.sidebarDesignColorSwatchCheck}
+                              style={{ color: getSwatchCheckColor(color.hex) }}
+                            >
+                              ✓
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+
+            {/*
+            <div
               className={[styles.sidebarSubsection, styles.sidebarColorPreviewSection].join(" ")}
               role="button"
               tabIndex={0}
@@ -264,7 +549,6 @@ export function ColorPanelPage({
                 <div className={styles.sidebarSubsectionHeader}>
                   <div className={styles.sidebarColorPreviewTitleRow}>
                     <h3 style={typographyStyles.h5}>
-                      {/* Design colors */}
                       {selectionScopeActive ? "Selection colors" : "Design colors"}
                       </h3>
                        <span
@@ -310,6 +594,7 @@ export function ColorPanelPage({
                 </div>
               ) : null}
             </div>
+            */}
 
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
@@ -721,6 +1006,47 @@ export function ColorPanelPage({
           setPaletteDeleteTarget(null);
         }}
       />
+      {activeDesignColorTooltip
+        ? createPortal(
+            <div aria-hidden="true" className={styles.sidebarDesignColorTooltipLayer}>
+              <span
+                ref={designColorTooltipRef}
+                className={styles.sidebarDesignColorTooltip}
+                data-placement={activeDesignColorTooltip.placement}
+                style={{
+                  left: `${designColorTooltipLayout?.left ?? activeDesignColorTooltip.anchorLeft}px`,
+                  top: `${
+                    designColorTooltipLayout?.top ??
+                    (activeDesignColorTooltip.placement === "top"
+                      ? activeDesignColorTooltip.anchorTop
+                      : activeDesignColorTooltip.anchorTop + 10)
+                  }px`,
+                }}
+              >
+                <span className={styles.sidebarDesignColorTooltipTitle}>
+                  {activeDesignColorTooltip.label}
+                </span>
+                {activeDesignColorTooltip.detail ? (
+                  <span className={styles.sidebarDesignColorTooltipDetail}>
+                    {activeDesignColorTooltip.detail}
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={styles.sidebarDesignColorTooltipArrow}
+                data-placement={activeDesignColorTooltip.placement}
+                style={{
+                  left: `${designColorTooltipLayout?.arrowLeft ?? activeDesignColorTooltip.anchorLeft - 4}px`,
+                  top:
+                    activeDesignColorTooltip.placement === "top"
+                      ? `${activeDesignColorTooltip.anchorTop - 14}px`
+                      : `${activeDesignColorTooltip.anchorTop + 6}px`,
+                }}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

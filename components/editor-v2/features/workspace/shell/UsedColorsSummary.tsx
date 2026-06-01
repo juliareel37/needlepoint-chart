@@ -872,7 +872,10 @@ export function UsedColorsSummary({
         : null}
 
       <div className={styles.usedColorsBlock}>
-      <div className={styles.usedColorsStickyControls}>
+      <div
+        className={styles.usedColorsStickyControls}
+        data-has-actions={!selectionPromptVisible && usedColors.length > 0 ? "true" : "false"}
+      >
         <SegmentedControl
           ariaLabel="Colors used scope"
           className={styles.usedColorsScopeControl}
@@ -1200,14 +1203,14 @@ export function UsedColorsSummary({
                       }}
                     />
                     <div className={styles.usedColorsSwapPreviewFooter}>
-                      <span
+                      {/* <span
                         className={styles.usedColorsSwapPreviewLabel}
                         style={typographyStyles.p2}
                       >
                         {swapPreviewTargetColor
                           ? `Previewing ${formatColorCodeLabel(swapPreviewTargetColor)}`
                           : "Choose a color to preview"}
-                      </span>
+                      </span> */}
                       <div className={styles.usedColorsSwapPreviewButtons}>
                         <Button
                           type="button"
