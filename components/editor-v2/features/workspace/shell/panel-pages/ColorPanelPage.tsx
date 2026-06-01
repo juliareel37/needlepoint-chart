@@ -216,9 +216,34 @@ export function ColorPanelPage({
       <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
+            <div
+              className={[
+                styles.metaRow,
+                styles.activeColorRow,
+                styles.colorPanelActiveColorRow,
+              ].join(" ")}
+              style={typographyStyles.p2}
+            >
+              <span
+                aria-hidden="true"
+                className={[styles.swatch, styles.activeColorSwatch].join(" ")}
+                style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
+              />
+              {activeColor ? (
+                <>
+                  <strong className={styles.activeColorName}>{activeColor.name}</strong>
+                  <span
+                    aria-hidden="true"
+                    className={styles.activeColorDivider}
+                  />
+                  <span className={styles.activeColorCode}>{activeColorCodeLabel}</span>
+                </>
+              ) : (
+                <strong className={styles.activeColorValue}>None selected</strong>
+              )}
+            </div>
 
-            {/* <div className={styles.traceSectionDivider} aria-hidden="true" /> */}
-
+            <div className={styles.traceSectionDivider} aria-hidden="true" />
 
             <div
               className={[styles.sidebarSubsection, styles.sidebarColorPreviewSection].join(" ")}
@@ -356,45 +381,31 @@ export function ColorPanelPage({
 
           <div className={styles.traceSectionDivider} aria-hidden="true" />
 
-            <div className={[styles.sidebarSubsection, styles.sidebarColorLibrarySection].join(" ")}>
-              
-              <h3 style={typographyStyles.h5}>Library</h3>
-              <div
-                className={[styles.metaRow, styles.activeColorRow].join(" ")}
-                style={typographyStyles.p2}
-              >
-                <span
-                  aria-hidden="true"
-                  className={[styles.swatch, styles.activeColorSwatch].join(" ")}
-                  style={{ backgroundColor: activeColor?.hex ?? "#ffffff" }}
-                />
-                {activeColor ? (
-                  <>
-                    <strong className={styles.activeColorName}>{activeColor.name}</strong>
-                    <span
-                      aria-hidden="true"
-                      className={styles.activeColorDivider}
-                    />
-                    <span className={styles.activeColorCode}>{activeColorCodeLabel}</span>
-                  </>
-                ) : (
-                  <strong className={styles.activeColorValue}>None selected</strong>
-                )}
-              </div>
-
-
+            <div
+              className={[
+                styles.sidebarSubsection,
+                styles.sidebarColorLibrarySection,
+                styles.sidebarOverviewColorLibrarySection,
+              ].join(" ")}
+            >
               <div className={styles.sidebarColorLibraryCard}>
                 <ColorLibrary
                   activeColorId={activeColorId}
-                  className={styles.sidebarColorLibrary}
+                  className={[
+                    styles.sidebarColorLibrary,
+                    styles.sidebarOverviewColorLibrary,
+                  ].join(" ")}
                   colors={palette}
                   featuredColorIds={usedColors.map((entry) => entry.colorId)}
                   onColorSelect={(colorId) => dispatch(createSetActiveColorCommand(colorId))}
-                  persistScrollPosition
                   persistenceKey="sidebar-color-panel-library"
+                  scrollMode="page"
                   showAllSectionHeader={false}
                   showFeaturedSection={false}
                   showFeaturedSymbols={showSymbols}
+                  stickyHeaderContent={
+                    <h3 style={typographyStyles.h5}>Library</h3>
+                  }
                   symbolAssignments={symbolAssignments}
                 />
               </div>

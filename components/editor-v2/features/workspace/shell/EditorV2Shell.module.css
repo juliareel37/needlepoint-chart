@@ -1067,6 +1067,10 @@
   /* padding-inline: 24px; */
 }
 
+.sidebarOverviewColorLibrarySection {
+  margin-top: -4px;
+}
+
 .sidebarColorPreviewSwatch {
   display: inline-flex;
   align-items: center;
@@ -2421,8 +2425,12 @@
 .sidebarColorLibrary.sidebarColorLibrary {
   --color-library-header-padding-right: 0px;
   --color-library-header-padding-left: 0px;
+  --color-library-intro-header-padding-top: 4px;
   --color-library-body-padding-right: 0px;
   --color-library-body-padding-left: 0px;
+  --color-library-sticky-top: -12px;
+  --color-library-sticky-cover-block: 24px;
+  --color-library-sticky-cover-inline: 24px;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -2430,6 +2438,10 @@
   border-radius: 0;
   /* height: 370px; */
   overscroll-behavior: none;
+}
+
+.sidebarOverviewColorLibrary.sidebarOverviewColorLibrary {
+  padding: 0;
 }
 
 .customPaletteCreateLibrary.customPaletteCreateLibrary {
@@ -3088,6 +3100,10 @@
   padding-top: 12px;
 }
 
+.colorPanelActiveColorRow {
+  padding-top: 0;
+}
+
 .activeColorValue {
   color: var(--text-primary);
 }
@@ -3624,7 +3640,7 @@
   --color-library-header-padding-right: 0px;
   --color-library-header-padding-bottom: 6px;
   --color-library-header-padding-left: 0px;
-  --color-library-body-padding-top: 8px;
+  --color-library-body-padding-top: 12px;
   --color-library-body-padding-right: 0px;
   --color-library-body-padding-bottom: 4px;
   --color-library-body-padding-left: 0px;

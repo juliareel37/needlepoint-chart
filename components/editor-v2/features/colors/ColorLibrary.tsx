@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/design-system";
 import { ButtonIcon } from "@/components/design-system";
@@ -19,6 +19,7 @@ import styles from "./ColorLibrary.module.css";
 
 type ColorLibraryView = "featured" | "all" | "palettes";
 type ColorLibraryLayoutMode = "list" | "grid";
+type ColorLibraryScrollMode = "internal" | "page";
 
 type ColorLibraryPersistenceState = {
   view: ColorLibraryView;
@@ -84,7 +85,9 @@ interface ColorLibraryProps {
   persistenceKey?: string;
   selectedColorIds?: string[];
   selectionMode?: "single" | "multiple";
+  scrollMode?: ColorLibraryScrollMode;
   scrollActiveColorIntoView?: boolean;
+  stickyHeaderContent?: ReactNode;
   showAllSectionHeader?: boolean;
   showAllSymbols?: boolean;
   showFeaturedSection?: boolean;
@@ -112,7 +115,9 @@ export function ColorLibrary({
   persistenceKey,
   selectedColorIds = [],
   selectionMode = "single",
+  scrollMode = "internal",
   scrollActiveColorIntoView = false,
+  stickyHeaderContent,
   showAllSectionHeader = false,
   showAllSymbols = false,
   showFeaturedSection = true,
@@ -682,8 +687,13 @@ export function ColorLibrary({
       <div
         className={[styles.library, className].filter(Boolean).join(" ")}
         data-featured-display={featuredSectionDisplay}
+        data-scroll-mode={scrollMode}
       >
         <div ref={stickyHeaderRef} className={styles.stickyHeaders}>
+          {stickyHeaderContent ? (
+            <div className={styles.stickyIntroHeader}>{stickyHeaderContent}</div>
+          ) : null}
+
           {useTabbedFeaturedView ? (
             <div className={styles.stickyHeader}>
               <SegmentedControl<ColorLibraryView>
