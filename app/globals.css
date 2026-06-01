@@ -1098,7 +1098,7 @@ button:disabled {
 }
 
 #app-shell-root[data-header-nav-mode="landing"][data-landing-header-visual="solid"] .app-shell-header {
-  background: white;
+  background: var(--surface-primary);
   border-bottom-color: color-mix(in srgb, var(--ui-border-reg) 92%, transparent);
   box-shadow: none;
 }
@@ -1194,6 +1194,14 @@ button:disabled {
 :root[data-theme="dark"] #app-shell-root[data-header-nav-mode="editor"] .editor-header-brand-logo {
   filter: invert(1);
 } */
+
+.header-brand-logo-text {
+  transition: filter var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+:root[data-theme="dark"] #app-shell-root:not([data-page-theme="landing-light"]) .header-brand-logo-text {
+  filter: invert(1);
+}
 
 .app-top-banner-slot {
   position: relative;

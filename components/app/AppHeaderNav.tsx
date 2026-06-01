@@ -166,13 +166,14 @@ function MenuIcon({ open }: { open: boolean }) {
 function HeaderLongLogo() {
   return (
     <>
-      {brandAssets.header.long.parts.map((logoPart) => (
+      {brandAssets.header.long.parts.map((logoPart, index) => (
         <Image
           key={logoPart.src}
           src={logoPart.src}
           alt={logoPart.alt}
           width={logoPart.width}
           height={logoPart.height}
+          className={index === 1 ? "header-brand-logo-text" : undefined}
           style={{
             display: "block",
             width: "auto",
