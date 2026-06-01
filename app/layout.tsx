@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import type { CSSProperties, ReactNode } from "react";
-import Link from "next/link";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
@@ -202,6 +202,7 @@ export default async function RootLayout({
             </div>
           </div>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
