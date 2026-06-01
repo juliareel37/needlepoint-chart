@@ -894,7 +894,7 @@ export function UsedColorsSummary({
             <Button
               type="button"
               variant="ghostV2"
-              size="sm"
+              size="md"
               active={actionMode === "merge"}
               className={styles.usedColorsActionToggle}
               onClick={() => activateActionMode("merge")}
@@ -907,7 +907,7 @@ export function UsedColorsSummary({
             <Button
               type="button"
               variant="ghostV2"
-              size="sm"
+              size="md"
               active={actionMode === "delete"}
               className={styles.usedColorsActionToggle}
               onClick={() => activateActionMode("delete")}

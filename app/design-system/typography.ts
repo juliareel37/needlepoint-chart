@@ -92,7 +92,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   h4: {
     label: "h4",
-    size: 16,
+    size: 18,
     lineHeight: 20,
     weight: fontWeights.bold,
     usage: "minor headings, card titles",
@@ -100,7 +100,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   h5: {
     label: "h5",
-    size: 14,
+    size: 16,
     lineHeight: 18,
     weight: fontWeights.bold,
     usage: "compact emphasis headings, alert titles",
@@ -108,7 +108,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   p1: {
     label: "p1",
-    size: 13,
+    size: 14,
     lineHeight: 20,
     weight: fontWeights.regular,
     usage: "primary body copy",
@@ -116,7 +116,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   p2: {
     label: "p2",
-    size: 12,
+    size: 13,
     lineHeight: 18,
     weight: fontWeights.regular,
     usage: "secondary UI/body text",

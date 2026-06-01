@@ -308,6 +308,13 @@
   --ui-shadow-md: 0 2px 6px rgba(15, 23, 42, 0.12);
   --ui-shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12);
 
+  /* Radius: lg is the default, md is for nested controls, sm is for compact badges, xl is for dialogs and sheets. */
+  --editor-radius-sm: 4px;
+  --editor-radius-md: 8px;
+  --editor-radius-lg: 12px;
+  --editor-radius-xl: 16px;
+  --editor-color-swatch-radius: 25%;
+
   /* Text */
   --font-primary: ui-sans-serif, system-ui, sans-serif;
   --font-secondary: var(--font-primary);

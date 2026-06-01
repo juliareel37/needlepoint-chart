@@ -823,6 +823,7 @@ export function ColorLibrary({
                             >
                               {option.label}
                             </button>
+
                           ))}
                         </div>
                       </div>

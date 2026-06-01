@@ -71,7 +71,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-md);
   background: var(--brand-200);
   color: var(--brand-600);
   box-shadow: var(--ui-shadow-sm);
@@ -157,7 +157,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-primary);
   cursor: pointer;
@@ -412,7 +412,7 @@
   max-width: 100%;
   padding: 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   transition:
     border-color 140ms ease,
@@ -508,7 +508,7 @@
   place-items: center;
   background: var(--canvas-stage-bg);
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--editor-radius-md);
   box-shadow: var(--ui-shadow-sm);
   overflow: hidden;
 }
@@ -517,7 +517,7 @@
   display: block;
   max-width: 100%;
   max-height: 100%;
-  border-radius: 6px;
+  border-radius: var(--editor-radius-md);
   box-shadow: var(--ui-shadow-md);
 }
 
@@ -541,7 +541,7 @@
 .documentStatusDot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: var(--text-secondary);
   flex: 0 0 auto;
 }
@@ -579,7 +579,7 @@
 .documentMetadataCard {
   padding: 16px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 20px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-card);
 }
 
@@ -592,7 +592,7 @@
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-card);
 }
 
@@ -640,7 +640,7 @@
   gap: 4px;
   /* min-height: 116px; */
   padding: 18px 16px;
-  border-radius: 18px;
+  border-radius: var(--editor-radius-md);
   text-align: center;
 }
 
@@ -707,7 +707,7 @@
 .documentRecentSeeAllButton:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--editor-radius-md);
 }
 
 .documentRecentList {
@@ -725,7 +725,7 @@
   appearance: none;
   -webkit-appearance: none;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-lg);
   background-color: transparent;
   box-shadow: inset 0 0 0 0 transparent;
   color: inherit;
@@ -765,7 +765,7 @@
   place-items: center;
   background: var(--canvas-stage-bg);
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   overflow: hidden;
 }
 
@@ -773,7 +773,7 @@
 .documentRecentThumbnailPlaceholder {
   width: 100%;
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--editor-radius-md);
 }
 
 .documentRecentThumbnailCanvas {
@@ -873,7 +873,7 @@
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 14px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-card);
 }
 
@@ -900,7 +900,7 @@
   width: 100%;
   padding: 14px 16px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 16px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-card);
   color: var(--text-primary);
   text-align: left;
@@ -970,7 +970,7 @@
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 4px;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   /* box-shadow: inset 0 0 0 1px var(--swatch-detail-inset); */
 }
@@ -983,7 +983,7 @@
   height: 100%;
   min-height: 16px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   border: 1px solid var(--ui-border-subtle);
   background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
   color: var(--text-secondary);
@@ -1019,7 +1019,7 @@
 .sidebarColorPreviewSection:focus-visible {
   outline: 2px solid var(--button-secondary-active);
   outline-offset: 4px;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-lg);
 }
 
 .sidebarSubsectionHint {
@@ -1069,7 +1069,7 @@
   min-height: 0;
   overflow: visible;
   /* border: 1px solid var(--ui-border-subtle);
-  border-radius: 16px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-card); */
 }
 
@@ -1093,7 +1093,7 @@
   width: 14px;
   height: 14px;
   margin: auto;
-  border-radius: 25%;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
 }
@@ -1106,7 +1106,7 @@
   min-height: 14px;
   height: 14px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   /* border: 1px solid var(--ui-border-subtle); */
   background: color-mix(in srgb, var(--surface-card) 76%, var(--surface-secondary));
   color: var(--text-secondary);
@@ -1128,7 +1128,7 @@
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
-  border-radius: 5px;
+  border-radius: var(--editor-radius-sm);
   border: 1px solid var(--ui-border-reg);
   background: var(--surface-card);
   color: var(--text-primary);
@@ -1147,7 +1147,7 @@
   justify-content: center;
   min-height: 20px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   color: var(--accent-primary);
   font-size: 11px;
@@ -1164,7 +1164,7 @@
   min-height: 24px;
   padding-inline: 6px;
   align-self: center;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   color: var(--text-primary);
   transition: background-color 140ms ease, color 140ms ease;
 }
@@ -1180,7 +1180,7 @@
   padding: 0;
   align-self: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-primary);
   cursor: pointer;
@@ -1222,7 +1222,7 @@
   margin: 0;
   padding: var(--sidebar-design-color-button-padding);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-primary);
   cursor: pointer;
@@ -1238,7 +1238,7 @@
   justify-content: center;
   width: var(--sidebar-design-color-swatch-size);
   height: var(--sidebar-design-color-swatch-size);
-  border-radius: 25%;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
@@ -1283,7 +1283,7 @@
   align-items: center;
   justify-content: center;
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
@@ -1313,7 +1313,7 @@
   background: var(--surface-card);
   border-right: 1px solid var(--ui-border-reg);
   border-bottom: 1px solid var(--ui-border-reg);
-  border-radius: 2px;
+  border-radius: var(--editor-radius-sm);
   pointer-events: none;
 }
 
@@ -1348,9 +1348,9 @@
 
 .customPaletteRowName {
   min-width: 0;
-  color: var(--text-primary);
+  /* color: var(--text-primary);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 500; */
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -1418,7 +1418,7 @@
 .customPaletteEmptyAction:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
   outline-offset: 3px;
-  border-radius: 6px;
+  border-radius: var(--editor-radius-md);
 }
 
 .customPaletteCardList {
@@ -1435,7 +1435,7 @@
   margin: 0;
   padding: 16px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 16px;
+  border-radius: var(--editor-radius-lg);
   background:
     linear-gradient(
       180deg,
@@ -1479,7 +1479,7 @@
   display: inline-flex;
   width: 18px;
   height: 18px;
-  border-radius: 25%;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
@@ -1507,7 +1507,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   opacity: 0;
@@ -1563,7 +1563,7 @@
 .customPaletteBackLink:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
   outline-offset: 4px;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
 }
 
 .customPaletteCreatePage {
@@ -1673,7 +1673,7 @@
   margin: 0;
   padding: 0 9px;
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 78%, transparent);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: color-mix(in srgb, var(--surface-secondary) 70%, transparent);
   color: color-mix(in srgb, var(--text-secondary) 92%, white);
   font-size: 10px;
@@ -1762,7 +1762,7 @@
   display: inline-flex;
   width: 28px;
   height: 28px;
-  border-radius: 25%;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
@@ -1779,7 +1779,7 @@
   margin: 0;
   padding: 0;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: var(--surface-card);
   color: var(--text-secondary);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
@@ -1861,7 +1861,7 @@
   gap: 14px;
   padding: 14px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 18px;
+  border-radius: var(--editor-radius-lg);
   background: color-mix(in srgb, var(--surface-card) 90%, white);
 }
 
@@ -1872,7 +1872,7 @@
   width: 104px;
   height: 104px;
   flex: 0 0 104px;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-lg);
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.58)),
     linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.1));
@@ -1928,7 +1928,7 @@
   aspect-ratio: 1;
   padding: 10px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 16px;
+  border-radius: var(--editor-radius-lg);
   background:
     linear-gradient(
       180deg,
@@ -2008,7 +2008,7 @@
   aspect-ratio: 1;
   padding: 10px;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   text-align: center;
@@ -2155,7 +2155,7 @@
 .iconLibrarySkeletonMeta,
 .iconLibrarySkeletonAction {
   display: inline-flex;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-lg);
   background: color-mix(in srgb, var(--text-primary) 12%, transparent);
 }
 
@@ -2328,7 +2328,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  /* border-radius: 28px; */
+  /* border-radius: var(--editor-radius-lg); */
   overflow: hidden;
   /* border: 1px solid rgba(125, 96, 197, 0.16);
   background: rgba(255, 255, 255, 0.72);
@@ -2353,7 +2353,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 20px;
+  border-radius: var(--editor-radius-xl);
   border: 1px solid rgba(125, 96, 197, 0.16);
   background: var(--surface-primary);
   box-shadow: 0 24px 60px rgba(56, 39, 102, 0.12);
@@ -2417,7 +2417,7 @@
   width: 18px;
   height: 18px;
   margin-top: 4px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   border: 2px solid var(--brand-600);
   background: var(--surface-primary);
 }
@@ -2499,7 +2499,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: var(--editor-radius-lg);
   border: 1px solid var(--ui-border-reg);
   background: color-mix(in srgb, var(--surface-secondary) 70%, white);
 }
@@ -2520,7 +2520,7 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: visible;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
@@ -2552,7 +2552,7 @@
   justify-content: center;
   padding: 4px 8px;
   /* border: 1px solid var(--ui-border-reg); */
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
@@ -2575,7 +2575,7 @@
   border-right: 1px solid var(--ui-border-reg);
   border-bottom: 1px solid var(--ui-border-reg);
   transform: translateX(-50%) rotate(45deg);
-  border-radius: 2px;
+  border-radius: var(--editor-radius-sm);
 }
 
 .floatingToolbarContextual {
@@ -2632,6 +2632,7 @@
 }
 
 .libraryPopoverSwatch {
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
@@ -2694,7 +2695,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   cursor: pointer;
 }
 
@@ -2770,7 +2771,7 @@
   justify-content: center;
   min-width: 56px;
   min-height: 28px;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   color: var(--text-primary);
   font-size: 13px !important;
   padding: 12px !important;
@@ -2805,7 +2806,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
 }
 
 .headerFileMenuTriggerIcon::before {
@@ -2906,7 +2907,7 @@
   min-width: 32px;
   min-height: 28px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   color: var(--text-primary);
 }
 
@@ -3033,7 +3034,7 @@
 .overwriteWarningCheckboxControl {
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: var(--editor-radius-sm);
 }
 
 .overwriteWarningDescriptionText {
@@ -3043,7 +3044,7 @@
 
 .selectionToolbarMainViewport,
 .selectionToolbarCloseViewport {
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
@@ -3064,14 +3065,14 @@
   flex: 0 0 auto;
   align-self: center;
   overflow: visible;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-xl);
 }
 
 .selectionToolbarCloseBar {
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   align-items: center;
   justify-content: center;
 }
@@ -3082,7 +3083,7 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
 }
 
 .duplicatePlacementActionButton {
@@ -3091,7 +3092,7 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3143,7 +3144,7 @@
 .aspectRatioGlyphFrame {
   display: block;
   border: 1.5px solid currentColor;
-  border-radius: 3px;
+  border-radius: var(--editor-radius-sm);
   opacity: 0.9;
 }
 
@@ -3151,7 +3152,7 @@
   position: absolute;
   width: 13px;
   height: 1.5px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: currentColor;
   transform: rotate(-32deg);
   opacity: 0.9;
@@ -3235,7 +3236,7 @@
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   border: 2px solid currentColor;
   border-right-color: transparent;
   animation: saveButtonSpin 900ms linear infinite;
@@ -3286,9 +3287,9 @@
 
 .activeColorName {
   min-width: 0;
-  color: var(--text-primary);
+  /* color: var(--text-primary);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 500; */
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -3299,7 +3300,7 @@
   width: 1px;
   height: 14px;
   flex: 0 0 1px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: var(--ui-border-reg);
 }
 
@@ -3324,7 +3325,7 @@
   position: relative;
   width: 36px;
   height: 36px;
-  border-radius: 25%;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
@@ -3449,7 +3450,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-lg);
   background: color-mix(in srgb, var(--surface-card) 92%, white);
   border: 1px solid var(--ui-border-subtle);
   box-shadow: var(--ui-shadow-md);
@@ -3460,7 +3461,7 @@
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   border: 2px solid currentColor;
   border-right-color: transparent;
   animation: saveButtonSpin 900ms linear infinite;
@@ -3530,7 +3531,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   color: var(--text-secondary);
   opacity: 1;
   transform: scale(1);
@@ -3653,7 +3654,7 @@
   height: 22px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   /* background: var(--surface-primary);
   color: var(--text-primary);
   box-shadow: var(--ui-shadow-md); */
@@ -3696,7 +3697,7 @@
   height: 32px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: none;
   /* color: var(--text-secondary); */
   align-items: center;
@@ -3808,7 +3809,7 @@
   margin: 4px 0 8px;
   padding: 8px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-primary);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
@@ -3841,7 +3842,7 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -3866,7 +3867,7 @@
   --color-library-body-padding-bottom: 4px;
   --color-library-body-padding-left: 0px;
   width: 100%;
-  height: min(260px, calc(100vh - 360px));
+  height: min(300px, calc(100vh - 360px));
   min-height: 190px;
   overscroll-behavior-y: contain;
 }
@@ -3918,7 +3919,7 @@
   /* height: 350px; */
   /* overflow: scroll; */
   /* background:var(--surface-card); */
-  border-radius:12px;
+  border-radius: var(--editor-radius-lg);
 }
 
 .usedColorsList[data-selection-mode="true"] {
@@ -3945,7 +3946,7 @@
   margin: 0;
   padding: 6px 4px 6px 8px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-lg);
   background: transparent;
   text-align: left;
   cursor: default;
@@ -4006,7 +4007,7 @@
   margin: 0;
   padding: 6px 0 6px 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   text-align: left;
   cursor: default;
@@ -4095,7 +4096,7 @@
   margin-right: -4px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   box-shadow: none;
@@ -4335,7 +4336,7 @@
 .usedColorSwatch {
   width: 25px;
   height: 25px;
-  border-radius: 999px;
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   flex: 0 0 auto;
 }
@@ -4347,7 +4348,7 @@
 
 .alertButtonIcon { 
   background:var(--status-warning-base);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   color: black;
 }
 
@@ -4362,7 +4363,7 @@
   /* max-width: min(260px, 32vw); */
   padding: 4px 10px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--editor-radius-lg);
   /* background: var(--surface-card); */
   color: var(--text-primary);
   /* box-shadow: var(--ui-shadow-md); */
@@ -4413,7 +4414,7 @@
   width: 22px;
   height: 22px;
   color: var(--header-save-status-icon-color);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: var(--header-save-status-badge-bg);
 }
 
@@ -4453,7 +4454,7 @@
 .headerSaveStatusInlineLink:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--editor-radius-sm);
 }
 
 .headerSaveStatusDismiss {
@@ -4466,7 +4467,7 @@
   margin-left: auto;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -4522,7 +4523,7 @@
   min-width: 32px;
   min-height: 32px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   color: var(--text-primary);
   flex: 0 0 auto;
 }
@@ -4584,7 +4585,7 @@
   height: 48px;
   flex-shrink: 0;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   background: color-mix(in srgb, var(--surface-primary) 82%, white);
   border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 72%, transparent);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -4740,7 +4741,7 @@
   transform: translateX(-50%);
   padding: 4px 8px;
   border: 1px solid var(--ui-border-reg);
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
@@ -4765,7 +4766,7 @@
   border-right: 1px solid var(--ui-border-reg);
   border-bottom: 1px solid var(--ui-border-reg);
   transform: translateX(-50%) rotate(45deg);
-  border-radius: 2px;
+  border-radius: var(--editor-radius-sm);
 }
 
 .traceSliderTooltipVisible {
@@ -4977,7 +4978,7 @@
 
   .versionHistoryPanelCard {
     max-height: 100%;
-    border-radius: 0px;
+    border-radius: 0;
     box-shadow: var(--ui-shadow-md);
   }
 

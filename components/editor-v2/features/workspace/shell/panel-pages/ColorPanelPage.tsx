@@ -372,7 +372,7 @@ export function ColorPanelPage({
               />
               {activeColor ? (
                 <>
-                  <strong className={styles.activeColorName}>{activeColor.name}</strong>
+                  <strong className={styles.activeColorName} style={typographyStyles.h5}>{activeColor.name}</strong>
                   <span
                     aria-hidden="true"
                     className={styles.activeColorDivider}
@@ -629,7 +629,7 @@ export function ColorPanelPage({
                   {customPalettes.map((customPalette) => (
                     <div key={customPalette.id} className={styles.customPaletteRow}>
                       <div className={styles.customPaletteRowText}>
-                        <span className={styles.customPaletteRowName}>
+                        <span className={styles.customPaletteRowName} style={typographyStyles.p1}>
                           {customPalette.name}
                         </span>
                         <span className={styles.customPaletteRowCount}>

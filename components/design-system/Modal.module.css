@@ -27,7 +27,7 @@
   width: min(100%, 540px);
   padding: 28px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   background: var(--surface-card);
   box-shadow: var(--ui-shadow-lg);
   opacity: 0;
@@ -93,7 +93,7 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-lg);
   flex: 0 0 40px;
 }
 

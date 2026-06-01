@@ -569,7 +569,7 @@ export function TraceControls({
         </div>
       ) : (
         <TraceSection
-          title="Uploaded File"
+          title="Uploaded file"
           action={(
             <Button
               type="button"

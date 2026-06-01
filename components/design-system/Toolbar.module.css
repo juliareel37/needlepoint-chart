@@ -6,7 +6,7 @@
   width: max-content;
   max-width: 100%;
   padding: 6px 8px;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
@@ -50,7 +50,7 @@
   min-height: 32px;
   padding: 6px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-primary);
   font-size: inherit;
@@ -117,7 +117,7 @@
   min-height: 0;
   padding: 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent !important;
   /* box-shadow: none !important; */
 }
@@ -204,7 +204,7 @@
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  border-radius: 4px;
+  border-radius: var(--editor-radius-sm);
   color: inherit;
 }
 
@@ -227,7 +227,7 @@
   width: 20px;
   height: 20px;
   display: block;
-  border-radius: 4px;
+  border-radius: var(--editor-color-swatch-radius);
   box-shadow: inset 0 0 0 1px var(--swatch-border-inset);
 }
 
@@ -244,7 +244,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   background: var(--surface-primary);
   border: 1px solid var(--toolbar-border);
   box-shadow: var(--ui-shadow-md);
@@ -257,7 +257,7 @@
   /* min-width: 0;
   min-height: 32px;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-md);
   font-size: inherit;
   line-height: inherit;
   gap: 4px;
