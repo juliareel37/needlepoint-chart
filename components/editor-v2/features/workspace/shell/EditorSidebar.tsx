@@ -56,6 +56,7 @@ interface EditorSidebarProps {
   onMergeColorsPreviewChange: (
     preview: { fromColorIds: string[]; toColorId: string } | null,
   ) => void;
+  onDeleteColorsPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
   onDuplicateDocument: () => void;
@@ -137,6 +138,7 @@ export function EditorSidebar({
   onLoadSelected,
   onColorSwapPreviewChange,
   onMergeColorsPreviewChange,
+  onDeleteColorsPreviewChange,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
   onDuplicateDocument,
@@ -404,6 +406,7 @@ export function EditorSidebar({
               onCustomPaletteDraftSelectAll={handleCustomPaletteDraftSelectAll}
               onColorSwapPreviewChange={onColorSwapPreviewChange}
               onMergeColorsPreviewChange={onMergeColorsPreviewChange}
+              onDeleteColorsPreviewChange={onDeleteColorsPreviewChange}
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}

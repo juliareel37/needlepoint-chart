@@ -466,6 +466,10 @@ export function EditorV2Shell({
     fromColorIds: string[];
     toColorId: string;
   } | null>(null);
+  const [colorDeletePreview, setColorDeletePreview] = useState<{
+    fromColorId: string;
+    toColorId: string;
+  } | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
@@ -589,6 +593,46 @@ export function EditorV2Shell({
 
     return changed ? previewCells : null;
   }, [colorMergePreview, colorsById, state]);
+  const colorDeletePreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorDeletePreview) {
+      return null;
+    }
+
+    const { fromColorId, toColorId } = colorDeletePreview;
+
+    if (
+      fromColorId === toColorId ||
+      !colorsById[fromColorId] ||
+      !colorsById[toColorId]
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (cell !== fromColorId) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorDeletePreview, colorsById, state]);
   const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>(() =>
     currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : [],
   );
@@ -3604,6 +3648,7 @@ export function EditorV2Shell({
                     }}
                     onColorSwapPreviewChange={setColorSwapPreview}
                     onMergeColorsPreviewChange={setColorMergePreview}
+                    onDeleteColorsPreviewChange={setColorDeletePreview}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                     onDuplicateDocument={() => {
@@ -3874,7 +3919,9 @@ export function EditorV2Shell({
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
-                    cellPreviewOverride={colorMergePreviewCells ?? colorSwapPreviewCells}
+                    cellPreviewOverride={
+                      colorMergePreviewCells ?? colorDeletePreviewCells ?? colorSwapPreviewCells
+                    }
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={showGridlines}

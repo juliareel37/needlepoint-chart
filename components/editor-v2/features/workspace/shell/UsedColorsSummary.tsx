@@ -484,6 +484,7 @@ export function UsedColorsSummary({
   symbolAssignments,
   onColorSwapPreviewChange,
   onMergeColorsPreviewChange,
+  onDeleteColorsPreviewChange,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
@@ -510,6 +511,7 @@ export function UsedColorsSummary({
   onMergeColorsPreviewChange: (
     preview: { fromColorIds: string[]; toColorId: string } | null,
   ) => void;
+  onDeleteColorsPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -523,6 +525,7 @@ export function UsedColorsSummary({
   const [swapSourceColorId, setSwapSourceColorId] = useState<string | null>(null);
   const [swapPreviewTargetColorId, setSwapPreviewTargetColorId] = useState<string | null>(null);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [deleteTargetColorId, setDeleteTargetColorId] = useState<string | null>(null);
   const [mergeConfirmationOpen, setMergeConfirmationOpen] = useState(false);
   const [successNotification, setSuccessNotification] =
     useState<UsedColorsSuccessNotification | null>(null);
@@ -537,7 +540,8 @@ export function UsedColorsSummary({
     () => getColorLibraryPaletteSections(palette, customPalettesById),
     [customPalettesById, palette],
   );
-  const isSelecting = toolMode !== "idle";
+  const isSelecting = toolMode !== "idle" && actionMode === "merge";
+  const deleteModeActive = actionMode === "delete";
   const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
   const scopeOptions = useMemo(
     () =>
@@ -743,10 +747,28 @@ export function UsedColorsSummary({
 
   useEffect(() => {
     if (selectedColorIds.length === 0) {
-      setDeleteConfirmationOpen(false);
       setMergeConfirmationOpen(false);
     }
   }, [selectedColorIds]);
+
+  useEffect(() => {
+    if (!deleteTargetColorId) {
+      return;
+    }
+
+    if (!usedColors.some((entry) => entry.colorId === deleteTargetColorId)) {
+      setDeleteTargetColorId(null);
+      setDeleteConfirmationOpen(false);
+      onDeleteColorsPreviewChange(null);
+    }
+  }, [deleteTargetColorId, onDeleteColorsPreviewChange, usedColors]);
+
+  useEffect(
+    () => () => {
+      onDeleteColorsPreviewChange(null);
+    },
+    [onDeleteColorsPreviewChange],
+  );
 
   useEffect(() => {
     if (
@@ -798,19 +820,19 @@ export function UsedColorsSummary({
     () => usedColors.filter((entry) => selectedColorIdSet.has(entry.colorId)),
     [selectedColorIdSet, usedColors],
   );
-  const canDelete =
-    selectedColorIds.length > 0 &&
-    selectedColorIds.some((colorId) =>
-      Boolean(
-        findClosestColorIdFromCandidates(
-          colorsById,
-          usedColors
-            .map((entry) => entry.colorId)
-            .filter((entryColorId) => !selectedColorIdSet.has(entryColorId)),
-          colorId,
-        ),
-      ),
-    );
+  const deleteTargetEntry = deleteTargetColorId
+    ? usedColors.find((entry) => entry.colorId === deleteTargetColorId) ?? null
+    : null;
+  const deleteReplacementColorId = deleteTargetColorId
+    ? findClosestColorIdFromCandidates(
+        colorsById,
+        usedColors
+          .map((entry) => entry.colorId)
+          .filter((entryColorId) => entryColorId !== deleteTargetColorId),
+        deleteTargetColorId,
+      )
+    : null;
+  const canDelete = Boolean(deleteReplacementColorId);
   const mergeSourceColorIds = mergeTargetColorId
     ? selectedColorIds.filter((colorId) => colorId !== mergeTargetColorId)
     : [];
@@ -818,11 +840,26 @@ export function UsedColorsSummary({
     actionMode === "merge" &&
     mergeTargetColorId !== null &&
     mergeSourceColorIds.length > 0;
-  const deleteSelectionCount = selectedColorIds.length;
-  const deleteStitchCount = selectedUsedColors.reduce(
-    (total, entry) => total + entry.count,
-    0,
-  );
+  const deleteStitchCount = deleteTargetEntry?.count ?? 0;
+  const deleteTargetName = deleteTargetColorId
+    ? (colorsById[deleteTargetColorId]?.name ?? deleteTargetColorId)
+    : "color";
+  const deleteReplacementColor = deleteReplacementColorId
+    ? colorsById[deleteReplacementColorId]
+    : null;
+  const deleteReplacementName =
+    deleteReplacementColor?.name ?? deleteReplacementColorId ?? "another color";
+  const deleteReplacementCode = deleteReplacementColor
+    ? formatColorCodeLabel(deleteReplacementColor)
+    : null;
+  const deleteReplacementLabel = deleteReplacementCode
+    ? `${deleteReplacementName} (${deleteReplacementCode})`
+    : deleteReplacementName;
+  const deleteReplacementSwatchHex = deleteReplacementColor?.hex ?? "#ffffff";
+  const deleteReplacementSymbol =
+    showSymbols && deleteReplacementColorId
+      ? symbolAssignments[deleteReplacementColorId]
+      : null;
   const mergeColorCount = mergeSourceColorIds.length;
   const mergeStitchCount = selectedUsedColors
     .filter((entry) => mergeTargetColorId === null || entry.colorId !== mergeTargetColorId)
@@ -846,13 +883,6 @@ export function UsedColorsSummary({
     mergeColorCount === 1
       ? `${mergeStitchCount} canvas cell${mergeStitchCount === 1 ? "" : "s"} will be reassigned to ${mergeTargetName}.`
       : `${mergeStitchCount} canvas cells will be reassigned to ${mergeTargetName}.`;
-  const deleteTitle =
-    deleteSelectionCount === 1 ? "Delete 1 color?" : `Delete ${deleteSelectionCount} colors?`;
-  const deleteDescription =
-    deleteSelectionCount === 1
-      ? `${deleteStitchCount} canvas cell${deleteStitchCount === 1 ? "" : "s"} will be replaced with the closest remaining color in the design palette.`
-      : `${deleteStitchCount} canvas cells will be replaced with the most similar remaining color in the design palette.`;
-
   useEffect(() => {
     if (actionMode === "merge") {
       if (mergeTargetColorId && colorsById[mergeTargetColorId]) {
@@ -878,6 +908,8 @@ export function UsedColorsSummary({
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
     onMergeColorsPreviewChange(null);
+    onDeleteColorsPreviewChange(null);
+    setDeleteTargetColorId(null);
     setDeleteConfirmationOpen(false);
     setMergeConfirmationOpen(false);
   };
@@ -886,6 +918,31 @@ export function UsedColorsSummary({
     setSwapSourceColorId(null);
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
+  };
+
+  const commitDeleteTargetColor = () => {
+    if (!canDelete || !deleteTargetColorId) {
+      setDeleteConfirmationOpen(false);
+      setDeleteTargetColorId(null);
+      onDeleteColorsPreviewChange(null);
+      return;
+    }
+
+    const affectedCellCount = deleteStitchCount;
+    const deletedColorName = deleteTargetName;
+    const replacementColorLabel = deleteReplacementLabel;
+
+    onDeleteColors([deleteTargetColorId]);
+    setSuccessNotification({
+      title: `Deleted ${deletedColorName}`,
+      description:
+        affectedCellCount === 1
+          ? `1 canvas cell was replaced with ${replacementColorLabel}.`
+          : `${affectedCellCount} canvas cells were replaced with ${replacementColorLabel}.`,
+    });
+    setDeleteConfirmationOpen(false);
+    setDeleteTargetColorId(null);
+    onDeleteColorsPreviewChange(null);
   };
 
   const toggleColorSelection = (colorId: string) => {
@@ -911,32 +968,34 @@ export function UsedColorsSummary({
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
     onMergeColorsPreviewChange(null);
+    onDeleteColorsPreviewChange(null);
   };
 
   const activateActionMode = (nextActionMode: Extract<UsedColorsActionMode, "merge" | "delete">) => {
-    if (!isSelecting) {
-      enterToolMode(nextActionMode);
-      return;
-    }
-
     if (actionMode === nextActionMode) {
       exitToolMode();
       return;
     }
 
-    setActionMode(nextActionMode);
-    setDeleteConfirmationOpen(false);
-    setMergeConfirmationOpen(false);
-
     if (nextActionMode === "merge") {
-      setMergeTargetColorId((current) =>
-        current && colorsById[current] ? current : null,
-      );
+      enterToolMode(nextActionMode);
       return;
     }
 
+    deactivateHighlight({ blurTrigger: true });
+    setToolMode("idle");
+    setActionMode(nextActionMode);
+    setSelectedColorIds([]);
+    setMergeTargetColorId(null);
     setMergePickerOpen(false);
+    setSwapSourceColorId(null);
+    setSwapPreviewTargetColorId(null);
+    onColorSwapPreviewChange(null);
     onMergeColorsPreviewChange(null);
+    onDeleteColorsPreviewChange(null);
+    setDeleteTargetColorId(null);
+    setDeleteConfirmationOpen(false);
+    setMergeConfirmationOpen(false);
   };
 
   return (
@@ -1050,6 +1109,15 @@ export function UsedColorsSummary({
                 const rowColor = colorsById[entry.colorId];
                 const rowColorName = rowColor?.name ?? entry.colorId;
                 const rowColorCode = rowColor ? formatColorCodeLabel(rowColor) : entry.colorId;
+                const canDeleteRowColor = Boolean(
+                  findClosestColorIdFromCandidates(
+                    colorsById,
+                    usedColors
+                      .map((usedColor) => usedColor.colorId)
+                      .filter((colorId) => colorId !== entry.colorId),
+                    entry.colorId,
+                  ),
+                );
 
                 return (
               <li
@@ -1065,6 +1133,7 @@ export function UsedColorsSummary({
                 className={styles.usedColorsRow}
                 data-active-color={isActiveColor ? "true" : "false"}
                 data-selectable={isSelecting ? "true" : "false"}
+                data-delete-mode={deleteModeActive ? "true" : "false"}
                 data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
               >
                 <div
@@ -1103,17 +1172,19 @@ export function UsedColorsSummary({
                       aria-label={
                         isSelecting
                           ? `${rowColorName} color`
+                          : deleteModeActive
+                            ? `${rowColorName} color`
                           : `Replace ${rowColorName}`
                       }
-                      aria-haspopup={isSelecting ? undefined : "dialog"}
+                      aria-haspopup={isSelecting || deleteModeActive ? undefined : "dialog"}
                       aria-expanded={
-                        !isSelecting && swapSourceColorId === entry.colorId
+                        !isSelecting && !deleteModeActive && swapSourceColorId === entry.colorId
                           ? true
                           : undefined
                       }
-                      disabled={isSelecting}
+                      disabled={isSelecting || deleteModeActive}
                       onClick={() => {
-                        if (isSelecting) {
+                        if (isSelecting || deleteModeActive) {
                           return;
                         }
 
@@ -1152,7 +1223,7 @@ export function UsedColorsSummary({
                             {swatchSymbol}
                           </span>
                         ) : null}
-                        {!isSelecting ? (
+                        {!isSelecting && !deleteModeActive ? (
                           <span
                             className={styles.usedColorSwatchSwapIcon}
                             style={{ color: getSwatchIconColor(swatchColor) }}
@@ -1257,7 +1328,209 @@ export function UsedColorsSummary({
                   </Button>
                 ) : null}
 
-                {!isSelecting && swapSourceColorId === entry.colorId ? (
+                {deleteModeActive ? (
+                  <Button
+                    type="button"
+                    variant="ghostV2"
+                    size="md"
+                    iconOnly
+                    className={styles.usedColorsRowDeleteButton}
+                    aria-label={`Delete ${rowColorName}`}
+                    title="Delete color"
+                    disabled={!canDeleteRowColor}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!canDeleteRowColor) {
+                        return;
+                      }
+
+                      setDeleteTargetColorId(entry.colorId);
+                      setDeleteConfirmationOpen(true);
+                      const replacementColorId = findClosestColorIdFromCandidates(
+                        colorsById,
+                        usedColors
+                          .map((usedColor) => usedColor.colorId)
+                          .filter((colorId) => colorId !== entry.colorId),
+                        entry.colorId,
+                      );
+                      onDeleteColorsPreviewChange(
+                        replacementColorId
+                          ? { fromColorId: entry.colorId, toColorId: replacementColorId }
+                          : null,
+                      );
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <ButtonIcon icon="/icons/lucide/trash.svg" />
+                  </Button>
+                ) : null}
+
+                {deleteModeActive &&
+                deleteConfirmationOpen &&
+                deleteTargetColorId === entry.colorId ? (
+                  <div
+                    role="alertdialog"
+                    aria-labelledby={`delete-color-title-${entry.colorId}`}
+                    aria-describedby={`delete-color-description-${entry.colorId}`}
+                    className={styles.usedColorsInlineDeleteConfirm}
+                  >
+                    <div className={styles.usedColorsInlineDeleteCopy}>
+                      <p
+                        id={`delete-color-title-${entry.colorId}`}
+                        className={styles.usedColorsInlineDeleteTitle}
+                        style={typographyStyles.p1Medium}
+                      >
+                        <span>Delete </span> 
+                        <strong>{deleteTargetName}</strong>?{" "}
+                        <span>
+                          {deleteStitchCount} cell{deleteStitchCount === 1 ? "" : "s"} will be
+                          replaced with <strong>{` ${deleteReplacementName}`}</strong>.
+                        </span>
+                      </p>
+                      <div
+                        id={`delete-color-description-${entry.colorId}`}
+                        aria-label={`${deleteTargetName} will be replaced with ${deleteReplacementName}`}
+                        className={styles.usedColorsInlineDeleteSwatchFlow}
+                      >
+                        <button
+                          type="button"
+                          className={styles.usedColorsInlineDeleteFlowSwatchButton}
+                          aria-label={`${rowColorName}${rowColorCode ? `, ${rowColorCode}` : ""}`}
+                          onFocus={(event) => {
+                            updateMergeTargetTooltip(
+                              event.currentTarget,
+                              rowColorName,
+                              rowColorCode,
+                            );
+                          }}
+                          onBlur={() => {
+                            setActiveMergeTargetTooltip(null);
+                          }}
+                          onPointerEnter={(event) => {
+                            updateMergeTargetTooltip(
+                              event.currentTarget,
+                              rowColorName,
+                              rowColorCode,
+                            );
+                          }}
+                          onPointerLeave={() => {
+                            setActiveMergeTargetTooltip((current) =>
+                              current?.target.matches(":focus-visible") ? current : null,
+                            );
+                          }}
+                          onClick={(event) => {
+                            event.preventDefault();
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={[
+                              styles.swatch,
+                              styles.usedColorsInlineDeleteFlowSwatch,
+                            ].join(" ")}
+                            style={{ backgroundColor: rowColor?.hex ?? "#ffffff" }}
+                          >
+                            {showSymbols && symbolAssignments[entry.colorId] ? (
+                              <span
+                                className={styles.usedColorSwatchSymbol}
+                                style={{
+                                  ...typographyStyles.captionMd,
+                                  color: getSwatchIconColor(rowColor?.hex ?? "#ffffff"),
+                                }}
+                              >
+                                {symbolAssignments[entry.colorId]}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                        <ButtonIcon
+                          className={styles.usedColorsInlineDeleteArrow}
+                          icon="/icons/lucide/arrow-right.svg"
+                        />
+                        <button
+                          type="button"
+                          className={styles.usedColorsInlineDeleteFlowSwatchButton}
+                          aria-label={`${deleteReplacementName}${deleteReplacementCode ? `, ${deleteReplacementCode}` : ""}`}
+                          onFocus={(event) => {
+                            updateMergeTargetTooltip(
+                              event.currentTarget,
+                              deleteReplacementName,
+                              deleteReplacementCode ?? "",
+                            );
+                          }}
+                          onBlur={() => {
+                            setActiveMergeTargetTooltip(null);
+                          }}
+                          onPointerEnter={(event) => {
+                            updateMergeTargetTooltip(
+                              event.currentTarget,
+                              deleteReplacementName,
+                              deleteReplacementCode ?? "",
+                            );
+                          }}
+                          onPointerLeave={() => {
+                            setActiveMergeTargetTooltip((current) =>
+                              current?.target.matches(":focus-visible") ? current : null,
+                            );
+                          }}
+                          onClick={(event) => {
+                            event.preventDefault();
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={[
+                              styles.swatch,
+                              styles.usedColorsInlineDeleteFlowSwatch,
+                            ].join(" ")}
+                            style={{ backgroundColor: deleteReplacementSwatchHex }}
+                          >
+                            {deleteReplacementSymbol ? (
+                              <span
+                                className={styles.usedColorSwatchSymbol}
+                                style={{
+                                  ...typographyStyles.captionMd,
+                                  color: getSwatchIconColor(deleteReplacementSwatchHex),
+                                }}
+                              >
+                                {deleteReplacementSymbol}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className={styles.usedColorsInlineDeleteActions}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="md"
+                        className={styles.usedColorsInlineDeleteAction}
+                        onClick={() => {
+                          setDeleteConfirmationOpen(false);
+                          setDeleteTargetColorId(null);
+                          onDeleteColorsPreviewChange(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="md"
+                        className={styles.usedColorsInlineDeleteAction}
+                        disabled={!canDelete}
+                        onClick={commitDeleteTargetColor}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!isSelecting && !deleteModeActive && swapSourceColorId === entry.colorId ? (
                   <div
                     role="dialog"
                     aria-label={`Replace ${rowColorName}`}
@@ -1522,49 +1795,6 @@ export function UsedColorsSummary({
                         </>
                       )}
                     </div>
-                  ) : actionMode === "delete" ? (
-                    <>
-                      <div className={styles.usedColorsSelectionSummary}>
-                        <span
-                          className={styles.usedColorsSelectionCount}
-                          style={typographyStyles.p2}
-                        >
-                          {selectedColorIds.length > 0
-                            ? `${selectedColorIds.length} selected`
-                            : "0 selected"}
-                        </span>
-                      </div>
-                      <div className={styles.usedColorsSelectionButtonRow}>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="md"
-                          className={styles.usedColorsSelectionCancelButton}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            exitToolMode();
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="md"
-                          className={styles.usedColorsDeleteButton}
-                          disabled={!canDelete}
-                          onClick={() => {
-                            if (!canDelete) {
-                              return;
-                            }
-                            setDeleteConfirmationOpen(true);
-                          }}
-                        >
-                          <ButtonIcon icon="/icons/lucide/trash.svg" />
-                          Delete
-                        </Button>
-                      </div>
-                    </>
                   ) : null}
                 </div>
               </div>
@@ -1636,38 +1866,6 @@ export function UsedColorsSummary({
         }}
       />
 
-      <Modal
-        isOpen={deleteConfirmationOpen}
-        title={deleteTitle}
-        description={deleteDescription}
-        tone="fail"
-        dismissLabel="Cancel"
-        confirmLabel={deleteSelectionCount === 1 ? "Delete color" : "Delete colors"}
-        confirmVariant="destructive"
-        onDismiss={() => setDeleteConfirmationOpen(false)}
-        onConfirm={() => {
-          if (!canDelete || selectedColorIds.length === 0) {
-            setDeleteConfirmationOpen(false);
-            return;
-          }
-
-          const removedColorCount = deleteSelectionCount;
-          const affectedCellCount = deleteStitchCount;
-
-          onDeleteColors(selectedColorIds);
-          setSuccessNotification({
-            title:
-              removedColorCount === 1
-                ? "Deleted 1 color"
-                : `Deleted ${removedColorCount} colors`,
-            description:
-              affectedCellCount === 1
-                ? "1 canvas cell was replaced with the closest remaining color."
-                : `${affectedCellCount} canvas cells were replaced with the closest remaining colors.`,
-          });
-          exitToolMode();
-        }}
-      />
       </div>
     </>
   );

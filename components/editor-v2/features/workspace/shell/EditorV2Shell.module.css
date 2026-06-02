@@ -3099,7 +3099,7 @@
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
-  border-radius: var(--editor-radius-sm);
+  border-radius: 999px;
   border: 2px solid currentColor;
   border-right-color: transparent;
   animation: saveButtonSpin 900ms linear infinite;
@@ -3319,7 +3319,7 @@
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
-  border-radius: var(--editor-radius-sm);
+  border-radius: 999px;
   border: 2px solid currentColor;
   border-right-color: transparent;
   animation: saveButtonSpin 900ms linear infinite;
@@ -3990,6 +3990,16 @@
   opacity: 0;
 }
 
+.usedColorsRowDeleteButton {
+  margin-left: 0;
+  margin-right: -4px;
+  color: var(--text-secondary);
+}
+
+.usedColorsRowDeleteButton:disabled {
+  opacity: 0.42;
+}
+
 .usedColorsHighlightButton[aria-pressed="true"] {
   opacity: 1;
 }
@@ -4005,6 +4015,97 @@
 .usedColorsHighlightButton:focus-visible {
   opacity: 1;
   color: var(--text-primary);
+}
+
+.usedColorsRowDeleteButton:focus-visible {
+  color: var(--status-destructive-strong);
+}
+
+.usedColorsInlineDeleteConfirm {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 100%;
+  gap: 16px;
+  margin: 6px 0 2px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--status-destructive-strong) 72%, transparent);
+  border-radius: var(--editor-radius-lg);
+  background: color-mix(in srgb, var(--status-destructive-soft) 10%, var(--surface-card));
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.usedColorsInlineDeleteCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.usedColorsInlineDeleteTitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.usedColorsInlineDeleteTitle strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.usedColorsInlineDeleteTitle span {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.usedColorsInlineDeleteSwatchFlow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+}
+
+.usedColorsInlineDeleteArrow {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.usedColorsInlineDeleteFlowSwatchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: default;
+}
+
+.usedColorsInlineDeleteFlowSwatchButton:focus-visible {
+  outline: 2px solid var(--button-secondary-active);
+  outline-offset: 2px;
+}
+
+.usedColorsInlineDeleteFlowSwatch {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 7px;
+}
+
+.usedColorsInlineDeleteActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.usedColorsInlineDeleteAction {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -4726,8 +4827,16 @@
     opacity: 1;
   }
 
+  .usedColorsRow[data-delete-mode="true"] .usedColorsHighlightButton {
+    opacity: 1;
+  }
+
   .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
     color: var(--text-primary);
+  }
+
+  .usedColorsRowDeleteButton:hover:not(:disabled) {
+    color: var(--status-destructive-strong);
   }
 
   .usedColorsRow[data-selected="true"] .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {

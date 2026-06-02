@@ -547,7 +547,7 @@ export function TraceControls({
             style={{ width: 18, height: 18 }}
           />
           <span style={typographyStyles.p2}>Choose a file or drag &amp; drop.</span>
-          <span style={{ ...typographyStyles.p2, opacity: 0.75 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
+          <span style={{ ...typographyStyles.caption, opacity: 0.5 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
           <Button
             type="button"
             variant="primary"

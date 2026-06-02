@@ -73,6 +73,7 @@ interface ColorPanelPageProps {
   onMergeColorsPreviewChange: (
     preview: { fromColorIds: string[]; toColorId: string } | null,
   ) => void;
+  onDeleteColorsPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
   onExitBottomPanelCanvasFocus: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
@@ -108,6 +109,7 @@ export function ColorPanelPage({
   onCustomPaletteDraftSelectAll,
   onColorSwapPreviewChange,
   onMergeColorsPreviewChange,
+  onDeleteColorsPreviewChange,
   onExitBottomPanelCanvasFocus,
   onEnterBottomPanelCanvasFocus,
   onViewChange,
@@ -742,6 +744,7 @@ export function ColorPanelPage({
               symbolAssignments={symbolAssignments}
               onColorSwapPreviewChange={onColorSwapPreviewChange}
               onMergeColorsPreviewChange={onMergeColorsPreviewChange}
+              onDeleteColorsPreviewChange={onDeleteColorsPreviewChange}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }
