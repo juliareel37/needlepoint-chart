@@ -442,6 +442,7 @@ export function GridWorldSurface({
     metrics,
     paintDisabled,
     previewMode,
+    renderedCellSize,
     state,
     trace,
   });

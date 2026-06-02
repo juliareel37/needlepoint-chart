@@ -54,6 +54,7 @@ export interface ModalProps {
   dismissDisabled?: boolean;
   showCloseButton?: boolean;
   presentation?: "default" | "centered";
+  size?: "default" | "wide";
 }
 
 export function Modal({
@@ -73,6 +74,7 @@ export function Modal({
   dismissDisabled = false,
   showCloseButton = false,
   presentation = "default",
+  size = "default",
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -210,6 +212,7 @@ export function Modal({
         aria-describedby={descriptionId}
         className={[
           styles.card,
+          size === "wide" ? styles.wideCard : null,
           presentation === "centered" ? styles.centeredCard : null,
         ]
           .filter(Boolean)

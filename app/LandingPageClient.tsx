@@ -1586,6 +1586,7 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
         }}
         tone={waitlistStatusModalTone}
         presentation={waitlistStatusModalTone === "confirmation" ? "centered" : "default"}
+        size={showOptionalSurvey ? "wide" : "default"}
         confirmVariant="primary"
         confirmDisabled={isSubmittingWaitlistSurvey}
         closeOnBackdropClick
