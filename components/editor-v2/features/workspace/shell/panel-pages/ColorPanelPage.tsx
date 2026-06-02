@@ -821,6 +821,10 @@ export function ColorPanelPage({
                           />
                         </Button>
                       </h3>
+                                            <span className={styles.customPaletteCardMeta} style={typographyStyles.captionMd}>
+                        {customPalette.colorIds.length}{" "}
+                        {customPalette.colorIds.length === 1 ? "color" : "colors"}
+                      </span>
                       <div className={styles.customPaletteCardSwatches}>
                         {customPalette.colorIds.map((colorId) => {
                           const color = colorsById[colorId];
@@ -839,10 +843,7 @@ export function ColorPanelPage({
                           );
                         })}
                       </div>
-                      <span className={styles.customPaletteCardMeta} style={typographyStyles.captionMd}>
-                        {customPalette.colorIds.length}{" "}
-                        {customPalette.colorIds.length === 1 ? "color" : "colors"}
-                      </span>
+
                     </div>
                 ))}
               </div>
@@ -936,10 +937,15 @@ export function ColorPanelPage({
                       className={styles.customPaletteSelectionCount}
                       // style={typographyStyles.s}
                     >
+                      <strong>
+                      <span>
                       {customPaletteDraftColors.length}{" "}
-                      {customPaletteDraftColors.length === 1
+                      </span>
+                      </strong>
+                      selected
+                      {/* {customPaletteDraftColors.length === 1
                         ? "color selected"
-                        : "colors selected"}
+                        : "colors selected"} */}
                     </span>
                   </div>
                 ) : null}
@@ -977,7 +983,7 @@ export function ColorPanelPage({
                 ) : (
                   <p
                     className={styles.customPaletteSelectionSummaryCaption}
-                    style={typographyStyles.caption}
+                    style={typographyStyles.p2}
                   >
                   Select colors to add to your palette
                   </p>

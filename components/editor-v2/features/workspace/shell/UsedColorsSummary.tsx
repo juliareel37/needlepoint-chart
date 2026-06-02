@@ -1284,49 +1284,47 @@ export function UsedColorsSummary({
                   </button>
                 </div>
 
-                {!isSelecting ? (
-                  <Button
-                    type="button"
-                    variant="ghostV2"
-                    size="md"
-                    iconOnly
-                    className={styles.usedColorsHighlightButton}
-                    aria-label={
-                      highlightedColorId === entry.colorId
-                        ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                        : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
-                    }
-                    aria-pressed={highlightedColorId === entry.colorId}
-                    title={
-                      highlightedColorId === entry.colorId
-                        ? "Stop highlight"
-                        : "Highlight on canvas"
-                    }
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const nextHighlightedColorId =
-                        highlightedColorId === entry.colorId ? null : entry.colorId;
+                <Button
+                  type="button"
+                  variant="ghostV2"
+                  size="md"
+                  iconOnly
+                  className={styles.usedColorsHighlightButton}
+                  aria-label={
+                    highlightedColorId === entry.colorId
+                      ? `Stop highlighting ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                      : `Highlight ${colorsById[entry.colorId]?.name ?? entry.colorId} on canvas`
+                  }
+                  aria-pressed={highlightedColorId === entry.colorId}
+                  title={
+                    highlightedColorId === entry.colorId
+                      ? "Stop highlight"
+                      : "Highlight on canvas"
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const nextHighlightedColorId =
+                      highlightedColorId === entry.colorId ? null : entry.colorId;
 
-                      if (nextHighlightedColorId) {
-                        onHighlightColorChange(nextHighlightedColorId);
+                    if (nextHighlightedColorId) {
+                      onHighlightColorChange(nextHighlightedColorId);
 
-                        if (!isBottomPanelLayout) {
-                          return;
-                        }
-
-                        onEnterBottomPanelCanvasFocus();
+                      if (!isBottomPanelLayout) {
                         return;
                       }
 
-                      deactivateHighlight();
-                    }}
-                    onKeyDown={(event) => {
-                      event.stopPropagation();
-                    }}
-                  >
-                    <ButtonIcon icon="/icons/lucide/search.svg" />
-                  </Button>
-                ) : null}
+                      onEnterBottomPanelCanvasFocus();
+                      return;
+                    }
+
+                    deactivateHighlight();
+                  }}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <ButtonIcon icon="/icons/lucide/search.svg" />
+                </Button>
 
                 {deleteModeActive ? (
                   <Button

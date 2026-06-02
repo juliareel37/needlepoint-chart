@@ -549,21 +549,6 @@
   white-space: normal;
 }
 
-.documentSizeSummary {
-  min-width: 0;
-  padding: 0 2px;
-}
-
-.documentSizeValue {
-  margin: 4px 0 0;
-  color: var(--text-primary);
-}
-
-.documentSizeUnit {
-  margin: 2px 0 0;
-  color: var(--text-tertiary);
-}
-
 .documentMetadataList {
   display: grid;
   gap: 0;
@@ -573,7 +558,7 @@
 
 .documentMetaItem {
   display: grid;
-  grid-template-columns: minmax(72px, 0.42fr) minmax(0, 1fr);
+  grid-template-columns: minmax(72px, 0.52fr) minmax(0, 1fr);
   gap: 12px;
   align-items: baseline;
   min-width: 0;
@@ -583,6 +568,8 @@
 .documentMetaLabel {
   margin: 0;
   color: var(--text-secondary);
+  opacity: 0.8;
+  font-weight: 400 !important;
 }
 
 .documentMetaValue {
@@ -1420,6 +1407,7 @@
 
 .customPaletteCardMeta {
   color: var(--text-tertiary);
+  margin-top: -12px;
 }
 
 .customPaletteCard:focus-visible {
@@ -3863,6 +3851,8 @@
 
 .usedColorsItem[data-selectable="true"] {
   cursor: pointer;
+  padding-right: 6px;
+  padding-left: 8px;
 }
 
 .usedColorsItem[data-selectable="true"]:focus-visible {
@@ -3882,7 +3872,7 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  margin-right: 20px;
+  margin-right: 10px;
   pointer-events: none;
 }
 
@@ -4828,6 +4818,10 @@
   }
 
   .usedColorsRow[data-delete-mode="true"] .usedColorsHighlightButton {
+    opacity: 1;
+  }
+
+  .usedColorsRow[data-selectable="true"] .usedColorsHighlightButton {
     opacity: 1;
   }
 
