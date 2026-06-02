@@ -1,6 +1,27 @@
 import type { CSSProperties } from "react";
 
-export type DesignTypeToken = "h1" | "h2" | "h3" | "h4" | "h5" | "p1" | "p2" | "s";
+export type DesignTypeToken =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "p1"
+  | "p1Medium"
+  | "p2"
+  | "p2Medium"
+  // | "p2Semibold"
+  // | "label"
+  | "caption"
+  | "captionMd"
+  // | "badge"
+  // | "micro"
+  // | "microCaps"
+  // | "tooltip"
+  // | "overline"
+  | "sMedium"
+  // | "sCaps"
+  | "s";
 export type MarketingTypeToken =
   | "eyebrow"
   | "bodyLg"
@@ -33,6 +54,7 @@ type TypographySpec<
   sample: string;
   fontFamily?: string;
   letterSpacing?: string;
+  textTransform?: CSSProperties["textTransform"];
 };
 
 function createTypographyStyles<
@@ -57,13 +79,36 @@ function createTypographyStyles<
           fontWeight: spec.weight,
           ...(spec.fontFamily ? { fontFamily: spec.fontFamily } : null),
           ...(spec.letterSpacing ? { letterSpacing: spec.letterSpacing } : null),
+          ...(spec.textTransform ? { textTransform: spec.textTransform } : null),
         } satisfies CSSProperties,
       ];
     })
   ) as Record<TToken, CSSProperties>;
 }
 
-export const uiTypographyOrder: DesignTypeToken[] = ["h1", "h2", "h3", "h4", "h5", "p1", "p2", "s"];
+export const uiTypographyOrder: DesignTypeToken[] = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "p1",
+  "p1Medium",
+  "p2",
+  "p2Medium",
+  // "p2Semibold",
+  // "label",
+  "caption",
+  "captionMd",
+  // "badge",
+  // "micro",
+  // "microCaps",
+  // "tooltip",
+  // "overline",
+  "sMedium",
+  // "sCaps",
+  "s",
+];
 
 export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, number>> = {
   h1: {
@@ -94,7 +139,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     label: "h4",
     size: 18,
     lineHeight: 20,
-    weight: fontWeights.bold,
+    weight: fontWeights.semibold,
     usage: "minor headings, card titles",
     sample: "Header Four",
   },
@@ -102,7 +147,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     label: "h5",
     size: 16,
     lineHeight: 18,
-    weight: fontWeights.bold,
+    weight: fontWeights.semibold,
     usage: "compact emphasis headings, alert titles",
     sample: "Header Five",
   },
@@ -114,6 +159,14 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     usage: "primary body copy",
     sample: "Primary body copy",
   },
+  p1Medium: {
+    label: "p1 medium",
+    size: 14,
+    lineHeight: 20,
+    weight: fontWeights.medium,
+    usage: "primary UI labels and prominent inline actions",
+    sample: "Primary action label",
+  },
   p2: {
     label: "p2",
     size: 13,
@@ -122,6 +175,110 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     usage: "secondary UI/body text",
     sample: "Secondary body copy",
   },
+  p2Medium: {
+    label: "p2 medium",
+    size: 13,
+    lineHeight: 18,
+    weight: fontWeights.medium,
+    usage: "secondary UI labels, list item titles, and compact controls",
+    sample: "Secondary label",
+  },
+  // p2Semibold: {
+  //   label: "p2 semibold",
+  //   size: 13,
+  //   lineHeight: 18,
+  //   weight: fontWeights.semibold,
+  //   usage: "emphasized secondary UI labels",
+  //   sample: "Emphasized label",
+  // },
+  // label: {
+  //   label: "label",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "compact field labels, tooltip titles, and metadata labels",
+  //   sample: "Compact label",
+  // },
+  caption: {
+    label: "caption",
+    size: 12,
+    lineHeight: 16,
+    weight: fontWeights.regular,
+    usage: "supporting captions and low-emphasis metadata",
+    sample: "Supporting caption",
+  },
+  captionMd: {
+    label: "caption medium",
+    size: 12,
+    lineHeight: 16,
+    weight: fontWeights.medium,
+    usage: "compact metadata, secondary counts, and small actions",
+    sample: "Compact metadata",
+  },
+  // badge: {
+  //   label: "badge",
+  //   size: 11,
+  //   lineHeight: 14,
+  //   weight: fontWeights.medium,
+  //   usage: "count badges and compact status badges",
+  //   sample: "12",
+  //   letterSpacing: "0.01em",
+  // },
+  // micro: {
+  //   label: "micro",
+  //   size: 10,
+  //   lineHeight: 12,
+  //   weight: fontWeights.medium,
+  //   usage: "color codes, tiny counts, and dense metadata",
+  //   sample: "DMC 310",
+  //   letterSpacing: "0.01em",
+  // },
+  // microCaps: {
+  //   label: "micro caps",
+  //   size: 9,
+  //   lineHeight: 10,
+  //   weight: fontWeights.medium,
+  //   usage: "very small uppercase labels in dense controls",
+  //   sample: "AUX",
+  //   letterSpacing: "0.03em",
+  //   textTransform: "uppercase",
+  // },
+  // tooltip: {
+  //   label: "tooltip",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "floating tooltip text",
+  //   sample: "Tooltip label",
+  // },
+  // overline: {
+  //   label: "overline",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "uppercase metadata labels",
+  //   sample: "METADATA",
+  //   letterSpacing: "0.08em",
+  //   textTransform: "uppercase",
+  // },
+  sMedium: {
+    label: "s medium",
+    size: 11,
+    lineHeight: 14,
+    weight: fontWeights.medium,
+    usage: "supporting labels with stronger emphasis",
+    sample: "Support label",
+  },
+  // sCaps: {
+  //   label: "s caps",
+  //   size: 11,
+  //   lineHeight: 14,
+  //   weight: fontWeights.medium,
+  //   usage: "uppercase supporting labels",
+  //   sample: "SUPPORT",
+  //   letterSpacing: "0.01em",
+  //   textTransform: "uppercase",
+  // },
   s: {
     label: "s",
     size: 11,

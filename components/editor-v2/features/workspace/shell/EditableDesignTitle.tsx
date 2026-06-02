@@ -120,10 +120,7 @@ export function EditableDesignTitle({
           <span className={styles.editableTitleSurface}>
             <div
               className={styles.editableTitleText}
-              style={{
-                ...typographyStyles.h5,
-                fontWeight: "var(--editor-font-weight-bold)",
-              }}
+              style={typographyStyles.h5}
             >
               {documentTitle}
             </div>

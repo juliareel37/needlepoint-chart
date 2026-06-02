@@ -52,7 +52,6 @@ interface EditorSidebarProps {
   selectedStorageId: string;
   setSelectedStorageId: (value: string) => void;
   onLoadSelected: () => void;
-  onClose: () => void;
   onColorSwapPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
@@ -133,7 +132,6 @@ export function EditorSidebar({
   selectedStorageId,
   setSelectedStorageId,
   onLoadSelected,
-  onClose,
   onColorSwapPreviewChange,
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
@@ -254,6 +252,9 @@ export function EditorSidebar({
     colorPanelView === "custom-palette-create"
       ? "Back to custom palettes"
       : "Back to color overview";
+  const showSidebarPanelHeader =
+    (activeSection === "color" && isColorSubpage) ||
+    (activeSection === "icons" && iconsPanelView.type === "category");
   const handleCustomPaletteCreateOpen = () => {
     setCustomPaletteDraftId(null);
     setCustomPaletteDraftColorIds([]);
@@ -298,73 +299,45 @@ export function EditorSidebar({
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarSurface}>
-        <div className={styles.sidebarPanelHeader}>
-          {activeSection === "color" && isColorSubpage ? (
-            <div className={styles.sidebarPanelBackRow}>
-              <Button
-                type="button"
-                variant="ghostV2"
-                size="sm"
-                className={styles.sidebarPanelBackButton}
-                aria-label={colorPanelBackLabel}
-                title={colorPanelBackLabel}
-                onClick={handleColorPanelBack}
-              >
-                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </Button>
-              <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
-                {colorPanelBackTitle}
-              </span>
-            </div>
-          ) : activeSection === "icons" && iconsPanelView.type === "category" ? (
-            <div className={styles.sidebarPanelBackRow}>
-              <Button
-                type="button"
-                variant="ghostV2"
-                size="sm"
-                className={styles.sidebarPanelBackButton}
-                aria-label="Back to icon categories"
-                title="Back to icon categories"
-                onClick={() => setIconsPanelBackRequestKey((current) => current + 1)}
-              >
-                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
-              </Button>
-              <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
-                {iconsPanelView.category}
-              </span>
-            </div>
-          ) : (
-            <h2 className={styles.sidebarPanelTitle} style={typographyStyles.h4}>
-              {activeSection === "document"
-                ? "Document"
-                : activeSection === "color"
-                  ? "Color"
-                  : activeSection === "trace"
-                    ? "Image Reference"
-                    : activeSection === "text"
-                      ? "Text"
-                      : activeSection === "icons"
-                        ? "Graphics"
-                        : "Settings"}
-            </h2>
-          )}
-          <div className={styles.sidebarHeaderActions}>
-            <Button
-              type="button"
-              variant="ghostV2"
-              size="sm"
-              className={styles.sidebarCloseButton}
-              aria-label="Hide panel"
-              title="Hide panel"
-              onClick={onClose}
-            >
-              <ButtonIcon
-                icon="/icons/lucide/x.svg"
-                className={styles.sidebarCloseIcon}
-              />
-            </Button>
+        {showSidebarPanelHeader ? (
+          <div className={styles.sidebarPanelHeader}>
+            {activeSection === "color" ? (
+              <div className={styles.sidebarPanelBackRow}>
+                <Button
+                  type="button"
+                  variant="ghostV2"
+                  size="sm"
+                  className={styles.sidebarPanelBackButton}
+                  aria-label={colorPanelBackLabel}
+                  title={colorPanelBackLabel}
+                  onClick={handleColorPanelBack}
+                >
+                  <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+                </Button>
+                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                  {colorPanelBackTitle}
+                </span>
+              </div>
+            ) : (
+              <div className={styles.sidebarPanelBackRow}>
+                <Button
+                  type="button"
+                  variant="ghostV2"
+                  size="sm"
+                  className={styles.sidebarPanelBackButton}
+                  aria-label="Back to icon categories"
+                  title="Back to icon categories"
+                  onClick={() => setIconsPanelBackRequestKey((current) => current + 1)}
+                >
+                  <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+                </Button>
+                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                  {iconsPanelView.type === "category" ? iconsPanelView.category : "Graphics"}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
+        ) : null}
 
         <div className={styles.sidebarPanelBody}>
           {activeSection === "document" ? (

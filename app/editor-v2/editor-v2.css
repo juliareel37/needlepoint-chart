@@ -45,7 +45,7 @@ body:has(.editor-v2-route-shell) {
   --text-primary: var(--editor-text-primary);
 }
 
-#app-shell-root:has(.editor-v2-route-shell) :where(
+/* #app-shell-root:has(.editor-v2-route-shell) :where(
   h1,
   h2,
   h3,
@@ -73,7 +73,7 @@ body:has(.editor-v2-route-shell) {
   button
 ) {
   font-weight: var(--editor-font-weight-semibold) !important;
-}
+} */
 
 .editor-v2-route-shell :is(
   input,

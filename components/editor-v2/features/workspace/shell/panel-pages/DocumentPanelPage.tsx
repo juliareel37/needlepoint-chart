@@ -319,11 +319,11 @@ export function DocumentPanelPage({
                     <div className={styles.documentRecentMeta}>
                       <p
                         className={styles.documentRecentName}
-                        style={{ ...typographyStyles.p2, fontWeight: 600 }}
+                        style={typographyStyles.p1Medium}
                       >
                         {record.title}
                       </p>
-                      <p className={styles.documentRecentDetail} style={typographyStyles.p2}>
+                      <p className={styles.documentRecentDetail} style={typographyStyles.caption}>
                         {record.gridWidth} × {record.gridHeight} sts
                         <span className={styles.documentRecentDetailDivider} aria-hidden="true">
                           •
@@ -394,7 +394,7 @@ function DocumentMetaItem({
 }) {
   return (
     <div className={styles.documentMetaItem}>
-      <p className={styles.documentMetaLabel} style={typographyStyles.p2}>
+      <p className={styles.documentMetaLabel} style={typographyStyles.caption}>
         {label}
       </p>
       <p className={styles.documentMetaValue} style={typographyStyles.p1}>

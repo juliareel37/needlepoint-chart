@@ -5,10 +5,16 @@
 }
 
 .page {
+  --editor-font-weight-semibold: 500;
+  --editor-font-weight-bold: 600;
+  --font-primary: var(--font-editor-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-primary);
+  --font-mono: var(--font-primary);
   min-height: 100%;
   padding: 20px;
   background: var(--surface-app);
   color: var(--text-primary);
+  font-family: var(--font-primary);
 }
 
 .stack {
@@ -163,6 +169,11 @@
   gap: 12px;
 }
 
+.typeRow {
+  display: grid;
+  grid-template-columns: minmax(88px, 120px) minmax(180px, 1fr) minmax(160px, 0.7fr);
+}
+
 .tokenSwatch {
   width: 32px;
   height: 32px;
@@ -173,10 +184,12 @@
 
 .tokenMeta,
 .typeMeta,
-.typeSample {
+.typeVariant,
+.typeUsage {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .tokenTitleRow {
@@ -396,7 +409,22 @@
   min-width: 88px;
 }
 
-.typeSample {
+.typeVariants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-items: start;
+  gap: 12px 18px;
+  min-width: 0;
+}
+
+.typeVariant {
+  gap: 4px;
+}
+
+.typeUsage {
+  justify-self: end;
+  max-width: 260px;
+  text-align: right;
   gap: 4px;
 }
 
@@ -681,5 +709,18 @@
   .sliderInlineRow,
   .sliderInputRow {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .typeRow {
+    grid-template-columns: minmax(72px, 88px) minmax(0, 1fr);
+  }
+
+  .typeUsage {
+    grid-column: 2;
+    justify-self: start;
+    max-width: none;
+    text-align: left;
   }
 }

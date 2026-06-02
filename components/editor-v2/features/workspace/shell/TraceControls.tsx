@@ -817,7 +817,7 @@ export function TraceControls({
                 <div className={styles.traceInlineFieldRow}>
                   <span
                     className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
+                    style={typographyStyles.p1}
                   >
                     Blending
                   </span>
@@ -849,7 +849,7 @@ export function TraceControls({
                 <div className={styles.traceInlineFieldRow}>
                   <span
                     className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
+                    style={typographyStyles.p1}
                   >
                     Opacity
                   </span>
@@ -865,7 +865,10 @@ export function TraceControls({
                           .filter(Boolean)
                           .join(" ")}
                         aria-hidden="true"
-                        style={{ left: `${trace.opacity * 100}%` }}
+                        style={{
+                          ...typographyStyles["tooltip"],
+                          left: `${trace.opacity * 100}%`,
+                        }}
                       >
                         {Math.round(trace.opacity * 100)}%
                       </div>
@@ -899,14 +902,14 @@ export function TraceControls({
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection
-            title="Convert to stitches"
+            title="Convert to pattern"
             // hint="Sample the image onto the stitch grid using your thread palette."
           >
             <Field>
               <div className={styles.traceInlineFieldRow}>
                 <span
                   className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
+                  style={typographyStyles.p1}
                 >
                   Max colors
                 </span>
@@ -929,7 +932,9 @@ export function TraceControls({
                         )
                       }
                     />
-                    <span className={styles.traceSliderValue}>{convertMaxColors}</span>
+                    <span className={styles.traceSliderValue} style={typographyStyles.captionMd}>
+                      {convertMaxColors}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -939,7 +944,7 @@ export function TraceControls({
               <div className={styles.traceInlineFieldRow}>
                 <span
                   className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
+                  style={typographyStyles.p1}
                 >
                   Smoothing
                 </span>
@@ -962,7 +967,7 @@ export function TraceControls({
                         )
                       }
                     />
-                    <span className={styles.traceSliderValue}>
+                    <span className={styles.traceSliderValue} style={typographyStyles.captionMd}>
                       {conversionSmoothingPercent}%
                     </span>
                   </div>

@@ -939,13 +939,13 @@ export function UsedColorsSummary({
         ) : null}
       </div>
       {selectionPromptVisible ? (
-        <span className={styles.emptyMessage} style={typographyStyles.p2}>
+        <span className={styles.emptyMessage} style={typographyStyles.p1}>
           Drag a selection on the canvas to edit colors.
         </span>
       ) : (
         <>
           {usedColors.length === 0 ? (
-            <span className={styles.emptyMessage} style={typographyStyles.p2}>
+            <span className={styles.emptyMessage} style={typographyStyles.p1}>
               No colors used yet.
             </span>
           ) : (
@@ -1058,7 +1058,10 @@ export function UsedColorsSummary({
                         {swatchSymbol ? (
                           <span
                             className={styles.usedColorSwatchSymbol}
-                            style={{ color: getSwatchIconColor(swatchColor) }}
+                            style={{
+                              ...typographyStyles.p1Medium,
+                              color: getSwatchIconColor(swatchColor),
+                            }}
                           >
                             {swatchSymbol}
                           </span>
@@ -1105,14 +1108,19 @@ export function UsedColorsSummary({
                     }
                   >
                     <span className={styles.usedColorsItemText}>
-                      <span className={styles.usedColorsItemName}>{rowColorName}</span>
-                      <span className={styles.usedColorsItemCode}>{rowColorCode}</span>
+                      <span className={styles.usedColorsItemName} style={typographyStyles.p1Medium}>
+                        {rowColorName}
+                      </span>
+                      <span className={styles.usedColorsItemCode} style={typographyStyles.s}>
+                        {rowColorCode}
+                      </span>
                     </span>
                     <span
                       className={[
                         styles.sidebarColorPreviewCountBadge,
                         styles.usedColorsItemCountBadge,
                       ].join(" ")}
+                      style={typographyStyles.sMedium}
                     >
                       {entry.count}
                     </span>
@@ -1167,7 +1175,7 @@ export function UsedColorsSummary({
                     className={styles.usedColorsInlineLibraryPanel}
                   >
                     <div className={styles.usedColorsInlineLibraryHeader}>
-                      <span className={styles.usedColorsInlineLibraryTitle}>
+                      <span className={styles.usedColorsInlineLibraryTitle} style={typographyStyles.s}>
                         Replace with
                       </span>
                       <button
@@ -1310,11 +1318,17 @@ export function UsedColorsSummary({
                                   </span>
                                 ) : null}
                                 <span className={styles.usedColorsMergeTargetText}>
-                                  <span className={styles.usedColorsMergeTargetName}>
+                                  <span
+                                    className={styles.usedColorsMergeTargetName}
+                                    style={typographyStyles.p2Medium}
+                                  >
                                     {mergeTargetLabel}
                                   </span>
                                   {mergeTargetCode ? (
-                                    <span className={styles.usedColorsMergeTargetCode}>
+                                    <span
+                                      className={styles.usedColorsMergeTargetCode}
+                                      style={typographyStyles.sMedium}
+                                    >
                                       {mergeTargetCode}
                                     </span>
                                   ) : null}

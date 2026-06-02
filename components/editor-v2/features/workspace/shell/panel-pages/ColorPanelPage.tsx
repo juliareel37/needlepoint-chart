@@ -377,10 +377,14 @@ export function ColorPanelPage({
                     aria-hidden="true"
                     className={styles.activeColorDivider}
                   />
-                  <span className={styles.activeColorCode}>{activeColorCodeLabel}</span>
+                  <span className={styles.activeColorCode} style={typographyStyles.sMedium}>
+                    {activeColorCodeLabel}
+                  </span>
                 </>
               ) : (
-                <strong className={styles.activeColorValue}>None selected</strong>
+                <strong className={styles.activeColorValue} style={typographyStyles.h5}>
+                  None selected
+                </strong>
               )}
             </div>
 
@@ -401,7 +405,7 @@ export function ColorPanelPage({
                     </h3>
                     <span
                       className={styles.sidebarColorPreviewCountBadge}
-                      style={typographyStyles.p2}
+                      style={typographyStyles.s}
                     >
                       {usedColors.length}
                     </span>
@@ -516,7 +520,10 @@ export function ColorPanelPage({
                             <span
                               aria-hidden="true"
                               className={styles.sidebarDesignColorSwatchCheck}
-                              style={{ color: getSwatchCheckColor(color.hex) }}
+                              style={{
+                                ...typographyStyles.captionMd,
+                                color: getSwatchCheckColor(color.hex),
+                              }}
                             >
                               ✓
                             </span>
@@ -553,7 +560,7 @@ export function ColorPanelPage({
                       </h3>
                        <span
                         className={styles.sidebarColorPreviewCountBadge}
-                        style={typographyStyles.p2}
+                        style={typographyStyles.s}
                       >
                         {usedColors.length}
                       </span>
@@ -585,7 +592,10 @@ export function ColorPanelPage({
                   {showMoreButton ? (
                     <span
                       className={styles.sidebarColorPreviewMoreBadge}
-                      style={{ gridColumn: `span ${hiddenBadgeSpan}` }}
+                      style={{
+                        ...typographyStyles.sMedium,
+                        gridColumn: `span ${hiddenBadgeSpan}`,
+                      }}
                     >
                       + {hiddenCount}
                     </span>
@@ -632,7 +642,7 @@ export function ColorPanelPage({
                         <span className={styles.customPaletteRowName} style={typographyStyles.p1}>
                           {customPalette.name}
                         </span>
-                        <span className={styles.customPaletteRowCount}>
+                        <span className={styles.customPaletteRowCount} style={typographyStyles.p1}>
                           ({customPalette.colorIds.length})
                         </span>
                       </div>
@@ -812,7 +822,7 @@ export function ColorPanelPage({
                           );
                         })}
                       </div>
-                      <span className={styles.customPaletteCardMeta}>
+                      <span className={styles.customPaletteCardMeta} style={typographyStyles.captionMd}>
                         {customPalette.colorIds.length}{" "}
                         {customPalette.colorIds.length === 1 ? "color" : "colors"}
                       </span>
@@ -895,6 +905,7 @@ export function ColorPanelPage({
                     <button
                       type="button"
                       className={styles.customPaletteSelectionSummaryAction}
+                      style={typographyStyles.sMedium}
                       onClick={onCustomPaletteDraftReset}
                     >
                       Clear
@@ -906,7 +917,7 @@ export function ColorPanelPage({
                   <div className={styles.customPaletteSelectionMetaRow}>
                     <span
                       className={styles.customPaletteSelectionCount}
-                      style={typographyStyles.p2}
+                      style={typographyStyles.s}
                     >
                       {customPaletteDraftColors.length}{" "}
                       {customPaletteDraftColors.length === 1
@@ -949,7 +960,7 @@ export function ColorPanelPage({
                 ) : (
                   <p
                     className={styles.customPaletteSelectionSummaryCaption}
-                    style={typographyStyles.p2}
+                    style={typographyStyles.caption}
                   >
                   Select colors to add to your palette
                   </p>
@@ -1023,11 +1034,17 @@ export function ColorPanelPage({
                   }px`,
                 }}
               >
-                <span className={styles.sidebarDesignColorTooltipTitle}>
+                <span
+                  className={styles.sidebarDesignColorTooltipTitle}
+                  style={typographyStyles.captionMd}
+                >
                   {activeDesignColorTooltip.label}
                 </span>
                 {activeDesignColorTooltip.detail ? (
-                  <span className={styles.sidebarDesignColorTooltipDetail}>
+                  <span
+                    className={styles.sidebarDesignColorTooltipDetail}
+                    style={typographyStyles.sMedium}
+                  >
                     {activeDesignColorTooltip.detail}
                   </span>
                 ) : null}

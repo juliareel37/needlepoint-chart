@@ -3567,7 +3567,6 @@ export function EditorV2Shell({
                       if (!selectedRecord) return;
                       void onLoadDocument(selectedRecord);
                     }}
-                    onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
                     onColorSwapPreviewChange={setColorSwapPreview}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}

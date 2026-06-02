@@ -25,9 +25,6 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 550;
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
