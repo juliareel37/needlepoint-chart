@@ -48,6 +48,14 @@ function formatColorCodeLabel(color: PaletteColor) {
   return color.brand === "dmc" ? `DMC ${color.code}` : color.code;
 }
 
+type UsedColorsMergeTargetTooltip = {
+  label: string;
+  detail: string;
+  left: number;
+  top: number;
+  target: HTMLButtonElement;
+};
+
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge" | "delete";
 type UsedColorsSortMode = "usage" | "usage-ascending" | "color";
@@ -318,7 +326,8 @@ function UsedColorsPortalPopover({
 }) {
   const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<{
-    top: number;
+    top: number | "auto";
+    bottom: number | "auto";
     left: number | "auto";
     right: number | "auto";
     direction: "up" | "down";
@@ -363,17 +372,14 @@ function UsedColorsPortalPopover({
             : "up"
         : preferredDirection;
     const availableSpace = direction === "up" ? spaceAbove : spaceBelow;
-    const top =
-      direction === "up"
-        ? Math.max(viewportPadding, rect.top - gap - popoverHeight)
-        : rect.bottom + gap;
 
     setPosition({
-      top,
+      top: direction === "up" ? "auto" : rect.bottom + gap,
+      bottom: direction === "up" ? window.innerHeight - rect.top : "auto",
       left: horizontalPosition.left,
       right: horizontalPosition.right,
       direction,
-      maxHeight: Math.max(availableSpace - gap, 140),
+      maxHeight: Math.max(direction === "up" ? availableSpace : availableSpace - gap, 140),
       transform: horizontalPosition.transform,
     });
   }, [anchorRef, horizontalAlign, preferredDirection]);
@@ -425,8 +431,8 @@ function UsedColorsPortalPopover({
       onRequestClose?.();
     }
 
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [anchorRef, mounted, onRequestClose]);
 
   if (!mounted) {
@@ -441,6 +447,7 @@ function UsedColorsPortalPopover({
         ...props.style,
         position: "fixed",
         top: position?.top ?? 0,
+        bottom: position?.bottom ?? "auto",
         left: position?.left ?? 0,
         right: position?.right ?? "auto",
         zIndex: "var(--z-editor-popover)",
@@ -515,6 +522,8 @@ export function UsedColorsSummary({
   const [mergeConfirmationOpen, setMergeConfirmationOpen] = useState(false);
   const [successNotification, setSuccessNotification] =
     useState<UsedColorsSuccessNotification | null>(null);
+  const [activeMergeTargetTooltip, setActiveMergeTargetTooltip] =
+    useState<UsedColorsMergeTargetTooltip | null>(null);
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
   const highlightColorChangeRef = useRef(onHighlightColorChange);
@@ -529,7 +538,7 @@ export function UsedColorsSummary({
   const scopeOptions = useMemo(
     () =>
       [
-        { value: "full-canvas", label: "All" },
+        { value: "full-canvas", label: "Entire Canvas" },
         {
           value: "selection",
           label: (
@@ -586,6 +595,21 @@ export function UsedColorsSummary({
     onHighlightColorChange,
   ]);
 
+  const updateMergeTargetTooltip = useCallback(
+    (target: HTMLButtonElement, label: string, detail: string) => {
+      const rect = target.getBoundingClientRect();
+
+      setActiveMergeTargetTooltip({
+        label,
+        detail,
+        left: rect.left + rect.width / 2,
+        top: rect.top - 8,
+        target,
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     setSelectedColorIds((current) =>
       current.filter((colorId) => usedColors.some((entry) => entry.colorId === colorId)),
@@ -597,6 +621,41 @@ export function UsedColorsSummary({
       onHighlightColorChange(null);
     }
   }, [highlightedColorId, onHighlightColorChange, usedColors]);
+
+  useEffect(() => {
+    if (!activeMergeTargetTooltip) {
+      return;
+    }
+
+    if (!document.body.contains(activeMergeTargetTooltip.target)) {
+      setActiveMergeTargetTooltip(null);
+      return;
+    }
+
+    function updateActiveTooltipPosition() {
+      setActiveMergeTargetTooltip((current) => {
+        if (!current || !document.body.contains(current.target)) {
+          return null;
+        }
+
+        const rect = current.target.getBoundingClientRect();
+
+        return {
+          ...current,
+          left: rect.left + rect.width / 2,
+          top: rect.top - 8,
+        };
+      });
+    }
+
+    window.addEventListener("resize", updateActiveTooltipPosition);
+    window.addEventListener("scroll", updateActiveTooltipPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateActiveTooltipPosition);
+      window.removeEventListener("scroll", updateActiveTooltipPosition, true);
+    };
+  }, [activeMergeTargetTooltip]);
 
   useEffect(() => {
     if (!highlightedColorId) {
@@ -791,6 +850,7 @@ export function UsedColorsSummary({
     setSelectedColorIds([]);
     setMergeTargetColorId(null);
     setMergePickerOpen(false);
+    setActiveMergeTargetTooltip(null);
     setSwapSourceColorId(null);
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
@@ -1276,93 +1336,127 @@ export function UsedColorsSummary({
                             ref={mergeTargetAnchorRef}
                             className={styles.usedColorsMergeActionGroup}
                           >
-                            <ToolbarAnchor
-                              className={styles.usedColorsMergeTriggerWrap}
-                            >
-                              <ToolbarButton
-                                type="button"
-                                swatch
-                                active={mergePickerOpen}
-                                aria-pressed={mergePickerOpen}
-                                className={[
-                                  styles.libraryPopoverSwatchTrigger,
-                                  styles.usedColorsMergeTargetTrigger,
-                                ].join(" ")}
-                                aria-label={
-                                  mergeTargetColorId
-                                    ? `Merge target ${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
-                                    : "Choose merge target color"
-                                }
-                                title={
-                                  mergeTargetColorId
-                                    ? `${colorsById[mergeTargetColorId]?.name ?? mergeTargetColorId}`
-                                    : "Choose merge target color"
-                                }
-                                onClick={() => setMergePickerOpen((current) => !current)}
-                              >
-                                <ToolbarSwatch
-                                  className={styles.libraryPopoverSwatch}
-                                  color={mergeTargetColorId ? (colorsById[mergeTargetColorId]?.hex ?? "#ffffff") : "#ffffff"}
-                                />
-                                {showSymbols && mergeTargetColorId && symbolAssignments[mergeTargetColorId] ? (
-                                  <span
-                                    aria-hidden="true"
-                                    className={styles.libraryPopoverSwatchSymbol}
-                                    style={{
-                                      color: getSwatchIconColor(
-                                        colorsById[mergeTargetColorId]?.hex ?? "#ffffff",
-                                      ),
-                                    }}
-                                  >
-                                    {symbolAssignments[mergeTargetColorId]}
-                                  </span>
-                                ) : null}
-                                <span className={styles.usedColorsMergeTargetText}>
-                                  <span
-                                    className={styles.usedColorsMergeTargetName}
-                                    style={typographyStyles.p2Medium}
-                                  >
-                                    {mergeTargetLabel}
-                                  </span>
-                                  {mergeTargetCode ? (
-                                    <span
-                                      className={styles.usedColorsMergeTargetCode}
-                                      style={typographyStyles.sMedium}
-                                    >
-                                      {mergeTargetCode}
-                                    </span>
-                                  ) : null}
-                                </span>
-                              </ToolbarButton>
+                            <div className={styles.usedColorsMergeTargetList}>
+                              {selectedUsedColors.map((entry) => {
+                                const color = colorsById[entry.colorId];
+                                const colorName = color?.name ?? entry.colorId;
+                                const colorCode = color ? formatColorCodeLabel(color) : entry.colorId;
+                                const tooltipDetail = colorCode;
 
-                              {mergePickerOpen ? (
-                                <UsedColorsPortalPopover
-                                  anchorRef={mergeTargetAnchorRef}
-                                  horizontalAlign="center"
-                                  onRequestClose={() => setMergePickerOpen(false)}
-                                  preferredDirection="up"
-                                  role="dialog"
-                                  aria-label="Merge target color library"
-                                  className={styles.usedColorsMergePopover}
-                                  style={{ whiteSpace: "normal" }}
-                                >
-                                  <ColorLibrary
-                                    activeColorId={mergeTargetColorId}
-                                    className={styles.usedColorsMergeLibraryGrid}
-                                    colors={palette}
-                                    defaultView="all"
-                                    featuredColorIds={featuredColorIds}
-                                    paletteSections={paletteSections}
-                                    showFeaturedSymbols={showSymbols}
-                                    symbolAssignments={symbolAssignments}
-                                    onColorSelect={(colorId) => {
-                                      setMergeTargetColorId(colorId);
-                                      setMergePickerOpen(false);
+                                return (
+                                  <ToolbarButton
+                                    key={entry.colorId}
+                                    type="button"
+                                    swatch
+                                    active={mergeTargetColorId === entry.colorId}
+                                    className={[
+                                      styles.libraryPopoverSwatchTrigger,
+                                      styles.usedColorsMergeTargetSwatchButton,
+                                    ].join(" ")}
+                                    aria-label={`Merge into ${colorName}`}
+                                    data-tooltip={colorName}
+                                    data-tooltip-detail={tooltipDetail}
+                                    onFocus={(event) => {
+                                      updateMergeTargetTooltip(
+                                        event.currentTarget,
+                                        colorName,
+                                        tooltipDetail,
+                                      );
                                     }}
-                                  />
-                                </UsedColorsPortalPopover>
-                              ) : null}
-                            </ToolbarAnchor>
+                                    onBlur={() => {
+                                      setActiveMergeTargetTooltip(null);
+                                    }}
+                                    onPointerEnter={(event) => {
+                                      updateMergeTargetTooltip(
+                                        event.currentTarget,
+                                        colorName,
+                                        tooltipDetail,
+                                      );
+                                    }}
+                                    onPointerLeave={() => {
+                                      setActiveMergeTargetTooltip((current) =>
+                                        current?.target.matches(":focus-visible")
+                                          ? current
+                                          : null,
+                                      );
+                                    }}
+                                    onClick={() => {
+                                      setMergeTargetColorId(entry.colorId);
+                                      setActiveMergeTargetTooltip(null);
+                                    }}
+                                  >
+                                    <ToolbarSwatch
+                                      className={styles.libraryPopoverSwatch}
+                                      color={color?.hex ?? "#ffffff"}
+                                    />
+                                  </ToolbarButton>
+                                );
+                              })}
+
+                              <ToolbarAnchor className={styles.usedColorsMergeTriggerWrap}>
+                                <ToolbarButton
+                                  type="button"
+                                  iconOnly
+                                  active={
+                                    mergePickerOpen ||
+                                    Boolean(
+                                      mergeTargetColorId &&
+                                        !selectedColorIdSet.has(mergeTargetColorId),
+                                    )
+                                  }
+                                  aria-expanded={mergePickerOpen}
+                                  aria-haspopup="dialog"
+                                  className={styles.usedColorsMergeLibraryTrigger}
+                                  aria-label="Choose merge target from library"
+                                  title={
+                                    mergeTargetColorId
+                                      ? `Choose from library. Current target: ${mergeTargetLabel}${mergeTargetCode ? ` (${mergeTargetCode})` : ""}`
+                                      : "Choose merge target from library"
+                                  }
+                                  onClick={() => setMergePickerOpen((current) => !current)}
+                                >
+                                  {mergeTargetColorId && !selectedColorIdSet.has(mergeTargetColorId) ? (
+                                    <ToolbarSwatch
+                                      className={[
+                                        styles.libraryPopoverSwatch,
+                                        styles.usedColorsMergeLibraryTargetSwatch,
+                                      ].join(" ")}
+                                      color={mergeTargetColor?.hex ?? "#ffffff"}
+                                    />
+                                  ) : (
+                                    <ButtonIcon icon="/icons/lucide/palette.svg" />
+                                  )}
+                                </ToolbarButton>
+
+                                {mergePickerOpen ? (
+                                  <UsedColorsPortalPopover
+                                    anchorRef={mergeTargetAnchorRef}
+                                    horizontalAlign="start"
+                                    onRequestClose={() => setMergePickerOpen(false)}
+                                    preferredDirection="up"
+                                    role="dialog"
+                                    aria-label="Merge target color library"
+                                    className={styles.usedColorsMergePopover}
+                                    style={{ whiteSpace: "normal" }}
+                                  >
+                                    <ColorLibrary
+                                      activeColorId={mergeTargetColorId}
+                                      className={styles.usedColorsMergeLibraryGrid}
+                                      colors={palette}
+                                      defaultView="all"
+                                      featuredColorIds={featuredColorIds}
+                                      paletteSections={paletteSections}
+                                      showFeaturedSymbols={showSymbols}
+                                      symbolAssignments={symbolAssignments}
+                                      onColorSelect={(colorId) => {
+                                        setMergeTargetColorId(colorId);
+                                        setMergePickerOpen(false);
+                                      }}
+                                    />
+                                  </UsedColorsPortalPopover>
+                                ) : null}
+                              </ToolbarAnchor>
+                            </div>
                           </div>
                           <div className={styles.usedColorsSelectionButtonRow}>
                             <Button
@@ -1448,6 +1542,33 @@ export function UsedColorsSummary({
           )}
         </>
       )}
+
+      {activeMergeTargetTooltip
+        ? createPortal(
+            <div
+              aria-hidden="true"
+              className={styles.usedColorsMergeTargetTooltip}
+              style={{
+                left: activeMergeTargetTooltip.left,
+                top: activeMergeTargetTooltip.top,
+              }}
+            >
+              <span
+                className={styles.usedColorsMergeTargetTooltipTitle}
+                style={typographyStyles.captionMd}
+              >
+                {activeMergeTargetTooltip.label}
+              </span>
+              <span
+                className={styles.usedColorsMergeTargetTooltipDetail}
+                style={typographyStyles.caption}
+              >
+                {activeMergeTargetTooltip.detail}
+              </span>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <Modal
         isOpen={mergeConfirmationOpen}

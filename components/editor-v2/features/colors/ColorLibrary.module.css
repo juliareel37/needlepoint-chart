@@ -411,10 +411,10 @@
 .libraryFamilySectionHeader {
   margin: 0;
   padding: 0;
-  color: var(--neutral-500);
+  color: var(--neutral-600);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  /* letter-spacing: 0.08em; */
   line-height: 1.2;
   text-transform: uppercase;
 }

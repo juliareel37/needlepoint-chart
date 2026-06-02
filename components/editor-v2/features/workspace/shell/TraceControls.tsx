@@ -866,7 +866,6 @@ export function TraceControls({
                           .join(" ")}
                         aria-hidden="true"
                         style={{
-                          ...typographyStyles["tooltip"],
                           left: `${trace.opacity * 100}%`,
                         }}
                       >
@@ -995,7 +994,7 @@ export function TraceControls({
                     className={styles.traceConversionActionButton}
                     onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
                   >
-                    Apply to canvas
+                    Apply
                   </Button>
                 </div>
               </div>
@@ -1034,7 +1033,7 @@ export function TraceControls({
                     ) : (
                       "Apply"
                     )} */}
-                    Apply to canvas
+                    Apply
                   </Button>
                   
                 </div>

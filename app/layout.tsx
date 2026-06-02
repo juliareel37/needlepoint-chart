@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Fraunces, Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
@@ -17,7 +17,7 @@ const uiSans = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-const editorUiSans = DM_Sans({
+const editorUiSans = Inter({
   variable: "--font-editor-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],

@@ -3630,7 +3630,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  width: 100%;
+  flex: 0 0 auto;
 }
 
 .usedColorsMergeActionGroup {
@@ -3643,6 +3643,100 @@
   border-radius: 0;
   background: transparent;
   border: 0;
+  gap: 10px;
+}
+
+.usedColorsMergeTargetList {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.usedColorsMergeTargetList::-webkit-scrollbar {
+  display: none;
+}
+
+.usedColorsMergeTargetSwatchButton {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+}
+
+.usedColorsMergeTargetSwatchButton .libraryPopoverSwatch {
+  width: 25px;
+  height: 25px;
+}
+
+.usedColorsMergeLibraryTrigger {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--text-primary);
+}
+
+.usedColorsMergeLibraryTrigger :global(.icon) {
+  width: 14px;
+  height: 14px;
+}
+
+.usedColorsMergeLibraryTrigger :global(.glyph) {
+  background: currentColor;
+}
+
+.usedColorsMergeLibraryTargetSwatch {
+  width: 25px;
+  height: 25px;
+}
+
+.usedColorsMergeLibraryTrigger:focus-visible,
+.usedColorsMergeLibraryTrigger[data-active="true"] {
+  background: transparent !important;
+  color: var(--text-primary);
+}
+
+.usedColorsMergeLibraryTrigger:focus-visible .libraryPopoverSwatch,
+.usedColorsMergeLibraryTrigger[data-active="true"] .libraryPopoverSwatch {
+  transform: scale(1.14);
+  border-color: var(--swatch-border);
+  box-shadow:
+    0 0 0 1px var(--surface-primary),
+    0 0 0 2.5px color-mix(in srgb, var(--swatch-border-strong) 72%, #000000);
+}
+
+.usedColorsMergeTargetTooltip {
+  position: fixed;
+  z-index: var(--z-editor-tooltip);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: min(220px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border-radius: var(--editor-radius-md);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--ui-tooltip-shadow);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+}
+
+.usedColorsMergeTargetTooltipTitle {
+  max-width: 100%;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usedColorsMergeTargetTooltipDetail {
+  color: var(--text-secondary);
 }
 
 .usedColorsMergeTargetTrigger {
@@ -3652,37 +3746,6 @@
   padding: 0 !important;
   border-radius: 0;
   text-align: left;
-}
-
-.usedColorsMergeTargetTrigger .libraryPopoverSwatchSymbol {
-  inset: auto;
-  top: 50%;
-  left: 0;
-  width: 20px;
-  height: 20px;
-  transform: translateY(-50%);
-}
-
-.usedColorsMergeTargetText {
-  display: flex;
-  align-items: baseline;
-  min-width: 0;
-  gap: 6px;
-  text-align: left;
-}
-
-.usedColorsMergeTargetName {
-  min-width: 0;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.usedColorsMergeTargetCode {
-  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
-  flex: 0 0 auto;
-  white-space: nowrap;
 }
 
 .usedColorsMergePopover {

@@ -314,7 +314,7 @@ export function EditorSidebar({
                 >
                   <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
                 </Button>
-                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h5}>
                   {colorPanelBackTitle}
                 </span>
               </div>
@@ -331,7 +331,7 @@ export function EditorSidebar({
                 >
                   <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
                 </Button>
-                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h4}>
+                <span className={styles.sidebarPanelBackTitle} style={typographyStyles.h5}>
                   {iconsPanelView.type === "category" ? iconsPanelView.category : "Graphics"}
                 </span>
               </div>

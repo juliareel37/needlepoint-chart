@@ -36,11 +36,11 @@ export type MarketingTypeToken =
 export type DesignFontWeightToken = "regular" | "medium" | "semibold" | "bold";
 
 export const fontWeights = {
-  regular: 400,
-  medium: 500,
+  regular: 500,
+  medium: 550,
   semibold: 600,
   bold: 700,
-} as const satisfies Record<DesignFontWeightToken, 400 | 500 | 600 | 700>;
+} as const satisfies Record<DesignFontWeightToken, 500 | 550 | 600 | 700>;
 
 type TypographySpec<
   Size extends number | string = number,
@@ -145,7 +145,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   h5: {
     label: "h5",
-    size: 16,
+    size: 15,
     lineHeight: 18,
     weight: fontWeights.semibold,
     usage: "compact emphasis headings, alert titles",

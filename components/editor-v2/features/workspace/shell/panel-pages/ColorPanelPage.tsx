@@ -417,6 +417,7 @@ export function ColorPanelPage({
                   aria-label="View all design colors"
                   onClick={openDesignColorsView}
                 >
+                  {/* <span>Edit</span> */}
                   <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
                 </button>
               </div>
