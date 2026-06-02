@@ -205,6 +205,11 @@ export function GridWorldSurface({
     y: 0,
   });
   const [brushCursorPoint, setBrushCursorPoint] = useState<{ x: number; y: number } | null>(null);
+  const [eyedropperCursorPoint, setEyedropperCursorPoint] = useState<{
+    color: string | null;
+    x: number;
+    y: number;
+  } | null>(null);
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -223,6 +228,7 @@ export function GridWorldSurface({
     traceEraserActive ||
     duplicatePlacementActive;
   const mainBrushToolActive = activeTool === "paint" || activeTool === "erase";
+  const eyedropperToolActive = activeTool === "eyedropper";
   const normalizedBrushSize = clampGridBrushSize(brushSize, grid.width, grid.height);
   const brushCursorSize = normalizedBrushSize * metrics.cellSize * viewport.zoom;
   const brushCursorVisible =
@@ -237,6 +243,12 @@ export function GridWorldSurface({
     !paintDisabled &&
     mainBrushToolActive &&
     brushPreviewVisible;
+  const eyedropperCursorVisible =
+    !coarsePointer &&
+    !interactionLocked &&
+    !paintDisabled &&
+    eyedropperToolActive &&
+    eyedropperCursorPoint !== null;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -332,6 +344,14 @@ export function GridWorldSurface({
 
     setBrushCursorPoint(null);
   }, [interactionLocked, mainBrushToolActive, paintDisabled]);
+
+  useEffect(() => {
+    if (eyedropperToolActive && !interactionLocked && !paintDisabled) {
+      return;
+    }
+
+    setEyedropperCursorPoint(null);
+  }, [eyedropperToolActive, interactionLocked, paintDisabled]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -609,41 +629,78 @@ export function GridWorldSurface({
       onPointerDownCapture={handleStagePointerDownCapture}
       onAuxClick={handleStageAuxClick}
       onPointerMove={(event) => {
-        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+        if (
+          (!mainBrushToolActive && !eyedropperToolActive) ||
+          coarsePointer ||
+          interactionLocked ||
+          paintDisabled
+        ) {
           return;
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
         if (!point) {
           setBrushCursorPoint(null);
+          setEyedropperCursorPoint(null);
           return;
         }
 
         const rect = event.currentTarget.getBoundingClientRect();
-        setBrushCursorPoint({
+        const cursorPoint = {
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
-        });
+        };
+
+        if (mainBrushToolActive) {
+          setBrushCursorPoint(cursorPoint);
+        }
+
+        if (eyedropperToolActive) {
+          const sampledColorId = grid.cells[point.y * grid.width + point.x] ?? null;
+          setEyedropperCursorPoint({
+            ...cursorPoint,
+            color: sampledColorId ? (colorsById[sampledColorId]?.hex ?? null) : null,
+          });
+        }
       }}
       onPointerDown={(event) => {
-        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+        if (
+          (!mainBrushToolActive && !eyedropperToolActive) ||
+          coarsePointer ||
+          interactionLocked ||
+          paintDisabled
+        ) {
           return;
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
         if (!point) {
           setBrushCursorPoint(null);
+          setEyedropperCursorPoint(null);
           return;
         }
 
         const rect = event.currentTarget.getBoundingClientRect();
-        setBrushCursorPoint({
+        const cursorPoint = {
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
-        });
+        };
+
+        if (mainBrushToolActive) {
+          setBrushCursorPoint(cursorPoint);
+        }
+
+        if (eyedropperToolActive) {
+          const sampledColorId = grid.cells[point.y * grid.width + point.x] ?? null;
+          setEyedropperCursorPoint({
+            ...cursorPoint,
+            color: sampledColorId ? (colorsById[sampledColorId]?.hex ?? null) : null,
+          });
+        }
       }}
       onPointerLeave={() => {
         setBrushCursorPoint(null);
+        setEyedropperCursorPoint(null);
       }}
       style={{
         position: "relative",
@@ -653,7 +710,7 @@ export function GridWorldSurface({
         cursor:
           interactionLocked
             ? "default"
-            : brushCursorVisible
+            : brushCursorVisible || eyedropperCursorVisible
               ? "none"
               : selectionCursor ?? cursor,
         touchAction: interactionLocked ? "auto" : "none",
@@ -876,6 +933,43 @@ export function GridWorldSurface({
             zIndex: 6,
           }}
         />
+      ) : null}
+      {eyedropperCursorVisible ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${eyedropperCursorPoint.x}px`,
+            top: `${eyedropperCursorPoint.y}px`,
+            width: "56px",
+            height: "56px",
+            transform: "translate(-50%, -50%)",
+            borderRadius: "999px",
+            border: "2px solid rgba(255, 255, 255, 0.98)",
+            boxShadow:
+              "0 0 0 1px rgba(15, 23, 42, 0.5), 0 8px 18px rgba(15, 23, 42, 0.18)",
+            background:
+              "radial-gradient(circle, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12))",
+            backdropFilter: "contrast(1.35) saturate(1.2)",
+            pointerEvents: "none",
+            zIndex: 8,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: "10px",
+              height: "10px",
+              transform: "translate(-50%, -50%)",
+              border: "1.5px solid rgba(255, 255, 255, 0.98)",
+              boxShadow:
+                "0 0 0 1px rgba(15, 23, 42, 0.62), inset 0 0 0 1px rgba(15, 23, 42, 0.18)",
+              background: eyedropperCursorPoint.color ?? "rgba(255, 255, 255, 0.16)",
+            }}
+          />
+        </div>
       ) : null}
       {centeredBrushPreviewVisible ? (
         <div

@@ -70,6 +70,9 @@ interface ColorPanelPageProps {
   onCustomPaletteDraftReset: () => void;
   onCustomPaletteDraftSelectAll: (colorIds: string[]) => void;
   onColorSwapPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
+  onMergeColorsPreviewChange: (
+    preview: { fromColorIds: string[]; toColorId: string } | null,
+  ) => void;
   onExitBottomPanelCanvasFocus: () => void;
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
@@ -104,6 +107,7 @@ export function ColorPanelPage({
   onCustomPaletteDraftReset,
   onCustomPaletteDraftSelectAll,
   onColorSwapPreviewChange,
+  onMergeColorsPreviewChange,
   onExitBottomPanelCanvasFocus,
   onEnterBottomPanelCanvasFocus,
   onViewChange,
@@ -737,6 +741,7 @@ export function ColorPanelPage({
               selectionScopeActive={selectionScopeActive}
               symbolAssignments={symbolAssignments}
               onColorSwapPreviewChange={onColorSwapPreviewChange}
+              onMergeColorsPreviewChange={onMergeColorsPreviewChange}
               onSwapColor={(fromColorId, toColorId) =>
                 dispatch(createSwapPaletteColorCommand(fromColorId, toColorId))
               }

@@ -174,18 +174,25 @@ export function DocumentPanelPage({
         </section>
 
         <section className={styles.documentMetadataCard}>
-          <div className={styles.documentMetadataGrid}>
-            <DocumentMetaItem
-              label="Size"
-              value={`${document.grid.width} × ${document.grid.height} sts`}
-            />
+          <div className={styles.documentSizeSummary}>
+            <p className={styles.documentMetaLabel} style={typographyStyles.caption}>
+              Size
+            </p>
+            <p className={styles.documentSizeValue} style={typographyStyles.h4}>
+              {document.grid.width} × {document.grid.height}
+            </p>
+            <p className={styles.documentSizeUnit} style={typographyStyles.captionMd}>
+              stitches
+            </p>
+          </div>
+          <dl className={styles.documentMetadataList}>
             <DocumentMetaItem label="Canvas" value={canvasLabel} />
             <DocumentMetaItem label="Colors" value={`${colorCount}`} />
             <DocumentMetaItem
               label="Created"
               value={formatDocumentDate(document.project.createdAt)}
             />
-          </div>
+          </dl>
         </section>
 {/* 
         <section className={styles.documentSaveStatusCard}>
@@ -394,12 +401,12 @@ function DocumentMetaItem({
 }) {
   return (
     <div className={styles.documentMetaItem}>
-      <p className={styles.documentMetaLabel} style={typographyStyles.caption}>
+      <dt className={styles.documentMetaLabel} style={typographyStyles.caption}>
         {label}
-      </p>
-      <p className={styles.documentMetaValue} style={typographyStyles.p1}>
+      </dt>
+      <dd className={styles.documentMetaValue} style={typographyStyles.p1}>
         {value}
-      </p>
+      </dd>
     </div>
   );
 }

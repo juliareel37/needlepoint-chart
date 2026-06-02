@@ -462,6 +462,10 @@ export function EditorV2Shell({
     fromColorId: string;
     toColorId: string;
   } | null>(null);
+  const [colorMergePreview, setColorMergePreview] = useState<{
+    fromColorIds: string[];
+    toColorId: string;
+  } | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
@@ -544,6 +548,47 @@ export function EditorV2Shell({
 
     return changed ? previewCells : null;
   }, [colorSwapPreview, colorsById, state]);
+  const colorMergePreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorMergePreview) {
+      return null;
+    }
+
+    const { fromColorIds, toColorId } = colorMergePreview;
+    const fromColorIdSet = new Set(fromColorIds.filter((colorId) => colorId !== toColorId));
+
+    if (
+      fromColorIdSet.size === 0 ||
+      !colorsById[toColorId] ||
+      !Array.from(fromColorIdSet).every((colorId) => colorsById[colorId])
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (!cell || !fromColorIdSet.has(cell)) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorMergePreview, colorsById, state]);
   const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>(() =>
     currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : [],
   );
@@ -3558,6 +3603,7 @@ export function EditorV2Shell({
                       void onLoadDocument(selectedRecord);
                     }}
                     onColorSwapPreviewChange={setColorSwapPreview}
+                    onMergeColorsPreviewChange={setColorMergePreview}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                     onDuplicateDocument={() => {
@@ -3828,7 +3874,7 @@ export function EditorV2Shell({
                     colorsById={colorsById}
                     dispatch={dispatch}
                     highlightedColorId={highlightedColorId}
-                    cellPreviewOverride={colorSwapPreviewCells}
+                    cellPreviewOverride={colorMergePreviewCells ?? colorSwapPreviewCells}
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={showGridlines}

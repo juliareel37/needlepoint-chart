@@ -483,6 +483,7 @@ export function UsedColorsSummary({
   selectionScopeActive,
   symbolAssignments,
   onColorSwapPreviewChange,
+  onMergeColorsPreviewChange,
   onSwapColor,
   onDeleteColors,
   onMergeColors,
@@ -506,6 +507,9 @@ export function UsedColorsSummary({
   selectionScopeActive: boolean;
   symbolAssignments: Record<string, string>;
   onColorSwapPreviewChange: (preview: { fromColorId: string; toColorId: string } | null) => void;
+  onMergeColorsPreviewChange: (
+    preview: { fromColorIds: string[]; toColorId: string } | null,
+  ) => void;
   onSwapColor: (fromColorId: string, toColorId: string) => void;
   onDeleteColors: (colorIds: string[]) => void;
   onMergeColors: (fromColorIds: string[], toColorId: string) => void;
@@ -715,6 +719,29 @@ export function UsedColorsSummary({
   );
 
   useEffect(() => {
+    if (actionMode !== "merge" || !mergeTargetColorId) {
+      onMergeColorsPreviewChange(null);
+      return;
+    }
+
+    const fromColorIds = selectedColorIds.filter((colorId) => colorId !== mergeTargetColorId);
+
+    if (fromColorIds.length === 0) {
+      onMergeColorsPreviewChange(null);
+      return;
+    }
+
+    onMergeColorsPreviewChange({ fromColorIds, toColorId: mergeTargetColorId });
+  }, [actionMode, mergeTargetColorId, onMergeColorsPreviewChange, selectedColorIds]);
+
+  useEffect(
+    () => () => {
+      onMergeColorsPreviewChange(null);
+    },
+    [onMergeColorsPreviewChange],
+  );
+
+  useEffect(() => {
     if (selectedColorIds.length === 0) {
       setDeleteConfirmationOpen(false);
       setMergeConfirmationOpen(false);
@@ -770,10 +797,6 @@ export function UsedColorsSummary({
   const selectedUsedColors = useMemo(
     () => usedColors.filter((entry) => selectedColorIdSet.has(entry.colorId)),
     [selectedColorIdSet, usedColors],
-  );
-  const defaultMergeTargetColorId = useMemo(
-    () => selectedUsedColors[0]?.colorId ?? null,
-    [selectedUsedColors],
   );
   const canDelete =
     selectedColorIds.length > 0 &&
@@ -836,13 +859,13 @@ export function UsedColorsSummary({
         return;
       }
 
-      setMergeTargetColorId(defaultMergeTargetColorId);
+      setMergeTargetColorId(null);
       return;
     }
 
     setMergePickerOpen(false);
     setMergeTargetColorId(null);
-  }, [actionMode, colorsById, defaultMergeTargetColorId, mergeTargetColorId]);
+  }, [actionMode, colorsById, mergeTargetColorId]);
 
   const exitToolMode = () => {
     setToolMode("idle");
@@ -854,6 +877,7 @@ export function UsedColorsSummary({
     setSwapSourceColorId(null);
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
+    onMergeColorsPreviewChange(null);
     setDeleteConfirmationOpen(false);
     setMergeConfirmationOpen(false);
   };
@@ -881,11 +905,12 @@ export function UsedColorsSummary({
     setToolMode("select");
     setActionMode(nextActionMode);
     setSelectedColorIds([]);
-    setMergeTargetColorId(nextActionMode === "merge" ? defaultMergeTargetColorId : null);
+    setMergeTargetColorId(null);
     setMergePickerOpen(false);
     setSwapSourceColorId(null);
     setSwapPreviewTargetColorId(null);
     onColorSwapPreviewChange(null);
+    onMergeColorsPreviewChange(null);
   };
 
   const activateActionMode = (nextActionMode: Extract<UsedColorsActionMode, "merge" | "delete">) => {
@@ -905,12 +930,13 @@ export function UsedColorsSummary({
 
     if (nextActionMode === "merge") {
       setMergeTargetColorId((current) =>
-        current && colorsById[current] ? current : defaultMergeTargetColorId,
+        current && colorsById[current] ? current : null,
       );
       return;
     }
 
     setMergePickerOpen(false);
+    onMergeColorsPreviewChange(null);
   };
 
   return (
