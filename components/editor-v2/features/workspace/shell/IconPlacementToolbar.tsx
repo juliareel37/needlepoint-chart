@@ -227,7 +227,7 @@ function IconColorSlotSwatchPopover({
 
       {isOpen ? (
         <IconToolbarPortalPopover
-          align="center"
+          align="start"
           anchorRef={anchorRef}
           onRequestClose={() => onOpenChange(false)}
           role="dialog"
@@ -528,7 +528,7 @@ export function IconPlacementToolbar({
 
                   {colorLibraryOpen ? (
                     <IconToolbarPortalPopover
-                      align="center"
+                      align="start"
                       anchorRef={colorAnchorRef}
                       onRequestClose={() => setColorLibraryOpen(false)}
                       role="dialog"

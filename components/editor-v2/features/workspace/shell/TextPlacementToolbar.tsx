@@ -329,7 +329,7 @@ export function TextPlacementToolbar({
 
               {colorLibraryOpen ? (
                 <TextToolbarPortalPopover
-                  align="center"
+                  align="start"
                   anchorRef={colorAnchorRef}
                   onRequestClose={() => setColorLibraryOpen(false)}
                   role="dialog"
