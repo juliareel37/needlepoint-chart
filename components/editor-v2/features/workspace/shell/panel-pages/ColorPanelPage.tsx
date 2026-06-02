@@ -372,7 +372,7 @@ export function ColorPanelPage({
               />
               {activeColor ? (
                 <>
-                  <strong className={styles.activeColorName} style={typographyStyles.p1}>
+                  <strong className={styles.activeColorName} style={typographyStyles.p1Medium}>
                     {activeColor.name}
                   </strong>
                   <span

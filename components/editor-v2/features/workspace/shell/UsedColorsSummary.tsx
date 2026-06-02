@@ -999,7 +999,7 @@ export function UsedColorsSummary({
         ) : null}
       </div>
       {selectionPromptVisible ? (
-        <span className={styles.emptyMessage} style={typographyStyles.p1}>
+        <span className={styles.emptyMessagePadded} style={typographyStyles.p1}>
           Drag a selection on the canvas to edit colors.
         </span>
       ) : (
