@@ -4774,9 +4774,11 @@
     transform: translateY(-1px);
   }
 
-  .iconLibraryMoreButton:hover {
-    background: color-mix(in srgb, var(--brand-100) 42%, transparent);
-    color: var(--brand-600);
+  .iconLibraryMoreButton.iconLibraryMoreButton:hover:not(:disabled) {
+    background: transparent;
+    color: var(--text-primary);
+    box-shadow: none;
+    transform: none;
   }
 
   .libraryPopoverSwatchTrigger:hover:not(:disabled) .libraryPopoverSwatch {
