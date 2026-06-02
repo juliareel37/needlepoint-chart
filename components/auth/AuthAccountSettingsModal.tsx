@@ -146,6 +146,7 @@ export function AuthAccountSettingsModal({
               type="button"
               variant="ghostV2"
               size="sm"
+              iconOnly
               className={styles.modalCloseButton}
               onClick={onClose}
               aria-label="Close account settings"

@@ -143,31 +143,7 @@
 }
 
 .sidebarPanelBackButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-primary);
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
-}
-
-.sidebarPanelBackButton:hover {
-  background: var(--button-ghost-hover);
-  color: var(--text-primary);
-}
-
-.sidebarPanelBackButton:focus-visible {
-  background: var(--button-ghost-hover);
-  color: var(--text-primary);
-  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
-  outline-offset: 1px;
 }
 
 .sidebarPanelBackTitle {
@@ -957,13 +933,31 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .sidebarSubsectionHeaderRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.sidebarSubsectionTitleRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding-right: 40px;
+}
+
+.sidebarSubsectionTitleRow .sidebarHeaderAction {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
 }
 
 .sidebarSubsectionHeader h3 {
@@ -1106,36 +1100,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-  padding-inline: 6px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
   align-self: center;
   border-radius: var(--editor-radius-md);
   color: var(--text-primary);
   transition: background-color 140ms ease, color 140ms ease;
 }
 
-.sidebarHeaderActionButtonIconOnly {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-  align-self: center;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+.sidebarHeaderAction :global(.icon),
+.sidebarHeaderAction :global(.glyph) {
+  width: 16px;
+  height: 16px;
 }
 
-.sidebarHeaderActionButtonIconOnly:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 2px;
+.sidebarHeaderActionButtonIconOnly {
+  align-self: center;
+  color: var(--text-primary);
 }
 
 .sidebarDesignColorsGridSection {
@@ -1421,29 +1404,12 @@
 }
 
 .customPaletteCardDeleteButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 24px;
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-secondary);
   opacity: 0;
-  cursor: pointer;
-  transition:
-    opacity 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease;
 }
 
 .customPaletteCardDeleteIcon {
-  width: 14px;
-  height: 14px;
+  color: inherit;
 }
 
 .customPaletteCard:hover .customPaletteCardDeleteButton,
@@ -1452,15 +1418,8 @@
   opacity: 1;
 }
 
-.customPaletteCardDeleteButton:hover {
-  background: var(--button-ghost2-hover);
-  color: var(--text-primary);
-}
-
 .customPaletteCardDeleteButton:focus-visible {
   opacity: 1;
-  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
-  outline-offset: 2px;
 }
 
 .customPaletteBackLink {
@@ -3788,18 +3747,7 @@
 }
 
 .usedColorsInlineLibraryClose {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-secondary);
-  cursor: pointer;
 }
 
 .usedColorsInlineLibraryClose :global(.icon) {
@@ -4031,48 +3979,14 @@
 }
 
 .usedColorsHighlightButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
   margin-left: 0;
   margin-right: -4px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-secondary);
-  box-shadow: none;
   opacity: 0;
-  transform: scale(0.92);
-  transition:
-    opacity 140ms ease,
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease;
-}
-
-.usedColorsHighlightButton :global(.icon) {
-  width: 12px;
-  height: 12px;
-}
-
-.usedColorsHighlightButton :global(.glyph) {
-  background: currentColor;
 }
 
 .usedColorsHighlightButton[aria-pressed="true"] {
   opacity: 1;
-  transform: scale(1);
-  background: color-mix(in srgb, currentColor 16%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 1px 2px rgba(15, 23, 42, 0.12);
-  color: var(--text-primary);
 }
 
 .usedColorsRow[data-selected="true"] .usedColorsHighlightButton {
@@ -4080,27 +3994,17 @@
 }
 
 .usedColorsRow[data-selected="true"] .usedColorsHighlightButton[aria-pressed="true"] {
-  background: color-mix(in srgb, currentColor 18%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 1px 2px rgba(15, 23, 42, 0.16);
   color: var(--button-secondary-active-text);
 }
 
 .usedColorsHighlightButton:focus-visible {
   opacity: 1;
-  transform: scale(1);
-  background: var(--surface-primary);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
   color: var(--text-primary);
-  outline: 2px solid var(--button-secondary-active);
-  outline-offset: 2px;
 }
 
 @media (hover: none), (pointer: coarse) {
   .usedColorsHighlightButton {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -4400,30 +4304,8 @@
 }
 
 .headerSaveStatusDismiss {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
   margin-left: auto;
-  padding: 0;
-  border: 0;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
-.headerSaveStatusDismiss:focus-visible {
-  background: color-mix(in srgb, var(--neutral-900) 8%, transparent);
-  color: var(--text-primary);
-}
-
-.headerSaveStatusDismiss:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
-  outline-offset: 1px;
 }
 
 .headerSaveStatusDismissIcon,
@@ -4462,12 +4344,7 @@
 }
 
 .traceSectionHeaderActionButton {
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0;
-  border-radius: var(--editor-radius-md);
   color: var(--text-primary);
-  flex: 0 0 auto;
 }
 
 .traceSectionHint {
@@ -4617,12 +4494,7 @@
 }
 
 .traceAttachmentRemoveButton {
-  min-width: 32px;
-  width: 32px;
-  height: 32px;
   margin-left: auto;
-  padding: 0;
-  flex-shrink: 0;
   color: color-mix(in srgb, var(--text-primary) 58%, transparent);
 }
 
@@ -4838,21 +4710,14 @@
 
   .usedColorsRow:hover .usedColorsHighlightButton {
     opacity: 1;
-    transform: scale(1);
   }
 
   .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
-    background: color-mix(in srgb, var(--surface-primary) 94%, var(--brand-100));
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
     color: var(--text-primary);
   }
 
   .usedColorsRow[data-selected="true"] .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
-    /* background: color-mix(in srgb, white 92%, var(--brand-100)); */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),
-      0 1px 2px rgba(15, 23, 42, 0.16);
-    /* color: var(--button-secondary-active-text); */
+    color: var(--button-secondary-active-text);
   }
 
   .headerSaveStatusDismiss:hover {

@@ -574,7 +574,8 @@ export function TraceControls({
             <Button
               type="button"
               variant={editModeActive ? "secondary" : "ghostV2"}
-              size="sm"
+              size="md"
+              iconOnly
               disabled={!trace || conversionPreviewActive}
               onClick={onToggleEditMode}
             >
@@ -654,6 +655,8 @@ export function TraceControls({
             <Button
               type="button"
               variant="ghostV2"
+              size="md"
+              iconOnly
               className={styles.traceAttachmentRemoveButton}
               aria-label="Remove trace image"
               title="Remove image"
@@ -747,8 +750,9 @@ export function TraceControls({
             action={(
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="ghostV2"
+                size="md"
+                iconOnly
                 className={styles.traceSectionHeaderActionButton}
                 aria-label={trace.visible ? "Hide image" : "Show image"}
                 aria-pressed={trace.visible}

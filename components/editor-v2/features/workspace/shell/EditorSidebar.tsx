@@ -306,7 +306,8 @@ export function EditorSidebar({
                 <Button
                   type="button"
                   variant="ghostV2"
-                  size="sm"
+                  size="md"
+                  iconOnly
                   className={styles.sidebarPanelBackButton}
                   aria-label={colorPanelBackLabel}
                   title={colorPanelBackLabel}
@@ -323,7 +324,8 @@ export function EditorSidebar({
                 <Button
                   type="button"
                   variant="ghostV2"
-                  size="sm"
+                  size="md"
+                  iconOnly
                   className={styles.sidebarPanelBackButton}
                   aria-label="Back to icon categories"
                   title="Back to icon categories"

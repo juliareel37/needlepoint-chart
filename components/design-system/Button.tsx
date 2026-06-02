@@ -37,12 +37,37 @@ const sizeStyles: Record<ButtonSize, CSSProperties> = {
   },
 };
 
+const iconOnlySizeStyles: Record<ButtonSize, CSSProperties> = {
+  sm: {
+    width: 24,
+    minWidth: 24,
+    height: 24,
+    minHeight: 24,
+    padding: 0,
+  },
+  md: {
+    width: 32,
+    minWidth: 32,
+    height: 32,
+    minHeight: 32,
+    padding: 0,
+  },
+  lg: {
+    width: 40,
+    minWidth: 40,
+    height: 40,
+    minHeight: 40,
+    padding: 0,
+  },
+};
+
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   children: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
   active?: boolean;
+  iconOnly?: boolean;
   inertWhenActive?: boolean;
 }
 
@@ -50,6 +75,7 @@ export function Button({
   active = false,
   children,
   className,
+  iconOnly = false,
   inertWhenActive = false,
   onClick,
   size = "md",
@@ -62,6 +88,7 @@ export function Button({
     styles.button,
     styles[size],
     styles[variant],
+    iconOnly ? styles.iconOnly : null,
     className,
   ]
     .filter(Boolean)
@@ -81,7 +108,10 @@ export function Button({
 
         onClick?.(event);
       }}
-      style={{ ...sizeStyles[size], ...style }}
+      style={{
+        ...(iconOnly ? iconOnlySizeStyles[size] : sizeStyles[size]),
+        ...style,
+      }}
     >
       {children}
     </button>

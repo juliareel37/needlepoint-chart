@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { assetPath } from "@/lib/assetPath";
 import { typographySpecs, typographyStyles } from "@/app/design-system/typography";
 import styles from "./Toolbar.module.css";
@@ -177,6 +177,19 @@ export const ToolbarPopover = forwardRef<
   style,
   ...props
 }, ref) {
+  const { transform, ...restStyle } = style ?? {};
+  const resolvedTransform =
+    typeof transform === "string" && transform.trim().length > 0
+      ? transform.trim() === "none"
+        ? "translate3d(0, 0, 0)"
+        : transform
+      : "translateX(-50%)";
+  const popoverStyle = {
+    ...typographyStyles.p2,
+    ...restStyle,
+    "--toolbar-popover-base-transform": resolvedTransform,
+  } as CSSProperties;
+
   return (
     <div
       {...props}
@@ -188,7 +201,7 @@ export const ToolbarPopover = forwardRef<
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ ...typographyStyles.p2, ...style }}
+      style={popoverStyle}
     >
       {children}
     </div>

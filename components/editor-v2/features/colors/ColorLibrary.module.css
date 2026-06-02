@@ -214,21 +214,7 @@
 }
 
 .searchControlButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--editor-radius-md);
-  background: transparent;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
 }
 
 .searchControlButton[data-active="true"] {
@@ -242,23 +228,6 @@
 
 .viewControlItem {
   min-width: 0;
-}
-
-
-.searchControlButton:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 1px;
-}
-
-.searchControlIcon {
-  width: 13px;
-  height: 13px;
-  flex: 0 0 13px;
-}
-
-.searchControlIcon > span {
-  width: 13px;
-  height: 13px;
 }
 
 .settingsPanel {

@@ -750,10 +750,13 @@ export function ColorLibrary({
                   />
                 </div>
                 <div className={styles.searchControls}>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghostV2"
+                    size="md"
+                    iconOnly
                     className={styles.searchControlButton}
-                    data-active={settingsOpen || hasActiveFamilyFilter ? "true" : "false"}
+                    active={settingsOpen || hasActiveFamilyFilter}
                     aria-label={
                       settingsOpen ? "Hide color library settings" : "Show color library settings"
                     }
@@ -764,10 +767,13 @@ export function ColorLibrary({
                       icon="/icons/lucide/list-filter.svg"
                       className={styles.searchControlIcon}
                     />
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     type="button"
+                    variant="ghostV2"
+                    size="md"
+                    iconOnly
                     className={styles.searchControlButton}
                     aria-label={
                       layoutMode === "grid"
@@ -784,7 +790,7 @@ export function ColorLibrary({
                       }
                       className={styles.searchControlIcon}
                     />
-                  </button>
+                  </Button>
                 </div>
               </div>
 

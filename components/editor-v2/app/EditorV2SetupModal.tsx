@@ -202,7 +202,7 @@ export function EditorV2SetupModal({
               </p>
             </div>
             {canClose ? (
-              <Button type="button" variant="ghostV2" onClick={onClose}>
+              <Button type="button" variant="ghostV2" size="sm" iconOnly onClick={onClose}>
                 <ButtonIcon
                   icon="/icons/lucide/x.svg"
                   className={styles.sidebarCloseIcon}
@@ -235,7 +235,7 @@ export function EditorV2SetupModal({
                 Create New Design
               </h1>
               {compactMode && canClose ? (
-                <Button type="button" variant="ghostV2" onClick={onClose}>
+                <Button type="button" variant="ghostV2" size="sm" iconOnly onClick={onClose}>
                   <ButtonIcon
                     icon="/icons/lucide/x.svg"
                     className={styles.sidebarCloseIcon}

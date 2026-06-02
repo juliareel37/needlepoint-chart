@@ -1188,8 +1188,11 @@ export function UsedColorsSummary({
                 </div>
 
                 {!isSelecting ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghostV2"
+                    size="md"
+                    iconOnly
                     className={styles.usedColorsHighlightButton}
                     aria-label={
                       highlightedColorId === entry.colorId
@@ -1225,7 +1228,7 @@ export function UsedColorsSummary({
                     }}
                   >
                     <ButtonIcon icon="/icons/lucide/search.svg" />
-                  </button>
+                  </Button>
                 ) : null}
 
                 {!isSelecting && swapSourceColorId === entry.colorId ? (
@@ -1238,14 +1241,17 @@ export function UsedColorsSummary({
                       <span className={styles.usedColorsInlineLibraryTitle} style={typographyStyles.s}>
                         Replace with
                       </span>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghostV2"
+                        size="sm"
+                        iconOnly
                         className={styles.usedColorsInlineLibraryClose}
                         aria-label="Close color library"
                         onClick={closeSwapPreview}
                       >
                         <ButtonIcon icon="/icons/lucide/x.svg" />
-                      </button>
+                      </Button>
                     </div>
                     <ColorLibrary
                       activeColorId={swapPreviewTargetColorId ?? entry.colorId}

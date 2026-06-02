@@ -411,15 +411,18 @@ export function ColorPanelPage({
                     </span>
                   </div>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="ghostV2"
+                  size="md"
+                  iconOnly
                   className={styles.sidebarHeaderActionButtonIconOnly}
                   aria-label="View all design colors"
                   onClick={openDesignColorsView}
                 >
                   {/* <span>Edit</span> */}
                   <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                </button>
+                </Button>
               </div>
 
               {usedColors.length > 0 ? (
@@ -788,8 +791,11 @@ export function ColorPanelPage({
                     >
                       <h3 className={styles.customPaletteCardTitle} style={typographyStyles.h5}>
                         <span>{customPalette.name}</span>
-                        <button
+                        <Button
                           type="button"
+                          variant="ghostV2"
+                          size="md"
+                          iconOnly
                           className={styles.customPaletteCardDeleteButton}
                           aria-label={`Delete ${customPalette.name}`}
                           title={`Delete ${customPalette.name}`}
@@ -803,7 +809,7 @@ export function ColorPanelPage({
                             icon="/icons/lucide/trash.svg"
                             className={styles.customPaletteCardDeleteIcon}
                           />
-                        </button>
+                        </Button>
                       </h3>
                       <div className={styles.customPaletteCardSwatches}>
                         {customPalette.colorIds.map((colorId) => {

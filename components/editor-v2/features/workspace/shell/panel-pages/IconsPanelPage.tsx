@@ -672,28 +672,29 @@ export function IconsPanelPage({
 
                   return (
                     <div key={group.category} className={styles.sidebarSubsection}>
-                      <div className={styles.sidebarSubsectionHeaderRow}>
-                        <div className={styles.sidebarSubsectionHeader}>
+                      <div className={styles.sidebarSubsectionHeader}>
+                        <div className={styles.sidebarSubsectionTitleRow}>
                           <h3 style={typographyStyles.h5}>{group.category}</h3>
-                          {!normalizedSearchQuery ? (
-                            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                              {group.count} icons
-                            </p>
-                          ) : null}
+                          <Button
+                            type="button"
+                            variant="ghostV2"
+                            size="md"
+                            iconOnly
+                            className={styles.sidebarHeaderAction}
+                            aria-label={`View all icons in ${group.category}`}
+                            title={`View all icons in ${group.category}`}
+                            onClick={() =>
+                              handleViewChange({ type: "category", category: group.category })
+                            }
+                          >
+                            <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghostV2"
-                          size="sm"
-                          className={styles.sidebarHeaderAction}
-                          aria-label={`View all icons in ${group.category}`}
-                          title={`View all icons in ${group.category}`}
-                          onClick={() =>
-                            handleViewChange({ type: "category", category: group.category })
-                          }
-                        >
-                          <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                        </Button>
+                        {!normalizedSearchQuery ? (
+                          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                            {group.count} icons
+                          </p>
+                        ) : null}
                       </div>
 
                       <div className={styles.iconLibraryGrid}>

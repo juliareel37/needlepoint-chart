@@ -428,7 +428,7 @@
 
   --toolbar-button-hover-bg: var(--brand-50);
   --toolbar-button-active-bg: var(--brand-400);
-  --toolbar-button-active-text: var(--text-primary);
+  --toolbar-button-active-text: var(--neutral-50);
   
   --sidebar-button-hover-bg: var(--brand-50);
   --sidebar-button-active-bg: var(--brand-50);
@@ -1047,7 +1047,7 @@ button:disabled {
   --zoom-menu-bg: var(--surface-card);
   --toolbar-button-hover-bg: var(--brand-50);
   --toolbar-button-active-bg: var(--brand-400);
-  --toolbar-button-active-text: var(--text-primary);
+  --toolbar-button-active-text: var(--neutral-50);
   --sidebar-button-hover-bg: var(--brand-50);
   --sidebar-button-active-bg: var(--brand-50);
   --sidebar-button-active-text: var(--brand-600);
@@ -1154,17 +1154,24 @@ button:disabled {
 .landing-header-mobile-menu-surface {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-4px) scale(0.98);
+  transform: translateY(-6px) scale(0.975);
   transform-origin: top right;
   transition:
-    opacity 140ms ease,
-    transform 140ms ease;
+    opacity 150ms ease,
+    transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 150ms ease;
 }
 
 .landing-header-mobile-menu-surface[data-open="true"] {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-header-mobile-menu-surface {
+    transition: none;
+  }
 }
 
 #app-shell-root[data-header-nav-mode="landing"] .landing-header-menu-button,

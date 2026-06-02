@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { typographyStyles } from "@/app/design-system/typography";
 import { assetPath } from "@/lib/assetPath";
-import { Button, type ButtonVariant } from "./Button";
+import { Button, ButtonIcon, type ButtonVariant } from "./Button";
 import styles from "./Modal.module.css";
 
 type ModalTone = "none" | "info" | "confirmation" | "warning" | "fail";
@@ -249,11 +249,12 @@ export function Modal({
                   type="button"
                   variant="ghostV2"
                   size="sm"
+                  iconOnly
                   className={styles.closeButton}
                   aria-label="Close modal"
                   onClick={handleClose}
                 >
-                  <img src="/icons/lucide/x.svg" alt="" aria-hidden="true" width="12" height="12" />
+                  <ButtonIcon icon="/icons/lucide/x.svg" />
                 </Button>
               ) : null}
             </div>

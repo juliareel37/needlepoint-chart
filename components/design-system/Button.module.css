@@ -3,6 +3,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: 1px solid transparent;
   border-radius: var(--editor-radius-md);
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
@@ -25,6 +26,26 @@
 
 .button[data-inert-active="true"] {
   cursor: default;
+}
+
+.iconOnly {
+  flex: 0 0 auto;
+  gap: 0;
+  aspect-ratio: 1;
+}
+
+.iconOnly .icon,
+.iconOnly .glyph {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+
+.iconOnly.md .icon,
+.iconOnly.md .glyph {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
 }
 
 .sm {
