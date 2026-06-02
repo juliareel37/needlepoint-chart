@@ -935,7 +935,7 @@ export function TraceControls({
                         )
                       }
                     />
-                    <span className={styles.traceSliderValue} style={typographyStyles.captionMd}>
+                    <span className={styles.traceSliderValue}>
                       {convertMaxColors}
                     </span>
                   </div>

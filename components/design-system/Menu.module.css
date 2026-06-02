@@ -124,7 +124,7 @@
 }
 
 .item[data-active="true"] {
-  background: var(--menu-item-hover-bg);
+  background: var(--menu-item-active-bg);
 }
 
 .itemLeading {

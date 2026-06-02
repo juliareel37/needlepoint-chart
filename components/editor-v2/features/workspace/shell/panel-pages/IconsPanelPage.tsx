@@ -616,7 +616,7 @@ export function IconsPanelPage({
               </p> */}
 
               {uploadError ? (
-                <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                   {uploadError}
                 </p>
               ) : null}
@@ -627,7 +627,7 @@ export function IconsPanelPage({
             {loading ? renderCategorySkeleton() : null}
 
             {!loading && !loadError && categoryContentReady && !hasCategorySearchResults ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 No icons found in {selectedCategory} for "{searchQuery.trim()}".
               </p>
             ) : null}
@@ -647,13 +647,13 @@ export function IconsPanelPage({
             {loading ? renderOverviewSkeleton() : null}
 
             {!loading && loadError ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 {loadError}
               </p>
             ) : null}
 
             {!loading && !loadError && !hasSearchResults ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 No icons found for "{searchQuery.trim()}".
               </p>
             ) : null}
@@ -693,7 +693,7 @@ export function IconsPanelPage({
                           </Button>
                         </div>
                         {!normalizedSearchQuery ? (
-                          <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                          <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                             {group.count} icons
                           </p>
                         ) : null}
@@ -725,7 +725,7 @@ export function IconsPanelPage({
           ) : null}
 
           {view.type === "category" && !loading && loadError ? (
-            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
               {loadError}
             </p>
           ) : null}

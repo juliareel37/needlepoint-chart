@@ -36,11 +36,11 @@ export type MarketingTypeToken =
 export type DesignFontWeightToken = "regular" | "medium" | "semibold" | "bold";
 
 export const fontWeights = {
-  regular: 500,
-  medium: 550,
-  semibold: 600,
-  bold: 700,
-} as const satisfies Record<DesignFontWeightToken, 500 | 550 | 600 | 700>;
+  regular: 450,
+  medium: 500,
+  semibold: 550,
+  bold: 600,
+} as const satisfies Record<DesignFontWeightToken, 450 | 500 | 550 | 600>;
 
 type TypographySpec<
   Size extends number | string = number,
@@ -145,25 +145,25 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   h5: {
     label: "h5",
-    size: 15,
+    size: 14,
     lineHeight: 18,
-    weight: fontWeights.semibold,
+    weight: fontWeights.bold,
     usage: "compact emphasis headings, alert titles",
     sample: "Header Five",
   },
   p1: {
     label: "p1",
-    size: 14,
+    size: 13,
     lineHeight: 20,
-    weight: fontWeights.regular,
+    weight: fontWeights.medium,
     usage: "primary body copy",
     sample: "Primary body copy",
   },
   p1Medium: {
     label: "p1 medium",
-    size: 14,
+    size: 13,
     lineHeight: 20,
-    weight: fontWeights.medium,
+    weight: fontWeights.bold,
     usage: "primary UI labels and prominent inline actions",
     sample: "Primary action label",
   },
@@ -178,7 +178,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   p2Medium: {
     label: "p2 medium",
     size: 13,
-    lineHeight: 18,
+    lineHeight: 16,
     weight: fontWeights.medium,
     usage: "secondary UI labels, list item titles, and compact controls",
     sample: "Secondary label",
@@ -201,7 +201,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   // },
   caption: {
     label: "caption",
-    size: 12,
+    size: 11,
     lineHeight: 16,
     weight: fontWeights.regular,
     usage: "supporting captions and low-emphasis metadata",
@@ -211,7 +211,7 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     label: "caption medium",
     size: 12,
     lineHeight: 16,
-    weight: fontWeights.medium,
+    weight: fontWeights.regular,
     usage: "compact metadata, secondary counts, and small actions",
     sample: "Compact metadata",
   },

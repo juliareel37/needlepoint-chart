@@ -372,12 +372,14 @@ export function ColorPanelPage({
               />
               {activeColor ? (
                 <>
-                  <strong className={styles.activeColorName} style={typographyStyles.h5}>{activeColor.name}</strong>
+                  <strong className={styles.activeColorName} style={typographyStyles.p1}>
+                    {activeColor.name}
+                  </strong>
                   <span
                     aria-hidden="true"
                     className={styles.activeColorDivider}
                   />
-                  <span className={styles.activeColorCode} style={typographyStyles.sMedium}>
+                  <span className={styles.activeColorCode} style={typographyStyles.caption}>
                     {activeColorCodeLabel}
                   </span>
                 </>
@@ -643,10 +645,10 @@ export function ColorPanelPage({
                   {customPalettes.map((customPalette) => (
                     <div key={customPalette.id} className={styles.customPaletteRow}>
                       <div className={styles.customPaletteRowText}>
-                        <span className={styles.customPaletteRowName} style={typographyStyles.p1}>
+                        <span className={styles.customPaletteRowName}>
                           {customPalette.name}
                         </span>
-                        <span className={styles.customPaletteRowCount} style={typographyStyles.p1}>
+                        <span className={styles.customPaletteRowName}>
                           ({customPalette.colorIds.length})
                         </span>
                       </div>
@@ -673,7 +675,7 @@ export function ColorPanelPage({
                 </div>
               ) : (
                 <p className={styles.emptyMessage} style={typographyStyles.p2}>
-                  No palettes in this design.
+                  No palettes in this design
                 </p>
               )}
             </div>
@@ -760,7 +762,7 @@ export function ColorPanelPage({
             {customPalettes.length === 0 ? (
               <div className={styles.customPaletteEmptyState}>
                 <p className={styles.emptyMessage} style={typographyStyles.p2}>
-                  No palettes created for this design yet.
+                  No palettes in this design yet. Make one now!
                 </p>
                 {/* <button
                   type="button"
@@ -924,7 +926,7 @@ export function ColorPanelPage({
                   <div className={styles.customPaletteSelectionMetaRow}>
                     <span
                       className={styles.customPaletteSelectionCount}
-                      style={typographyStyles.s}
+                      // style={typographyStyles.s}
                     >
                       {customPaletteDraftColors.length}{" "}
                       {customPaletteDraftColors.length === 1

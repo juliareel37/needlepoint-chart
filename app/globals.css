@@ -271,7 +271,6 @@
   --brand-500: var(--green-med-strong-dark);
   --brand-600: var(--green-med-strong-darkest);
 
-
   --accent-pink: #ffdcea;
   --accent-blue: #ccebff;
   --accent-yellow: #fff3a8;
@@ -318,8 +317,10 @@
   /* Text */
   --font-primary: ui-sans-serif, system-ui, sans-serif;
   --font-secondary: var(--font-primary);
-  --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-700);
+  --text-primary: #0a0a0a;
+  --text-secondary: var(--neutral-600);
+
+
 
   --control-secondary-bg: #f1f3f6;
   --control-disabled-bg: color-mix(in srgb, var(--surface-card) 30%, var(--neutral-300));
@@ -389,15 +390,6 @@
   --button-outlined-active-border: var(--brand-500);
   --button-outlined-active-text: var(--brand-600);
 
-  /* OUTLINE: NEUTRAL */
-  /* --button-outlined-default: var(--neutral-0);
-  --button-outlined-default-border: var(--neutral-400);
-  --button-outlined-default-text: var(--neutral-800);
-  --button-outlined-hover: var(--neutral-100);
-  --button-outlined-active: var(--neutral-200);
-  --button-outlined-active-border: var(--neutral-500);
-  --button-outlined-active-text: var(--neutral-800); */
-
   --button-ghost-default: transparent;
   --button-ghost-hover: var(--neutral-0);
   --button-ghost-active: var(--neutral-0);
@@ -407,8 +399,6 @@
   /* --button-ghost2-hover: var(--brand-100); */
   --button-ghost2-active: var(--brand-100);
   --button-ghost2-active-text: var(--brand-600);
-
-  /* 
 
   /* UI components */
   --icon-on-bg-filter: invert(0);
@@ -422,7 +412,8 @@
   --slider-thumb-bg: var(--neutral-0);
   --slider-thumb-border: var(--brand-300);
 
-  --menu-item-hover-bg: var(--brand-50);
+  --menu-item-hover-bg: var(--neutral-200);
+  --menu-item-active-bg: var(--brand-100);
   
   --zoom-menu-bg: var(--surface-card);
 
@@ -435,9 +426,6 @@
   --sidebar-button-active-text: var(--brand-600);
 
   --sidebar-segmented-control-bg: white;
-
-
-    /* incorrectly assigned (legacy) */
 
 }
 
@@ -1208,6 +1196,10 @@ button:disabled {
 :root[data-theme="dark"] #app-shell-root[data-header-nav-mode="editor"] .editor-header-brand-logo {
   filter: invert(1);
 } */
+
+#app-shell-root[data-header-nav-mode="editor"][data-mobile-header-overflow-auth="true"] .editor-header-brand-divider {
+  display: none;
+}
 
 .header-brand-logo-text {
   transition: filter var(--theme-transition-duration) var(--theme-transition-timing);

@@ -323,7 +323,7 @@ export function DocumentPanelPage({
                       >
                         {record.title}
                       </p>
-                      <p className={styles.documentRecentDetail} style={typographyStyles.caption}>
+                      <p className={styles.documentRecentDetail} style={typographyStyles.captionMd}>
                         {record.gridWidth} × {record.gridHeight} sts
                         <span className={styles.documentRecentDetailDivider} aria-hidden="true">
                           •

@@ -388,7 +388,7 @@ export function EditorV2SetupModal({
                       </p>
                       <p
                         className={styles.canvasEstimateValue}
-                        style={{ ...typographyStyles.h5, fontWeight: 500 }}
+                        // style={{ ...typographyStyles.h5, fontWeight: 500 }}
                       >
                         {formatStitchCount(estimatedStitchCount)} stitches
                       </p>
@@ -533,7 +533,7 @@ export function EditorV2SetupModal({
                       </p>
                       <p
                         className={styles.canvasEstimateValue}
-                        style={{ ...typographyStyles.h5, fontWeight: 500 }}
+                        // style={{ ...typographyStyles.h5, fontWeight: 500 }}
                       >
                         {estimatedCanvasWidth} x {estimatedCanvasHeight} grid ={" "}
                         {formatStitchCount(estimatedCanvasWidth * estimatedCanvasHeight)} stitches

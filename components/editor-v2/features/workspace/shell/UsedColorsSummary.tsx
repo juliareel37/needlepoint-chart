@@ -1168,10 +1168,10 @@ export function UsedColorsSummary({
                     }
                   >
                     <span className={styles.usedColorsItemText}>
-                      <span className={styles.usedColorsItemName} style={typographyStyles.p1Medium}>
+                      <span className={styles.usedColorsItemName} style={typographyStyles.p1}>
                         {rowColorName}
                       </span>
-                      <span className={styles.usedColorsItemCode} style={typographyStyles.s}>
+                      <span className={styles.usedColorsItemCode} style={typographyStyles.caption}>
                         {rowColorCode}
                       </span>
                     </span>

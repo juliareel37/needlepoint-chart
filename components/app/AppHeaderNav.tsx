@@ -366,7 +366,11 @@ export default function AppHeaderNav() {
         <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
           <HeaderCompactLogo className="editor-header-brand-logo" />
         </Link>
-        <span aria-hidden="true" style={editorHeaderDividerStyle} />
+        <span
+          aria-hidden="true"
+          className="editor-header-brand-divider"
+          style={editorHeaderDividerStyle}
+        />
       </div>
     );
   }

@@ -864,7 +864,7 @@ export function ColorLibrary({
               <div className={styles.sectionContent}>
                 {onFeaturedSectionAction && featuredColors.length > 0 ? (
                   <div className={styles.sectionHeaderRow}>
-                    <h3 className={styles.sectionHeader}>Design colors</h3>
+                    <h3 className={styles.libraryFamilySectionHeader}>Design colors</h3>
                     <button
                       type="button"
                       className={styles.sectionHeaderAction}

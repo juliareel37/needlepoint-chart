@@ -34,7 +34,6 @@ import {
   MenuItem,
   MenuSurface,
   MenuTrigger,
-  SingleSelectDropdown,
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
@@ -3002,7 +3001,6 @@ export function EditorV2Shell({
                   deleteButtonState={deleteButtonState}
                   exportButtonState={exportButtonState}
                   getItemLabel={renderHeaderMenuItemLabel}
-                  hasPersistableUnsavedChanges={hasPersistableUnsavedChanges}
                   hasSavedDesignAccess={hasSavedDesignAccess}
                   items={headerFileMenuItems}
                   onAction={handleHeaderMenuAction}
@@ -3092,32 +3090,24 @@ export function EditorV2Shell({
         : null}
       {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerOverflowTarget && isBottomPanelLayout
         ? createPortal(
-            <SingleSelectDropdown
-              ariaLabel="More actions"
+            <HeaderFileMenu
               items={mobileHeaderMenuItems}
-              value=""
-              placeholder="More actions"
-              triggerLabel={<span className={styles.headerOverflowDots}>⋮</span>}
-              triggerVariant="ghost"
-              showChevron={false}
-              menuPortalToViewport
-              menuPlacement="bottom-end"
-              menuShowTrailingCheck={false}
-              minWidth="auto"
-              getItemIsDivider={(item) => item.kind === "divider"}
-              getItemValue={(item) => item.id}
+              saveButtonState={saveButtonState}
+              exportButtonState={exportButtonState}
+              deleteButtonState={deleteButtonState}
+              currentStorageId={currentStorageId}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              savedDocumentsLoading={savedDocumentsLoading}
+              recentSavedDocuments={recentSavedDocuments}
               getItemLabel={renderHeaderMenuItemLabel}
               getItemDisabled={(item) =>
-                item.kind === "divider" ||
-                (item.id === "download" && exportButtonState === "exporting") ||
-                (item.id === "delete" && deleteButtonState === "deleting") ||
-                (item.id === "preview" && previewModeDisabled)
+                item.id === "preview" ? previewModeDisabled : false
               }
-              onValueChange={handleHeaderMenuAction}
-              wrapperClassName={styles.headerOverflowMenu}
-              triggerClassName={styles.headerOverflowTrigger}
-              menuClassName={styles.headerOverflowSurface}
-              triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+              onAction={handleHeaderMenuAction}
+              onOpenSavedDocuments={onOpenSavedDocuments}
+              ariaLabel="More actions"
+              menuLabel="More actions"
+              menuPlacement="right"
             />,
             headerOverflowTarget,
           )
@@ -3900,10 +3890,13 @@ function HeaderFileMenu({
   currentStorageId,
   deleteButtonState,
   exportButtonState,
+  getItemDisabled: getAdditionalItemDisabled,
   getItemLabel,
-  hasPersistableUnsavedChanges,
   hasSavedDesignAccess,
   items,
+  ariaLabel = "File menu",
+  menuLabel = "File actions",
+  menuPlacement = "left",
   onAction,
   onOpenSavedDocuments,
   recentSavedDocuments,
@@ -3913,10 +3906,13 @@ function HeaderFileMenu({
   currentStorageId: string;
   deleteButtonState: DeleteButtonState;
   exportButtonState: ExportButtonState;
+  getItemDisabled?: (item: HeaderFileMenuItem) => boolean;
   getItemLabel: (item: HeaderFileMenuItem) => ReactNode;
-  hasPersistableUnsavedChanges: boolean;
   hasSavedDesignAccess: boolean;
   items: HeaderFileMenuItem[];
+  ariaLabel?: string;
+  menuLabel?: string;
+  menuPlacement?: "left" | "right";
   onAction: (value: string) => void;
   onOpenSavedDocuments: () => Promise<void> | void;
   recentSavedDocuments: SavedEditorV2DocumentRecord[];
@@ -4005,9 +4001,13 @@ function HeaderFileMenu({
     const menuRect = menuRef.current.getBoundingClientRect();
     const measuredMenuWidth = menuRect.width || 220;
     const measuredMenuHeight = menuRect.height || 0;
-    const left = Math.min(
-      Math.max(triggerRect.left, viewportPadding),
-      window.innerWidth - measuredMenuWidth - viewportPadding,
+    const preferredLeft =
+      menuPlacement === "right"
+        ? triggerRect.right - measuredMenuWidth
+        : triggerRect.left;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(preferredLeft, window.innerWidth - measuredMenuWidth - viewportPadding),
     );
     const top = Math.min(
       triggerRect.bottom + 4,
@@ -4025,7 +4025,7 @@ function HeaderFileMenu({
       overflowY: "auto",
       visibility: "visible",
     });
-  }, []);
+  }, [menuPlacement]);
 
   useLayoutEffect(() => {
     if (!open || !mounted) {
@@ -4047,6 +4047,7 @@ function HeaderFileMenu({
 
   function getItemDisabled(item: HeaderFileMenuItem) {
     return (
+      getAdditionalItemDisabled?.(item) ||
       item.kind === "divider" ||
       (item.id === "save-version" && saveButtonState === "saving") ||
       (item.id === "version-history" &&
@@ -4115,7 +4116,7 @@ function HeaderFileMenu({
         onClick={() => setOpen((currentValue) => !currentValue)}
         className={styles.headerFileMenuTrigger}
         style={{ minWidth: "auto", padding: "6px 8px" }}
-        aria-label="File menu"
+        aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -4132,7 +4133,7 @@ function HeaderFileMenu({
                 .filter(Boolean)
                 .join(" ")}
               role="menu"
-              aria-label="File actions"
+              aria-label={menuLabel}
               style={portalStyle ?? { visibility: "hidden" }}
             >
               {items.map((item) =>
