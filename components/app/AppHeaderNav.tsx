@@ -51,7 +51,7 @@ const brandLogoStyle = {
 
 const editorBrandLogoStyle = {
   ...brandLogoStyle,
-  height: 35,
+  height: 26,
 } as const;
 
 const editorHeaderWrapStyle = {

@@ -250,6 +250,10 @@
   gap: 12px;
 }
 
+.iconsPanelUploadSection {
+  margin-top: -14px;
+}
+
 .iconsPanelUploadRow {
   display: flex;
   align-items: center;

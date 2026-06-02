@@ -3178,7 +3178,7 @@ export function EditorV2Shell({
                   </>
                 ) : (
                   <>
-                    <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
+                    <ButtonIcon icon="/icons/lucide/upload.svg" className={styles.saveButtonIcon} />
                     Export
                   </>
                 )}

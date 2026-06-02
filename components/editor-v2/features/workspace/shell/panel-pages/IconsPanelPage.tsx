@@ -577,49 +577,51 @@ export function IconsPanelPage({
               />
             </div>
           </div>
-          <div className={styles.sidebarSubsection}>
-            <div className={styles.iconsPanelTools}>
-              <div className={styles.iconsPanelUploadRow}>
-                <input
-                  id={uploadInputId}
-                  ref={uploadInputRef}
-                  type="file"
-                  accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
-                  className={styles.iconsPanelUploadInput}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) {
-                      return;
-                    }
+          {view.type === "overview" ? (
+            <div className={[styles.sidebarSubsection, styles.iconsPanelUploadSection].join(" ")}>
+              <div className={styles.iconsPanelTools}>
+                <div className={styles.iconsPanelUploadRow}>
+                  <input
+                    id={uploadInputId}
+                    ref={uploadInputRef}
+                    type="file"
+                    accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+                    className={styles.iconsPanelUploadInput}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) {
+                        return;
+                      }
 
-                    void handleUploadedGraphicSelected(file);
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  disabled={placementActive || uploadingGraphic}
-                  className={styles.iconsPanelUploadButton}
-                  onClick={() => uploadInputRef.current?.click()}
-                >
-                  <ButtonIcon icon="/icons/lucide/upload.svg" />
-                  {uploadingGraphic ? "Processing..." : "Upload graphic"}
-                </Button>
+                      void handleUploadedGraphicSelected(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    disabled={placementActive || uploadingGraphic}
+                    className={styles.iconsPanelUploadButton}
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    {/* <ButtonIcon icon="/icons/lucide/upload.svg" /> */}
+                    {uploadingGraphic ? "Processing..." : "Upload graphic"}
+                  </Button>
+                </div>
               </div>
+
+              {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
+                library graphics.
+              </p> */}
+
+              {uploadError ? (
+                <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                  {uploadError}
+                </p>
+              ) : null}
             </div>
-
-            {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-              Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
-              library graphics.
-            </p> */}
-
-            {uploadError ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                {uploadError}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
           {view.type === "category" ? (
             <>
             {loading ? renderCategorySkeleton() : null}
