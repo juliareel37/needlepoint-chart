@@ -1395,7 +1395,7 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      Do you currently create your own needlepoint patterns?
+                      Do you currently make your own stitch patterns?
                     </legend>
                     <div className={styles.waitlistRadioOptions}>
                       {experienceLevelOptions.map((option) => (
@@ -1430,7 +1430,7 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        What tools do you currently use to make them?
+                        Where do you currently make or buy your patterns?
                       </span>
                     }
                     hint={
@@ -1448,7 +1448,7 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
                         setCurrentTools(event.currentTarget.value);
                         clearWaitlistSurveyFieldError("currentTools");
                       }}
-                      placeholder="Photoshop, Procreate, graph paper, stitch charts..."
+                      placeholder="Stitchly, Canva, Etsy, etc."
                       aria-invalid={waitlistSurveyFormErrors.currentTools ? "true" : undefined}
                       className={
                         waitlistSurveyFormErrors.currentTools ? styles.invalidInput : undefined

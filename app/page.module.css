@@ -1913,8 +1913,8 @@
   width: 100dvw;
   margin-left: -50dvw;
   box-sizing: border-box;
-  padding-inline: var(--landing-page-gutter);
-  padding-bottom: clamp(48px, 6vw, 88px);
+  /* padding-inline: var(--landing-page-gutter); */
+  /* padding-bottom: clamp(48px, 6vw, 88px); */
   background: var(--landing-page-bg);
   /* background:
     radial-gradient(circle at 14% 12%, rgb(255 255 255 / 94%) 0%, transparent 34%),
@@ -1930,6 +1930,7 @@
       color-mix(in srgb, white 78%, var(--secondary-100)) 58%,
       color-mix(in srgb, white 80%, var(--brand-300)) 100%
   ); */
+  background: var(--brand-100);
   color: var(--text-primary);
 }
 

@@ -33,14 +33,15 @@ export type MarketingTypeToken =
   | "display"
   | "sectionTitle"
   | "footerTitle";
-export type DesignFontWeightToken = "regular" | "medium" | "semibold" | "bold";
+export type DesignFontWeightToken = "light" | "regular" | "medium" | "semibold" | "bold";
 
 export const fontWeights = {
+  light: 400,
   regular: 450,
   medium: 500,
   semibold: 550,
   bold: 600,
-} as const satisfies Record<DesignFontWeightToken, 450 | 500 | 550 | 600>;
+} as const satisfies Record<DesignFontWeightToken, 400 | 450 | 500 | 550 | 600>;
 
 type TypographySpec<
   Size extends number | string = number,
@@ -314,16 +315,16 @@ export const marketingTypographySpecs: Record<
     label: "eyebrow",
     size: "12px",
     lineHeight: "15px",
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "capsule labels, section kickers, metadata",
     sample: "Work in progress",
     letterSpacing: "0.14em",
   },
   bodyLg: {
     label: "bodyLg",
-    size: "clamp(1.16rem, 1.08vw, 1.3rem)",
-    lineHeight: 1.48,
-    weight: fontWeights.regular,
+    size: "clamp(1.04rem, 1.08vw, 1.3rem)",
+    lineHeight: 1.6,
+    weight: fontWeights.light,
     usage: "hero body copy on marketing pages",
     sample: "A systematic canvas for modern needlepoint and cross-stitch designers.",
   },
@@ -331,7 +332,7 @@ export const marketingTypographySpecs: Record<
     label: "body",
     size: "clamp(1.02rem, 0.96vw, 1.08rem)",
     lineHeight: 1.6,
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "standard landing-page body copy",
     sample: "Wippa treats every needlepoint chart like a technical drawing.",
   },
@@ -339,7 +340,7 @@ export const marketingTypographySpecs: Record<
     label: "bodySm",
     size: "clamp(0.92rem, 0.88vw, 0.96rem)",
     lineHeight: 1.55,
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "secondary landing-page copy",
     sample: "Thread-accurate color mapped to real materials.",
   },
@@ -363,7 +364,7 @@ export const marketingTypographySpecs: Record<
   },
   featureTitle: {
     label: "featureTitle",
-    size: "clamp(1.12rem, 1.32vw, 1.3rem)",
+    size: "clamp(1rem, 1.32vw, 1.3rem)",
     lineHeight: 1.2,
     weight: fontWeights.bold,
     usage: "feature cards and supporting marketing headings",
