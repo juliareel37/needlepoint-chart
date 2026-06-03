@@ -55,6 +55,9 @@ export interface ModalProps {
   showCloseButton?: boolean;
   presentation?: "default" | "centered";
   size?: "default" | "wide";
+  actionsPlacement?: "footer" | "content";
+  hideDismissAction?: boolean;
+  hideActions?: boolean;
 }
 
 export function Modal({
@@ -75,6 +78,9 @@ export function Modal({
   showCloseButton = false,
   presentation = "default",
   size = "default",
+  actionsPlacement = "footer",
+  hideDismissAction = false,
+  hideActions = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -194,6 +200,36 @@ export function Modal({
   }
 
   const toneStyles = tone === "none" ? null : toneConfig[tone];
+  const actions = (
+    <div
+      className={[
+        styles.actions,
+        hideDismissAction ? styles.actionsSingle : null,
+        actionsPlacement === "content" ? styles.actionsInContent : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {!hideDismissAction ? (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onDismiss}
+          disabled={dismissDisabled}
+        >
+          {dismissLabel}
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant={confirmVariant}
+        onClick={onConfirm}
+        disabled={confirmDisabled}
+      >
+        {confirmLabel}
+      </Button>
+    </div>
+  );
 
   return createPortal(
     <div
@@ -220,7 +256,14 @@ export function Modal({
         data-state={isVisible ? "open" : "closed"}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className={styles.body}>
+        <div
+          className={[
+            styles.body,
+            toneStyles ? null : styles.bodyWithoutBadge,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {toneStyles ? (
             <div
               className={styles.badge}
@@ -265,27 +308,11 @@ export function Modal({
             <div id={descriptionId} className={styles.description} style={typographyStyles.p2}>
               {description}
             </div>
+            {actionsPlacement === "content" && !hideActions ? actions : null}
           </div>
         </div>
 
-        <div className={styles.actions}>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onDismiss}
-            disabled={dismissDisabled}
-          >
-            {dismissLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={confirmVariant}
-            onClick={onConfirm}
-            disabled={confirmDisabled}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+        {actionsPlacement === "footer" && !hideActions ? actions : null}
       </div>
     </div>,
       document.body

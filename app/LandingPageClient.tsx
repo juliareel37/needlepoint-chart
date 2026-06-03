@@ -1361,16 +1361,17 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
             <p className={styles.waitlistModalIntro}>
               {waitlistStatus?.description ?? ""}
             </p>
+            <p>If you have a second, help us out by sharing some info.</p>
             {showOptionalSurvey ? (
               <section
                 className={styles.waitlistSurveySection}
                 aria-labelledby="waitlist-survey-heading"
               >
-                <div className={styles.waitlistSurveyHeader}>
+                {/* <div className={styles.waitlistSurveyHeader}>
                   <h3 id="waitlist-survey-heading" className={styles.waitlistSurveyTitle}>
-                    If you have a second, help us out by answering a few questions
+                    If you have a second, help us out by sharing some info
                   </h3>
-                </div>
+                </div> */}
                 <form
                   id="waitlist-survey-form"
                   className={styles.waitlistModalForm}
@@ -1429,7 +1430,7 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        What tools do you currently use?
+                        What tools do you currently use to make them?
                       </span>
                     }
                     hint={
@@ -1549,14 +1550,14 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
             ) : null}
           </div>
         }
-        dismissLabel={showOptionalSurvey ? "Skip" : "Close"}
+        dismissLabel={showOptionalSurvey ? "Skip survey" : "Close"}
         confirmLabel={
           showResumeCta
             ? "Open library"
             : showOptionalSurvey
               ? isSubmittingWaitlistSurvey
                 ? "Saving..."
-                : "Submit survey"
+                : "Submit"
               : "Okay"
         }
         onDismiss={() => {

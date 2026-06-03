@@ -2620,6 +2620,53 @@
   gap: 16px;
 }
 
+.headerReportButton {
+  white-space: nowrap;
+}
+
+.floatingReportButton {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: var(--z-notification);
+  white-space: nowrap;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.tabletHeaderReportButton {
+  display: none;
+}
+
+.tabletHeaderReportButton .icon,
+.tabletHeaderReportButton .glyph {
+  width: 40px;
+  height: 40px;
+}
+
+.headerReportButtonLabel {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .floatingReportButton {
+    display: none;
+  }
+
+  .tabletHeaderReportButton {
+    display: inline-flex;
+  }
+
+  .tabletHeaderReportButton .icon,
+  .tabletHeaderReportButton .glyph {
+    width: 40px;
+    height: 40px;
+  }
+
+  .headerReportButtonLabel {
+    display: none;
+  }
+}
+
 @media (max-width: 1000px) {
 
 
@@ -3279,6 +3326,290 @@
 
 .editorNotificationStack > * {
   pointer-events: auto;
+}
+
+.bugReportModalBody {
+  display: grid;
+  gap: 18px;
+}
+
+.bugReportStepPage {
+  display: grid;
+  gap: 8px;
+}
+
+.bugReportFieldset {
+  display: grid;
+  gap: 12px;
+}
+
+.bugReportStepHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bugReportBackButton {
+  color: var(--text-secondary);
+  margin-left: -8px;
+}
+
+.bugReportStandaloneField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bugReportRadioField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.bugReportRadioLegend {
+  display: block;
+  float: left;
+  width: 100%;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bugReportRadioLegend + * {
+  clear: both;
+}
+
+.bugReportQuestionLabel {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bugReportRequiredMark {
+  display: inline-block;
+  margin-left: 4px;
+  color: color-mix(in srgb, var(--status-destructive-strong) 78%, var(--brand-500));
+  font-size: 0.9em;
+  font-weight: 700;
+  vertical-align: top;
+}
+
+.bugReportRadioOptions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.bugReportRadioOption {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--editor-radius-lg);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.bugReportRadioOption:hover {
+  background: color-mix(in srgb, var(--surface-card) 72%, var(--surface-secondary));
+}
+
+.bugReportRadioOption input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  margin-top: 3px;
+  border: 1.5px solid color-mix(in srgb, var(--brand-500) 72%, var(--ui-border-subtle));
+  border-radius: 999px;
+  background: var(--surface-card);
+  flex: 0 0 auto;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.bugReportRadioOption input:checked {
+  border-color: var(--brand-500);
+  background: radial-gradient(circle, var(--brand-500) 0 42%, var(--surface-card) 46% 100%);
+}
+
+.bugReportRadioOption:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand-400) 55%, var(--ui-border-subtle));
+  /* background: color-mix(in srgb, var(--brand-100) 55%, var(--surface-card)); */
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.bugReportRadioCopy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bugReportRadioTitle {
+  color: var(--text-primary);
+}
+
+.bugReportRadioHint {
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+}
+
+.bugReportTextarea {
+  width: 100%;
+  min-height: 78px;
+  padding: 12px 14px;
+  resize: vertical;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: var(--editor-radius-md);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.5;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.bugReportTextareaLarge {
+  min-height: 132px;
+}
+
+.bugReportScaleField {
+  display: grid;
+  gap: 4px;
+  justify-content: start;
+}
+
+.bugReportScaleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  gap: 8px;
+}
+
+.bugReportScaleButton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-border-reg);
+  border-radius: var(--editor-radius-md);
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.bugReportStepActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+.bugReportNextButton:disabled {
+  opacity: 0.4;
+}
+
+.bugReportScaleLabels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 274px;
+  gap: 8px;
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+}
+
+.bugReportScaleButton[data-active="true"] {
+  border: 3px solid color-mix(in srgb, var(--brand-400) 55%, var(--ui-border-subtle));
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.bugReportScaleButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-500) 60%, transparent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bugReportScaleButton:hover {
+    background: color-mix(in srgb, var(--surface-card) 72%, var(--surface-secondary));
+  }
+}
+
+.bugReportTextarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--brand-500) 65%, var(--ui-border-reg));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-200) 72%, transparent);
+}
+
+.bugReportScreenshotSection {
+  display: grid;
+  gap: 12px;
+}
+
+.bugReportScreenshotGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.bugReportScreenshotCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: var(--editor-radius-lg);
+  background: var(--surface-card);
+}
+
+.bugReportScreenshotPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--editor-radius-md);
+  background: var(--surface-secondary);
+}
+
+.bugReportScreenshotMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.bugReportScreenshotName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.bugReportError {
+  margin: 0;
+  color: var(--status-destructive-strong);
+}
+
+.bugReportSubmitButton {
+  width: 100%;
 }
 
 .canvasLoadingOverlay {
@@ -5159,7 +5490,9 @@
     gap: 0;
     padding: 0;
     overflow: hidden;
-  }
+    border-radius: 20px 20px 0 0;
+    box-shadow: var(--ui-shadow-lg);
+}
 
   .sidebarPanelHeader {
     position: sticky;

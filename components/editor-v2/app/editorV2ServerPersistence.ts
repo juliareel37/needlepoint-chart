@@ -130,6 +130,15 @@ export class EditorV2PersistenceError extends Error {
   }
 }
 
+export interface SubmitEditorV2BugReportInput {
+  answers: Record<string, unknown> | Array<unknown>;
+  clientMetadata?: Record<string, unknown>;
+  context?: Record<string, unknown>;
+  editorDesignId?: string | null;
+  formId: string;
+  formVersion?: string | null;
+}
+
 export async function listSavedEditorV2Documents({
   limit,
   offset,
@@ -268,6 +277,38 @@ export async function createEditorV2Folder(
   }
 
   return body.folder;
+}
+
+export async function submitEditorV2BugReport(
+  input: SubmitEditorV2BugReportInput,
+): Promise<{ id: string; createdAt: string; editorDesignId: string | null }> {
+  const response = await fetch("/api/editor-v2/bug-reports", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify(input),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        report?: {
+          id: string;
+          createdAt: string;
+          editorDesignId: string | null;
+        };
+      }
+    | null;
+
+  if (!response.ok || !body?.report) {
+    throw new EditorV2PersistenceError(
+      body?.error ?? "Couldn’t send your report.",
+      response.status,
+    );
+  }
+
+  return body.report;
 }
 
 export async function renameEditorV2Folder(

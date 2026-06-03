@@ -102,6 +102,7 @@ import {
   type TraceCropAspectRatioId,
 } from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
+import { EditorBugReportModal } from "./EditorBugReportModal";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { CanvasAidsFloatingToolbar } from "./CanvasAidsFloatingToolbar";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -457,6 +458,8 @@ export function EditorV2Shell({
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [exportAuthModalOpen, setExportAuthModalOpen] = useState(false);
+  const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
+  const [bugReportSuccessVisible, setBugReportSuccessVisible] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
   const [colorSwapPreview, setColorSwapPreview] = useState<{
     fromColorId: string;
@@ -1487,6 +1490,7 @@ export function EditorV2Shell({
               label: previewMode ? "Exit preview" : "Preview",
               kind: "action",
             },
+            // { id: "report-issue", label: "Report issue", kind: "action" },
             ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
@@ -1496,6 +1500,7 @@ export function EditorV2Shell({
               label: previewMode ? "Exit preview" : "Preview",
               kind: "action",
             },
+            // { id: "report-issue", label: "Report issue", kind: "action" },
             ...HEADER_FILE_MENU_ITEMS,
           ],
     [hasSavedDesignAccess, previewMode],
@@ -2675,6 +2680,18 @@ export function EditorV2Shell({
   }, [currentStorageId]);
 
   useEffect(() => {
+    if (!bugReportSuccessVisible) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setBugReportSuccessVisible(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [bugReportSuccessVisible]);
+
+  useEffect(() => {
     if (!errorNotification) {
       return;
     }
@@ -2950,6 +2967,11 @@ export function EditorV2Shell({
       return;
     }
 
+    if (value === "report-issue") {
+      setBugReportModalOpen(true);
+      return;
+    }
+
     if (value === "delete") {
       setDeleteConfirmationOpen(true);
       return;
@@ -3098,7 +3120,7 @@ export function EditorV2Shell({
                   saveButtonState={saveButtonState}
                   savedDocumentsLoading={savedDocumentsLoading}
                 />
-                {!hasSavedDesignAccess ? (
+                {/* {!hasSavedDesignAccess ? (
                   <Button
                     type="button"
                     variant="secondary"
@@ -3110,7 +3132,7 @@ export function EditorV2Shell({
                   >
                     Clear browser drafts
                   </Button>
-                ) : null}
+                ) : null} */}
               </div>
             ),
             headerAutosaveTarget,
@@ -3391,6 +3413,21 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      {mounted && bugReportSuccessVisible
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div className={styles.editorNotificationStack} data-auto-dismiss="true">
+                <Notification
+                  tone="success"
+                  title="Form submitted"
+                  description="We got your submission - thanks for the feedback!"
+                  onDismiss={() => setBugReportSuccessVisible(false)}
+                />
+              </div>
+            </div>,
+            window.document.body,
+          )
+        : null}
       <Modal
         isOpen={exportAuthModalOpen}
         title="Export your pattern as a PDF"
@@ -3443,7 +3480,7 @@ export function EditorV2Shell({
 
       <div
         className={styles.shellContent}
-        data-modal-open={setupModalOpen ? "true" : "false"}
+        data-modal-open={setupModalOpen || bugReportModalOpen ? "true" : "false"}
         data-mobile-selection-docked={mobileSelectionDocked ? "true" : "false"}
         data-version-history-mode={isVersionHistoryMode ? "true" : "false"}
       >
@@ -3975,6 +4012,48 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      <EditorBugReportModal
+        activeSidebarSection={activeSidebarSection}
+        activeTool={activeTool}
+        currentStorageId={currentStorageId || null}
+        gridHeight={document.grid.height}
+        gridWidth={document.grid.width}
+        hasSavedDesignAccess={hasSavedDesignAccess}
+        isOpen={bugReportModalOpen}
+        previewMode={previewMode}
+        projectTitle={title}
+        traceAttached={Boolean(trace)}
+        onClose={() => setBugReportModalOpen(false)}
+        onSubmitted={() => {
+          setBugReportModalOpen(false);
+          setBugReportSuccessVisible(true);
+        }}
+      />
+      {!suppressHeaderForSetupModal && !isVersionHistoryMode && isBottomPanelLayout && headerFileLeftTarget
+        ? createPortal(
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="md"
+              className={[styles.headerReportButton, styles.tabletHeaderReportButton].join(" ")}
+              onClick={() => setBugReportModalOpen(true)}
+            >
+              <ButtonIcon icon="/icons/lucide/message-square-warning.svg" />
+              <span className={styles.headerReportButtonLabel}>Feedback</span>
+            </Button>,
+            headerFileLeftTarget,
+          )
+        : null}
+      <Button
+        type="button"
+        variant="secondary"
+        size="md"
+        className={styles.floatingReportButton}
+        onClick={() => setBugReportModalOpen(true)}
+      >
+        <ButtonIcon icon="/icons/lucide/message-square-warning.svg" />
+        Feedback
+      </Button>
     </main>
   );
 }

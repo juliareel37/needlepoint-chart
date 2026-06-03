@@ -435,7 +435,10 @@
 
 :root[data-theme="dark"] {
   --neutral-0: #fffffff2;
-  /* --brand-600: #423b5c; */
+
+  --brand-600: color-mix(in oklch, black 10%, var(--green-med-strong-darkest));
+
+
   --ui-tooltip-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
   --ui-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.22);
   --ui-shadow-md: 0 3px 10px rgba(0, 0, 0, 0.26);
@@ -465,15 +468,15 @@
   --canvas-bg: var(--surface-primary);
 
   --text-primary: var(--neutral-0);
-  --text-secondary: var(--neutral-200);
+  --text-secondary: var(--neutral-400);
   --text-tertiary: var(--neutral-400);
   --control-disabled-bg: color-mix(in srgb, var(--surface-card) 72%, var(--neutral-700));
   --control-disabled-text: var(--neutral-400);
   --control-disabled-border: color-mix(in srgb, var(--ui-border-subtle) 45%, var(--neutral-600));
 
-  --ui-border-subtle: var(--neutral-800);
-  --ui-border-reg: var(--neutral-700);
-  --ui-border-strong: var(--neutral-600);
+  --ui-border-subtle: var(--neutral-700);
+  --ui-border-reg: var(--neutral-600);
+  --ui-border-strong: var(--neutral-500);
 
   /* Buttons */
 
@@ -527,7 +530,8 @@
   --button-ghost2-active: var(--brand-400);
   --button-ghost2-active-text: var(--brand-200);
 
-  --menu-item-hover-bg: var(--brand-600);
+  --menu-item-hover-bg: var(--neutral-700);
+  --menu-item-active-bg: var(--brand-600);
 
   --zoom-menu-bg: var(--neutral-800);
   

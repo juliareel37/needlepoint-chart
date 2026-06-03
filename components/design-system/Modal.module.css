@@ -9,6 +9,7 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.16), transparent 34%),
     rgba(10, 15, 26, 0.22);
   backdrop-filter: blur(1px);
+  overscroll-behavior: none;
   opacity: 0;
   transition:
     opacity 180ms ease,
@@ -25,11 +26,16 @@
   display: grid;
   gap: 20px;
   width: min(100%, 400px);
+  max-height: min(520px, calc(100dvh - 72px));
   padding: 28px;
   border: 1px solid var(--ui-border-subtle);
   border-radius: var(--editor-radius-xl);
   background: var(--surface-card);
   box-shadow: var(--ui-shadow-lg);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
   opacity: 0;
   transform: translateY(8px) scale(0.985);
   transition:
@@ -39,7 +45,7 @@
 }
 
 .wideCard {
-  width: min(100%, 540px);
+  width: min(100%, 460px);
 }
 
 .card[data-state="open"] {
@@ -52,6 +58,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 16px;
+}
+
+.bodyWithoutBadge {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .centeredCard .body {
@@ -82,7 +92,7 @@
 
 .content {
   display: grid;
-  gap: 12px;
+  gap: 18px;
 }
 
 .header {
@@ -147,6 +157,14 @@
 
 .actions > * {
   min-width: 0;
+}
+
+.actionsSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.actionsInContent {
+  margin-top: 4px;
 }
 
 @media (max-width: 560px) {

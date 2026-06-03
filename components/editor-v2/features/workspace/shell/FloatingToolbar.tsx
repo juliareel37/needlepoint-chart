@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal, flushSync } from "react-dom";
 import { ColorLibrary } from "@/components/editor-v2/features/colors";
 import {
   MenuChevronIcon,
@@ -22,6 +22,7 @@ import {
   clampGridBrushSize,
   getGridBrushSizeMax,
 } from "@/lib/editor-v2/editor/brushSize";
+import { findClosestPaletteColorId, hexToRgb } from "@/lib/editor-v2/editor/color-utils";
 import { getColorLibraryPaletteSections } from "@/lib/editor-v2/editor/color-library";
 import type {
   ActiveTool,
@@ -60,6 +61,23 @@ import {
   TOOLBAR_POPOVER_VIEWPORT_PADDING,
 } from "./toolbarPopoverPosition";
 import styles from "./EditorV2Shell.module.css";
+
+interface NativeEyeDropperResult {
+  sRGBHex: string;
+}
+
+interface NativeEyeDropper {
+  open: () => Promise<NativeEyeDropperResult>;
+}
+
+type NativeEyeDropperConstructor = new () => NativeEyeDropper;
+type TraceDisplaySnapshot = Pick<TraceDocument, "blendMode" | "opacity">;
+
+declare global {
+  interface Window {
+    EyeDropper?: NativeEyeDropperConstructor;
+  }
+}
 
 export interface ColorLibraryDismissGesture {
   clientX: number;
@@ -388,6 +406,7 @@ export function FloatingToolbar({
   const [brushSizeSliderDragging, setBrushSizeSliderDragging] = useState(false);
   const [touchPrimaryInput, setTouchPrimaryInput] = useState(false);
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false);
+  const [nativeEyedropperOpen, setNativeEyedropperOpen] = useState(false);
   const colorAnchorRef = useRef<HTMLDivElement | null>(null);
   const paintAnchorRef = useRef<HTMLDivElement | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -410,6 +429,10 @@ export function FloatingToolbar({
     brushSizeMax <= 1 ? 0 : ((brushSizeSliderValue - 1) / (brushSizeMax - 1)) * 100;
   const activeSwatchColor = activeColor?.hex ?? "var(--neutral-400)";
   const paletteSections = getColorLibraryPaletteSections(palette, customPalettesById);
+  const paletteById = useMemo(
+    () => Object.fromEntries(palette.map((color) => [color.id, color])),
+    [palette],
+  );
   const selectionVisible = Boolean(selectionBounds) || activeTool === "lasso";
   const canMirrorSelection = selectionCommitted && selectionMode === "rect";
   const duplicatePlacementSelected = duplicatePlacementOperation === "duplicate";
@@ -735,6 +758,89 @@ export function FloatingToolbar({
 
     dispatch(createSetToolCommand("lasso"));
     setSelectOpen(true);
+  }
+
+  async function handleEyedropperButtonClick(): Promise<void> {
+    closeColorLibrary();
+    closeDrawMenu();
+    closeImageMenu();
+
+    if (activeTool === "eyedropper") {
+      dispatch(
+        createSetToolCommand(
+          selectionToolSessionActive ? "lasso" : (eyedropperReturnTool ?? "paint"),
+        ),
+      );
+      return;
+    }
+
+    const EyeDropperConstructor =
+      typeof window === "undefined" ? undefined : window.EyeDropper;
+
+    if (!EyeDropperConstructor) {
+      dispatch(createSetToolCommand("eyedropper"));
+      return;
+    }
+
+    const returnTool =
+      selectionToolSessionActive || activeTool === "lasso"
+        ? "lasso"
+        : activeTool === "mirror"
+          ? "pan"
+          : activeTool;
+    const traceDisplaySnapshot =
+      trace && trace.visible
+        ? {
+            blendMode: trace.blendMode,
+            opacity: trace.opacity,
+          }
+        : null;
+    const shouldOverrideTraceDisplay =
+      traceDisplaySnapshot !== null &&
+      (traceDisplaySnapshot.blendMode !== "image" ||
+        Math.abs(traceDisplaySnapshot.opacity - 1) > 0.0001);
+
+    setNativeEyedropperOpen(true);
+
+    try {
+      if (shouldOverrideTraceDisplay) {
+        flushSync(() => {
+          dispatch(
+            createUpdateTraceCommand(
+              { blendMode: "image", opacity: 1 },
+              { history: { mode: "skip" } },
+            ),
+          );
+        });
+      }
+
+      const result = await new EyeDropperConstructor().open();
+      const sampledRgb = hexToRgb(result.sRGBHex);
+      const sampledColorId = sampledRgb
+        ? findClosestPaletteColorId(paletteById, sampledRgb)
+        : null;
+
+      dispatch(
+        sampledColorId
+          ? createSetToolWithColorCommand(returnTool, sampledColorId)
+          : createSetToolCommand(returnTool),
+      );
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("Failed to sample color with EyeDropper API.", error);
+      }
+    } finally {
+      if (shouldOverrideTraceDisplay && traceDisplaySnapshot) {
+        dispatch(
+          createUpdateTraceCommand(
+            traceDisplaySnapshot,
+            { history: { mode: "skip" } },
+          ),
+        );
+      }
+
+      setNativeEyedropperOpen(false);
+    }
   }
 
   function handleExitSelection() {
@@ -1368,26 +1474,13 @@ export function FloatingToolbar({
 
           <ToolbarButton
             type="button"
-            active={activeTool === "eyedropper"}
-            aria-pressed={activeTool === "eyedropper"}
+            active={activeTool === "eyedropper" || nativeEyedropperOpen}
+            aria-pressed={activeTool === "eyedropper" || nativeEyedropperOpen}
             aria-label="Eyedropper"
             data-tooltip="Eyedropper"
             title="Eyedropper"
             onClick={() => {
-              closeColorLibrary();
-              closeDrawMenu();
-              closeImageMenu();
-              if (activeTool === "eyedropper") {
-                dispatch(
-                  createSetToolCommand(
-                    selectionToolSessionActive
-                      ? "lasso"
-                      : (eyedropperReturnTool ?? "paint"),
-                  ),
-                );
-                return;
-              }
-              dispatch(createSetToolCommand("eyedropper"));
+              void handleEyedropperButtonClick();
             }}
           >
             <ToolbarIcon icon="/icons/lucide/dropper.svg" />

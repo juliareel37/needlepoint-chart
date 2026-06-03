@@ -380,7 +380,7 @@
 .libraryFamilySectionHeader {
   margin: 0;
   padding: 0;
-  color: var(--neutral-600);
+  color: var(--text-secondary);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.03em;

@@ -1740,13 +1740,13 @@
 
 .waitlistModalCopy {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .waitlistModalTitle {
   display: block;
   color: var(--text-primary);
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 36px;
   text-align: center;
@@ -1755,18 +1755,22 @@
 .waitlistModalIntro {
   margin: 0;
   color: color-mix(in srgb, var(--text-primary) 82%, var(--text-secondary));
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 24px;
 }
 
 .waitlistSurveySection {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
   padding-top: 18px;
   border-top: 1px solid color-mix(in srgb, var(--ui-border-subtle) 82%, transparent);
   text-align: left;
+  background-color: var(--neutral-100);
+  padding: 18px clamp(14px, 1.6vw, 24px);
+  border-radius: 20px;
+  border: 1px solid var(--neutral-200);
 }
 
 .waitlistSurveyHeader {
@@ -1784,16 +1788,16 @@
 
 .waitlistModalForm {
   display: grid;
-  gap: 16px;
-  font-size: 14px;
+  gap: 24px;
+  font-size: 12px;
   line-height: 21px;
   text-align: left;
 }
 
 .waitlistFieldLabel {
   color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 20px;
 }
 
@@ -1828,9 +1832,9 @@
   align-items: center;
   gap: 10px;
   padding: 4px 0;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 20px;
 }
 
