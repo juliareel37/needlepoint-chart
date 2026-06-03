@@ -106,6 +106,7 @@ export function useGridInteractions({
     handleHover,
     handlePointerDown,
     handlePointerEnter,
+    isPaintStrokeActive: paintStroke.isStrokeActive,
   };
 
   function handlePointerDown(point: GridPoint, selectionPoint: SelectionPoint): void {
