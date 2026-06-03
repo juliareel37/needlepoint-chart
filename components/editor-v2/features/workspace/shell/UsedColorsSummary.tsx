@@ -464,6 +464,48 @@ function UsedColorsPortalPopover({
   );
 }
 
+function useTouchScreenInput() {
+  const [touchScreenInput, setTouchScreenInput] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(any-pointer: coarse)");
+    const primaryCoarsePointerQuery = window.matchMedia("(pointer: coarse)");
+
+    const update = () => {
+      const hasTouchPoints =
+        typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+
+      setTouchScreenInput(
+        coarsePointerQuery.matches || primaryCoarsePointerQuery.matches || hasTouchPoints,
+      );
+    };
+
+    update();
+
+    const queries = [coarsePointerQuery, primaryCoarsePointerQuery];
+    const addListener = (query: MediaQueryList) => {
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+      }
+
+      query.addListener(update);
+      return () => query.removeListener(update);
+    };
+
+    const cleanups = queries.map(addListener);
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  return touchScreenInput;
+}
+
 export function UsedColorsSummary({
   activeColorId,
   usedColors,
@@ -533,6 +575,7 @@ export function UsedColorsSummary({
     useState<UsedColorsSuccessNotification | null>(null);
   const [activeMergeTargetTooltip, setActiveMergeTargetTooltip] =
     useState<UsedColorsMergeTargetTooltip | null>(null);
+  const touchScreenInput = useTouchScreenInput();
   const mergeTargetAnchorRef = useRef<HTMLDivElement | null>(null);
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
   const highlightColorChangeRef = useRef(onHighlightColorChange);
@@ -545,6 +588,7 @@ export function UsedColorsSummary({
   );
   const isSelecting = toolMode !== "idle" && actionMode === "merge";
   const deleteModeActive = actionMode === "delete";
+  const rowDeleteButtonsActive = !isSelecting && (!touchScreenInput || deleteModeActive);
   const scopeMode: UsedColorsScopeMode = selectionControlActive ? "selection" : "full-canvas";
   const scopeOptions = useMemo(
     () =>
@@ -1104,19 +1148,21 @@ export function UsedColorsSummary({
                 <span>Merge</span>
               </span>
             </Button>
-            <Button
-              type="button"
-              variant="ghostV2"
-              size="md"
-              active={actionMode === "delete"}
-              className={styles.usedColorsActionToggle}
-              onClick={() => activateActionMode("delete")}
-            >
-              <ButtonIcon icon="/icons/lucide/trash.svg" />
-              <span className={styles.usedColorsActionLabel}>
-                <span>Delete</span>
-              </span>
-            </Button>
+            {touchScreenInput ? (
+              <Button
+                type="button"
+                variant="ghostV2"
+                size="md"
+                active={actionMode === "delete"}
+                className={styles.usedColorsActionToggle}
+                onClick={() => activateActionMode("delete")}
+              >
+                <ButtonIcon icon="/icons/lucide/trash.svg" />
+                <span className={styles.usedColorsActionLabel}>
+                  <span>Delete</span>
+                </span>
+              </Button>
+            ) : null}
             <SingleSelectDropdown
               ariaLabel="Sort design colors"
               items={sortOptions}
@@ -1154,6 +1200,7 @@ export function UsedColorsSummary({
                 <ul
                   className={styles.usedColorsList}
                   data-selection-mode={isSelecting ? "true" : "false"}
+                  data-touch-screen={touchScreenInput ? "true" : "false"}
                   data-selection-overlay={
                     isSelecting && selectedColorIds.length > 0 ? "true" : "false"
                   }
@@ -1188,7 +1235,7 @@ export function UsedColorsSummary({
                 className={styles.usedColorsRow}
                 data-active-color={isActiveColor ? "true" : "false"}
                 data-selectable={isSelecting ? "true" : "false"}
-                data-delete-mode={deleteModeActive ? "true" : "false"}
+                data-delete-mode={rowDeleteButtonsActive ? "true" : "false"}
                 data-selected={selectedColorIdSet.has(entry.colorId) ? "true" : "false"}
               >
                 <div
@@ -1381,7 +1428,7 @@ export function UsedColorsSummary({
                   <ButtonIcon icon="/icons/lucide/search.svg" />
                 </Button>
 
-                {deleteModeActive ? (
+                {rowDeleteButtonsActive ? (
                   <Button
                     type="button"
                     variant="ghostV2"
@@ -1399,6 +1446,9 @@ export function UsedColorsSummary({
 
                       setDeleteTargetColorId(entry.colorId);
                       setDeleteConfirmationOpen(true);
+                      setSwapSourceColorId(null);
+                      setSwapPreviewTargetColorId(null);
+                      onColorSwapPreviewChange(null);
                       const replacementColorId = findClosestColorIdFromCandidates(
                         colorsById,
                         usedColors
@@ -1420,7 +1470,7 @@ export function UsedColorsSummary({
                   </Button>
                 ) : null}
 
-                {deleteModeActive &&
+                {rowDeleteButtonsActive &&
                 deleteConfirmationOpen &&
                 deleteTargetColorId === entry.colorId ? (
                   <div

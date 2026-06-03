@@ -1010,106 +1010,129 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
                 {/* <span className={styles.sectionTitleEmphasis}> specifically </span>
                 for stitched canvases */}
               </h2>
-              <p className={styles.sectionBody} style={marketingTypographyStyles.bodyLg}>
+              {/* <p className={styles.sectionBody} style={marketingTypographyStyles.bodyLg}> */}
                 {/* No more constantly purchasing single-use etsy downloads, dealing with clunky dated tools, 
                 or trying to stitch from a photo that doesn't translate well to thread.  */}
                 {/* Never buy another overpriced one-off pattern download again.  */}
                 {/* Stop relying on someone else to make the pattern you want to stitch. */}
 
-                Instead of relying on someone else every time you stitch,
+                {/* Instead of relying on someone else every time you stitch,
                 make your own patterns exactly how you want them
-                with our powerful editing tools designed specifically for stitched canvases.
+                with our powerful editing tools designed specifically for stitched canvases. */}
 
                 {/* Create one yourself and make it truly your own with Wippa's seamless 
                 and intuitive editing interface,
                 with powerful tools developed specifically for stitched canvases. */}
-              </p>
+              {/* </p> */}
             </div>
           </div>
 
           <div className={styles.bentoRows}>
-            <div className={[styles.bentoGrid, styles.bentoGridTop].join(" ")}>
-              <article
-                className={[styles.bentoCard, styles.bentoCardPrimary, styles.bentoCardWrappedStack].join(" ")}
-                data-animate="pending"
-              >
-                <div className={styles.bentoCopy}>
-                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                    Paint and edit with precision
+            <div className={styles.bentoAlternatingRows}>
+              <article className={styles.bentoAlternatingRow} data-animate="pending">
+                <div className={[styles.bentoCopy, styles.bentoAlternatingCopy].join(" ")}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.title}>
+                    Powerful, flexible editing tools
                   </h3>
-                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-              Every tool you need (and more) to create and edit patterns just how you want them, in a modern and intuitive interface.                  </p>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.body}>
+                    No more relying on someone else every time you want to stitch.
+                    Wippa has every tool you need (and more) to create any pattern you can imagine with zero friction,
+                      wrapped up in a seamless and intuitive interface. 
+                  </p>
                 </div>
-                <div className={styles.bentoVisualFrame} aria-hidden="true">
-                  <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
-                    <Image
-                      src="/ui/cut-tool-ss.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                      className={styles.bentoVisualImage}
-                    />
+                <div
+                  className={[
+                    styles.bentoCard,
+                    styles.bentoCardPrimary,
+                    styles.bentoCardWrappedStack,
+                    styles.bentoAlternatingCard,
+                  ].join(" ")}
+                  aria-hidden="true"
+                >
+                  <div className={styles.bentoVisualFrame}>
+                    <div className={[styles.bentoVisualAsset, styles.bentoVisualPrimary].join(" ")}>
+                      <Image
+                        src="/ui/cut-tool-ss.png"
+                        alt=""
+                        width={1600}
+                        height={1000}
+                        className={styles.bentoVisualImage}
+                      />
+                    </div>
                   </div>
                 </div>
               </article>
 
               <article
-                className={[styles.bentoCard, styles.bentoCardQuaternary, styles.bentoCardRightStack].join(" ")}
+                className={[styles.bentoAlternatingRow, styles.bentoAlternatingRowReverse].join(" ")}
                 data-animate="pending"
               >
-                <div className={styles.bentoCopy}>
-                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.featureTitle}>
-                  Manage your design colors
-                  </h3>
-                  <p className={styles.bentoBody} style={marketingTypographyStyles.bodySm}>
-                    Track thread color usage as you go. 
-                    Swap, merge, and delete design colors in a pinch.
-                  </p>
-                </div>
-                <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")} aria-hidden="true">
-                  <div
-                    className={[
-                      styles.bentoVisualAsset,
-                      styles.bentoVisualQuaternaryBack,
-                      styles.bentoVisualRightStackBack,
-                    ].join(" ")}
-                  >
-                    <Image
-                      src="/ui/selection-canvas-dog.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                      className={styles.bentoPlaceholderBack}
-                    />
-                  </div>
-                  <div
-                    className={[
-                      styles.bentoVisualAsset,
-                      styles.bentoVisualQuaternaryFront,
-                      styles.bentoVisualRightStackMiddle,
-                    ].join(" ")}
-                  >
-                    <Image
-                      src="/ui/selection-card.png"
-                      alt=""
-                      width={1600}
-                      height={1000}
-                    />
+                <div
+                  className={[
+                    styles.bentoCard,
+                    styles.bentoCardQuaternary,
+                    styles.bentoCardRightStack,
+                    styles.bentoAlternatingCard,
+                  ].join(" ")}
+                  aria-hidden="true"
+                >
+                  <div className={[styles.bentoOverlayVisual, styles.bentoOverlayVisualRightStack].join(" ")}>
+                    <div
+                      className={[
+                        styles.bentoVisualAsset,
+                        styles.bentoVisualQuaternaryBack,
+                        styles.bentoVisualRightStackBack,
+                      ].join(" ")}
+                    >
+                      <Image
+                        src="/ui/selection-canvas-dog.png"
+                        alt=""
+                        width={1600}
+                        height={1000}
+                        className={styles.bentoPlaceholderBack}
+                      />
+                    </div>
                     <div
                       className={[
                         styles.bentoVisualAsset,
                         styles.bentoVisualQuaternaryFront,
-                        styles.bentoVisualRightStackFront,
+                        styles.bentoVisualRightStackMiddle,
                       ].join(" ")}
                     >
                       <Image
-                        src="/ui/selection-bar.png"
+                        src="/ui/selection-card.png"
                         alt=""
                         width={1600}
                         height={1000}
                       />
+                      <div
+                        className={[
+                          styles.bentoVisualAsset,
+                          styles.bentoVisualQuaternaryFront,
+                          styles.bentoVisualRightStackFront,
+                        ].join(" ")}
+                      >
+                        <Image
+                          src="/ui/selection-bar.png"
+                          alt=""
+                          width={1600}
+                          height={1000}
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <div className={[styles.bentoCopy, styles.bentoAlternatingCopy].join(" ")}>
+                  <h3 className={styles.bentoTitle} style={marketingTypographyStyles.title}>
+                    Comprehensive design color editing
+                  </h3>
+                  <p className={styles.bentoBody} style={marketingTypographyStyles.body}>
+                    Keep track of your design colors as you work and
+                    seamlessly edit across the entire canvas with a powerful global or selection-driven color editor.
+                    Merge similar colors, experiment with alternate shades, or delete colors entirely
+                    to automatically swap with a close match. Clean up speckled and messy canvases in seconds. 
+                  </p>
                 </div>
               </article>
             </div>

@@ -4371,12 +4371,18 @@
   margin-right: -4px;
   color: var(--text-secondary);
   opacity: 0;
+  transition:
+    color 140ms ease,
+    opacity 140ms ease;
 }
 
 .usedColorsRowDeleteButton {
   margin-left: 0;
   margin-right: -4px;
   color: var(--text-secondary);
+  transition:
+    color 140ms ease,
+    opacity 140ms ease;
 }
 
 .usedColorsRowDeleteButton:disabled {
@@ -4495,6 +4501,10 @@
   .usedColorsHighlightButton {
     opacity: 1;
   }
+}
+
+.usedColorsList[data-touch-screen="true"] .usedColorsHighlightButton {
+  opacity: 1;
 }
 
 .usedColorsItem[data-selectable="true"] .usedColorsItemButton {
@@ -5259,6 +5269,20 @@
 
   .usedColorsRowDeleteButton:hover:not(:disabled) {
     color: var(--status-destructive-strong);
+  }
+
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsHighlightButton,
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsRowDeleteButton {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsRow:hover .usedColorsHighlightButton,
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsRow:hover .usedColorsRowDeleteButton,
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsHighlightButton:focus-visible,
+  .usedColorsList:not([data-touch-screen="true"]) .usedColorsRowDeleteButton:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .usedColorsRow[data-selected="true"] .usedColorsHighlightButton:hover:not([aria-pressed="true"]) {
