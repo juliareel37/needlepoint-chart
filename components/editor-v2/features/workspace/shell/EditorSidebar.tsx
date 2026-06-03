@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Button, ButtonIcon } from "@/components/design-system";
 import { typographyStyles } from "@/app/design-system/typography";
 import type {
@@ -109,6 +109,7 @@ interface EditorSidebarProps {
   onCommitTraceCrop?: () => void;
   onResetTraceCrop?: () => void;
   onToggleTraceEditMode?: () => void;
+  onCloseBottomPanelDrawer: () => void;
 }
 
 export function EditorSidebar({
@@ -191,6 +192,7 @@ export function EditorSidebar({
   onCommitTraceCrop,
   onResetTraceCrop,
   onToggleTraceEditMode,
+  onCloseBottomPanelDrawer,
 }: EditorSidebarProps) {
   const [colorPanelView, setColorPanelView] = useState<ColorPanelView>("overview");
   const [customPaletteDraftId, setCustomPaletteDraftId] = useState<string | null>(null);
@@ -203,6 +205,7 @@ export function EditorSidebar({
     category: null,
     scrollTop: 0,
   });
+  const bottomPanelDragStartYRef = useRef<number | null>(null);
   const previousActiveSectionRef = useRef(activeSection);
   const shouldRestoreIconsSubpageScrollRef = useRef(false);
 
@@ -301,10 +304,61 @@ export function EditorSidebar({
       return [...next];
     });
   };
+  const handleBottomPanelHandlePointerDown = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!isBottomPanelLayout) {
+      return;
+    }
+
+    bottomPanelDragStartYRef.current = event.clientY;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const handleBottomPanelHandlePointerUp = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const startY = bottomPanelDragStartYRef.current;
+    bottomPanelDragStartYRef.current = null;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (startY === null) {
+      return;
+    }
+
+    const dragDeltaY = event.clientY - startY;
+    if (dragDeltaY > 44) {
+      onCloseBottomPanelDrawer();
+    }
+  };
+  const handleBottomPanelHandlePointerCancel = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    bottomPanelDragStartYRef.current = null;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarSurface}>
+        <button
+          type="button"
+          className={styles.bottomPanelDragHandleButton}
+          aria-label="Close panel"
+          title="Close panel"
+          onClick={onCloseBottomPanelDrawer}
+          onPointerDown={handleBottomPanelHandlePointerDown}
+          onPointerUp={handleBottomPanelHandlePointerUp}
+          onPointerCancel={handleBottomPanelHandlePointerCancel}
+        >
+          <span className={styles.bottomPanelDragHandle} aria-hidden="true" />
+        </button>
+
         {showSidebarPanelHeader ? (
           <div className={styles.sidebarPanelHeader}>
             {activeSection === "color" ? (

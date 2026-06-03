@@ -262,6 +262,7 @@ interface PreviewSessionSnapshot {
 }
 
 interface BottomPanelCanvasFocusSnapshot {
+  sidebarCollapsed: boolean;
   viewport: {
     zoom: number;
     offsetX: number;
@@ -1468,11 +1469,7 @@ export function EditorV2Shell({
     isBottomPanelLayout &&
     (Boolean(selectionBounds) || activeTool === "lasso");
   const mobileBottomPanelVisibleHeightRatio =
-    isBottomPanelLayout && !sidebarCollapsed
-      ? isBottomPanelCanvasFocusActive
-        ? 0.6
-        : 0.25
-      : 1;
+    isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive ? 0.1 : 1;
   const previewModeDisabled =
     Boolean(textPlacement) ||
     Boolean(iconPlacement) ||
@@ -1480,7 +1477,9 @@ export function EditorV2Shell({
     traceRepositionActive ||
     selectionControlActive;
   const mobileVisibleTopInset =
-    isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
+    isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive
+      ? stageToolbarTopInset * 0.5
+      : 0;
   const mobileHeaderMenuItems = useMemo(
     (): HeaderFileMenuItem[] =>
       hasSavedDesignAccess
@@ -1640,6 +1639,9 @@ export function EditorV2Shell({
     mobileVisibleTopInset,
     viewport.zoom,
   ]);
+  const highlightedColorName = highlightedColorId
+    ? (colorsById[highlightedColorId]?.name ?? "color")
+    : null;
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -1763,6 +1765,10 @@ export function EditorV2Shell({
         return;
       }
 
+      if (sidebarCollapsed !== snapshot.sidebarCollapsed) {
+        dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+      }
+
       dispatch(createSetViewportZoomCommand(snapshot.viewport.zoom));
       dispatch(
         createPanViewportCommand(
@@ -1773,15 +1779,16 @@ export function EditorV2Shell({
 
       bottomPanelCanvasFocusSnapshotRef.current = null;
     },
-    [dispatch, viewport.offsetX, viewport.offsetY],
+    [dispatch, sidebarCollapsed, viewport.offsetX, viewport.offsetY],
   );
 
   const enterBottomPanelCanvasFocus = useCallback(() => {
-    if (isBottomPanelCanvasFocusActive || !isBottomPanelLayout || sidebarCollapsed) {
+    if (isBottomPanelCanvasFocusActive || !isBottomPanelLayout) {
       return;
     }
 
     bottomPanelCanvasFocusSnapshotRef.current = {
+      sidebarCollapsed,
       viewport: {
         zoom: viewport.zoom,
         offsetX: viewport.offsetX,
@@ -1789,8 +1796,12 @@ export function EditorV2Shell({
       },
     };
     bottomPanelCanvasFocusFitPendingRef.current = true;
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
     setIsBottomPanelCanvasFocusActive(true);
   }, [
+    dispatch,
     isBottomPanelCanvasFocusActive,
     isBottomPanelLayout,
     sidebarCollapsed,
@@ -2090,10 +2101,7 @@ export function EditorV2Shell({
   ]);
 
   useEffect(() => {
-    if (!isBottomPanelCanvasFocusActive || sidebarCollapsed) {
-      if (isBottomPanelCanvasFocusActive && sidebarCollapsed) {
-        exitBottomPanelCanvasFocus({ restoreViewport: false });
-      }
+    if (!isBottomPanelCanvasFocusActive) {
       return;
     }
 
@@ -2475,6 +2483,14 @@ export function EditorV2Shell({
     dispatch(createSetActiveSidebarSectionCommand("color"));
     dispatch(createSetSidebarCollapsedCommand(false));
   }, [dispatch]);
+
+  const handleCloseBottomPanelDrawer = useCallback(() => {
+    if (sidebarCollapsed) {
+      return;
+    }
+
+    dispatch(createSetSidebarCollapsedCommand(true));
+  }, [dispatch, sidebarCollapsed]);
 
   const handleOpenCustomPalettesPanel = useCallback(() => {
     setRequestedColorPanelView("custom-palettes");
@@ -3642,6 +3658,15 @@ export function EditorV2Shell({
                   </div>
                 ) : null}
 
+                {isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive ? (
+                  <button
+                    type="button"
+                    className={styles.mobileStageDimmer}
+                    aria-label="Close panel"
+                    onClick={handleCloseBottomPanelDrawer}
+                  />
+                ) : null}
+
                 <div
                   className={styles.sidePanelOverlay}
                   data-collapsed={sidebarCollapsed ? "true" : "false"}
@@ -3738,6 +3763,7 @@ export function EditorV2Shell({
                     onCommitTraceCrop={handleCommitTraceCrop}
                     onResetTraceCrop={handleResetTraceCrop}
                     onToggleTraceEditMode={handleToggleTraceEditMode}
+                    onCloseBottomPanelDrawer={handleCloseBottomPanelDrawer}
                     trace={trace}
                     traceConversionPreview={traceConversionPreview}
                     traceRepositionActive={traceRepositionActive}
@@ -3765,7 +3791,7 @@ export function EditorV2Shell({
                   />
                 </div>
 
-                {previewMode || isBottomPanelCanvasFocusActive ? null : (
+                {previewMode ? null : (
                   <div
                     ref={stageToolbarTopRef}
                     className={styles.stageToolbarTop}
@@ -3776,7 +3802,25 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {traceConversionPreview ? (
+                    {isBottomPanelCanvasFocusActive && highlightedColorId ? (
+                      <div className={styles.highlightPreviewToolbar}>
+                        <span className={styles.highlightPreviewLabel} style={typographyStyles.p2}>
+                          Highlighting {highlightedColorName}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghostV2"
+                          size="md"
+                          iconOnly
+                          className={styles.highlightPreviewCloseButton}
+                          aria-label="Exit color highlight"
+                          title="Exit color highlight"
+                          onClick={clearHighlightedColor}
+                        >
+                          <ButtonIcon icon="/icons/lucide/x.svg" />
+                        </Button>
+                      </div>
+                    ) : traceConversionPreview ? (
                       <ConversionPreviewToolbar
                         dispatch={dispatch}
                         onExitPreview={handleExitTraceConversionPreviewFromToolbar}
@@ -4029,30 +4073,17 @@ export function EditorV2Shell({
           setBugReportSuccessVisible(true);
         }}
       />
-      {!suppressHeaderForSetupModal && !isVersionHistoryMode && isBottomPanelLayout && headerFileLeftTarget
-        ? createPortal(
-            <Button
-              type="button"
-              variant="ghostV2"
-              size="md"
-              className={[styles.headerReportButton, styles.tabletHeaderReportButton].join(" ")}
-              onClick={() => setBugReportModalOpen(true)}
-            >
-              <ButtonIcon icon="/icons/lucide/message-square-warning.svg" />
-              <span className={styles.headerReportButtonLabel}>Feedback</span>
-            </Button>,
-            headerFileLeftTarget,
-          )
-        : null}
       <Button
         type="button"
         variant="secondary"
         size="md"
         className={styles.floatingReportButton}
+        data-feedback-modal-open={bugReportModalOpen ? "true" : "false"}
+        aria-label="Feedback"
         onClick={() => setBugReportModalOpen(true)}
       >
         <ButtonIcon icon="/icons/lucide/message-square-warning.svg" />
-        Feedback
+        <span className={styles.floatingReportButtonLabel}>Feedback</span>
       </Button>
     </main>
   );

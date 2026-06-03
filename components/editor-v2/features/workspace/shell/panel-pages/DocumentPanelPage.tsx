@@ -127,6 +127,7 @@ export function DocumentPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
+      <section className={styles.sidebarSubsection}>
         <section className={styles.documentSummaryCard}>
           <div className={styles.documentSummaryRow}>
             <div className={styles.documentThumbnailFrame}>
@@ -187,6 +188,7 @@ export function DocumentPanelPage({
             />
           </dl>
         </section>
+     </section>
 {/* 
         <section className={styles.documentSaveStatusCard}>
           <SaveStatusCard
@@ -271,6 +273,7 @@ export function DocumentPanelPage({
             <div className={styles.traceSectionDivider} aria-hidden="true" /> */}
 
         {hasSavedDesignAccess ? (
+         <section className={styles.sidebarSubsection}>
           <section className={styles.documentRecentSection}>
             <div className={styles.documentRecentHeader}>
               <h3 className={styles.documentRecentTitle} style={typographyStyles.h5}>
@@ -340,6 +343,7 @@ export function DocumentPanelPage({
               </p>
             )}
           </section>
+        </section>
         ) : null}
 
         <section className={styles.documentSecondaryActions}>

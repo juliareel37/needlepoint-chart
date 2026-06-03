@@ -58,6 +58,7 @@ type UsedColorsMergeTargetTooltip = {
 
 type UsedColorsToolMode = "idle" | "select";
 type UsedColorsActionMode = "none" | "merge" | "delete";
+type MobileMergeStep = "select" | "configure";
 type UsedColorsSortMode = "usage" | "usage-ascending" | "color";
 type UsedColorsScopeMode = "full-canvas" | "selection";
 type UsedColorsSuccessNotification = {
@@ -518,6 +519,7 @@ export function UsedColorsSummary({
 }) {
   const [toolMode, setToolMode] = useState<UsedColorsToolMode>("idle");
   const [actionMode, setActionMode] = useState<UsedColorsActionMode>("none");
+  const [mobileMergeStep, setMobileMergeStep] = useState<MobileMergeStep>("select");
   const [sortMode, setSortMode] = useState<UsedColorsSortMode>("usage");
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [mergeTargetColorId, setMergeTargetColorId] = useState<string | null>(null);
@@ -535,6 +537,7 @@ export function UsedColorsSummary({
   const usedColorRowElementsRef = useRef(new Map<string, HTMLLIElement>());
   const highlightColorChangeRef = useRef(onHighlightColorChange);
   const exitBottomPanelCanvasFocusRef = useRef(onExitBottomPanelCanvasFocus);
+  const mergePreviewKeyRef = useRef<string | null>(null);
   const featuredColorIds = usedColors.map((entry) => entry.colorId);
   const paletteSections = useMemo(
     () => getColorLibraryPaletteSections(palette, customPalettesById),
@@ -723,23 +726,39 @@ export function UsedColorsSummary({
   );
 
   useEffect(() => {
-    if (actionMode !== "merge" || !mergeTargetColorId) {
+    const clearMergePreview = () => {
+      if (mergePreviewKeyRef.current === null) {
+        return;
+      }
+
+      mergePreviewKeyRef.current = null;
       onMergeColorsPreviewChange(null);
+    };
+
+    if (actionMode !== "merge" || !mergeTargetColorId) {
+      clearMergePreview();
       return;
     }
 
     const fromColorIds = selectedColorIds.filter((colorId) => colorId !== mergeTargetColorId);
 
     if (fromColorIds.length === 0) {
-      onMergeColorsPreviewChange(null);
+      clearMergePreview();
       return;
     }
 
+    const previewKey = `${mergeTargetColorId}:${fromColorIds.join(",")}`;
+    if (mergePreviewKeyRef.current === previewKey) {
+      return;
+    }
+
+    mergePreviewKeyRef.current = previewKey;
     onMergeColorsPreviewChange({ fromColorIds, toColorId: mergeTargetColorId });
   }, [actionMode, mergeTargetColorId, onMergeColorsPreviewChange, selectedColorIds]);
 
   useEffect(
     () => () => {
+      mergePreviewKeyRef.current = null;
       onMergeColorsPreviewChange(null);
     },
     [onMergeColorsPreviewChange],
@@ -748,8 +767,15 @@ export function UsedColorsSummary({
   useEffect(() => {
     if (selectedColorIds.length === 0) {
       setMergeConfirmationOpen(false);
+      setMobileMergeStep("select");
     }
   }, [selectedColorIds]);
+
+  useEffect(() => {
+    if (actionMode !== "merge") {
+      setMobileMergeStep("select");
+    }
+  }, [actionMode]);
 
   useEffect(() => {
     if (!deleteTargetColorId) {
@@ -877,6 +903,11 @@ export function UsedColorsSummary({
     Boolean(swapSourceColorId) &&
     Boolean(swapPreviewTargetColorId) &&
     swapSourceColorId !== swapPreviewTargetColorId;
+  const mobileMergeActive = isBottomPanelLayout && actionMode === "merge";
+  const mobileMergeSelectStep =
+    mobileMergeActive && mobileMergeStep === "select";
+  const showMergeConfigureControls =
+    actionMode === "merge" && (!isBottomPanelLayout || mobileMergeStep === "configure");
   const mergeTitle =
     mergeColorCount === 1 ? "Merge 1 color?" : `Merge ${mergeColorCount} colors?`;
   const mergeDescription =
@@ -912,6 +943,7 @@ export function UsedColorsSummary({
     setDeleteTargetColorId(null);
     setDeleteConfirmationOpen(false);
     setMergeConfirmationOpen(false);
+    setMobileMergeStep("select");
   };
 
   const closeSwapPreview = () => {
@@ -969,6 +1001,25 @@ export function UsedColorsSummary({
     onColorSwapPreviewChange(null);
     onMergeColorsPreviewChange(null);
     onDeleteColorsPreviewChange(null);
+    setMobileMergeStep("select");
+  };
+
+  const advanceMobileMergeStep = () => {
+    if (selectedColorIds.length === 0) {
+      return;
+    }
+
+    if (!mergeTargetColorId) {
+      setMergeTargetColorId(selectedColorIds[0]);
+    }
+
+    setMobileMergeStep("configure");
+  };
+
+  const returnToMobileMergeSelection = () => {
+    setMergePickerOpen(false);
+    setActiveMergeTargetTooltip(null);
+    setMobileMergeStep("select");
   };
 
   const activateActionMode = (nextActionMode: Extract<UsedColorsActionMode, "merge" | "delete">) => {
@@ -996,6 +1047,7 @@ export function UsedColorsSummary({
     setDeleteTargetColorId(null);
     setDeleteConfirmationOpen(false);
     setMergeConfirmationOpen(false);
+    setMobileMergeStep("select");
   };
 
   return (
@@ -1020,7 +1072,9 @@ export function UsedColorsSummary({
       <div
         className={styles.usedColorsStickyControls}
         data-has-actions={!selectionPromptVisible && usedColors.length > 0 ? "true" : "false"}
+        data-mobile-merge-active={mobileMergeActive ? "true" : undefined}
       >
+        <section className={styles.sidebarSubsection}>
         <SegmentedControl
           ariaLabel="Colors used scope"
           className={styles.usedColorsScopeControl}
@@ -1034,6 +1088,7 @@ export function UsedColorsSummary({
             }
           }}
         />
+        </section>
         {!selectionPromptVisible && usedColors.length > 0 ? (
           <div className={styles.usedColorsActionRow}>
             <Button
@@ -1608,8 +1663,11 @@ export function UsedColorsSummary({
                           Replace
                         </Button>
                       </div>
+                      
                     </div>
+                    
                   </div>
+                  
                 ) : null}
               </li>
                 );
@@ -1617,23 +1675,101 @@ export function UsedColorsSummary({
             ))}
             </ul>
             {isSelecting ? (
-              <div className={styles.usedColorsSelectionBar}>
+              <div
+                className={styles.usedColorsSelectionBar}
+                data-mobile-merge-step={
+                  mobileMergeSelectStep
+                    ? "select"
+                    : isBottomPanelLayout && actionMode === "merge" && mobileMergeStep === "configure"
+                      ? "configure"
+                      : undefined
+                }
+              >
                 <div className={styles.usedColorsSelectionBarTop}>
                   {actionMode === "merge" ? (
                     <div className={styles.usedColorsMergeControls}>
-                      {selectedColorIds.length === 0 ? (
+                      {mobileMergeSelectStep ? (
+                        <div className={styles.usedColorsMobileMergeStep}>
+                          <Button
+                            type="button"
+                            variant="ghostV2"
+                            size="md"
+                            iconOnly
+                            className={styles.usedColorsMobileMergeCancelButton}
+                            aria-label="Cancel merge"
+                            title="Cancel merge"
+                            onClick={exitToolMode}
+                          >
+                            <ButtonIcon icon="/icons/lucide/x.svg" />
+                          </Button>
+                          <span
+                            className={styles.usedColorsSelectionPrompt}
+                            style={typographyStyles.p2}
+                          >
+                            {selectedColorIds.length === 0
+                              ? "Select colors to merge"
+                              : `${selectedColorIds.length} selected`}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            iconOnly
+                            className={styles.usedColorsMobileMergeNextButton}
+                            aria-label="Next"
+                            title="Next"
+                            disabled={selectedColorIds.length === 0}
+                            onClick={advanceMobileMergeStep}
+                          >
+                            <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                          </Button>
+                        </div>
+                      ) : selectedColorIds.length === 0 ? (
                         <p className={styles.usedColorsSelectionPrompt} style={typographyStyles.p2}>
                           Select colors to merge
                         </p>
-                      ) : (
+                      ) : showMergeConfigureControls ? (
                         <>
-                          <div className={styles.usedColorsSelectionSummary}>
-                            <span
-                              className={styles.usedColorsSelectionCount}
-                              style={typographyStyles.p2}
-                            >
-                              Merge {selectedColorIds.length} colors into:
-                            </span>
+                          <div className={styles.usedColorsMobileMergeConfigureHeader}>
+                            {isBottomPanelLayout ? (
+                              <Button
+                                type="button"
+                                variant="ghostV2"
+                                size="md"
+                                iconOnly
+                                className={styles.usedColorsMobileMergeBackButton}
+                                aria-label="Back to color selection"
+                                title="Back to color selection"
+                                onClick={returnToMobileMergeSelection}
+                              >
+                                <ButtonIcon icon="/icons/lucide/arrow-left.svg" />
+                              </Button>
+                            ) : null}
+                            <div className={styles.usedColorsSelectionSummary}>
+                              <span
+                                className={styles.usedColorsSelectionCount}
+                                style={typographyStyles.p2}
+                              >
+                                Merge {selectedColorIds.length} colors into
+                              </span>
+                            </div>
+                            {isBottomPanelLayout ? (
+                              <Button
+                                type="button"
+                                variant="ghostV2"
+                                size="md"
+                                iconOnly
+                                className={styles.usedColorsMobileMergeCancelButton}
+                                aria-label="Cancel merge"
+                                title="Cancel merge"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  exitToolMode();
+                                }}
+                              >
+                                <ButtonIcon icon="/icons/lucide/x.svg" />
+                              </Button>
+                            ) : null}
                           </div>
                           <div
                             ref={mergeTargetAnchorRef}
@@ -1791,7 +1927,7 @@ export function UsedColorsSummary({
                             </Button>
                           </div>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -1865,6 +2001,7 @@ export function UsedColorsSummary({
       />
 
       </div>
+      
     </>
   );
 }

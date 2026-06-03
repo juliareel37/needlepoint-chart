@@ -1238,7 +1238,7 @@ function TraceSection({
   title: string;
 }) {
   return (
-    <section className={styles.traceSection}>
+    <section className={styles.sidebarSubsection}>
       <div className={styles.traceSectionHeader}>
         <div className={styles.traceSectionTitleRow}>
           <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>

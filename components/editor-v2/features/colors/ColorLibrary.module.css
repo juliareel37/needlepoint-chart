@@ -632,3 +632,9 @@
     transform: scale(1.14);
   }
 }
+
+@media (max-width: 768px) {
+  .stickyIntroHeader {
+    padding-top: 16px;
+  }
+}

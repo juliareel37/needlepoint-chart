@@ -6,7 +6,7 @@
   width: max-content;
   max-width: 100%;
   padding: 6px 8px;
-  border-radius: var(--editor-radius-xl);
+  border-radius: var(--editor-radius-lg);
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);

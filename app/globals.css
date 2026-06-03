@@ -1530,6 +1530,12 @@ input[type="number"] {
     z-index: 3;
     min-width: 0;
   }
+  #app-shell-root[data-header-nav-mode="editor"] .app-header-auth {
+    order: 2;
+  }
+  #app-shell-root[data-header-nav-mode="editor"] #app-header-overflow-right {
+    order: 1;
+  }
   .app-shell-header-controls {
     gap: 6px !important;
   }

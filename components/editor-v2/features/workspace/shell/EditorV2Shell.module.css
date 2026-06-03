@@ -112,6 +112,14 @@
   overscroll-behavior-y: none;
 }
 
+.bottomPanelDragHandleButton {
+  display: none;
+}
+
+.bottomPanelDragHandle {
+  display: block;
+}
+
 .sidebarPanelHeader {
   display: flex;
   align-items: center;
@@ -162,7 +170,7 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  padding-inline: 24px;
+  /* padding-inline: 24px; */
 }
 
 /* .colorPanelPageSection {
@@ -218,10 +226,11 @@
   height: 100%;
   padding-inline: 0;
   overflow: hidden;
+  margin-top: -12px;
 }
 
 .designColorsPageBody {
-  --design-colors-page-gutter: 20px;
+  /* --design-colors-page-gutter: 20px; */
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -250,14 +259,15 @@
   gap: 12px;
 }
 
-.iconsPanelUploadSection {
-  margin-top: -14px;
-}
+/* .iconsPanelUploadSection {
+  margin-top: -24px;
+} */
 
 .iconsPanelUploadRow {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: -12px;
 }
 
 .iconsPanelUploadInput {
@@ -273,29 +283,33 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 24px;
+  gap: 12px;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-  width: calc(100% + 24px);
+  /* width: calc(100% + 24px);
   margin-right: -24px;
-  padding-right: 24px;
+  padding-right: 24px; */
   box-sizing: border-box;
+  /* padding-bottom: 18px; */
 }
 
 .iconsPanelStickySearch {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding-bottom: 2px;
+  padding-bottom: 8px;
   background: var(--surface-primary);
+  padding-inline: 24px;
 }
 
 .iconsPanelSection {
   flex: 1 1 auto;
   min-height: 0;
+  margin-top: -12px;
+  /* margin-bottom: -18px; */
 }
 
 
@@ -840,6 +854,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-inline: 24px;
+}
+
+.iconsPreviewSections {
+  padding-bottom: 18px;
 }
 
 .sidebarDetailCard {
@@ -938,7 +957,7 @@
   grid-column: span 2;
 }
 
-.sidebarSubsectionHeader {
+.sidebarSubsectionHeader, .sidebarCanvasAidsHeader {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1381,6 +1400,7 @@
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+  margin-top: -6px;
 }
 
 .customPaletteCardTitle > span:first-child {
@@ -1461,7 +1481,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 6px;
+  gap: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -1471,7 +1491,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  padding-bottom: 12px;
+  /* padding-bottom: 12px; */
 }
 
 .customPaletteCreatePage .sidebarColorLibraryCard {
@@ -1802,6 +1822,7 @@
   grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
   gap: 12px;
   display: grid;
+  padding-bottom: 18px;
 }
 
 .iconLibraryCard {
@@ -1930,6 +1951,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  padding-bottom: 18px;
 }
 
 .textQuickAddCard {
@@ -2151,6 +2173,16 @@
   }
 }
 
+@keyframes mobileStageDimmerIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .canvasColumn {
   min-width: 0;
   display: flex;
@@ -2180,6 +2212,10 @@
   transform: translateX(calc(-100% - 12px));
   opacity: 0;
   pointer-events: none;
+}
+
+.mobileStageDimmer {
+  display: none;
 }
 
 .canvasWorld {
@@ -2404,7 +2440,7 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: visible;
-  border-radius: var(--editor-radius-xl);
+  border-radius: var(--editor-radius-lg);
   border: 1px solid var(--toolbar-border);
   background: var(--surface-primary);
   box-shadow: var(--ui-shadow-md);
@@ -2504,11 +2540,11 @@
   padding: 0;
 }
 
-.customPaletteCreateLibrary.customPaletteCreateLibrary {
+/* .customPaletteCreateLibrary.customPaletteCreateLibrary {
   --color-library-header-padding-top: 2px;
   --color-library-body-padding-bottom: 6px;
   padding-inline: 12px;
-}
+} */
 
 .libraryPopoverSwatchTrigger {
   position: relative;
@@ -2631,47 +2667,49 @@
   z-index: var(--z-notification);
   white-space: nowrap;
   box-shadow: var(--ui-shadow-md);
+  background: var(--surface-primary);
 }
 
-.tabletHeaderReportButton {
-  display: none;
+.floatingReportButton[data-feedback-modal-open="true"] {
+  z-index: var(--z-editor-popover-high);
 }
 
-.tabletHeaderReportButton .icon,
-.tabletHeaderReportButton .glyph {
-  width: 40px;
-  height: 40px;
-}
-
-.headerReportButtonLabel {
+.floatingReportButtonLabel {
   display: inline;
 }
 
 @media (max-width: 768px) {
+
+  .designColorsPageSection {
+    margin-top: 0;
+  }
   .floatingReportButton {
-    display: none;
-  }
-
-  .tabletHeaderReportButton {
-    display: inline-flex;
-  }
-
-  .tabletHeaderReportButton .icon,
-  .tabletHeaderReportButton .glyph {
+    left: auto;
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     width: 40px;
+    min-width: 40px;
     height: 40px;
+    min-height: 40px;
+    padding: 0;
+    gap: 0;
+    border-radius: var(--editor-radius-md);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
   }
-
-  .headerReportButtonLabel {
+  .sidebarCanvasAidsHeader {
+    padding-top: 12px;
+  }
+  .floatingReportButtonLabel {
     display: none;
   }
+
+  .floatingReportButton .icon,
+  .floatingReportButton .glyph {
+    width: 18px;
+    height: 18px;
+  }
 }
 
-@media (max-width: 1000px) {
-
-
-
-}
 
 .headerExportButton {
   white-space: nowrap;
@@ -2869,10 +2907,35 @@
   pointer-events: auto;
   max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
   min-width: 0;
+  overscroll-behavior: none;
 }
 
 .conversionPreviewToolbar {
   padding: 10px 12px;
+}
+
+.highlightPreviewToolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--ui-border-subtle);
+  border-radius: var(--editor-radius-lg);
+  background: var(--surface-primary);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+}
+
+.highlightPreviewLabel {
+  min-width: 0;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlightPreviewCloseButton {
+  flex: 0 0 auto;
 }
 
 .conversionPreviewToolbarHint {
@@ -3160,6 +3223,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  padding-bottom: 18px;
 }
 
 .metaRow {
@@ -3242,8 +3306,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin: calc(-1 * var(--used-colors-sticky-top-cover)) -20px 0;
-  padding: var(--used-colors-sticky-top-cover) 20px 12px;
+  /* margin: calc(-1 * var(--used-colors-sticky-top-cover)) -20px 0;
+  padding: var(--used-colors-sticky-top-cover) 20px 12px; */
   background: var(--surface-primary);
   background-color: var(--surface-primary);
   /* box-shadow: 0 1px 0 color-mix(in srgb, var(--ui-border-subtle) 70%, transparent); */
@@ -3264,7 +3328,7 @@
   top: auto;
   flex: 0 0 auto;
   margin: 0;
-  padding: 0 var(--design-colors-page-gutter) 0;
+  /* padding: 0 var(--design-colors-page-gutter) 0; */
 }
 
 .designColorsPageBody .usedColorsStickyControls:not([data-has-actions="true"]) {
@@ -3272,8 +3336,7 @@
 }
 
 .designColorsPageBody .usedColorsActionRow {
-  margin-inline: calc(-1 * var(--design-colors-page-gutter));
-  padding-inline: var(--design-colors-page-gutter);
+  /* margin-inline: calc(-1 * var(--design-colors-page-gutter)); */
 }
 
 .designColorsPageBody .usedColorsListFrame {
@@ -3286,12 +3349,11 @@
 
 .designColorsPageBody .usedColorsListCard {
   box-sizing: border-box;
-  padding-block: 12px 16px;
-  padding-inline: var(--design-colors-page-gutter);
+  /* padding-block: 12px 16px; */
 }
 
 .designColorsPageBody .emptyMessage {
-  padding-inline: var(--design-colors-page-gutter);
+  /* padding-inline: var(--design-colors-page-gutter); */
 }
 
 .editorNotificationOverlay {
@@ -3794,9 +3856,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-inline: -20px;
+  /* margin-inline: -20px; */
   margin-bottom: 0;
-  padding: 12px 20px;
+  padding: 8px 20px;
   border-top: 1px solid var(--ui-border-reg);
   border-bottom: 1px solid var(--ui-border-reg);
   overflow: visible;
@@ -4133,7 +4195,7 @@
   width: 100%;
   gap: 8px;
   margin: 0;
-  padding: 0;
+  padding: 8px 18px 0px 18px;
   list-style: none;
   /* height: 350px; */
   /* overflow: scroll; */
@@ -4142,7 +4204,7 @@
 }
 
 .usedColorsList[data-selection-mode="true"] {
-  margin-bottom: 200px;
+  margin-bottom: 20px;
 }
 
 .usedColorsRow {
@@ -4532,7 +4594,7 @@
 }
 
 .usedColorsSelectionBar {
-  position: fixed;
+  position: sticky;
   right: 0;
   bottom: 0;
   left: 0;
@@ -4567,6 +4629,17 @@
   min-width: 0;
 }
 
+.usedColorsMobileMergeConfigureHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.usedColorsMobileMergeBackButton {
+  flex: 0 0 auto;
+}
+
 .usedColorsMergeControls {
   display: flex;
   flex-direction: column;
@@ -4582,6 +4655,28 @@
 .usedColorsSelectionPrompt {
   margin: 0;
   color: var(--text-secondary);
+}
+
+.usedColorsMobileMergeStep {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.usedColorsMobileMergeStep .usedColorsSelectionPrompt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.usedColorsMobileMergeCancelButton {
+  flex: 0 0 auto;
+}
+
+.usedColorsMobileMergeNextButton {
+  flex: 0 0 auto;
 }
 
 .usedColorsSelectionButtonRow {
@@ -5298,6 +5393,13 @@
 
 
 @media (max-width: 768px) {
+  .iconsPanelStickySearch {
+    padding-top: 16px;
+  }
+
+  .colorPanelActiveColorRow {
+    padding-top: 12px;
+  }
 
   .editableTitleRootHeader {
     display: none;
@@ -5465,12 +5567,12 @@
 
   .sidePanelOverlay {
     width: 100%;
-    top: 25%;
+    top: 10%;
     transition: top 180ms ease;
   }
 
   .sidePanelOverlay[data-mobile-canvas-focus="true"] {
-    top: 60%;
+    top: 100%;
   }
 
   .sidePanelOverlay[data-collapsed="true"] .sidebar {
@@ -5492,13 +5594,49 @@
     overflow: hidden;
     border-radius: 20px 20px 0 0;
     box-shadow: var(--ui-shadow-lg);
-}
+  }
+
+  .bottomPanelDragHandleButton {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 16px;
+    padding: 6px 0 3px;
+    border: 0;
+    background: var(--surface-primary);
+    color: inherit;
+    cursor: grab;
+    touch-action: none;
+  }
+  .usedColorsActionRow {
+    padding: 6px 20px;
+  }
+
+  .bottomPanelDragHandleButton:active {
+    cursor: grabbing;
+  }
+
+  .bottomPanelDragHandleButton:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand-500) 72%, transparent);
+    outline-offset: -6px;
+  }
+
+  .bottomPanelDragHandle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-secondary) 24%, transparent);
+  }
 
   .sidebarPanelHeader {
     position: sticky;
-    top: 0;
+    top: 16px;
     z-index: 2;
-    padding: 14px 20px 10px;
+    padding: 10px 20px 10px;
     background: var(--surface-primary);
     box-shadow: 0 1px 0 var(--ui-border-subtle);
   }
@@ -5508,18 +5646,203 @@
     overflow-y: auto;
     overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
-    padding: 20px 0 24px;
+    padding-top: 12px;
+    /* padding-bottom: 18px; */
   }
 
-  .sidebarSection {
+  /* .sidebarSection {
     padding-inline: 20px;
+  } */
+
+  .textQuickAddGrid {
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
   }
 
+  .textQuickAddCard {
+    min-height: 68px;
+    height: 68px;
+    aspect-ratio: auto;
+    padding: 10px 12px;
+    border-radius: var(--editor-radius-md);
+  }
+
+  .textQuickAddSample {
+    -webkit-line-clamp: 2;
+  }
+
+  .usedColorsSelectionBar {
+    margin-inline: -20px;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="select"] {
+    width: fit-content;
+    max-width: calc(100% - 40px);
+    margin: 10px auto calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 10px;
+    border: 1px solid var(--ui-border-subtle);
+    border-radius: var(--editor-radius-lg);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] {
+    width: min(520px, calc(100% - 28px));
+    max-width: calc(100% - 28px);
+    margin: 10px auto calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 12px 12px;
+    border: 1px solid var(--ui-border-subtle);
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+  }
+
+  .usedColorsStickyControls[data-mobile-merge-active="true"] {
+    display: none;
+  }
+
+  .usedColorsSelectionBarTop,
+  .usedColorsMergeControls {
+    gap: 10px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="select"] .usedColorsSelectionBarTop,
+  .usedColorsSelectionBar[data-mobile-merge-step="select"] .usedColorsMergeControls,
+  .usedColorsSelectionBar[data-mobile-merge-step="select"] .usedColorsMobileMergeStep {
+    width: auto;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="select"] .usedColorsSelectionPrompt {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMobileMergeConfigureHeader {
+    width: auto;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
+    gap: 8px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsSelectionSummary {
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsSelectionCount {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMobileMergeBackButton {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeControls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeActionGroup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeTargetList {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    gap: 6px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeTargetSwatchButton,
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeLibraryTrigger {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeTargetSwatchButton .libraryPopoverSwatch,
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeLibraryTrigger .libraryPopoverSwatch {
+    width: 25px;
+    height: 25px;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsSelectionButtonRow {
+    display: contents;
+    align-items: center;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsSelectionCancelButton {
+    display: none;
+  }
+
+  .usedColorsSelectionBar[data-mobile-merge-step="configure"] .usedColorsMergeConfirmButton {
+    width: auto;
+    min-width: 88px;
+    height: 38px;
+    min-height: 38px;
+    padding-inline: 16px;
+  }
+
+  .usedColorsMobileMergeCancelButton {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+  }
+
+  .usedColorsMobileMergeNextButton {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    border-radius: var(--editor-radius-md);
+  }
+
+  .usedColorsSelectionButtonRow {
+    gap: 8px;
+  }
+
+  .mobileStageDimmer {
+    appearance: none;
+    -webkit-appearance: none;
+    position: fixed;
+    inset: 0;
+    z-index: 224;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: rgba(16, 16, 16, 0.34);
+    cursor: pointer;
+    animation: mobileStageDimmerIn 180ms ease both;
+  }
+
+  .customPaletteCreateSection {
+    margin-top: 8px;
+  }
+/* 
   .iconsPanelPageContent {
     width: calc(100% + 20px);
     margin-right: -20px;
     padding-right: 20px;
-  }
+  } */
 
   .modalOverlay {
     padding: 12px;
@@ -5537,7 +5860,7 @@
   }
 
   .iconsPanelPageBody {
-    padding-bottom: 28px;
+    /* padding-bottom: 28px; */
   }
 }
 

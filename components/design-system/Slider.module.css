@@ -59,7 +59,7 @@
 
 @media (pointer: coarse) {
   .wrap {
-    --slider-thumb-size: 16px;
+    --slider-thumb-size: 10px;
     --slider-hit-area-size: 28px;
   }
 }

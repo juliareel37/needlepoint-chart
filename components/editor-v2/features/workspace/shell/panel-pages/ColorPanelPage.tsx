@@ -363,6 +363,7 @@ export function ColorPanelPage({
       <div className={styles.colorPanelPageBody}>
         {view === "overview" ? (
           <>
+          <section className={styles.sidebarSubsection}>
             <div
               className={[
                 styles.metaRow,
@@ -395,7 +396,7 @@ export function ColorPanelPage({
                 </strong>
               )}
             </div>
-
+           </section>
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
             <div
@@ -720,7 +721,7 @@ export function ColorPanelPage({
 
           </>
         ) : view === "design-colors" ? (
-          <div className={[styles.sidebarSubsection, styles.designColorsPageBody].join(" ")}>
+          <div className={styles.designColorsPageBody}>
             <UsedColorsSummary
               activeColorId={activeColorId}
               usedColors={usedColors}
@@ -756,6 +757,7 @@ export function ColorPanelPage({
           </div>
         ) : view === "custom-palettes" ? (
           <div className={styles.sidebarPageBody}>
+            <section className={styles.sidebarSubsection}>
             <Button
               type="button"
               variant="primary"
@@ -766,6 +768,7 @@ export function ColorPanelPage({
               <ButtonIcon icon="/icons/lucide/plus.svg" />
               <span>New Palette</span>
             </Button>
+            </section>
 
             {customPalettes.length === 0 ? (
               <div className={styles.customPaletteEmptyState}>
@@ -781,6 +784,7 @@ export function ColorPanelPage({
                 </button> */}
               </div>
             ) : (
+               <section className={styles.sidebarSubsection}>
                 <div className={styles.customPaletteCardList}>
                   {customPalettes.map((customPalette) => (
                     <div
@@ -847,6 +851,7 @@ export function ColorPanelPage({
                     </div>
                 ))}
               </div>
+              </section>
             )}
           </div>
         ) : (
