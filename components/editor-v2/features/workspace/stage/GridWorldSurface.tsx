@@ -63,6 +63,7 @@ interface GridWorldSurfaceProps {
   colorLibraryDismissGestureRef?: RefObject<ColorLibraryDismissGesture | null>;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedCellIndexes?: number[] | null;
   highlightedColorId: string | null;
   cellPreviewOverride?: GridCellValue[] | null;
   interactionLocked?: boolean;
@@ -105,6 +106,7 @@ export function GridWorldSurface({
   colorLibraryDismissGestureRef,
   colorsById,
   dispatch,
+  highlightedCellIndexes = null,
   highlightedColorId,
   cellPreviewOverride = null,
   interactionLocked = false,
@@ -826,6 +828,7 @@ export function GridWorldSurface({
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}
+              highlightedCellIndexes={highlightedCellIndexes}
               highlightedColorId={highlightedColorId}
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={

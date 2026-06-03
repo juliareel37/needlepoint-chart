@@ -53,6 +53,10 @@ import {
   getContainedRect,
   getPositionedBounds,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  buildSpeckleSmoothingReplacements,
+  detectSpeckleCellIndexes,
+} from "@/lib/editor-v2/editor/speckleDetection";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
@@ -81,6 +85,7 @@ import {
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createSmoothSpecklesCommand,
   createUpdateIconPlacementCommand,
   createUpdateTraceCommand,
   createUndoCommand,
@@ -261,6 +266,10 @@ interface PreviewSessionSnapshot {
   };
 }
 
+interface SpeckleHighlightSessionSnapshot {
+  sidebarCollapsed: boolean;
+}
+
 interface BottomPanelCanvasFocusSnapshot {
   sidebarCollapsed: boolean;
   viewport: {
@@ -422,6 +431,34 @@ export function EditorV2Shell({
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
+  const selectedCellIndexSet = useMemo(() => {
+    if (!selectionCommitted) {
+      return null;
+    }
+
+    const indexes = new Set<number>();
+    const gridWidth = document.grid.width;
+    const gridHeight = document.grid.height;
+
+    for (let y = 0; y < gridHeight; y += 1) {
+      for (let x = 0; x < gridWidth; x += 1) {
+        if (isCellInSelection(state, { x, y })) {
+          indexes.add(y * gridWidth + x);
+        }
+      }
+    }
+
+    return indexes;
+  }, [
+    document.grid.height,
+    document.grid.width,
+    selectionCommitted,
+    state,
+  ]);
+  const selectedCellIndexes = useMemo(
+    () => (selectedCellIndexSet ? Array.from(selectedCellIndexSet) : null),
+    [selectedCellIndexSet],
+  );
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
@@ -432,6 +469,7 @@ export function EditorV2Shell({
   const mobileTraceConversionPreviewWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
   const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
+  const speckleHighlightSnapshotRef = useRef<SpeckleHighlightSessionSnapshot | null>(null);
   const bottomPanelCanvasFocusSnapshotRef =
     useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
@@ -462,6 +500,8 @@ export function EditorV2Shell({
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
   const [bugReportSuccessVisible, setBugReportSuccessVisible] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [highlightedSpeckleCellIndexes, setHighlightedSpeckleCellIndexes] =
+    useState<number[] | null>(null);
   const [colorSwapPreview, setColorSwapPreview] = useState<{
     fromColorId: string;
     toColorId: string;
@@ -1642,6 +1682,8 @@ export function EditorV2Shell({
   const highlightedColorName = highlightedColorId
     ? (colorsById[highlightedColorId]?.name ?? "color")
     : null;
+  const speckleHighlightActive = highlightedSpeckleCellIndexes !== null;
+  const speckleHighlightCount = highlightedSpeckleCellIndexes?.length ?? 0;
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -1823,13 +1865,109 @@ export function EditorV2Shell({
     isBottomPanelCanvasFocusActive,
   ]);
 
-  const clearHighlightedColor = useCallback(() => {
+  const clearHighlightedCells = useCallback(() => {
     setHighlightedColorId(null);
+    setHighlightedSpeckleCellIndexes(null);
 
     if (isBottomPanelCanvasFocusActive) {
       exitBottomPanelCanvasFocus();
     }
-  }, [exitBottomPanelCanvasFocus, isBottomPanelCanvasFocusActive]);
+
+    const snapshot = speckleHighlightSnapshotRef.current;
+
+    if (snapshot && sidebarCollapsed !== snapshot.sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+    }
+
+    speckleHighlightSnapshotRef.current = null;
+  }, [
+    dispatch,
+    exitBottomPanelCanvasFocus,
+    isBottomPanelCanvasFocusActive,
+    sidebarCollapsed,
+  ]);
+
+  const handleSpeckleDetect = useCallback(() => {
+    const speckleCellIndexes = detectSpeckleCellIndexes(
+      document.grid.cells,
+      document.grid.width,
+      document.grid.height,
+      selectedCellIndexSet,
+    );
+
+    setHighlightedColorId(null);
+    setHighlightedSpeckleCellIndexes(speckleCellIndexes);
+
+    if (!speckleHighlightSnapshotRef.current) {
+      speckleHighlightSnapshotRef.current = { sidebarCollapsed };
+    }
+
+    if (isBottomPanelLayout) {
+      enterBottomPanelCanvasFocus();
+    } else if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+  }, [
+    dispatch,
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    enterBottomPanelCanvasFocus,
+    isBottomPanelLayout,
+    selectedCellIndexSet,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (!speckleHighlightActive) {
+      return;
+    }
+
+    setHighlightedSpeckleCellIndexes(
+      detectSpeckleCellIndexes(
+        document.grid.cells,
+        document.grid.width,
+        document.grid.height,
+        selectedCellIndexSet,
+      ),
+    );
+  }, [
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    selectedCellIndexSet,
+    speckleHighlightActive,
+  ]);
+
+  const handleSmoothSpeckles = useCallback(() => {
+    if (!speckleHighlightActive) {
+      return;
+    }
+
+    const replacements = buildSpeckleSmoothingReplacements(
+      document.grid.cells,
+      document.grid.width,
+      document.grid.height,
+      colorsById,
+      selectedCellIndexSet,
+    ).map(({ index, toColorId }) => ({ index, toColorId }));
+
+    if (replacements.length === 0) {
+      return;
+    }
+
+    dispatch(createSmoothSpecklesCommand(replacements));
+    clearHighlightedCells();
+  }, [
+    clearHighlightedCells,
+    colorsById,
+    dispatch,
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    selectedCellIndexSet,
+    speckleHighlightActive,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -2290,7 +2428,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     const escapeAction = getWorkspaceEscapeAction({
-      highlightedColorActive: highlightedColorId !== null,
+      highlightedColorActive: highlightedColorId !== null || speckleHighlightActive,
       iconPlacementActive: Boolean(iconPlacement),
       previewMode,
       traceEditModeActive: traceImageEditingActive,
@@ -2353,7 +2491,7 @@ export function EditorV2Shell({
       }
 
       if (escapeAction === "clear-highlight") {
-        clearHighlightedColor();
+        clearHighlightedCells();
         return;
       }
 
@@ -2363,7 +2501,7 @@ export function EditorV2Shell({
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [
-    clearHighlightedColor,
+    clearHighlightedCells,
     dispatch,
     exitPreviewMode,
     handleCancelIconEraser,
@@ -2381,6 +2519,7 @@ export function EditorV2Shell({
     traceCropEditing,
     traceEraserEditing,
     traceRepositionActive,
+    speckleHighlightActive,
   ]);
 
   useEffect(() => {
@@ -3525,6 +3664,7 @@ export function EditorV2Shell({
                     colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
+                    highlightedCellIndexes={null}
                     highlightedColorId={highlightedColorId}
                     interactionLocked
                     onSurfaceReady={onCanvasReady}
@@ -3782,6 +3922,7 @@ export function EditorV2Shell({
                     saveMessage={saveMessage}
                     saveMode={saveMode}
                     onHighlightColorChange={setHighlightedColorId}
+                    onSpeckleDetect={handleSpeckleDetect}
                     showGridlines={showGridlines}
                     showSymbols={showSymbols}
                     touchSnappingEnabled={touchSnappingEnabled}
@@ -3802,20 +3943,35 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {isBottomPanelCanvasFocusActive && highlightedColorId ? (
+                    {speckleHighlightActive || (isBottomPanelCanvasFocusActive && highlightedColorId) ? (
                       <div className={styles.highlightPreviewToolbar}>
                         <span className={styles.highlightPreviewLabel} style={typographyStyles.p2}>
-                          Highlighting {highlightedColorName}
+                          {speckleHighlightActive
+                            ? speckleHighlightCount === 0
+                              ? "No speckles detected"
+                              : `Speckle Detect: ${speckleHighlightCount} highlighted`
+                            : `Highlighting ${highlightedColorName}`}
                         </span>
+                        {speckleHighlightActive ? (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            disabled={speckleHighlightCount === 0}
+                            onClick={handleSmoothSpeckles}
+                          >
+                            Smooth
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghostV2"
                           size="md"
                           iconOnly
                           className={styles.highlightPreviewCloseButton}
-                          aria-label="Exit color highlight"
-                          title="Exit color highlight"
-                          onClick={clearHighlightedColor}
+                          aria-label={speckleHighlightActive ? "Exit speckle detect" : "Exit color highlight"}
+                          title={speckleHighlightActive ? "Exit speckle detect" : "Exit color highlight"}
+                          onClick={clearHighlightedCells}
                         >
                           <ButtonIcon icon="/icons/lucide/x.svg" />
                         </Button>
@@ -3999,6 +4155,9 @@ export function EditorV2Shell({
                     colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
+                    highlightedCellIndexes={
+                      highlightedSpeckleCellIndexes ?? (highlightedColorId ? selectedCellIndexes : null)
+                    }
                     highlightedColorId={highlightedColorId}
                     cellPreviewOverride={
                       colorMergePreviewCells ?? colorDeletePreviewCells ?? colorSwapPreviewCells

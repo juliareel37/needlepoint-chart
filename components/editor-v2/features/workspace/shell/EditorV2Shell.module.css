@@ -3298,6 +3298,10 @@
   gap: 0;
 }
 
+.usedColorsBlock .emptyMessage {
+  padding: 12px 32px;
+}
+
 .usedColorsStickyControls {
   --used-colors-sticky-top-cover: 52px;
   position: sticky;

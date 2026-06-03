@@ -97,6 +97,7 @@ interface EditorSidebarProps {
   requestedColorPanelView: ColorPanelView | null;
   requestedColorPanelViewKey: number;
   onHighlightColorChange: (colorId: string | null) => void;
+  onSpeckleDetect: () => void;
   textViewportCenter: WorldPoint | null;
   textViewportWidth: number | null;
   textViewportHeight: number | null;
@@ -180,6 +181,7 @@ export function EditorSidebar({
   requestedColorPanelView,
   requestedColorPanelViewKey,
   onHighlightColorChange,
+  onSpeckleDetect,
   textViewportCenter,
   textViewportWidth,
   textViewportHeight,
@@ -464,6 +466,7 @@ export function EditorSidebar({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onViewChange={setColorPanelView}
               onHighlightColorChange={onHighlightColorChange}
+              onSpeckleDetect={onSpeckleDetect}
               onScopeModeChange={onScopeModeChange}
               palette={palette}
               selectionControlActive={selectionControlActive}

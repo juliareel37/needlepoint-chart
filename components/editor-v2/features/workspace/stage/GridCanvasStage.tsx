@@ -41,6 +41,7 @@ interface GridCanvasStageProps {
   colorsById: Record<string, PaletteColor>;
   deferPaintUntilTraceReady?: boolean;
   displayHost: HTMLElement | null;
+  highlightedCellIndexes?: number[] | null;
   highlightedColorId?: string | null;
   onDisplayRendered?: () => void;
   displayTraceAsset: LoadedTraceAsset | null;
@@ -74,6 +75,7 @@ export function GridCanvasStage({
   colorsById,
   deferPaintUntilTraceReady = false,
   displayHost,
+  highlightedCellIndexes = null,
   highlightedColorId = null,
   onDisplayRendered,
   displayTraceAsset,
@@ -351,6 +353,7 @@ export function GridCanvasStage({
         frameOrigin,
       gridOverlayStep,
       gridWidth,
+      highlightedCellIndexes,
       highlightedColorId,
       metrics,
       paintOpacity,
@@ -381,6 +384,7 @@ export function GridCanvasStage({
     frameOrigin.y,
     gridOverlayStep,
     gridWidth,
+    highlightedCellIndexes,
     highlightedColorId,
     metrics.surfaceHeight,
     metrics.surfaceWidth,

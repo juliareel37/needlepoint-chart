@@ -69,6 +69,7 @@ export function renderDisplayCanvas(options: {
   frameOrigin: { x: number; y: number };
   gridOverlayStep: number;
   gridWidth: number;
+  highlightedCellIndexes?: number[] | null;
   highlightedColorId?: string | null;
   metrics: GridWorldMetrics;
   paintOpacity: number;
@@ -94,6 +95,7 @@ export function renderDisplayCanvas(options: {
     frameOrigin,
     gridOverlayStep,
     gridWidth,
+    highlightedCellIndexes = null,
     highlightedColorId = null,
     metrics,
     paintOpacity,
@@ -242,7 +244,10 @@ export function renderDisplayCanvas(options: {
     context.restore();
   }
 
-  if (highlightedColorId) {
+  const hasHighlightedCells =
+    highlightedColorId !== null || Boolean(highlightedCellIndexes?.length);
+
+  if (hasHighlightedCells) {
     context.save();
     context.fillStyle = "rgba(6, 10, 16, 0.84)";
     context.fillRect(drawX, drawY, drawWidth, drawHeight);
@@ -252,12 +257,17 @@ export function renderDisplayCanvas(options: {
       drawX,
       drawY,
       gridWidth,
+      highlightedCellIndexes,
       highlightedColorId,
       renderedCellSize: metrics.cellSize * viewport.zoom,
       threadView,
     });
 
     if (showSymbols && !deferPaintUntilTraceReady) {
+      const highlightedCellIndexSet = highlightedCellIndexes?.length
+        ? new Set(highlightedCellIndexes)
+        : null;
+
       drawSymbolsOverlay(context, {
         cells,
         cellSize: metrics.cellSize,
@@ -267,6 +277,7 @@ export function renderDisplayCanvas(options: {
         gridWidth,
         symbolAssignments,
         zoom: viewport.zoom,
+        onlyCellIndexes: highlightedCellIndexSet,
         onlyColorId: highlightedColorId,
       });
     }
@@ -284,7 +295,8 @@ function drawHighlightedCells(
     drawX: number;
     drawY: number;
     gridWidth: number;
-    highlightedColorId: string;
+    highlightedCellIndexes?: number[] | null;
+    highlightedColorId?: string | null;
     renderedCellSize: number;
     threadView: boolean;
   },
@@ -295,30 +307,35 @@ function drawHighlightedCells(
     drawX,
     drawY,
     gridWidth,
+    highlightedCellIndexes = null,
     highlightedColorId,
     renderedCellSize,
     threadView,
   } = options;
-  const color = colorsById[highlightedColorId];
 
-  if (!color || renderedCellSize <= 0) {
+  if (renderedCellSize <= 0) {
     return;
   }
 
   const devicePixelRatio = window.devicePixelRatio || 1;
-  const highlightLiftAlpha = getHighlightLiftAlpha(color.hex);
-  const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
-  const stitchCanvas = threadView
-    ? getThreadStitchCanvas(
-        color.hex,
-        Math.max(1, Math.round(renderedCellSize)),
-        stitchCanvasCache,
-        1,
-      )
+  const highlightedCellIndexSet = highlightedCellIndexes?.length
+    ? new Set(highlightedCellIndexes)
     : null;
+  const stitchCanvasCache = new Map<string, HTMLCanvasElement>();
 
   for (let index = 0; index < cells.length; index += 1) {
-    if (cells[index] !== highlightedColorId) {
+    if (highlightedColorId && cells[index] !== highlightedColorId) {
+      continue;
+    }
+
+    if (highlightedCellIndexSet && !highlightedCellIndexSet.has(index)) {
+      continue;
+    }
+
+    const colorId = cells[index];
+    const color = colorId ? colorsById[colorId] : null;
+
+    if (!color) {
       continue;
     }
 
@@ -341,7 +358,14 @@ function drawHighlightedCells(
     context.fillStyle = color.hex;
     context.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
 
-    if (threadView && stitchCanvas) {
+    if (threadView) {
+      const stitchCanvas = getThreadStitchCanvas(
+        color.hex,
+        Math.max(1, Math.round(renderedCellSize)),
+        stitchCanvasCache,
+        1,
+      );
+
       context.drawImage(
         stitchCanvas,
         cellRect.x,
@@ -350,6 +374,8 @@ function drawHighlightedCells(
         cellRect.height,
       );
     }
+
+    const highlightLiftAlpha = getHighlightLiftAlpha(color.hex);
 
     if (highlightLiftAlpha > 0) {
       context.fillStyle = `rgba(255, 255, 255, ${highlightLiftAlpha})`;

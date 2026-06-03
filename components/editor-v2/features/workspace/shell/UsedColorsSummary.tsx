@@ -519,6 +519,7 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus,
   onExitBottomPanelCanvasFocus,
   onHighlightColorChange,
+  onSpeckleDetect,
   onScopeModeChange,
   showSymbols,
   selectionControlActive,
@@ -544,6 +545,7 @@ export function UsedColorsSummary({
   onEnterBottomPanelCanvasFocus: () => void;
   onExitBottomPanelCanvasFocus: () => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onSpeckleDetect: () => void;
   onScopeModeChange: (mode: UsedColorsScopeMode) => void;
   showSymbols: boolean;
   selectionControlActive: boolean;
@@ -1094,6 +1096,12 @@ export function UsedColorsSummary({
     setMobileMergeStep("select");
   };
 
+  const handleSpeckleDetect = () => {
+    exitToolMode();
+    deactivateHighlight({ blurTrigger: true });
+    onSpeckleDetect();
+  };
+
   return (
     <>
       {successNotification
@@ -1163,6 +1171,18 @@ export function UsedColorsSummary({
                 </span>
               </Button>
             ) : null}
+            <Button
+              type="button"
+              variant="ghostV2"
+              size="md"
+              className={styles.usedColorsActionToggle}
+              onClick={handleSpeckleDetect}
+            >
+              <ButtonIcon icon="/icons/lucide/scan-search.svg" />
+              <span className={styles.usedColorsActionLabel}>
+                <span>Speckle</span>
+              </span>
+            </Button>
             <SingleSelectDropdown
               ariaLabel="Sort design colors"
               items={sortOptions}

@@ -78,6 +78,7 @@ interface ColorPanelPageProps {
   onEnterBottomPanelCanvasFocus: () => void;
   onViewChange: (view: ColorPanelView) => void;
   onHighlightColorChange: (colorId: string | null) => void;
+  onSpeckleDetect: () => void;
   onScopeModeChange: (mode: "full-canvas" | "selection") => void;
   palette: PaletteColor[];
   selectionControlActive: boolean;
@@ -114,6 +115,7 @@ export function ColorPanelPage({
   onEnterBottomPanelCanvasFocus,
   onViewChange,
   onHighlightColorChange,
+  onSpeckleDetect,
   onScopeModeChange,
   palette,
   selectionControlActive,
@@ -737,6 +739,7 @@ export function ColorPanelPage({
               onExitBottomPanelCanvasFocus={onExitBottomPanelCanvasFocus}
               onEnterBottomPanelCanvasFocus={onEnterBottomPanelCanvasFocus}
               onHighlightColorChange={onHighlightColorChange}
+              onSpeckleDetect={onSpeckleDetect}
               onScopeModeChange={onScopeModeChange}
               showSymbols={showSymbols}
               selectionControlActive={selectionControlActive}
