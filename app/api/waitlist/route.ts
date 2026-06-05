@@ -12,6 +12,12 @@ import {
 const WAITLIST_HOURLY_IP_LIMIT = 5;
 const WAITLIST_DAILY_IP_LIMIT = 20;
 
+function getEmailLogMetadata(email: string) {
+  return {
+    emailDomain: email.split("@").pop() ?? null,
+  };
+}
+
 export async function POST(req: Request) {
   const ip = getClientIpFromRequest(req);
   const userAgent = req.headers.get("user-agent");
@@ -91,10 +97,21 @@ export async function POST(req: Request) {
   });
 
   if (result.created) {
+    const emailLogMetadata = {
+      waitlistApplicationId: result.application.id,
+      ...getEmailLogMetadata(result.application.email),
+    };
+
     try {
-      await sendWaitlistSignupConfirmationEmail(result.application.email);
+      console.info("Sending waitlist signup confirmation email", emailLogMetadata);
+      const emailResult = await sendWaitlistSignupConfirmationEmail(result.application.email);
+      console.info("Sent waitlist signup confirmation email", {
+        ...emailLogMetadata,
+        brevoMessageId: emailResult?.messageId ?? null,
+      });
     } catch (error) {
       console.error("Failed to send waitlist signup confirmation email", error);
+      console.error("Waitlist signup confirmation email failure context", emailLogMetadata);
     }
   }
 

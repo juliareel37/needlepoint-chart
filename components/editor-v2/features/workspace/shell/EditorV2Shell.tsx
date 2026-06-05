@@ -37,12 +37,17 @@ import {
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
-import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
+import {
+  useEditorStore,
+  useEditorStoreDispatch,
+  useEditorStoreSelector,
+} from "../../../app/editorStoreContext";
 import type {
   ActiveTool,
   EditorDocumentState,
   GridCellValue,
 } from "@/lib/editor-v2/editor/store";
+import type { DocumentPatch } from "@/lib/editor-v2/editor/store/patches";
 import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
@@ -391,8 +396,13 @@ export function EditorV2Shell({
   successNotification: EditorV2SuccessNotification | null;
 }) {
   const openSignIn = useOpenSignIn();
+  const store = useEditorStore();
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
+  const latestGridCellChangeRef = useRef<{
+    indexes: readonly number[];
+    revision: number;
+  } | null>(null);
 
   const document = state.document;
   const title = state.document.project.title;
@@ -459,6 +469,15 @@ export function EditorV2Shell({
     () => (selectedCellIndexSet ? Array.from(selectedCellIndexSet) : null),
     [selectedCellIndexSet],
   );
+
+  useEffect(() => {
+    return store.subscribe((_nextState, _prevState, event) => {
+      latestGridCellChangeRef.current = getLatestGridCellChangeFromPatches(
+        event.patches,
+        latestGridCellChangeRef.current?.revision ?? 0,
+      );
+    });
+  }, [store]);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
@@ -3667,6 +3686,7 @@ export function EditorV2Shell({
                     highlightedCellIndexes={null}
                     highlightedColorId={highlightedColorId}
                     interactionLocked
+                    latestGridCellChange={null}
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={false}
@@ -4159,6 +4179,7 @@ export function EditorV2Shell({
                       highlightedSpeckleCellIndexes ?? (highlightedColorId ? selectedCellIndexes : null)
                     }
                     highlightedColorId={highlightedColorId}
+                    latestGridCellChange={latestGridCellChangeRef.current}
                     cellPreviewOverride={
                       colorMergePreviewCells ?? colorDeletePreviewCells ?? colorSwapPreviewCells
                     }
@@ -4785,4 +4806,34 @@ async function uploadTraceMask(input: {
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const response = await fetch(dataUrl);
   return response.blob();
+}
+
+function getLatestGridCellChangeFromPatches(
+  patches: DocumentPatch[] | undefined,
+  currentRevision: number,
+): { indexes: readonly number[]; revision: number } | null {
+  if (!patches?.length) {
+    return null;
+  }
+
+  const indexes = new Set<number>();
+
+  for (const patch of patches) {
+    if (patch.type !== "grid.replaceCells") {
+      continue;
+    }
+
+    for (const cell of patch.cells) {
+      indexes.add(cell.index);
+    }
+  }
+
+  if (indexes.size === 0) {
+    return null;
+  }
+
+  return {
+    indexes: Array.from(indexes),
+    revision: currentRevision + 1,
+  };
 }

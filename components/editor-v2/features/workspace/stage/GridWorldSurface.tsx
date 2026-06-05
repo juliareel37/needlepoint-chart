@@ -65,6 +65,10 @@ interface GridWorldSurfaceProps {
   dispatch: EditorStore["dispatch"];
   highlightedCellIndexes?: number[] | null;
   highlightedColorId: string | null;
+  latestGridCellChange?: {
+    indexes: readonly number[];
+    revision: number;
+  } | null;
   cellPreviewOverride?: GridCellValue[] | null;
   interactionLocked?: boolean;
   onSurfaceReady?: () => void;
@@ -108,6 +112,7 @@ export function GridWorldSurface({
   dispatch,
   highlightedCellIndexes = null,
   highlightedColorId,
+  latestGridCellChange = null,
   cellPreviewOverride = null,
   interactionLocked = false,
   onSurfaceReady,
@@ -187,6 +192,7 @@ export function GridWorldSurface({
   const effectiveShowSymbols = showSymbols && !previewMode;
   const effectiveShowRuler = showRuler;
   const threadView = previewMode || state.ui.preferences.threadView;
+  const customBrushCursorEnabled = false;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -230,6 +236,7 @@ export function GridWorldSurface({
     traceEraserActive ||
     duplicatePlacementActive;
   const mainBrushToolActive = activeTool === "paint" || activeTool === "erase";
+  const customBrushCursorActive = customBrushCursorEnabled && mainBrushToolActive;
   const eyedropperToolActive = activeTool === "eyedropper";
   const normalizedBrushSize = clampGridBrushSize(brushSize, grid.width, grid.height);
   const brushCursorSize = normalizedBrushSize * metrics.cellSize * viewport.zoom;
@@ -237,13 +244,13 @@ export function GridWorldSurface({
     !coarsePointer &&
     !interactionLocked &&
     !paintDisabled &&
-    mainBrushToolActive &&
+    customBrushCursorActive &&
     brushCursorPoint !== null;
   const centeredBrushPreviewVisible =
     !coarsePointer &&
     !interactionLocked &&
     !paintDisabled &&
-    mainBrushToolActive &&
+    customBrushCursorActive &&
     brushPreviewVisible;
   const eyedropperCursorVisible =
     !coarsePointer &&
@@ -639,7 +646,7 @@ export function GridWorldSurface({
       onAuxClick={handleStageAuxClick}
       onPointerMove={(event) => {
         if (
-          (!mainBrushToolActive && !eyedropperToolActive) ||
+          (!customBrushCursorActive && !eyedropperToolActive) ||
           coarsePointer ||
           interactionLocked ||
           paintDisabled
@@ -660,7 +667,7 @@ export function GridWorldSurface({
           y: event.clientY - rect.top,
         };
 
-        if (mainBrushToolActive) {
+        if (customBrushCursorActive) {
           setBrushCursorPoint(cursorPoint);
         }
 
@@ -674,7 +681,7 @@ export function GridWorldSurface({
       }}
       onPointerDown={(event) => {
         if (
-          (!mainBrushToolActive && !eyedropperToolActive) ||
+          (!customBrushCursorActive && !eyedropperToolActive) ||
           coarsePointer ||
           interactionLocked ||
           paintDisabled
@@ -695,7 +702,7 @@ export function GridWorldSurface({
           y: event.clientY - rect.top,
         };
 
-        if (mainBrushToolActive) {
+        if (customBrushCursorActive) {
           setBrushCursorPoint(cursorPoint);
         }
 
@@ -837,6 +844,9 @@ export function GridWorldSurface({
               displayHost={displayHost}
               highlightedCellIndexes={highlightedCellIndexes}
               highlightedColorId={highlightedColorId}
+              latestGridCellChange={
+                cellPreviewOverride ? null : latestGridCellChange
+              }
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
                 trace && loadedTraceAsset?.previewUrl === trace.previewUrl

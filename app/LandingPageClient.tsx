@@ -773,7 +773,8 @@ export default function Page({ allowAuthenticatedPreview = false }: LandingPageC
               <div className={styles.heroPreviewStage}>
                 <div className={styles.heroPreviewCard}>
                   <Image
-                    src="/ui/editor-collage-2.png"
+                    // src="/ui/editor-collage-2.png"
+                    src="ui/editor-tennis-ui.png"
                     alt="Wippa editor interface with the workspace controls collapsed"
                     width={2438}
                     height={1448}

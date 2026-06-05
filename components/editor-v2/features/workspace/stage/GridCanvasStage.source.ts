@@ -187,7 +187,6 @@ export function drawChangedSourceCells(options: {
     threadView,
     stitchCanvasCache,
   } = options;
-  const gridHeight = Math.ceil(cells.length / Math.max(gridWidth, 1));
   const changedIndices: number[] = [];
 
   for (let index = 0; index < cells.length; index += 1) {
@@ -200,12 +199,70 @@ export function drawChangedSourceCells(options: {
     return;
   }
 
+  drawSourceCellsForChangedIndexes({
+    context,
+    cells,
+    changedIndices,
+    colorsById,
+    gridWidth,
+    cellSize,
+    stitchStyleVersion,
+    threadView,
+    stitchCanvasCache,
+  });
+}
+
+export function drawKnownChangedSourceCells(options: {
+  context: CanvasRenderingContext2D;
+  cells: GridCellValue[];
+  changedIndices: readonly number[];
+  colorsById: Record<string, PaletteColor>;
+  gridWidth: number;
+  cellSize: number;
+  stitchStyleVersion: number;
+  threadView: boolean;
+  stitchCanvasCache: Map<string, HTMLCanvasElement>;
+}) {
+  if (options.changedIndices.length === 0) {
+    return;
+  }
+
+  drawSourceCellsForChangedIndexes(options);
+}
+
+function drawSourceCellsForChangedIndexes(options: {
+  context: CanvasRenderingContext2D;
+  cells: GridCellValue[];
+  changedIndices: readonly number[];
+  colorsById: Record<string, PaletteColor>;
+  gridWidth: number;
+  cellSize: number;
+  stitchStyleVersion: number;
+  threadView: boolean;
+  stitchCanvasCache: Map<string, HTMLCanvasElement>;
+}) {
+  const {
+    context,
+    cells,
+    changedIndices,
+    colorsById,
+    gridWidth,
+    cellSize,
+    stitchStyleVersion,
+    threadView,
+    stitchCanvasCache,
+  } = options;
+  const gridHeight = Math.ceil(cells.length / Math.max(gridWidth, 1));
   let minAffectedX = gridWidth;
   let maxAffectedX = -1;
   let minAffectedY = gridHeight;
   let maxAffectedY = -1;
 
   for (const index of changedIndices) {
+    if (index < 0 || index >= cells.length) {
+      continue;
+    }
+
     const cellX = index % gridWidth;
     const cellY = Math.floor(index / gridWidth);
 
