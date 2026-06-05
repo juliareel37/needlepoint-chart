@@ -34,6 +34,11 @@ type ApprovalResult = {
   email: string;
   inviteUrl: string | null;
   inviteTokenExpiresAt: string | null;
+  approvalEmail: {
+    sent: boolean;
+    messageId?: string | null;
+    error?: string;
+  } | null;
 };
 
 export function WaitlistAdminPageClient({
@@ -84,6 +89,11 @@ export function WaitlistAdminPageClient({
               inviteUrl: string | null;
               inviteTokenExpiresAt: string | null;
             };
+            approvalEmail?: {
+              sent: boolean;
+              messageId?: string | null;
+              error?: string;
+            } | null;
           }
         | null;
 
@@ -112,6 +122,7 @@ export function WaitlistAdminPageClient({
         email: body.application.email,
         inviteUrl: body.application.inviteUrl,
         inviteTokenExpiresAt: body.application.inviteTokenExpiresAt,
+        approvalEmail: body.approvalEmail ?? null,
       });
     } catch {
       setErrorMessage("Unable to approve this waitlist application.");
@@ -146,9 +157,11 @@ export function WaitlistAdminPageClient({
             tone="success"
             title={`Approved ${approvalResult.email}`}
             description={
-              approvalResult.inviteUrl
-                ? `Invite URL: ${approvalResult.inviteUrl}${approvalResult.inviteTokenExpiresAt ? ` • expires ${formatDateTime(approvalResult.inviteTokenExpiresAt)}` : ""}`
-                : "Approval saved, but no invite URL was returned."
+              approvalResult.approvalEmail?.sent
+                ? `Approval email sent.${approvalResult.inviteUrl ? ` Invite URL: ${approvalResult.inviteUrl}` : ""}${approvalResult.inviteTokenExpiresAt ? ` • expires ${formatDateTime(approvalResult.inviteTokenExpiresAt)}` : ""}`
+                : approvalResult.inviteUrl
+                  ? `Approval saved, but the email was not sent${approvalResult.approvalEmail?.error ? `: ${approvalResult.approvalEmail.error}` : "."} Invite URL: ${approvalResult.inviteUrl}${approvalResult.inviteTokenExpiresAt ? ` • expires ${formatDateTime(approvalResult.inviteTokenExpiresAt)}` : ""}`
+                  : "Approval saved, but no invite URL was returned."
             }
             onDismiss={() => setApprovalResult(null)}
             neutralSurface

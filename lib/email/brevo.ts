@@ -6,6 +6,7 @@ export interface BrevoTransactionalTemplateEmailInput {
     name?: string | null;
   };
   templateId: number;
+  params?: Record<string, string | number | boolean | null>;
 }
 
 interface BrevoTransactionalEmailResponse {
@@ -33,6 +34,7 @@ function createBrevoSender() {
 export async function sendBrevoTransactionalTemplateEmail({
   to,
   templateId,
+  params,
 }: BrevoTransactionalTemplateEmailInput): Promise<BrevoTransactionalEmailResponse | null> {
   const toName = to.name?.trim();
   const response = await fetch(BREVO_TRANSACTIONAL_EMAIL_ENDPOINT, {
@@ -51,6 +53,7 @@ export async function sendBrevoTransactionalTemplateEmail({
         },
       ],
       templateId,
+      ...(params ? { params } : {}),
     }),
   });
 
