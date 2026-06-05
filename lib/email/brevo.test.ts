@@ -50,6 +50,45 @@ describe("sendBrevoTransactionalTemplateEmail", () => {
     });
   });
 
+  it("includes transactional template params when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ messageId: "message_2" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendBrevoTransactionalTemplateEmail({
+      to: { email: "maker@example.com" },
+      templateId: 6,
+      params: {
+        inviteUrl: "https://wippa.example/sign-in/sign-up?token=invite_123",
+        inviteTokenExpiresAt: "2026-06-19T12:00:00.000Z",
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.brevo.com/v3/smtp/email",
+      expect.objectContaining({
+        body: JSON.stringify({
+          sender: {
+            email: "hello@example.com",
+            name: "Wippa",
+          },
+          to: [
+            {
+              email: "maker@example.com",
+            },
+          ],
+          templateId: 6,
+          params: {
+            inviteUrl: "https://wippa.example/sign-in/sign-up?token=invite_123",
+            inviteTokenExpiresAt: "2026-06-19T12:00:00.000Z",
+          },
+        }),
+      }),
+    );
+  });
+
   it("throws when Brevo rejects the request", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,

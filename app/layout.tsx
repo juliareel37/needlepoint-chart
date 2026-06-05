@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, Plus_Jakarta_Sans } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
 import { assetPath } from "../lib/assetPath";
 import HeaderAuth from "../components/auth/HeaderAuth";
+import AppAnalytics from "./AppAnalytics";
 import { AuthProvider } from "@/lib/auth/client";
 import AppHeaderNav from "@/components/app/AppHeaderNav";
 import { getCurrentUserThemePreference } from "@/lib/auth/server";
@@ -208,7 +208,7 @@ export default async function RootLayout({
             </div>
           </div>
         </AuthProvider>
-        <Analytics />
+        <AppAnalytics />
       </body>
     </html>
   );
