@@ -85,7 +85,7 @@ export function SettingsPanelPage({
         ) : null}
 
         <div className={styles.sidebarSubsection}>
-          <div className={styles.sidebarSubsectionHeader}>
+          <div className={styles.sidebarCanvasAidsHeader}>
             <h3 style={typographyStyles.h5}>Canvas Aids</h3>
           </div>
           {isBottomPanelLayout ? (

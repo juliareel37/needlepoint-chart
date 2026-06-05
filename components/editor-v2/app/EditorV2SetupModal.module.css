@@ -17,7 +17,7 @@
   max-height: inherit;
   padding: 28px;
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, white);
-  border-radius: 28px;
+  border-radius: var(--editor-radius-xl);
   background: var(--surface-card);
   box-shadow:
     0 28px 80px rgba(15, 23, 42, 0.24),
@@ -110,7 +110,7 @@
   flex-direction: column;
   gap: 18px;
   padding: 20px;
-  border-radius: 20px;
+  border-radius: var(--editor-radius-lg);
   background: var(--surface-primary);
   border: 1px solid var(--ui-border-subtle);
 }
@@ -118,7 +118,7 @@
 .sectionStandalone {
   gap: 20px;
   padding: 28px;
-  border-radius: 28px;
+  border-radius: var(--editor-radius-xl);
   background: var(--surface-primary);
   border: 1px solid color-mix(in srgb, var(--ui-border-reg) 84%, white);
   box-shadow:
@@ -187,7 +187,7 @@
 .strongFieldLabel,
 .strongFieldLabelError {
   margin: 0;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .strongFieldLabel {
@@ -222,7 +222,7 @@
 
 .meshPresetButton {
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--editor-radius-md);
   padding-inline: 14px;
   min-height: 30px;
   white-space: nowrap;
@@ -234,7 +234,7 @@
   min-height: 30px;
   padding: 4px 8px;
   text-align: center;
-  /* border-radius: 999px; */
+  /* border-radius: var(--editor-radius-lg); */
   /* padding-inline: 26px; */
   /* min-height: 30px; */
   box-shadow: none;
@@ -247,7 +247,7 @@
   align-items: start;
   padding: 18px 20px;
   border: 1px solid var(--ui-border-subtle);
-  border-radius: 18px;
+  border-radius: var(--editor-radius-lg);
   background: color-mix(in srgb, var(--surface-card) 72%, transparent);
 }
 
@@ -270,16 +270,19 @@
 .canvasEstimateLabel,
 .canvasEstimateValue {
   margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 14px;
 }
 
 .canvasEstimateLabel {
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .canvasEstimateValue {
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .actions {
@@ -301,12 +304,12 @@
 
   .card {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: var(--editor-radius-xl);
   }
 
   .sectionStandalone {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: var(--editor-radius-xl);
   }
 
   .header,

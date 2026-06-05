@@ -16,7 +16,7 @@
   min-height: 50px;
   padding: 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--editor-radius-lg);
   background: transparent;
   /* color: var(--toolbar-button-default-text); */
   text-align: center;

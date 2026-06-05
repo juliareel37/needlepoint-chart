@@ -31,6 +31,7 @@ import type {
 import {
   configureSourceCanvas,
   drawChangedSourceCells,
+  drawKnownChangedSourceCells,
   redrawSourceCanvas,
 } from "./GridCanvasStage.source";
 
@@ -41,7 +42,12 @@ interface GridCanvasStageProps {
   colorsById: Record<string, PaletteColor>;
   deferPaintUntilTraceReady?: boolean;
   displayHost: HTMLElement | null;
+  highlightedCellIndexes?: number[] | null;
   highlightedColorId?: string | null;
+  latestGridCellChange?: {
+    indexes: readonly number[];
+    revision: number;
+  } | null;
   onDisplayRendered?: () => void;
   displayTraceAsset: LoadedTraceAsset | null;
   displayTraceOverride?: TraceDisplayOverride;
@@ -74,7 +80,9 @@ export function GridCanvasStage({
   colorsById,
   deferPaintUntilTraceReady = false,
   displayHost,
+  highlightedCellIndexes = null,
   highlightedColorId = null,
+  latestGridCellChange = null,
   onDisplayRendered,
   displayTraceAsset,
   displayTraceOverride = null,
@@ -262,6 +270,10 @@ export function GridCanvasStage({
       previousCells.length !== cells.length ||
       previousColors !== colorsById ||
       previousThreadView !== threadView;
+    const canUseKnownChangedCells =
+      !shouldRedrawAll &&
+      latestGridCellChange !== null &&
+      latestGridCellChange.indexes.length > 0;
 
     if (shouldRedrawAll) {
       redrawSourceCanvas({
@@ -285,19 +297,42 @@ export function GridCanvasStage({
       return;
     }
 
-    drawChangedSourceCells({
-      context,
-      cells,
-      previousCells,
-      colorsById,
-      gridWidth,
-      cellSize: metrics.cellSize,
-      stitchStyleVersion: sourceThreadStyleVersion,
-      threadView,
-      stitchCanvasCache: stitchCanvasCacheRef.current,
-    });
+    if (canUseKnownChangedCells) {
+      drawKnownChangedSourceCells({
+        context,
+        cells,
+        changedIndices: latestGridCellChange.indexes,
+        colorsById,
+        gridWidth,
+        cellSize: metrics.cellSize,
+        stitchStyleVersion: sourceThreadStyleVersion,
+        threadView,
+        stitchCanvasCache: stitchCanvasCacheRef.current,
+      });
 
-    previousCellsRef.current = cells.slice();
+      for (const index of latestGridCellChange.indexes) {
+        if (index >= 0 && index < previousCells.length) {
+          previousCells[index] = cells[index] ?? null;
+        }
+      }
+
+      previousCellsRef.current = previousCells;
+    } else {
+      drawChangedSourceCells({
+        context,
+        cells,
+        previousCells,
+        colorsById,
+        gridWidth,
+        cellSize: metrics.cellSize,
+        stitchStyleVersion: sourceThreadStyleVersion,
+        threadView,
+        stitchCanvasCache: stitchCanvasCacheRef.current,
+      });
+
+      previousCellsRef.current = cells.slice();
+    }
+
     previousCellsInputRef.current = cells;
     previousColorsRef.current = colorsById;
     previousColorsInputRef.current = colorsById;
@@ -308,6 +343,7 @@ export function GridCanvasStage({
     colorsById,
     gridWidth,
     isZoomInteractionActive,
+    latestGridCellChange,
     metrics.cellSize,
     metrics.surfaceHeight,
     metrics.surfaceWidth,
@@ -351,6 +387,7 @@ export function GridCanvasStage({
         frameOrigin,
       gridOverlayStep,
       gridWidth,
+      highlightedCellIndexes,
       highlightedColorId,
       metrics,
       paintOpacity,
@@ -381,6 +418,7 @@ export function GridCanvasStage({
     frameOrigin.y,
     gridOverlayStep,
     gridWidth,
+    highlightedCellIndexes,
     highlightedColorId,
     metrics.surfaceHeight,
     metrics.surfaceWidth,

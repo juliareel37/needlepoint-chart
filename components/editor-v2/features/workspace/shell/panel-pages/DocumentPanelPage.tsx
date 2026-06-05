@@ -127,6 +127,7 @@ export function DocumentPanelPage({
   return (
     <section className={styles.sidebarSection}>
       <div className={styles.sidebarPageBody}>
+      <section className={styles.sidebarSubsection}>
         <section className={styles.documentSummaryCard}>
           <div className={styles.documentSummaryRow}>
             <div className={styles.documentThumbnailFrame}>
@@ -174,19 +175,20 @@ export function DocumentPanelPage({
         </section>
 
         <section className={styles.documentMetadataCard}>
-          <div className={styles.documentMetadataGrid}>
+          <dl className={styles.documentMetadataList}>
             <DocumentMetaItem
               label="Size"
-              value={`${document.grid.width} × ${document.grid.height} sts`}
+              value={`${document.grid.width} × ${document.grid.height} stitches`}
             />
-            <DocumentMetaItem label="Canvas" value={canvasLabel} />
+            <DocumentMetaItem label="Canvas Mesh" value={canvasLabel} />
             <DocumentMetaItem label="Colors" value={`${colorCount}`} />
             <DocumentMetaItem
               label="Created"
               value={formatDocumentDate(document.project.createdAt)}
             />
-          </div>
+          </dl>
         </section>
+     </section>
 {/* 
         <section className={styles.documentSaveStatusCard}>
           <SaveStatusCard
@@ -271,6 +273,7 @@ export function DocumentPanelPage({
             <div className={styles.traceSectionDivider} aria-hidden="true" /> */}
 
         {hasSavedDesignAccess ? (
+         <section className={styles.sidebarSubsection}>
           <section className={styles.documentRecentSection}>
             <div className={styles.documentRecentHeader}>
               <h3 className={styles.documentRecentTitle} style={typographyStyles.h5}>
@@ -281,8 +284,8 @@ export function DocumentPanelPage({
                 className={styles.documentRecentSeeAllButton}
                 onClick={onOpenAllDesigns}
               >
-                <span className={styles.documentRecentSeeAllLabel} style={typographyStyles.p2}>
-                  <span>See all</span>
+                <span className={styles.documentRecentSeeAllLabel} style={typographyStyles.captionMd}>
+                  <span>View all</span>
                   <span className={styles.documentRecentSeeAllCaret} aria-hidden="true">
                     ›
                   </span>
@@ -319,12 +322,12 @@ export function DocumentPanelPage({
                     <div className={styles.documentRecentMeta}>
                       <p
                         className={styles.documentRecentName}
-                        style={{ ...typographyStyles.p2, fontWeight: 750 }}
+                        style={typographyStyles.p1Medium}
                       >
                         {record.title}
                       </p>
-                      <p className={styles.documentRecentDetail} style={typographyStyles.p2}>
-                        {record.gridWidth} × {record.gridHeight} sts
+                      <p className={styles.documentRecentDetail} style={typographyStyles.captionMd}>
+                        {record.gridWidth} × {record.gridHeight} stitches
                         <span className={styles.documentRecentDetailDivider} aria-hidden="true">
                           •
                         </span>
@@ -340,6 +343,7 @@ export function DocumentPanelPage({
               </p>
             )}
           </section>
+        </section>
         ) : null}
 
         <section className={styles.documentSecondaryActions}>
@@ -394,12 +398,12 @@ function DocumentMetaItem({
 }) {
   return (
     <div className={styles.documentMetaItem}>
-      <p className={styles.documentMetaLabel} style={typographyStyles.p2}>
+      <dt className={styles.documentMetaLabel} style={typographyStyles.p2}>
         {label}
-      </p>
-      <p className={styles.documentMetaValue} style={typographyStyles.p1}>
+      </dt>
+      <dd className={styles.documentMetaValue} style={typographyStyles.p1}>
         {value}
-      </p>
+      </dd>
     </div>
   );
 }

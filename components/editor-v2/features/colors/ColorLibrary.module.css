@@ -7,12 +7,18 @@
 
 .library {
   --color-library-track-size: 33px;
-  --color-library-grid-gap: 6px;
+  --color-library-track-max-size: 1fr;
+  --color-library-swatch-size: 25px;
+  --color-library-color-button-padding: 4px;
+  --color-library-grid-gap: 0px;
   --color-library-header-padding-top: 8px;
   --color-library-header-padding-right: 16px;
   --color-library-header-padding-bottom: 6px;
   --color-library-header-padding-left: 16px;
-  --color-library-body-padding-top: 10px;
+  --color-library-intro-header-padding-top: var(--color-library-header-padding-top);
+  --color-library-tab-header-padding-bottom: 12px;
+  --color-library-search-header-padding-bottom: 12px;
+  --color-library-body-padding-top: 14px;
   --color-library-body-padding-right: 16px;
   --color-library-body-padding-bottom: 16px;
   --color-library-body-padding-left: 16px;
@@ -21,14 +27,61 @@
   overflow: hidden;
   padding: 0;
   gap: 0;
-  border-radius: 16px;
+  border-radius: var(--editor-radius-xl);
   width: 100%;
   height: 100%;
   min-height: 0;
 }
 
-.stickyHeader {
+.stickyHeaders {
   z-index: var(--z-editor-popover-high);
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  background: var(--surface-primary);
+  box-shadow: 0 1px 0 var(--ui-border-subtle);
+}
+
+.library[data-scroll-mode="page"] {
+  height: auto;
+  overflow: visible;
+}
+
+.library[data-scroll-mode="page"] .stickyHeaders {
+  position: sticky;
+  top: var(--color-library-sticky-top, 0);
+}
+
+.library[data-scroll-mode="page"] .stickyHeaders::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--color-library-sticky-cover-block, 0px));
+  right: calc(-1 * var(--color-library-sticky-cover-inline, 0px));
+  left: calc(-1 * var(--color-library-sticky-cover-inline, 0px));
+  height: var(--color-library-sticky-cover-block, 0px);
+  background: var(--surface-primary);
+  pointer-events: none;
+}
+
+.library[data-scroll-mode="page"] .libraryBody {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.stickyIntroHeader {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding:
+    var(--color-library-intro-header-padding-top)
+    var(--color-library-header-padding-right)
+    14px
+    var(--color-library-header-padding-left);
+  background: var(--surface-primary);
+}
+
+.stickyHeader {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
@@ -36,10 +89,31 @@
   padding:
     var(--color-library-header-padding-top)
     var(--color-library-header-padding-right)
-    var(--color-library-header-padding-bottom)
+    var(--color-library-tab-header-padding-bottom)
     var(--color-library-header-padding-left);
   background: var(--surface-primary);
-  box-shadow: 0 1px 0 var(--ui-border-subtle);
+}
+
+.stickySearchHeader {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding:
+    var(--color-library-header-padding-top)
+    var(--color-library-header-padding-right)
+    var(--color-library-search-header-padding-bottom)
+    var(--color-library-header-padding-left);
+  background: var(--surface-primary);
+}
+
+.stickyHeader + .stickySearchHeader {
+  padding-top: 0;
+}
+
+.stickyIntroHeader + .stickySearchHeader,
+.stickyIntroHeader + .stickyHeader {
+  padding-top: 0;
 }
 
 .libraryBody {
@@ -84,7 +158,7 @@
   min-height: 24px;
   padding: 0 10px;
   border: 1px solid var(--button-outlined-default-border);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-lg);
   background: var(--button-outlined-default);
   color: var(--button-outlined-default-text);
   font-size: 11px;
@@ -102,7 +176,7 @@
   border-color: var(--button-outlined-active-border);
   background: var(--button-outlined-active);
   color: var(--button-outlined-active-text);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .familyFilterChip:focus-visible {
@@ -140,21 +214,7 @@
 }
 
 .searchControlButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
 }
 
 .searchControlButton[data-active="true"] {
@@ -168,23 +228,6 @@
 
 .viewControlItem {
   min-width: 0;
-}
-
-
-.searchControlButton:focus-visible {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 1px;
-}
-
-.searchControlIcon {
-  width: 13px;
-  height: 13px;
-  flex: 0 0 13px;
-}
-
-.searchControlIcon > span {
-  width: 13px;
-  height: 13px;
 }
 
 .settingsPanel {
@@ -206,7 +249,7 @@
   margin: 0;
   color: var(--neutral-500);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -219,7 +262,12 @@
 
 .library[data-featured-display="stacked"] .stickyHeader {
   gap: 0;
-  padding-bottom: 8px;
+  padding-bottom: var(--color-library-header-padding-bottom);
+}
+
+.library[data-featured-display="stacked"] .stickySearchHeader {
+  gap: 0;
+  padding-bottom: var(--color-library-search-header-padding-bottom);
 }
 
 .library[data-featured-display="stacked"] .searchRow {
@@ -246,7 +294,7 @@
   padding: 0;
   color: var(--neutral-500);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   line-height: 1.25;
   text-transform: uppercase;
@@ -273,7 +321,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition: color 140ms ease;
@@ -281,9 +329,9 @@
 
 .stackedFeaturedSection .sectionHeaderAction {
   color: color-mix(in srgb, var(--text-secondary) 90%, white);
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  /* text-transform: uppercase; */
 }
 
 .sectionHeaderAction:hover {
@@ -293,13 +341,17 @@
 .sectionHeaderAction:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 3px;
-  border-radius: 6px;
+  border-radius: var(--editor-radius-md);
 }
 
 .sectionGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--color-library-track-size), 1fr));
-  /* gap: var(--color-library-grid-gap); */
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(var(--color-library-track-size), var(--color-library-track-max-size))
+    );
+  gap: var(--color-library-grid-gap);
   align-items: start;
 }
 
@@ -328,10 +380,10 @@
 .libraryFamilySectionHeader {
   margin: 0;
   padding: 0;
-  color: var(--neutral-500);
+  color: var(--text-secondary);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
   line-height: 1.2;
   text-transform: uppercase;
 }
@@ -339,9 +391,7 @@
 .paletteSectionHeader {
   margin: 0;
   padding: 0;
-  color: var(--neutral-500);
-  font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.25;
 }
@@ -375,7 +425,7 @@
   gap: 10px;
   padding: 6px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: transparent;
   color: var(--text-secondary);
   text-align: left;
@@ -392,7 +442,7 @@
 
 .colorListRow[data-active="true"] {
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .colorListRowSwatch {
@@ -414,7 +464,7 @@
 .colorListRowDivider {
   width: 100%;
   height: 14px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-sm);
   background: var(--ui-border-reg);
 }
 
@@ -422,7 +472,7 @@
   min-width: 0;
   color: var(--text-primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -434,7 +484,7 @@
   justify-content: center;
   width: 100%;
   min-width: 0;
-  padding: 4px !important;
+  padding: var(--color-library-color-button-padding) !important;
 }
 
 .tooltipLayer {
@@ -452,7 +502,7 @@
   align-items: center;
   justify-content: center;
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--editor-radius-md);
   background: var(--surface-card);
   color: var(--text-primary);
   box-shadow: var(--ui-tooltip-shadow);
@@ -464,7 +514,7 @@
   color: var(--text-primary);
   font-size: 12px;
   line-height: 16px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tooltipDetail {
@@ -482,7 +532,7 @@
   background: var(--surface-card);
   border-right: 1px solid var(--ui-border-reg);
   border-bottom: 1px solid var(--ui-border-reg);
-  border-radius: 2px;
+  border-radius: var(--editor-radius-sm);
   pointer-events: none;
 }
 
@@ -500,19 +550,19 @@
 
 .colorButton[data-active="true"] .swatch {
   transform: scale(1.08);
-  border-color: var(--swatch-border-strong);
+  border-color: var(--swatch-border);
   box-shadow:
-    0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
+    0 0 0 1px var(--surface-primary),
+    0 0 0 2.5px color-mix(in srgb, var(--swatch-border-strong) 72%, #000000);
 }
 
 .swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 25%;
+  width: var(--color-library-swatch-size);
+  height: var(--color-library-swatch-size);
+  border-radius: var(--editor-color-swatch-radius);
   border: 1px solid var(--swatch-border);
   box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   transition:
@@ -524,22 +574,23 @@
 
 .colorButton:focus-visible .swatch {
   transform: scale(1.08);
-  border-color: var(--swatch-border-strong);
+  border-color: var(--swatch-border);
   box-shadow:
-    0 0 0 1px var(--swatch-ring-inner),
-    0 0 0 2px color-mix(in srgb, var(--swatch-ring-outer) 72%, transparent);
+    0 0 0 1px var(--surface-primary),
+    0 0 0 2.5px color-mix(in srgb, var(--swatch-border-strong) 72%, #000000);
 }
 
 .swatchCheck {
-  font-size: 14px;
+  font-size: 11px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .swatchSymbol {
   font-size: 13px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -579,9 +630,11 @@
   .colorListRow:hover:not(:disabled) .swatch,
   .colorButton:hover:not(:disabled) .swatch {
     transform: scale(1.14);
-    border-color: var(--swatch-border-strong);
-    box-shadow:
-      0 0 0 1px var(--swatch-ring-inner),
-      0 0 0 3px var(--swatch-ring-outer);
+  }
+}
+
+@media (max-width: 768px) {
+  .stickyIntroHeader {
+    padding-top: 16px;
   }
 }

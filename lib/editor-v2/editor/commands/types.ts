@@ -29,6 +29,7 @@ export type EditorCommandKind =
   | "grid.paint"
   | "grid.erase"
   | "grid.clear"
+  | "grid.smoothSpeckles"
   | "grid.applyTraceConversion"
   | "grid.previewTraceConversion"
   | "grid.commitTraceConversionPreview"
@@ -129,6 +130,11 @@ export type EraseCellsCommand = BaseEditorCommand<
 >;
 
 export type ClearCanvasCommand = BaseEditorCommand<"grid.clear", object>;
+
+export type SmoothSpecklesCommand = BaseEditorCommand<
+  "grid.smoothSpeckles",
+  { replacements: Array<{ index: number; toColorId: string }> }
+>;
 
 export type ApplyTraceConversionCommand = BaseEditorCommand<
   "grid.applyTraceConversion",
@@ -525,6 +531,7 @@ export type EditorCommand =
   | PaintCellsCommand
   | EraseCellsCommand
   | ClearCanvasCommand
+  | SmoothSpecklesCommand
   | ApplyTraceConversionCommand
   | PreviewTraceConversionCommand
   | CommitTraceConversionPreviewCommand

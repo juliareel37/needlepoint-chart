@@ -42,6 +42,7 @@ model AppUser {
   identities      AuthIdentity[]
   editorDesigns   EditorDesign[]
   editorDesignFolders EditorDesignFolder[]
+  editorBugReports EditorBugReport[]
 }
 
 model AuthIdentity {
@@ -187,6 +188,7 @@ model EditorDesign {
   updatedAt       DateTime            @updatedAt
   versions        EditorDesignVersion[]
   guestTraceAssets GuestTraceAsset[]
+  bugReports      EditorBugReport[]
   appUser         AppUser             @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   folder          EditorDesignFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
@@ -248,4 +250,25 @@ model GuestTraceAsset {
   @@index([expiresAt])
   @@index([claimedDesignId])
   @@index([claimedAt])
+}
+
+model EditorBugReport {
+  id             String      @id @default(cuid())
+  appUserId      String?
+  editorDesignId String?
+  source         String
+  formId         String
+  formVersion    String?
+  answers        Json
+  context        Json?
+  clientMetadata Json?
+  createdAt      DateTime    @default(now())
+  appUser        AppUser?    @relation(fields: [appUserId], references: [id], onDelete: SetNull)
+  editorDesign   EditorDesign? @relation(fields: [editorDesignId], references: [id], onDelete: SetNull)
+
+  @@index([appUserId, createdAt])
+  @@index([editorDesignId, createdAt])
+  @@index([source, createdAt])
+  @@index([formId, createdAt])
+  @@index([createdAt])
 }

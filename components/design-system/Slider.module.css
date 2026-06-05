@@ -18,7 +18,7 @@
   position: relative;
   width: 100%;
   height: 3px;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: var(--neutral-300);
 }
 
@@ -27,7 +27,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: var(--brand-primary);
 }
 
@@ -36,7 +36,7 @@
   top: 50%;
   width: var(--slider-thumb-size);
   height: var(--slider-thumb-size);
-  border-radius: 999px;
+  border-radius: var(--editor-radius-md);
   background: var(--brand-primary);
   transform: translate(-50%, -50%);
 }
@@ -59,7 +59,7 @@
 
 @media (pointer: coarse) {
   .wrap {
-    --slider-thumb-size: 16px;
+    --slider-thumb-size: 10px;
     --slider-hit-area-size: 28px;
   }
 }

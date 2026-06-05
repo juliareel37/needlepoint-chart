@@ -151,6 +151,17 @@ export function createClearCanvasCommand(): EditorCommand {
   );
 }
 
+export function createSmoothSpecklesCommand(
+  replacements: Array<{ index: number; toColorId: string }>,
+): EditorCommand {
+  return createCommand(
+    "grid.smoothSpeckles",
+    { replacements },
+    "toolbar",
+    { mode: "push", label: "Smooth Speckles" },
+  );
+}
+
 export function createApplyTraceConversionCommand(payload: {
   replacements: Array<{ index: number; value: string | null }>;
   extractedColorIds: string[];

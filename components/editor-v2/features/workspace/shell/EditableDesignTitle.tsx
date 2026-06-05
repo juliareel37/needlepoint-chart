@@ -120,7 +120,7 @@ export function EditableDesignTitle({
           <span className={styles.editableTitleSurface}>
             <div
               className={styles.editableTitleText}
-              style={variant === "header" ? typographyStyles.h5 : typographyStyles.h5}
+              style={typographyStyles.h5}
             >
               {documentTitle}
             </div>

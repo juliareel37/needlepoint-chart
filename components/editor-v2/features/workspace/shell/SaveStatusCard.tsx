@@ -1,7 +1,7 @@
 "use client";
 
 import { typographyStyles } from "@/app/design-system/typography";
-import { ButtonIcon } from "@/components/design-system";
+import { Button, ButtonIcon } from "@/components/design-system";
 import styles from "./EditorV2Shell.module.css";
 
 const SAVE_SUCCESS_PREFIX = "Saved at ";
@@ -93,14 +93,17 @@ export function SaveStatusCard({
         )}
       </p>
       {layout === "banner" && onDismiss ? (
-        <button
+        <Button
           type="button"
+          variant="ghostV2"
+          size="sm"
+          iconOnly
           className={styles.headerSaveStatusDismiss}
           aria-label="Dismiss save status"
           onClick={onDismiss}
         >
           <ButtonIcon icon="/icons/lucide/x.svg" className={styles.headerSaveStatusDismissIcon} />
-        </button>
+        </Button>
       ) : null}
     </div>
   );

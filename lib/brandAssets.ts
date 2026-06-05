@@ -19,7 +19,7 @@ export type BrandComposedLogoAsset = {
 export const brandAssets = {
   header: {
     compact: {
-      src: "/logos/spruce/logo-square.png",
+      src: "/logos/spruce/logo-plain-dark.png",
       alt: "Wippa",
       width: 344,
       height: 72,

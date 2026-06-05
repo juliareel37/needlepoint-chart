@@ -94,7 +94,7 @@ export function ViewportToolbar({
             value={String(Math.round(zoomPercent))}
             placeholder={zoomLabel}
             showChevron={false}
-            triggerLabel={<strong>{zoomLabel}</strong>}
+            triggerLabel={zoomLabel}
             triggerVariant="ghost"
             menuStyle={{ background: "var(--zoom-menu-bg)" }}
             menuPlacement="top-start"
@@ -122,7 +122,7 @@ export function ViewportToolbar({
             triggerStyle={{
               minWidth: "auto",
               padding: "6px 8px",
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           />
         </ToolbarMeta>

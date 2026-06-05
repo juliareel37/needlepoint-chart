@@ -1,6 +1,7 @@
 "use client";
 
 import type { KeyboardEvent, ReactNode } from "react";
+import { typographyStyles } from "@/app/design-system/typography";
 import styles from "./SegmentedControl.module.css";
 
 export interface SegmentedControlOption<T extends string> {
@@ -86,6 +87,7 @@ export function SegmentedControl<T extends string>({
             className={[styles.item, itemClassName].filter(Boolean).join(" ")}
             data-active={active ? "true" : "false"}
             disabled={optionDisabled}
+            style={typographyStyles["p2Medium"]}
             onClick={() => {
               if (optionDisabled) {
                 return;

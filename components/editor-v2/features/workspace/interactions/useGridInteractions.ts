@@ -38,6 +38,7 @@ interface UseGridInteractionsOptions {
   metrics: { cellSize: number; surfaceWidth: number; surfaceHeight: number };
   paintDisabled?: boolean;
   previewMode: boolean;
+  renderedCellSize: number;
   state: EditorStoreState;
   trace: TraceDocument | null;
 }
@@ -53,6 +54,7 @@ export function useGridInteractions({
   metrics,
   paintDisabled = false,
   previewMode,
+  renderedCellSize,
   state,
   trace,
 }: UseGridInteractionsOptions) {
@@ -62,6 +64,8 @@ export function useGridInteractions({
     brushSize,
     dispatch,
     disabled: paintDisabled,
+    gridHeight: state.document.grid.height,
+    gridWidth: state.document.grid.width,
   });
   const selectionDrag = useSelectionDrag({
     activeTool,
@@ -70,6 +74,7 @@ export function useGridInteractions({
     getClampedSelectionPointFromClient,
     state,
     selectionShape: state.session.selection.shape,
+    selectionCellSizePx: renderedCellSize,
   });
   const mirrorDrag = useMirrorDrag({
     activeTool,
@@ -101,6 +106,7 @@ export function useGridInteractions({
     handleHover,
     handlePointerDown,
     handlePointerEnter,
+    isPaintStrokeActive: paintStroke.isStrokeActive,
   };
 
   function handlePointerDown(point: GridPoint, selectionPoint: SelectionPoint): void {

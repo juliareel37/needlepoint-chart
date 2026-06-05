@@ -51,7 +51,7 @@ const brandLogoStyle = {
 
 const editorBrandLogoStyle = {
   ...brandLogoStyle,
-  height: 35,
+  height: 26,
 } as const;
 
 const editorHeaderWrapStyle = {
@@ -166,13 +166,14 @@ function MenuIcon({ open }: { open: boolean }) {
 function HeaderLongLogo() {
   return (
     <>
-      {brandAssets.header.long.parts.map((logoPart) => (
+      {brandAssets.header.long.parts.map((logoPart, index) => (
         <Image
           key={logoPart.src}
           src={logoPart.src}
           alt={logoPart.alt}
           width={logoPart.width}
           height={logoPart.height}
+          className={index === 1 ? "header-brand-logo-text" : undefined}
           style={{
             display: "block",
             width: "auto",
@@ -365,7 +366,11 @@ export default function AppHeaderNav() {
         <Link href="/" style={editorBrandStyle} aria-label="Wippa home">
           <HeaderCompactLogo className="editor-header-brand-logo" />
         </Link>
-        <span aria-hidden="true" style={editorHeaderDividerStyle} />
+        <span
+          aria-hidden="true"
+          className="editor-header-brand-divider"
+          style={editorHeaderDividerStyle}
+        />
       </div>
     );
   }

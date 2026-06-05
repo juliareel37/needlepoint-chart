@@ -162,6 +162,30 @@ const vectorDisplayCurveOptions = [
   { id: "ink", label: "Ink", value: "var(--neutral-900)" },
 ] as const;
 
+const typographyVariantBaseTokens: Partial<Record<DesignTypeToken, DesignTypeToken>> = {
+  p1Medium: "p1",
+  p2Medium: "p2",
+  // p2Semibold: "p2",
+  captionMd: "caption",
+  sMedium: "s",
+};
+
+const typographyRows = typographyOrder.reduce<Array<{ id: DesignTypeToken; tokens: DesignTypeToken[] }>>(
+  (rows, token) => {
+    const rowId = typographyVariantBaseTokens[token] ?? token;
+    const existingRow = rows.find((row) => row.id === rowId);
+
+    if (existingRow) {
+      existingRow.tokens.push(token);
+      return rows;
+    }
+
+    rows.push({ id: rowId, tokens: [token] });
+    return rows;
+  },
+  []
+);
+
 const paletteGroups = [
   {
     title: "Neutrals",
@@ -760,23 +784,41 @@ function PaletteDemo() {
 function TypographyDemo() {
   return (
     <div className={styles.typeStack}>
-      {typographyOrder.map((token) => {
-        const spec = typographySpecs[token];
+      {typographyRows.map((row) => {
+        const baseSpec = typographySpecs[row.id];
         return (
-          <div key={token} className={styles.typeRow}>
+          <div key={row.id} className={styles.typeRow}>
             <div className={styles.typeMeta}>
-              <span style={typographyStyles.h5}>{token}</span>
+              <span style={typographyStyles.h5}>{row.id}</span>
               <span className={styles.muted} style={typographyStyles.s}>
-                {spec.size}/{spec.lineHeight} {spec.weight}
+                {baseSpec.size}/{baseSpec.lineHeight}
               </span>
             </div>
-            <div className={styles.typeSample}>
-              <span style={typographyStyles[token as DesignTypeToken]}>
-                {spec.sample}
-              </span>
-              <span className={styles.muted} style={typographyStyles.s}>
-                {spec.usage}
-              </span>
+            <div className={styles.typeVariants}>
+              {row.tokens.map((token) => {
+                const spec = typographySpecs[token];
+                return (
+                  <div key={token} className={styles.typeVariant}>
+                    <span style={typographyStyles[token]}>
+                      {spec.sample}
+                    </span>
+                    <span className={styles.muted} style={typographyStyles.s}>
+                      {spec.label} · {spec.weight}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className={styles.typeUsage}>
+              {row.tokens.map((token) => {
+                const spec = typographySpecs[token];
+                return (
+                  <span key={token} className={styles.muted} style={typographyStyles.s}>
+                    {row.tokens.length > 1 ? `${spec.label}: ` : null}
+                    {spec.usage}
+                  </span>
+                );
+              })}
             </div>
           </div>
         );

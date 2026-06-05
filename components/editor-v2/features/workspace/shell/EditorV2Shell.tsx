@@ -34,15 +34,21 @@ import {
   MenuItem,
   MenuSurface,
   MenuTrigger,
-  SingleSelectDropdown,
   ToolbarButton,
   ToolbarIcon,
 } from "@/components/design-system";
-import { useEditorStoreDispatch, useEditorStoreSelector } from "../../../app/editorStoreContext";
+import {
+  useEditorStore,
+  useEditorStoreDispatch,
+  useEditorStoreSelector,
+} from "../../../app/editorStoreContext";
 import type {
   ActiveTool,
   EditorDocumentState,
+  GridCellValue,
 } from "@/lib/editor-v2/editor/store";
+import type { DocumentPatch } from "@/lib/editor-v2/editor/store/patches";
+import { isCellInSelection } from "@/lib/editor-v2/editor/selection/lassoGeometry";
 import type { TraceCropRect } from "@/lib/editor-v2/editor/trace/crop";
 import {
   createFullTraceCrop,
@@ -52,6 +58,10 @@ import {
   getContainedRect,
   getPositionedBounds,
 } from "@/lib/editor-v2/editor/positioning";
+import {
+  buildSpeckleSmoothingReplacements,
+  detectSpeckleCellIndexes,
+} from "@/lib/editor-v2/editor/speckleDetection";
 import type { SavedEditorV2DocumentRecord } from "../../../app/editorV2ServerPersistence";
 import type {
   EditorDesignVersionListItem,
@@ -80,6 +90,7 @@ import {
   createPanViewportCommand,
   createSetSidebarCollapsedCommand,
   createSetViewportZoomCommand,
+  createSmoothSpecklesCommand,
   createUpdateIconPlacementCommand,
   createUpdateTraceCommand,
   createUndoCommand,
@@ -101,6 +112,7 @@ import {
   type TraceCropAspectRatioId,
 } from "./TraceRepositionToolbar";
 import { SaveStatusCard } from "./SaveStatusCard";
+import { EditorBugReportModal } from "./EditorBugReportModal";
 import { GridWorldSurface } from "../stage/GridWorldSurface";
 import { CanvasAidsFloatingToolbar } from "./CanvasAidsFloatingToolbar";
 import { ViewportToolbar } from "./ViewportToolbar";
@@ -259,7 +271,12 @@ interface PreviewSessionSnapshot {
   };
 }
 
+interface SpeckleHighlightSessionSnapshot {
+  sidebarCollapsed: boolean;
+}
+
 interface BottomPanelCanvasFocusSnapshot {
+  sidebarCollapsed: boolean;
   viewport: {
     zoom: number;
     offsetX: number;
@@ -379,8 +396,13 @@ export function EditorV2Shell({
   successNotification: EditorV2SuccessNotification | null;
 }) {
   const openSignIn = useOpenSignIn();
+  const store = useEditorStore();
   const dispatch = useEditorStoreDispatch();
   const state = useEditorStoreSelector((currentState) => currentState);
+  const latestGridCellChangeRef = useRef<{
+    indexes: readonly number[];
+    revision: number;
+  } | null>(null);
 
   const document = state.document;
   const title = state.document.project.title;
@@ -419,6 +441,43 @@ export function EditorV2Shell({
   const textPlacement = state.session.textInteraction.placement;
   const iconPlacement = state.session.iconInteraction.placement;
   const selectionCommitted = Boolean(selectionBounds && !state.session.selection.preview);
+  const selectedCellIndexSet = useMemo(() => {
+    if (!selectionCommitted) {
+      return null;
+    }
+
+    const indexes = new Set<number>();
+    const gridWidth = document.grid.width;
+    const gridHeight = document.grid.height;
+
+    for (let y = 0; y < gridHeight; y += 1) {
+      for (let x = 0; x < gridWidth; x += 1) {
+        if (isCellInSelection(state, { x, y })) {
+          indexes.add(y * gridWidth + x);
+        }
+      }
+    }
+
+    return indexes;
+  }, [
+    document.grid.height,
+    document.grid.width,
+    selectionCommitted,
+    state,
+  ]);
+  const selectedCellIndexes = useMemo(
+    () => (selectedCellIndexSet ? Array.from(selectedCellIndexSet) : null),
+    [selectedCellIndexSet],
+  );
+
+  useEffect(() => {
+    return store.subscribe((_nextState, _prevState, event) => {
+      latestGridCellChangeRef.current = getLatestGridCellChangeFromPatches(
+        event.patches,
+        latestGridCellChangeRef.current?.revision ?? 0,
+      );
+    });
+  }, [store]);
   const canvasWorldRef = useRef<HTMLDivElement | null>(null);
   const versionHistoryTimelineRef = useRef<HTMLDivElement | null>(null);
   const stageToolbarTopRef = useRef<HTMLDivElement | null>(null);
@@ -429,6 +488,7 @@ export function EditorV2Shell({
   const mobileTraceConversionPreviewWasActiveRef = useRef(false);
   const mobileTextPlacementWasActiveRef = useRef(false);
   const previewSessionSnapshotRef = useRef<PreviewSessionSnapshot | null>(null);
+  const speckleHighlightSnapshotRef = useRef<SpeckleHighlightSessionSnapshot | null>(null);
   const bottomPanelCanvasFocusSnapshotRef =
     useRef<BottomPanelCanvasFocusSnapshot | null>(null);
   const previewFitPendingRef = useRef(false);
@@ -456,7 +516,23 @@ export function EditorV2Shell({
   const [saveBannerDismissed, setSaveBannerDismissed] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [exportAuthModalOpen, setExportAuthModalOpen] = useState(false);
+  const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
+  const [bugReportSuccessVisible, setBugReportSuccessVisible] = useState(false);
   const [highlightedColorId, setHighlightedColorId] = useState<string | null>(null);
+  const [highlightedSpeckleCellIndexes, setHighlightedSpeckleCellIndexes] =
+    useState<number[] | null>(null);
+  const [colorSwapPreview, setColorSwapPreview] = useState<{
+    fromColorId: string;
+    toColorId: string;
+  } | null>(null);
+  const [colorMergePreview, setColorMergePreview] = useState<{
+    fromColorIds: string[];
+    toColorId: string;
+  } | null>(null);
+  const [colorDeletePreview, setColorDeletePreview] = useState<{
+    fromColorId: string;
+    toColorId: string;
+  } | null>(null);
   const [tracePreviewCrop, setTracePreviewCrop] = useState<TraceCropRect | null>(null);
   const [traceCropSnapshot, setTraceCropSnapshot] = useState<TraceCropRect | null>(null);
   const [traceCropAspectRatioId, setTraceCropAspectRatioId] =
@@ -499,6 +575,127 @@ export function EditorV2Shell({
   const [topBannerTarget, setTopBannerTarget] = useState<HTMLElement | null>(null);
   const [usedColorsSelectionPromptVisible, setUsedColorsSelectionPromptVisible] =
     useState(false);
+  const colorSwapPreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorSwapPreview) {
+      return null;
+    }
+
+    const { fromColorId, toColorId } = colorSwapPreview;
+
+    if (
+      fromColorId === toColorId ||
+      !colorsById[fromColorId] ||
+      !colorsById[toColorId]
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (cell !== fromColorId) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorSwapPreview, colorsById, state]);
+  const colorMergePreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorMergePreview) {
+      return null;
+    }
+
+    const { fromColorIds, toColorId } = colorMergePreview;
+    const fromColorIdSet = new Set(fromColorIds.filter((colorId) => colorId !== toColorId));
+
+    if (
+      fromColorIdSet.size === 0 ||
+      !colorsById[toColorId] ||
+      !Array.from(fromColorIdSet).every((colorId) => colorsById[colorId])
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (!cell || !fromColorIdSet.has(cell)) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorMergePreview, colorsById, state]);
+  const colorDeletePreviewCells = useMemo<GridCellValue[] | null>(() => {
+    if (!colorDeletePreview) {
+      return null;
+    }
+
+    const { fromColorId, toColorId } = colorDeletePreview;
+
+    if (
+      fromColorId === toColorId ||
+      !colorsById[fromColorId] ||
+      !colorsById[toColorId]
+    ) {
+      return null;
+    }
+
+    const selectionActive =
+      state.session.selection.mode !== "none" && state.session.selection.rect !== null;
+    const gridWidth = state.document.grid.width;
+    let changed = false;
+    const previewCells = state.document.grid.cells.map((cell, index) => {
+      if (cell !== fromColorId) {
+        return cell;
+      }
+
+      if (
+        selectionActive &&
+        !isCellInSelection(state, {
+          x: index % gridWidth,
+          y: Math.floor(index / gridWidth),
+        })
+      ) {
+        return cell;
+      }
+
+      changed = true;
+      return toColorId;
+    });
+
+    return changed ? previewCells : null;
+  }, [colorDeletePreview, colorsById, state]);
   const [versionHistory, setVersionHistory] = useState<EditorDesignVersionListItem[]>(() =>
     currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : [],
   );
@@ -1331,11 +1528,7 @@ export function EditorV2Shell({
     isBottomPanelLayout &&
     (Boolean(selectionBounds) || activeTool === "lasso");
   const mobileBottomPanelVisibleHeightRatio =
-    isBottomPanelLayout && !sidebarCollapsed
-      ? isBottomPanelCanvasFocusActive
-        ? 0.6
-        : 0.25
-      : 1;
+    isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive ? 0.1 : 1;
   const previewModeDisabled =
     Boolean(textPlacement) ||
     Boolean(iconPlacement) ||
@@ -1343,7 +1536,9 @@ export function EditorV2Shell({
     traceRepositionActive ||
     selectionControlActive;
   const mobileVisibleTopInset =
-    isBottomPanelLayout && !sidebarCollapsed ? stageToolbarTopInset * 0.5 : 0;
+    isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive
+      ? stageToolbarTopInset * 0.5
+      : 0;
   const mobileHeaderMenuItems = useMemo(
     (): HeaderFileMenuItem[] =>
       hasSavedDesignAccess
@@ -1353,6 +1548,7 @@ export function EditorV2Shell({
               label: previewMode ? "Exit preview" : "Preview",
               kind: "action",
             },
+            // { id: "report-issue", label: "Report issue", kind: "action" },
             ...HEADER_FILE_MENU_ITEMS,
           ]
         : [
@@ -1362,6 +1558,7 @@ export function EditorV2Shell({
               label: previewMode ? "Exit preview" : "Preview",
               kind: "action",
             },
+            // { id: "report-issue", label: "Report issue", kind: "action" },
             ...HEADER_FILE_MENU_ITEMS,
           ],
     [hasSavedDesignAccess, previewMode],
@@ -1501,6 +1698,11 @@ export function EditorV2Shell({
     mobileVisibleTopInset,
     viewport.zoom,
   ]);
+  const highlightedColorName = highlightedColorId
+    ? (colorsById[highlightedColorId]?.name ?? "color")
+    : null;
+  const speckleHighlightActive = highlightedSpeckleCellIndexes !== null;
+  const speckleHighlightCount = highlightedSpeckleCellIndexes?.length ?? 0;
   const fitToGrid = useCallback(() => {
     if (
       fitZoom <= 0 ||
@@ -1624,6 +1826,10 @@ export function EditorV2Shell({
         return;
       }
 
+      if (sidebarCollapsed !== snapshot.sidebarCollapsed) {
+        dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+      }
+
       dispatch(createSetViewportZoomCommand(snapshot.viewport.zoom));
       dispatch(
         createPanViewportCommand(
@@ -1634,15 +1840,16 @@ export function EditorV2Shell({
 
       bottomPanelCanvasFocusSnapshotRef.current = null;
     },
-    [dispatch, viewport.offsetX, viewport.offsetY],
+    [dispatch, sidebarCollapsed, viewport.offsetX, viewport.offsetY],
   );
 
   const enterBottomPanelCanvasFocus = useCallback(() => {
-    if (isBottomPanelCanvasFocusActive || !isBottomPanelLayout || sidebarCollapsed) {
+    if (isBottomPanelCanvasFocusActive || !isBottomPanelLayout) {
       return;
     }
 
     bottomPanelCanvasFocusSnapshotRef.current = {
+      sidebarCollapsed,
       viewport: {
         zoom: viewport.zoom,
         offsetX: viewport.offsetX,
@@ -1650,8 +1857,12 @@ export function EditorV2Shell({
       },
     };
     bottomPanelCanvasFocusFitPendingRef.current = true;
+    if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
     setIsBottomPanelCanvasFocusActive(true);
   }, [
+    dispatch,
     isBottomPanelCanvasFocusActive,
     isBottomPanelLayout,
     sidebarCollapsed,
@@ -1673,13 +1884,109 @@ export function EditorV2Shell({
     isBottomPanelCanvasFocusActive,
   ]);
 
-  const clearHighlightedColor = useCallback(() => {
+  const clearHighlightedCells = useCallback(() => {
     setHighlightedColorId(null);
+    setHighlightedSpeckleCellIndexes(null);
 
     if (isBottomPanelCanvasFocusActive) {
       exitBottomPanelCanvasFocus();
     }
-  }, [exitBottomPanelCanvasFocus, isBottomPanelCanvasFocusActive]);
+
+    const snapshot = speckleHighlightSnapshotRef.current;
+
+    if (snapshot && sidebarCollapsed !== snapshot.sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(snapshot.sidebarCollapsed));
+    }
+
+    speckleHighlightSnapshotRef.current = null;
+  }, [
+    dispatch,
+    exitBottomPanelCanvasFocus,
+    isBottomPanelCanvasFocusActive,
+    sidebarCollapsed,
+  ]);
+
+  const handleSpeckleDetect = useCallback(() => {
+    const speckleCellIndexes = detectSpeckleCellIndexes(
+      document.grid.cells,
+      document.grid.width,
+      document.grid.height,
+      selectedCellIndexSet,
+    );
+
+    setHighlightedColorId(null);
+    setHighlightedSpeckleCellIndexes(speckleCellIndexes);
+
+    if (!speckleHighlightSnapshotRef.current) {
+      speckleHighlightSnapshotRef.current = { sidebarCollapsed };
+    }
+
+    if (isBottomPanelLayout) {
+      enterBottomPanelCanvasFocus();
+    } else if (!sidebarCollapsed) {
+      dispatch(createSetSidebarCollapsedCommand(true));
+    }
+  }, [
+    dispatch,
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    enterBottomPanelCanvasFocus,
+    isBottomPanelLayout,
+    selectedCellIndexSet,
+    sidebarCollapsed,
+  ]);
+
+  useEffect(() => {
+    if (!speckleHighlightActive) {
+      return;
+    }
+
+    setHighlightedSpeckleCellIndexes(
+      detectSpeckleCellIndexes(
+        document.grid.cells,
+        document.grid.width,
+        document.grid.height,
+        selectedCellIndexSet,
+      ),
+    );
+  }, [
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    selectedCellIndexSet,
+    speckleHighlightActive,
+  ]);
+
+  const handleSmoothSpeckles = useCallback(() => {
+    if (!speckleHighlightActive) {
+      return;
+    }
+
+    const replacements = buildSpeckleSmoothingReplacements(
+      document.grid.cells,
+      document.grid.width,
+      document.grid.height,
+      colorsById,
+      selectedCellIndexSet,
+    ).map(({ index, toColorId }) => ({ index, toColorId }));
+
+    if (replacements.length === 0) {
+      return;
+    }
+
+    dispatch(createSmoothSpecklesCommand(replacements));
+    clearHighlightedCells();
+  }, [
+    clearHighlightedCells,
+    colorsById,
+    dispatch,
+    document.grid.cells,
+    document.grid.height,
+    document.grid.width,
+    selectedCellIndexSet,
+    speckleHighlightActive,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -1951,10 +2258,7 @@ export function EditorV2Shell({
   ]);
 
   useEffect(() => {
-    if (!isBottomPanelCanvasFocusActive || sidebarCollapsed) {
-      if (isBottomPanelCanvasFocusActive && sidebarCollapsed) {
-        exitBottomPanelCanvasFocus({ restoreViewport: false });
-      }
+    if (!isBottomPanelCanvasFocusActive) {
       return;
     }
 
@@ -2143,7 +2447,7 @@ export function EditorV2Shell({
 
   useEffect(() => {
     const escapeAction = getWorkspaceEscapeAction({
-      highlightedColorActive: highlightedColorId !== null,
+      highlightedColorActive: highlightedColorId !== null || speckleHighlightActive,
       iconPlacementActive: Boolean(iconPlacement),
       previewMode,
       traceEditModeActive: traceImageEditingActive,
@@ -2206,7 +2510,7 @@ export function EditorV2Shell({
       }
 
       if (escapeAction === "clear-highlight") {
-        clearHighlightedColor();
+        clearHighlightedCells();
         return;
       }
 
@@ -2216,7 +2520,7 @@ export function EditorV2Shell({
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [
-    clearHighlightedColor,
+    clearHighlightedCells,
     dispatch,
     exitPreviewMode,
     handleCancelIconEraser,
@@ -2234,6 +2538,7 @@ export function EditorV2Shell({
     traceCropEditing,
     traceEraserEditing,
     traceRepositionActive,
+    speckleHighlightActive,
   ]);
 
   useEffect(() => {
@@ -2336,6 +2641,14 @@ export function EditorV2Shell({
     dispatch(createSetActiveSidebarSectionCommand("color"));
     dispatch(createSetSidebarCollapsedCommand(false));
   }, [dispatch]);
+
+  const handleCloseBottomPanelDrawer = useCallback(() => {
+    if (sidebarCollapsed) {
+      return;
+    }
+
+    dispatch(createSetSidebarCollapsedCommand(true));
+  }, [dispatch, sidebarCollapsed]);
 
   const handleOpenCustomPalettesPanel = useCallback(() => {
     setRequestedColorPanelView("custom-palettes");
@@ -2539,6 +2852,18 @@ export function EditorV2Shell({
     setVersionHistory(currentStorageId ? versionHistoryCache.get(currentStorageId) ?? [] : []);
     setVersionHistoryError(null);
   }, [currentStorageId]);
+
+  useEffect(() => {
+    if (!bugReportSuccessVisible) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setBugReportSuccessVisible(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [bugReportSuccessVisible]);
 
   useEffect(() => {
     if (!errorNotification) {
@@ -2816,6 +3141,11 @@ export function EditorV2Shell({
       return;
     }
 
+    if (value === "report-issue") {
+      setBugReportModalOpen(true);
+      return;
+    }
+
     if (value === "delete") {
       setDeleteConfirmationOpen(true);
       return;
@@ -2956,7 +3286,6 @@ export function EditorV2Shell({
                   deleteButtonState={deleteButtonState}
                   exportButtonState={exportButtonState}
                   getItemLabel={renderHeaderMenuItemLabel}
-                  hasPersistableUnsavedChanges={hasPersistableUnsavedChanges}
                   hasSavedDesignAccess={hasSavedDesignAccess}
                   items={headerFileMenuItems}
                   onAction={handleHeaderMenuAction}
@@ -2965,7 +3294,7 @@ export function EditorV2Shell({
                   saveButtonState={saveButtonState}
                   savedDocumentsLoading={savedDocumentsLoading}
                 />
-                {!hasSavedDesignAccess ? (
+                {/* {!hasSavedDesignAccess ? (
                   <Button
                     type="button"
                     variant="secondary"
@@ -2977,7 +3306,7 @@ export function EditorV2Shell({
                   >
                     Clear browser drafts
                   </Button>
-                ) : null}
+                ) : null} */}
               </div>
             ),
             headerAutosaveTarget,
@@ -3046,32 +3375,24 @@ export function EditorV2Shell({
         : null}
       {!suppressHeaderForSetupModal && !isVersionHistoryMode && headerOverflowTarget && isBottomPanelLayout
         ? createPortal(
-            <SingleSelectDropdown
-              ariaLabel="More actions"
+            <HeaderFileMenu
               items={mobileHeaderMenuItems}
-              value=""
-              placeholder="More actions"
-              triggerLabel={<span className={styles.headerOverflowDots}>⋮</span>}
-              triggerVariant="ghost"
-              showChevron={false}
-              menuPortalToViewport
-              menuPlacement="bottom-end"
-              menuShowTrailingCheck={false}
-              minWidth="auto"
-              getItemIsDivider={(item) => item.kind === "divider"}
-              getItemValue={(item) => item.id}
+              saveButtonState={saveButtonState}
+              exportButtonState={exportButtonState}
+              deleteButtonState={deleteButtonState}
+              currentStorageId={currentStorageId}
+              hasSavedDesignAccess={hasSavedDesignAccess}
+              savedDocumentsLoading={savedDocumentsLoading}
+              recentSavedDocuments={recentSavedDocuments}
               getItemLabel={renderHeaderMenuItemLabel}
               getItemDisabled={(item) =>
-                item.kind === "divider" ||
-                (item.id === "download" && exportButtonState === "exporting") ||
-                (item.id === "delete" && deleteButtonState === "deleting") ||
-                (item.id === "preview" && previewModeDisabled)
+                item.id === "preview" ? previewModeDisabled : false
               }
-              onValueChange={handleHeaderMenuAction}
-              wrapperClassName={styles.headerOverflowMenu}
-              triggerClassName={styles.headerOverflowTrigger}
-              menuClassName={styles.headerOverflowSurface}
-              triggerStyle={{ minWidth: "32px", padding: "6px 8px" }}
+              onAction={handleHeaderMenuAction}
+              onOpenSavedDocuments={onOpenSavedDocuments}
+              ariaLabel="More actions"
+              menuLabel="More actions"
+              menuPlacement="right"
             />,
             headerOverflowTarget,
           )
@@ -3132,7 +3453,7 @@ export function EditorV2Shell({
                   </>
                 ) : (
                   <>
-                    <ButtonIcon icon="/icons/lucide/download.svg" className={styles.saveButtonIcon} />
+                    <ButtonIcon icon="/icons/lucide/upload.svg" className={styles.saveButtonIcon} />
                     Export
                   </>
                 )}
@@ -3266,6 +3587,21 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      {mounted && bugReportSuccessVisible
+        ? createPortal(
+            <div className={styles.editorNotificationOverlayTop}>
+              <div className={styles.editorNotificationStack} data-auto-dismiss="true">
+                <Notification
+                  tone="success"
+                  title="Form submitted"
+                  description="We got your submission - thanks for the feedback!"
+                  onDismiss={() => setBugReportSuccessVisible(false)}
+                />
+              </div>
+            </div>,
+            window.document.body,
+          )
+        : null}
       <Modal
         isOpen={exportAuthModalOpen}
         title="Export your pattern as a PDF"
@@ -3318,7 +3654,7 @@ export function EditorV2Shell({
 
       <div
         className={styles.shellContent}
-        data-modal-open={setupModalOpen ? "true" : "false"}
+        data-modal-open={setupModalOpen || bugReportModalOpen ? "true" : "false"}
         data-mobile-selection-docked={mobileSelectionDocked ? "true" : "false"}
         data-version-history-mode={isVersionHistoryMode ? "true" : "false"}
       >
@@ -3347,8 +3683,10 @@ export function EditorV2Shell({
                     colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
+                    highlightedCellIndexes={null}
                     highlightedColorId={highlightedColorId}
                     interactionLocked
+                    latestGridCellChange={null}
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={false}
@@ -3480,6 +3818,15 @@ export function EditorV2Shell({
                   </div>
                 ) : null}
 
+                {isBottomPanelLayout && !sidebarCollapsed && !isBottomPanelCanvasFocusActive ? (
+                  <button
+                    type="button"
+                    className={styles.mobileStageDimmer}
+                    aria-label="Close panel"
+                    onClick={handleCloseBottomPanelDrawer}
+                  />
+                ) : null}
+
                 <div
                   className={styles.sidePanelOverlay}
                   data-collapsed={sidebarCollapsed ? "true" : "false"}
@@ -3521,7 +3868,9 @@ export function EditorV2Shell({
                       if (!selectedRecord) return;
                       void onLoadDocument(selectedRecord);
                     }}
-                    onClose={() => dispatch(createSetSidebarCollapsedCommand(true))}
+                    onColorSwapPreviewChange={setColorSwapPreview}
+                    onMergeColorsPreviewChange={setColorMergePreview}
+                    onDeleteColorsPreviewChange={setColorDeletePreview}
                     onEnterBottomPanelCanvasFocus={enterBottomPanelCanvasFocus}
                     onExitBottomPanelCanvasFocus={exitBottomPanelCanvasFocus}
                     onDuplicateDocument={() => {
@@ -3574,6 +3923,7 @@ export function EditorV2Shell({
                     onCommitTraceCrop={handleCommitTraceCrop}
                     onResetTraceCrop={handleResetTraceCrop}
                     onToggleTraceEditMode={handleToggleTraceEditMode}
+                    onCloseBottomPanelDrawer={handleCloseBottomPanelDrawer}
                     trace={trace}
                     traceConversionPreview={traceConversionPreview}
                     traceRepositionActive={traceRepositionActive}
@@ -3592,6 +3942,7 @@ export function EditorV2Shell({
                     saveMessage={saveMessage}
                     saveMode={saveMode}
                     onHighlightColorChange={setHighlightedColorId}
+                    onSpeckleDetect={handleSpeckleDetect}
                     showGridlines={showGridlines}
                     showSymbols={showSymbols}
                     touchSnappingEnabled={touchSnappingEnabled}
@@ -3601,7 +3952,7 @@ export function EditorV2Shell({
                   />
                 </div>
 
-                {previewMode || isBottomPanelCanvasFocusActive ? null : (
+                {previewMode ? null : (
                   <div
                     ref={stageToolbarTopRef}
                     className={styles.stageToolbarTop}
@@ -3612,7 +3963,40 @@ export function EditorV2Shell({
                           : `${EXPANDED_SIDEBAR_WIDTH}px`,
                     }}
                   >
-                    {traceConversionPreview ? (
+                    {speckleHighlightActive || (isBottomPanelCanvasFocusActive && highlightedColorId) ? (
+                      <div className={styles.highlightPreviewToolbar}>
+                        <span className={styles.highlightPreviewLabel} style={typographyStyles.p2}>
+                          {speckleHighlightActive
+                            ? speckleHighlightCount === 0
+                              ? "No speckles detected"
+                              : `Speckle Detect: ${speckleHighlightCount} highlighted`
+                            : `Highlighting ${highlightedColorName}`}
+                        </span>
+                        {speckleHighlightActive ? (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            disabled={speckleHighlightCount === 0}
+                            onClick={handleSmoothSpeckles}
+                          >
+                            Smooth
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghostV2"
+                          size="md"
+                          iconOnly
+                          className={styles.highlightPreviewCloseButton}
+                          aria-label={speckleHighlightActive ? "Exit speckle detect" : "Exit color highlight"}
+                          title={speckleHighlightActive ? "Exit speckle detect" : "Exit color highlight"}
+                          onClick={clearHighlightedCells}
+                        >
+                          <ButtonIcon icon="/icons/lucide/x.svg" />
+                        </Button>
+                      </div>
+                    ) : traceConversionPreview ? (
                       <ConversionPreviewToolbar
                         dispatch={dispatch}
                         onExitPreview={handleExitTraceConversionPreviewFromToolbar}
@@ -3722,6 +4106,8 @@ export function EditorV2Shell({
                         customPalettesById={document.palette.customPalettesById}
                         dispatch={dispatch}
                         eyedropperReturnTool={state.session.eyedropperReturnTool}
+                        gridHeight={document.grid.height}
+                        gridWidth={document.grid.width}
                         hasPaintedCells={hasPaintedCells}
                         featuredColorIds={featuredColorIds}
                         palette={palette}
@@ -3789,7 +4175,14 @@ export function EditorV2Shell({
                     colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
                     colorsById={colorsById}
                     dispatch={dispatch}
+                    highlightedCellIndexes={
+                      highlightedSpeckleCellIndexes ?? (highlightedColorId ? selectedCellIndexes : null)
+                    }
                     highlightedColorId={highlightedColorId}
+                    latestGridCellChange={latestGridCellChangeRef.current}
+                    cellPreviewOverride={
+                      colorMergePreviewCells ?? colorDeletePreviewCells ?? colorSwapPreviewCells
+                    }
                     onSurfaceReady={onCanvasReady}
                     previewMode={previewMode}
                     showGridlines={showGridlines}
@@ -3843,6 +4236,35 @@ export function EditorV2Shell({
             window.document.body,
           )
         : null}
+      <EditorBugReportModal
+        activeSidebarSection={activeSidebarSection}
+        activeTool={activeTool}
+        currentStorageId={currentStorageId || null}
+        gridHeight={document.grid.height}
+        gridWidth={document.grid.width}
+        hasSavedDesignAccess={hasSavedDesignAccess}
+        isOpen={bugReportModalOpen}
+        previewMode={previewMode}
+        projectTitle={title}
+        traceAttached={Boolean(trace)}
+        onClose={() => setBugReportModalOpen(false)}
+        onSubmitted={() => {
+          setBugReportModalOpen(false);
+          setBugReportSuccessVisible(true);
+        }}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="md"
+        className={styles.floatingReportButton}
+        data-feedback-modal-open={bugReportModalOpen ? "true" : "false"}
+        aria-label="Feedback"
+        onClick={() => setBugReportModalOpen(true)}
+      >
+        <ButtonIcon icon="/icons/lucide/message-square-warning.svg" />
+        <span className={styles.floatingReportButtonLabel}>Feedback</span>
+      </Button>
     </main>
   );
 }
@@ -3851,10 +4273,13 @@ function HeaderFileMenu({
   currentStorageId,
   deleteButtonState,
   exportButtonState,
+  getItemDisabled: getAdditionalItemDisabled,
   getItemLabel,
-  hasPersistableUnsavedChanges,
   hasSavedDesignAccess,
   items,
+  ariaLabel = "File menu",
+  menuLabel = "File actions",
+  menuPlacement = "left",
   onAction,
   onOpenSavedDocuments,
   recentSavedDocuments,
@@ -3864,10 +4289,13 @@ function HeaderFileMenu({
   currentStorageId: string;
   deleteButtonState: DeleteButtonState;
   exportButtonState: ExportButtonState;
+  getItemDisabled?: (item: HeaderFileMenuItem) => boolean;
   getItemLabel: (item: HeaderFileMenuItem) => ReactNode;
-  hasPersistableUnsavedChanges: boolean;
   hasSavedDesignAccess: boolean;
   items: HeaderFileMenuItem[];
+  ariaLabel?: string;
+  menuLabel?: string;
+  menuPlacement?: "left" | "right";
   onAction: (value: string) => void;
   onOpenSavedDocuments: () => Promise<void> | void;
   recentSavedDocuments: SavedEditorV2DocumentRecord[];
@@ -3956,9 +4384,13 @@ function HeaderFileMenu({
     const menuRect = menuRef.current.getBoundingClientRect();
     const measuredMenuWidth = menuRect.width || 220;
     const measuredMenuHeight = menuRect.height || 0;
-    const left = Math.min(
-      Math.max(triggerRect.left, viewportPadding),
-      window.innerWidth - measuredMenuWidth - viewportPadding,
+    const preferredLeft =
+      menuPlacement === "right"
+        ? triggerRect.right - measuredMenuWidth
+        : triggerRect.left;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(preferredLeft, window.innerWidth - measuredMenuWidth - viewportPadding),
     );
     const top = Math.min(
       triggerRect.bottom + 4,
@@ -3976,7 +4408,7 @@ function HeaderFileMenu({
       overflowY: "auto",
       visibility: "visible",
     });
-  }, []);
+  }, [menuPlacement]);
 
   useLayoutEffect(() => {
     if (!open || !mounted) {
@@ -3998,6 +4430,7 @@ function HeaderFileMenu({
 
   function getItemDisabled(item: HeaderFileMenuItem) {
     return (
+      getAdditionalItemDisabled?.(item) ||
       item.kind === "divider" ||
       (item.id === "save-version" && saveButtonState === "saving") ||
       (item.id === "version-history" &&
@@ -4066,7 +4499,7 @@ function HeaderFileMenu({
         onClick={() => setOpen((currentValue) => !currentValue)}
         className={styles.headerFileMenuTrigger}
         style={{ minWidth: "auto", padding: "6px 8px" }}
-        aria-label="File menu"
+        aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -4083,7 +4516,7 @@ function HeaderFileMenu({
                 .filter(Boolean)
                 .join(" ")}
               role="menu"
-              aria-label="File actions"
+              aria-label={menuLabel}
               style={portalStyle ?? { visibility: "hidden" }}
             >
               {items.map((item) =>
@@ -4373,4 +4806,34 @@ async function uploadTraceMask(input: {
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const response = await fetch(dataUrl);
   return response.blob();
+}
+
+function getLatestGridCellChangeFromPatches(
+  patches: DocumentPatch[] | undefined,
+  currentRevision: number,
+): { indexes: readonly number[]; revision: number } | null {
+  if (!patches?.length) {
+    return null;
+  }
+
+  const indexes = new Set<number>();
+
+  for (const patch of patches) {
+    if (patch.type !== "grid.replaceCells") {
+      continue;
+    }
+
+    for (const cell of patch.cells) {
+      indexes.add(cell.index);
+    }
+  }
+
+  if (indexes.size === 0) {
+    return null;
+  }
+
+  return {
+    indexes: Array.from(indexes),
+    revision: currentRevision + 1,
+  };
 }

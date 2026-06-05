@@ -20,6 +20,10 @@ import {
 
 type SelectionResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
+const FINE_POINTER_SELECTION_HANDLE_TOLERANCE_CELLS = 0.75;
+const COARSE_POINTER_SELECTION_HANDLE_TOLERANCE_CELLS = 1.1;
+const COARSE_POINTER_SELECTION_HANDLE_TARGET_PX = 44;
+
 interface UseSelectionDragOptions {
   activeTool: ActiveTool;
   coarsePointer?: boolean;
@@ -30,6 +34,7 @@ interface UseSelectionDragOptions {
   ) => SelectionPoint | null;
   state: EditorStoreState;
   selectionShape: SelectionState["shape"];
+  selectionCellSizePx: number;
 }
 
 export function useSelectionDrag({
@@ -39,6 +44,7 @@ export function useSelectionDrag({
   getClampedSelectionPointFromClient,
   state,
   selectionShape,
+  selectionCellSizePx,
 }: UseSelectionDragOptions) {
   const [isLassoing, setIsLassoing] = useState(false);
   const [isMovingSelection, setIsMovingSelection] = useState(false);
@@ -89,7 +95,7 @@ export function useSelectionDrag({
           event.clientY,
         );
         const nextHoveredHandle = point
-          ? getSelectionResizeHandleAtPoint(state, point, coarsePointer)
+          ? getSelectionResizeHandleAtPoint(state, point, coarsePointer, selectionCellSizePx)
           : null;
         setHoveredResizeHandle(nextHoveredHandle);
         setHoveringMovableSelection(
@@ -197,6 +203,7 @@ export function useSelectionDrag({
     selectionShape,
     state,
     coarsePointer,
+    selectionCellSizePx,
   ]);
 
   return {
@@ -226,7 +233,12 @@ export function useSelectionDrag({
       return false;
     }
 
-    const resizeHandle = getSelectionResizeHandleAtPoint(state, point, coarsePointer);
+    const resizeHandle = getSelectionResizeHandleAtPoint(
+      state,
+      point,
+      coarsePointer,
+      selectionCellSizePx,
+    );
 
     if (resizeHandle) {
       setActiveResizeHandle(resizeHandle);
@@ -270,7 +282,7 @@ export function useSelectionDrag({
     }
 
     const resizeHandle = point
-      ? getSelectionResizeHandleAtPoint(state, point, coarsePointer)
+      ? getSelectionResizeHandleAtPoint(state, point, coarsePointer, selectionCellSizePx)
       : null;
     setHoveredResizeHandle(resizeHandle);
     setHoveringMovableSelection(
@@ -332,6 +344,7 @@ function getSelectionResizeHandleAtPoint(
   state: EditorStoreState,
   point: SelectionPoint,
   coarsePointer: boolean,
+  selectionCellSizePx: number,
 ): SelectionResizeHandle | null {
   const selection = state.session.selection;
 
@@ -344,7 +357,7 @@ function getSelectionResizeHandleAtPoint(
     return null;
   }
 
-  const tolerance = coarsePointer ? 1.1 : 0.75;
+  const tolerance = getSelectionResizeHandleTolerance(coarsePointer, selectionCellSizePx);
   const corners: Array<{ handle: SelectionResizeHandle; point: SelectionPoint }> = [
     { handle: "nw", point: { x: selection.rect.x, y: selection.rect.y } },
     {
@@ -402,4 +415,21 @@ function getSelectionResizeHandleAtPoint(
   }
 
   return null;
+}
+
+function getSelectionResizeHandleTolerance(
+  coarsePointer: boolean,
+  selectionCellSizePx: number,
+): number {
+  if (!coarsePointer) {
+    return FINE_POINTER_SELECTION_HANDLE_TOLERANCE_CELLS;
+  }
+
+  const halfTargetInCells =
+    COARSE_POINTER_SELECTION_HANDLE_TARGET_PX / 2 / Math.max(selectionCellSizePx, 1);
+
+  return Math.max(
+    COARSE_POINTER_SELECTION_HANDLE_TOLERANCE_CELLS,
+    halfTargetInCells,
+  );
 }

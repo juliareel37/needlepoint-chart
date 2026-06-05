@@ -119,6 +119,7 @@ export function drawSymbolsOverlay(
     drawX: number;
     drawY: number;
     gridWidth: number;
+    onlyCellIndexes?: Set<number> | null;
     onlyColorId?: string | null;
     symbolAssignments: Record<string, string>;
     zoom: number;
@@ -131,6 +132,7 @@ export function drawSymbolsOverlay(
     drawX,
     drawY,
     gridWidth,
+    onlyCellIndexes = null,
     onlyColorId = null,
     symbolAssignments,
     zoom,
@@ -151,6 +153,10 @@ export function drawSymbolsOverlay(
     const colorId = cells[index];
 
     if (!colorId) {
+      continue;
+    }
+
+    if (onlyCellIndexes && !onlyCellIndexes.has(index)) {
       continue;
     }
 

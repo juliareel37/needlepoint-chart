@@ -1,4 +1,12 @@
 .editor-v2-route-shell {
+  --editor-font-weight-semibold: 500;
+  --editor-font-weight-bold: 600;
+  --editor-heading-letter-spacing: -0.015em;
+  --editor-text-primary: #262626;
+  --font-primary: var(--font-editor-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-primary);
+  --font-mono: var(--font-primary);
+  font-family: var(--font-primary);
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -8,6 +16,64 @@
   user-select: none;
   animation: editorV2RouteEnter 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+body:has(.editor-v2-route-shell) {
+  --editor-font-weight-semibold: 500;
+  --editor-font-weight-bold: 600;
+  --editor-heading-letter-spacing: -0.015em;
+  --editor-text-primary: #262626;
+  --font-primary: var(--font-editor-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-primary);
+  --font-mono: var(--font-primary);
+  font-family: var(--font-primary);
+}
+
+#app-shell-root:has(.editor-v2-route-shell) {
+  --editor-font-weight-semibold: 500;
+  --editor-font-weight-bold: 600;
+  --editor-heading-letter-spacing: -0.015em;
+  --editor-text-primary: #262626;
+  --font-primary: var(--font-editor-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-secondary: var(--font-primary);
+  --font-mono: var(--font-primary);
+  font-family: var(--font-primary);
+}
+
+:root:not([data-theme="dark"]) body:has(.editor-v2-route-shell),
+:root:not([data-theme="dark"]) .editor-v2-route-shell,
+:root:not([data-theme="dark"]) #app-shell-root:has(.editor-v2-route-shell) {
+  --text-primary: var(--editor-text-primary);
+}
+
+/* #app-shell-root:has(.editor-v2-route-shell) :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  b,
+  strong
+) {
+  font-weight: var(--editor-font-weight-bold) !important;
+}
+
+#app-shell-root:has(.editor-v2-route-shell) :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6
+) {
+  letter-spacing: var(--editor-heading-letter-spacing);
+}
+
+#app-shell-root:has(.editor-v2-route-shell) :where(
+  button
+) {
+  font-weight: var(--editor-font-weight-semibold) !important;
+} */
 
 .editor-v2-route-shell :is(
   input,

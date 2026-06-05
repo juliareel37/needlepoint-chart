@@ -577,55 +577,57 @@ export function IconsPanelPage({
               />
             </div>
           </div>
-          <div className={styles.sidebarSubsection}>
-            <div className={styles.iconsPanelTools}>
-              <div className={styles.iconsPanelUploadRow}>
-                <input
-                  id={uploadInputId}
-                  ref={uploadInputRef}
-                  type="file"
-                  accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
-                  className={styles.iconsPanelUploadInput}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) {
-                      return;
-                    }
+          {view.type === "overview" ? (
+            <div className={[styles.sidebarSubsection, styles.iconsPanelUploadSection].join(" ")}>
+              <div className={styles.iconsPanelTools}>
+                <div className={styles.iconsPanelUploadRow}>
+                  <input
+                    id={uploadInputId}
+                    ref={uploadInputRef}
+                    type="file"
+                    accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+                    className={styles.iconsPanelUploadInput}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) {
+                        return;
+                      }
 
-                    void handleUploadedGraphicSelected(file);
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  disabled={placementActive || uploadingGraphic}
-                  className={styles.iconsPanelUploadButton}
-                  onClick={() => uploadInputRef.current?.click()}
-                >
-                  <ButtonIcon icon="/icons/lucide/upload.svg" />
-                  {uploadingGraphic ? "Processing..." : "Upload graphic"}
-                </Button>
+                      void handleUploadedGraphicSelected(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    disabled={placementActive || uploadingGraphic}
+                    className={styles.iconsPanelUploadButton}
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    {/* <ButtonIcon icon="/icons/lucide/upload.svg" /> */}
+                    {uploadingGraphic ? "Processing..." : "Upload graphic"}
+                  </Button>
+                </div>
               </div>
+
+              {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+                Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
+                library graphics.
+              </p> */}
+
+              {uploadError ? (
+                <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
+                  {uploadError}
+                </p>
+              ) : null}
             </div>
-
-            {/* <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-              Upload a raster or SVG graphic to place it with the same convert-and-adjust flow as
-              library graphics.
-            </p> */}
-
-            {uploadError ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                {uploadError}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
           {view.type === "category" ? (
             <>
             {loading ? renderCategorySkeleton() : null}
 
             {!loading && !loadError && categoryContentReady && !hasCategorySearchResults ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 No icons found in {selectedCategory} for "{searchQuery.trim()}".
               </p>
             ) : null}
@@ -645,13 +647,13 @@ export function IconsPanelPage({
             {loading ? renderOverviewSkeleton() : null}
 
             {!loading && loadError ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 {loadError}
               </p>
             ) : null}
 
             {!loading && !loadError && !hasSearchResults ? (
-              <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+              <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
                 No icons found for "{searchQuery.trim()}".
               </p>
             ) : null}
@@ -672,28 +674,29 @@ export function IconsPanelPage({
 
                   return (
                     <div key={group.category} className={styles.sidebarSubsection}>
-                      <div className={styles.sidebarSubsectionHeaderRow}>
-                        <div className={styles.sidebarSubsectionHeader}>
+                      <div className={styles.sidebarSubsectionHeader}>
+                        <div className={styles.sidebarSubsectionTitleRow}>
                           <h3 style={typographyStyles.h5}>{group.category}</h3>
-                          {!normalizedSearchQuery ? (
-                            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
-                              {group.count} icons
-                            </p>
-                          ) : null}
+                          <Button
+                            type="button"
+                            variant="ghostV2"
+                            size="md"
+                            iconOnly
+                            className={styles.sidebarHeaderAction}
+                            aria-label={`View all icons in ${group.category}`}
+                            title={`View all icons in ${group.category}`}
+                            onClick={() =>
+                              handleViewChange({ type: "category", category: group.category })
+                            }
+                          >
+                            <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghostV2"
-                          size="sm"
-                          className={styles.sidebarHeaderAction}
-                          aria-label={`View all icons in ${group.category}`}
-                          title={`View all icons in ${group.category}`}
-                          onClick={() =>
-                            handleViewChange({ type: "category", category: group.category })
-                          }
-                        >
-                          <ButtonIcon icon="/icons/lucide/arrow-right.svg" />
-                        </Button>
+                        {!normalizedSearchQuery ? (
+                          <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
+                            {group.count} icons
+                          </p>
+                        ) : null}
                       </div>
 
                       <div className={styles.iconLibraryGrid}>
@@ -722,7 +725,7 @@ export function IconsPanelPage({
           ) : null}
 
           {view.type === "category" && !loading && loadError ? (
-            <p className={styles.sidebarSubsectionHint} style={typographyStyles.p2}>
+            <p className={styles.sidebarSubsectionHint} style={typographyStyles.captionMd}>
               {loadError}
             </p>
           ) : null}

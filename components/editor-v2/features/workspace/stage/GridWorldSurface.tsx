@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ColorLibraryDismissGesture } from "../shell/FloatingToolbar";
+import { clampGridBrushSize } from "@/lib/editor-v2/editor/brushSize";
 import type {
   ActiveTool,
   EditorStore,
   EditorStoreState,
+  GridCellValue,
   GridPoint,
   PaletteColor,
   ViewportState,
@@ -61,7 +63,13 @@ interface GridWorldSurfaceProps {
   colorLibraryDismissGestureRef?: RefObject<ColorLibraryDismissGesture | null>;
   colorsById: Record<string, PaletteColor>;
   dispatch: EditorStore["dispatch"];
+  highlightedCellIndexes?: number[] | null;
   highlightedColorId: string | null;
+  latestGridCellChange?: {
+    indexes: readonly number[];
+    revision: number;
+  } | null;
+  cellPreviewOverride?: GridCellValue[] | null;
   interactionLocked?: boolean;
   onSurfaceReady?: () => void;
   previewMode: boolean;
@@ -102,7 +110,10 @@ export function GridWorldSurface({
   colorLibraryDismissGestureRef,
   colorsById,
   dispatch,
+  highlightedCellIndexes = null,
   highlightedColorId,
+  latestGridCellChange = null,
+  cellPreviewOverride = null,
   interactionLocked = false,
   onSurfaceReady,
   previewMode,
@@ -181,6 +192,7 @@ export function GridWorldSurface({
   const effectiveShowSymbols = showSymbols && !previewMode;
   const effectiveShowRuler = showRuler;
   const threadView = previewMode || state.ui.preferences.threadView;
+  const customBrushCursorEnabled = false;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [displayHost, setDisplayHost] = useState<HTMLElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -200,7 +212,12 @@ export function GridWorldSurface({
     x: 0,
     y: 0,
   });
-  const [brushPreviewCell, setBrushPreviewCell] = useState<GridPoint | null>(null);
+  const [brushCursorPoint, setBrushCursorPoint] = useState<{ x: number; y: number } | null>(null);
+  const [eyedropperCursorPoint, setEyedropperCursorPoint] = useState<{
+    color: string | null;
+    x: number;
+    y: number;
+  } | null>(null);
   const [loadedTraceAsset, setLoadedTraceAsset] = useState<LoadedTraceAsset | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const frameOrigin = {
@@ -219,23 +236,28 @@ export function GridWorldSurface({
     traceEraserActive ||
     duplicatePlacementActive;
   const mainBrushToolActive = activeTool === "paint" || activeTool === "erase";
-  const normalizedBrushSize = Number.isFinite(brushSize)
-    ? Math.min(Math.max(Math.round(brushSize), 1), 10)
-    : 1;
-  const brushLeadingOffset = Math.floor((normalizedBrushSize - 1) / 2);
+  const customBrushCursorActive = customBrushCursorEnabled && mainBrushToolActive;
+  const eyedropperToolActive = activeTool === "eyedropper";
+  const normalizedBrushSize = clampGridBrushSize(brushSize, grid.width, grid.height);
   const brushCursorSize = normalizedBrushSize * metrics.cellSize * viewport.zoom;
   const brushCursorVisible =
     !coarsePointer &&
     !interactionLocked &&
     !paintDisabled &&
-    mainBrushToolActive &&
-    brushPreviewCell !== null;
+    customBrushCursorActive &&
+    brushCursorPoint !== null;
   const centeredBrushPreviewVisible =
     !coarsePointer &&
     !interactionLocked &&
     !paintDisabled &&
-    mainBrushToolActive &&
+    customBrushCursorActive &&
     brushPreviewVisible;
+  const eyedropperCursorVisible =
+    !coarsePointer &&
+    !interactionLocked &&
+    !paintDisabled &&
+    eyedropperToolActive &&
+    eyedropperCursorPoint !== null;
   const textPreviewColor =
     (activeColorId ? colorsById[activeColorId]?.hex : null) ?? "#111827";
 
@@ -329,8 +351,16 @@ export function GridWorldSurface({
       return;
     }
 
-    setBrushPreviewCell(null);
+    setBrushCursorPoint(null);
   }, [interactionLocked, mainBrushToolActive, paintDisabled]);
+
+  useEffect(() => {
+    if (eyedropperToolActive && !interactionLocked && !paintDisabled) {
+      return;
+    }
+
+    setEyedropperCursorPoint(null);
+  }, [eyedropperToolActive, interactionLocked, paintDisabled]);
   const getSelectionPointFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const worldElement = worldRef.current;
@@ -430,7 +460,14 @@ export function GridWorldSurface({
     },
     [getSelectionPointFromClient],
   );
-  const { cancelPaintStroke, cursor: selectionCursor, handleHover, handlePointerDown, handlePointerEnter } = useGridInteractions({
+  const {
+    cancelPaintStroke,
+    cursor: selectionCursor,
+    handleHover,
+    handlePointerDown,
+    handlePointerEnter,
+    isPaintStrokeActive,
+  } = useGridInteractions({
     activeColorId,
     activeTool,
     brushSize,
@@ -441,6 +478,7 @@ export function GridWorldSurface({
     metrics,
     paintDisabled,
     previewMode,
+    renderedCellSize,
     state,
     trace,
   });
@@ -607,23 +645,78 @@ export function GridWorldSurface({
       onPointerDownCapture={handleStagePointerDownCapture}
       onAuxClick={handleStageAuxClick}
       onPointerMove={(event) => {
-        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+        if (
+          (!customBrushCursorActive && !eyedropperToolActive) ||
+          coarsePointer ||
+          interactionLocked ||
+          paintDisabled
+        ) {
           return;
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
-        setBrushPreviewCell(point);
+        if (!point) {
+          setBrushCursorPoint(null);
+          setEyedropperCursorPoint(null);
+          return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const cursorPoint = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        };
+
+        if (customBrushCursorActive) {
+          setBrushCursorPoint(cursorPoint);
+        }
+
+        if (eyedropperToolActive) {
+          const sampledColorId = grid.cells[point.y * grid.width + point.x] ?? null;
+          setEyedropperCursorPoint({
+            ...cursorPoint,
+            color: sampledColorId ? (colorsById[sampledColorId]?.hex ?? null) : null,
+          });
+        }
       }}
       onPointerDown={(event) => {
-        if (!mainBrushToolActive || coarsePointer || interactionLocked || paintDisabled) {
+        if (
+          (!customBrushCursorActive && !eyedropperToolActive) ||
+          coarsePointer ||
+          interactionLocked ||
+          paintDisabled
+        ) {
           return;
         }
 
         const point = getGridPointFromClient(event.clientX, event.clientY);
-        setBrushPreviewCell(point);
+        if (!point) {
+          setBrushCursorPoint(null);
+          setEyedropperCursorPoint(null);
+          return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const cursorPoint = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        };
+
+        if (customBrushCursorActive) {
+          setBrushCursorPoint(cursorPoint);
+        }
+
+        if (eyedropperToolActive) {
+          const sampledColorId = grid.cells[point.y * grid.width + point.x] ?? null;
+          setEyedropperCursorPoint({
+            ...cursorPoint,
+            color: sampledColorId ? (colorsById[sampledColorId]?.hex ?? null) : null,
+          });
+        }
       }}
       onPointerLeave={() => {
-        setBrushPreviewCell(null);
+        setBrushCursorPoint(null);
+        setEyedropperCursorPoint(null);
       }}
       style={{
         position: "relative",
@@ -633,7 +726,7 @@ export function GridWorldSurface({
         cursor:
           interactionLocked
             ? "default"
-            : brushCursorVisible
+            : brushCursorVisible || eyedropperCursorVisible
               ? "none"
               : selectionCursor ?? cursor,
         touchAction: interactionLocked ? "auto" : "none",
@@ -744,12 +837,16 @@ export function GridWorldSurface({
             }}
           >
             <GridCanvasStage
-              cells={grid.cells}
+              cells={cellPreviewOverride ?? grid.cells}
               colorLibraryDismissGestureRef={colorLibraryDismissGestureRef}
               colorsById={colorsById}
               deferPaintUntilTraceReady={deferPaintUntilTraceReady}
               displayHost={displayHost}
+              highlightedCellIndexes={highlightedCellIndexes}
               highlightedColorId={highlightedColorId}
+              latestGridCellChange={
+                cellPreviewOverride ? null : latestGridCellChange
+              }
               onDisplayRendered={handleDisplayRendered}
               displayTraceAsset={
                 trace && loadedTraceAsset?.previewUrl === trace.previewUrl
@@ -772,7 +869,7 @@ export function GridWorldSurface({
               gridOverlayStep={gridOverlayStep}
               metrics={metrics}
               showGridlines={effectiveShowGridlines}
-              showSymbols={effectiveShowSymbols}
+              showSymbols={effectiveShowSymbols && !isPaintStrokeActive}
               stageSize={stageSize}
               symbolAssignments={state.document.palette.symbolAssignments}
               threadView={threadView}
@@ -844,18 +941,11 @@ export function GridWorldSurface({
           aria-hidden="true"
           style={{
             position: "absolute",
-            left: `${
-              worldBounds.left -
-              stageBounds.left +
-              (brushPreviewCell.x - brushLeadingOffset) * metrics.cellSize * viewport.zoom
-            }px`,
-            top: `${
-              worldBounds.top -
-              stageBounds.top +
-              (brushPreviewCell.y - brushLeadingOffset) * metrics.cellSize * viewport.zoom
-            }px`,
+            left: `${brushCursorPoint.x}px`,
+            top: `${brushCursorPoint.y}px`,
             width: `${brushCursorSize}px`,
             height: `${brushCursorSize}px`,
+            transform: "translate(-50%, -50%)",
             border: "1.5px solid rgba(255, 255, 255, 0.96)",
             boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.42)",
             background: "rgba(255, 255, 255, 0.08)",
@@ -863,6 +953,43 @@ export function GridWorldSurface({
             zIndex: 6,
           }}
         />
+      ) : null}
+      {eyedropperCursorVisible ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${eyedropperCursorPoint.x}px`,
+            top: `${eyedropperCursorPoint.y}px`,
+            width: "56px",
+            height: "56px",
+            transform: "translate(-50%, -50%)",
+            borderRadius: "999px",
+            border: "2px solid rgba(255, 255, 255, 0.98)",
+            boxShadow:
+              "0 0 0 1px rgba(15, 23, 42, 0.5), 0 8px 18px rgba(15, 23, 42, 0.18)",
+            background:
+              "radial-gradient(circle, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12))",
+            backdropFilter: "contrast(1.35) saturate(1.2)",
+            pointerEvents: "none",
+            zIndex: 8,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: "10px",
+              height: "10px",
+              transform: "translate(-50%, -50%)",
+              border: "1.5px solid rgba(255, 255, 255, 0.98)",
+              boxShadow:
+                "0 0 0 1px rgba(15, 23, 42, 0.62), inset 0 0 0 1px rgba(15, 23, 42, 0.18)",
+              background: eyedropperCursorPoint.color ?? "rgba(255, 255, 255, 0.16)",
+            }}
+          />
+        </div>
       ) : null}
       {centeredBrushPreviewVisible ? (
         <div

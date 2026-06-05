@@ -131,6 +131,7 @@ function DismissButton({
       type="button"
       variant="ghostV2"
       size="sm"
+      iconOnly
       aria-label={label}
       className={[styles.closeButton, className].filter(Boolean).join(" ")}
       onClick={onClick}

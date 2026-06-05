@@ -1,6 +1,27 @@
 import type { CSSProperties } from "react";
 
-export type DesignTypeToken = "h1" | "h2" | "h3" | "h4" | "h5" | "p1" | "p2" | "s";
+export type DesignTypeToken =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "p1"
+  | "p1Medium"
+  | "p2"
+  | "p2Medium"
+  // | "p2Semibold"
+  // | "label"
+  | "caption"
+  | "captionMd"
+  // | "badge"
+  // | "micro"
+  // | "microCaps"
+  // | "tooltip"
+  // | "overline"
+  | "sMedium"
+  // | "sCaps"
+  | "s";
 export type MarketingTypeToken =
   | "eyebrow"
   | "bodyLg"
@@ -12,14 +33,15 @@ export type MarketingTypeToken =
   | "display"
   | "sectionTitle"
   | "footerTitle";
-export type DesignFontWeightToken = "regular" | "medium" | "semibold" | "bold";
+export type DesignFontWeightToken = "light" | "regular" | "medium" | "semibold" | "bold";
 
 export const fontWeights = {
-  regular: 400,
+  light: 400,
+  regular: 450,
   medium: 500,
-  semibold: 600,
-  bold: 700,
-} as const satisfies Record<DesignFontWeightToken, 400 | 500 | 600 | 700>;
+  semibold: 550,
+  bold: 600,
+} as const satisfies Record<DesignFontWeightToken, 400 | 450 | 500 | 550 | 600>;
 
 type TypographySpec<
   Size extends number | string = number,
@@ -33,6 +55,7 @@ type TypographySpec<
   sample: string;
   fontFamily?: string;
   letterSpacing?: string;
+  textTransform?: CSSProperties["textTransform"];
 };
 
 function createTypographyStyles<
@@ -57,13 +80,36 @@ function createTypographyStyles<
           fontWeight: spec.weight,
           ...(spec.fontFamily ? { fontFamily: spec.fontFamily } : null),
           ...(spec.letterSpacing ? { letterSpacing: spec.letterSpacing } : null),
+          ...(spec.textTransform ? { textTransform: spec.textTransform } : null),
         } satisfies CSSProperties,
       ];
     })
   ) as Record<TToken, CSSProperties>;
 }
 
-export const uiTypographyOrder: DesignTypeToken[] = ["h1", "h2", "h3", "h4", "h5", "p1", "p2", "s"];
+export const uiTypographyOrder: DesignTypeToken[] = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "p1",
+  "p1Medium",
+  "p2",
+  "p2Medium",
+  // "p2Semibold",
+  // "label",
+  "caption",
+  "captionMd",
+  // "badge",
+  // "micro",
+  // "microCaps",
+  // "tooltip",
+  // "overline",
+  "sMedium",
+  // "sCaps",
+  "s",
+];
 
 export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, number>> = {
   h1: {
@@ -92,9 +138,9 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
   },
   h4: {
     label: "h4",
-    size: 16,
+    size: 18,
     lineHeight: 20,
-    weight: fontWeights.bold,
+    weight: fontWeights.semibold,
     usage: "minor headings, card titles",
     sample: "Header Four",
   },
@@ -110,18 +156,130 @@ export const uiTypographySpecs: Record<DesignTypeToken, TypographySpec<number, n
     label: "p1",
     size: 13,
     lineHeight: 20,
-    weight: fontWeights.regular,
+    weight: fontWeights.medium,
     usage: "primary body copy",
     sample: "Primary body copy",
   },
+  p1Medium: {
+    label: "p1 medium",
+    size: 13,
+    lineHeight: 20,
+    weight: fontWeights.bold,
+    usage: "primary UI labels and prominent inline actions",
+    sample: "Primary action label",
+  },
   p2: {
     label: "p2",
-    size: 12,
+    size: 13,
     lineHeight: 18,
     weight: fontWeights.regular,
     usage: "secondary UI/body text",
     sample: "Secondary body copy",
   },
+  p2Medium: {
+    label: "p2 medium",
+    size: 13,
+    lineHeight: 16,
+    weight: fontWeights.medium,
+    usage: "secondary UI labels, list item titles, and compact controls",
+    sample: "Secondary label",
+  },
+  // p2Semibold: {
+  //   label: "p2 semibold",
+  //   size: 13,
+  //   lineHeight: 18,
+  //   weight: fontWeights.semibold,
+  //   usage: "emphasized secondary UI labels",
+  //   sample: "Emphasized label",
+  // },
+  // label: {
+  //   label: "label",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "compact field labels, tooltip titles, and metadata labels",
+  //   sample: "Compact label",
+  // },
+  caption: {
+    label: "caption",
+    size: 11,
+    lineHeight: 16,
+    weight: fontWeights.regular,
+    usage: "supporting captions and low-emphasis metadata",
+    sample: "Supporting caption",
+  },
+  captionMd: {
+    label: "caption medium",
+    size: 12,
+    lineHeight: 16,
+    weight: fontWeights.regular,
+    usage: "compact metadata, secondary counts, and small actions",
+    sample: "Compact metadata",
+  },
+  // badge: {
+  //   label: "badge",
+  //   size: 11,
+  //   lineHeight: 14,
+  //   weight: fontWeights.medium,
+  //   usage: "count badges and compact status badges",
+  //   sample: "12",
+  //   letterSpacing: "0.01em",
+  // },
+  // micro: {
+  //   label: "micro",
+  //   size: 10,
+  //   lineHeight: 12,
+  //   weight: fontWeights.medium,
+  //   usage: "color codes, tiny counts, and dense metadata",
+  //   sample: "DMC 310",
+  //   letterSpacing: "0.01em",
+  // },
+  // microCaps: {
+  //   label: "micro caps",
+  //   size: 9,
+  //   lineHeight: 10,
+  //   weight: fontWeights.medium,
+  //   usage: "very small uppercase labels in dense controls",
+  //   sample: "AUX",
+  //   letterSpacing: "0.03em",
+  //   textTransform: "uppercase",
+  // },
+  // tooltip: {
+  //   label: "tooltip",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "floating tooltip text",
+  //   sample: "Tooltip label",
+  // },
+  // overline: {
+  //   label: "overline",
+  //   size: 12,
+  //   lineHeight: 16,
+  //   weight: fontWeights.medium,
+  //   usage: "uppercase metadata labels",
+  //   sample: "METADATA",
+  //   letterSpacing: "0.08em",
+  //   textTransform: "uppercase",
+  // },
+  sMedium: {
+    label: "s medium",
+    size: 11,
+    lineHeight: 14,
+    weight: fontWeights.medium,
+    usage: "supporting labels with stronger emphasis",
+    sample: "Support label",
+  },
+  // sCaps: {
+  //   label: "s caps",
+  //   size: 11,
+  //   lineHeight: 14,
+  //   weight: fontWeights.medium,
+  //   usage: "uppercase supporting labels",
+  //   sample: "SUPPORT",
+  //   letterSpacing: "0.01em",
+  //   textTransform: "uppercase",
+  // },
   s: {
     label: "s",
     size: 11,
@@ -157,24 +315,24 @@ export const marketingTypographySpecs: Record<
     label: "eyebrow",
     size: "12px",
     lineHeight: "15px",
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "capsule labels, section kickers, metadata",
     sample: "Work in progress",
     letterSpacing: "0.14em",
   },
   bodyLg: {
     label: "bodyLg",
-    size: "clamp(1.16rem, 1.08vw, 1.3rem)",
-    lineHeight: 1.48,
-    weight: fontWeights.regular,
+    size: "clamp(1.08rem, 1.24vw, 1.4rem)",
+    lineHeight: 1.6,
+    weight: fontWeights.light,
     usage: "hero body copy on marketing pages",
     sample: "A systematic canvas for modern needlepoint and cross-stitch designers.",
   },
   body: {
     label: "body",
-    size: "clamp(1.02rem, 0.96vw, 1.08rem)",
+    size: "clamp(1rem, 1.1vw, 1.2rem)",
     lineHeight: 1.6,
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "standard landing-page body copy",
     sample: "Wippa treats every needlepoint chart like a technical drawing.",
   },
@@ -182,7 +340,7 @@ export const marketingTypographySpecs: Record<
     label: "bodySm",
     size: "clamp(0.92rem, 0.88vw, 0.96rem)",
     lineHeight: 1.55,
-    weight: fontWeights.regular,
+    weight: fontWeights.light,
     usage: "secondary landing-page copy",
     sample: "Thread-accurate color mapped to real materials.",
   },
@@ -199,14 +357,15 @@ export const marketingTypographySpecs: Record<
     label: "title",
     size: "clamp(1.52rem, 2.08vw, 1.86rem)",
     lineHeight: 1.1,
-    weight: fontWeights.bold,
+    weight: fontWeights.semibold,
     usage: "sans-serif marketing subheads and prominent card titles",
     sample: "Custom Grid Math",
+    fontFamily: "var(--font-marketing-heading), serif",
     letterSpacing: "-0.03em",
   },
   featureTitle: {
     label: "featureTitle",
-    size: "clamp(1.12rem, 1.32vw, 1.3rem)",
+    size: "clamp(1.1rem, 1.42vw, 1.4rem)",
     lineHeight: 1.2,
     weight: fontWeights.bold,
     usage: "feature cards and supporting marketing headings",

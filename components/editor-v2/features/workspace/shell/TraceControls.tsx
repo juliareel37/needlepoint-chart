@@ -547,7 +547,7 @@ export function TraceControls({
             style={{ width: 18, height: 18 }}
           />
           <span style={typographyStyles.p2}>Choose a file or drag &amp; drop.</span>
-          <span style={{ ...typographyStyles.p2, opacity: 0.75 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
+          <span style={{ ...typographyStyles.caption, opacity: 0.5 , paddingBottom: 10}}>PNG, JPG, WEBP, or GIF up to 10 MB.</span>
           <Button
             type="button"
             variant="primary"
@@ -556,7 +556,7 @@ export function TraceControls({
             disabled={traceUploadStatus === "uploading"}
             onClick={() => fileInputRef.current?.click()}
           >
-               <ButtonIcon icon="/icons/lucide/upload.svg" />
+               {/* <ButtonIcon icon="/icons/lucide/upload.svg" /> */}
             {traceUploadStatus === "uploading" ? (
               <>
                 <span className={styles.saveButtonSpinner} aria-hidden="true" />
@@ -569,12 +569,13 @@ export function TraceControls({
         </div>
       ) : (
         <TraceSection
-          title="Uploaded File"
+          title="Uploaded file"
           action={(
             <Button
               type="button"
               variant={editModeActive ? "secondary" : "ghostV2"}
-              size="sm"
+              size="md"
+              iconOnly
               disabled={!trace || conversionPreviewActive}
               onClick={onToggleEditMode}
             >
@@ -654,6 +655,8 @@ export function TraceControls({
             <Button
               type="button"
               variant="ghostV2"
+              size="md"
+              iconOnly
               className={styles.traceAttachmentRemoveButton}
               aria-label="Remove trace image"
               title="Remove image"
@@ -747,8 +750,9 @@ export function TraceControls({
             action={(
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="ghostV2"
+                size="md"
+                iconOnly
                 className={styles.traceSectionHeaderActionButton}
                 aria-label={trace.visible ? "Hide image" : "Show image"}
                 aria-pressed={trace.visible}
@@ -817,7 +821,7 @@ export function TraceControls({
                 <div className={styles.traceInlineFieldRow}>
                   <span
                     className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
+                    style={typographyStyles.p1}
                   >
                     Blending
                   </span>
@@ -849,7 +853,7 @@ export function TraceControls({
                 <div className={styles.traceInlineFieldRow}>
                   <span
                     className={styles.traceInlineFieldLabel}
-                    style={typographyStyles.p2}
+                    style={typographyStyles.p1}
                   >
                     Opacity
                   </span>
@@ -865,7 +869,9 @@ export function TraceControls({
                           .filter(Boolean)
                           .join(" ")}
                         aria-hidden="true"
-                        style={{ left: `${trace.opacity * 100}%` }}
+                        style={{
+                          left: `${trace.opacity * 100}%`,
+                        }}
                       >
                         {Math.round(trace.opacity * 100)}%
                       </div>
@@ -899,14 +905,14 @@ export function TraceControls({
             <div className={styles.traceSectionDivider} aria-hidden="true" />
 
           <TraceSection
-            title="Convert to stitches"
+            title="Convert to pattern"
             // hint="Sample the image onto the stitch grid using your thread palette."
           >
             <Field>
               <div className={styles.traceInlineFieldRow}>
                 <span
                   className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
+                  style={typographyStyles.p1}
                 >
                   Max colors
                 </span>
@@ -929,7 +935,9 @@ export function TraceControls({
                         )
                       }
                     />
-                    <span className={styles.traceSliderValue}>{convertMaxColors}</span>
+                    <span className={styles.traceSliderValue}>
+                      {convertMaxColors}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -939,7 +947,7 @@ export function TraceControls({
               <div className={styles.traceInlineFieldRow}>
                 <span
                   className={styles.traceInlineFieldLabel}
-                  style={typographyStyles.p2}
+                  style={typographyStyles.p1}
                 >
                   Smoothing
                 </span>
@@ -962,7 +970,7 @@ export function TraceControls({
                         )
                       }
                     />
-                    <span className={styles.traceSliderValue}>
+                    <span className={styles.traceSliderValue} style={typographyStyles.captionMd}>
                       {conversionSmoothingPercent}%
                     </span>
                   </div>
@@ -990,7 +998,7 @@ export function TraceControls({
                     className={styles.traceConversionActionButton}
                     onClick={() => dispatch(createCommitTraceConversionPreviewCommand())}
                   >
-                    Apply to canvas
+                    Apply
                   </Button>
                 </div>
               </div>
@@ -1029,7 +1037,7 @@ export function TraceControls({
                     ) : (
                       "Apply"
                     )} */}
-                    Apply to canvas
+                    Apply
                   </Button>
                   
                 </div>
@@ -1230,7 +1238,7 @@ function TraceSection({
   title: string;
 }) {
   return (
-    <section className={styles.traceSection}>
+    <section className={styles.sidebarSubsection}>
       <div className={styles.traceSectionHeader}>
         <div className={styles.traceSectionTitleRow}>
           <h3 className={styles.traceSectionTitle} style={typographyStyles.h5}>

@@ -15,6 +15,7 @@ import {
 import { gridClearCommandHandler } from "./handlers/gridClear";
 import { gridEraseCommandHandler } from "./handlers/gridErase";
 import { gridPaintCommandHandler } from "./handlers/gridPaint";
+import { gridSmoothSpecklesCommandHandler } from "./handlers/gridSmoothSpeckles";
 import { applyProjectServerStateCommandHandler } from "./handlers/applyProjectServerState";
 import {
   applyMirrorCommandHandler,
@@ -84,6 +85,7 @@ export const commandHandlers: EditorCommandHandler[] = [
   applyProjectServerStateCommandHandler,
   gridPaintCommandHandler,
   gridEraseCommandHandler,
+  gridSmoothSpecklesCommandHandler,
   gridClearCommandHandler,
   gridApplyTraceConversionCommandHandler,
   previewTraceConversionCommandHandler,
