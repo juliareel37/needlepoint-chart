@@ -1,6 +1,17 @@
+import type { NextRequest } from "next/server";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { auth } from "@/lib/auth/neon";
 
-export default authMiddleware;
+const neonOAuthMiddleware = auth.middleware();
+const NEON_AUTH_SESSION_VERIFIER_PARAM_NAME = "neon_auth_session_verifier";
+
+export default async function proxy(req: NextRequest) {
+  if (req.nextUrl.searchParams.has(NEON_AUTH_SESSION_VERIFIER_PARAM_NAME)) {
+    return neonOAuthMiddleware(req);
+  }
+
+  return authMiddleware(req);
+}
 
 export const config = {
   matcher: [

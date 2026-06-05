@@ -1,26 +1,10 @@
 import { AppThemePreference } from "@prisma/client";
-import { createNeonAuth } from "@neondatabase/auth/next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth/neon";
 import { getAccountSettingsContextFromProviderIds, type AccountSettingsContext } from "./account-settings";
 import type { ThemeMode } from "@/lib/theme/themePreference";
 
-const neonAuthBaseUrl = process.env.NEON_AUTH_BASE_URL;
-const neonAuthCookieSecret = process.env.NEON_AUTH_COOKIE_SECRET;
-
-if (!neonAuthBaseUrl) {
-  throw new Error("Missing NEON_AUTH_BASE_URL");
-}
-
-if (!neonAuthCookieSecret) {
-  throw new Error("Missing NEON_AUTH_COOKIE_SECRET");
-}
-
-export const auth = createNeonAuth({
-  baseUrl: neonAuthBaseUrl,
-  cookies: {
-    secret: neonAuthCookieSecret,
-  },
-});
+export { auth } from "@/lib/auth/neon";
 
 const NEON_AUTH_PROVIDER = "neon_auth";
 
